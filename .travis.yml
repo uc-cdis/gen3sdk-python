@@ -1,0 +1,31 @@
+language: python
+
+python:
+  - 2.7
+  - 3.6
+
+env:
+  - REPOSITORY="uc-cdis/gen3sdk-python" PR_NUMBER="$TRAVIS_PULL_REQUEST"
+
+install:
+  - pip install -r requirements.txt
+  - pip install -r test-requirements.txt
+  - if [[ $TRAVIS_PYTHON_VERSION == 3.6 ]]; then pip install -e git+https://git@github.com/uc-cdis/wool.git#egg=wool; fi
+
+script:
+  - sed -i.bak "s/0.1.0/$(git describe --tags --abbrev=0 --match=[0-9]*)/g" setup.py
+  - python setup.py install
+  - py.test -vv tests
+
+after_script:
+  - if [[ $TRAVIS_PYTHON_VERSION == 3.6 ]]; then wool; fi
+
+deploy:
+  provider: pypi
+  user: uccdistravis
+  password:
+    secure: MKp8ZNuLhcVfJcM2Ux+/RZpQlLopX+HE2Hsf5ihShPq2tG9PdmrpzrUKgGbrz640QzaJ2bkzs4etlylgZx5P6lA/ZJV1ZtvL6WlHfjYbTVXSLYOGRlDfpYPPeoTBBNl7W45qu16qS1VhHWgsujswG36Yj6vS7G8dMPyHaGiFPzMkWORygIq7DJ2JxJVdyGH8DPCLSL6LVpK/gTGr5dbPEreE/4I4A0iccFDzTBHSPgSe+R8PP+VlrYho0SSZvOsZBL0Aq3FO07qmlT9ZWzq6hYrj/+R08keLMIl6Xy8ho/Gzd4eWEpEo4QwGzjgiomWlzXiJ39FQ9kBxQ9ihXEldad+Vlo6ZLFbJkCzDM/vljGqScX82kMSnAXjUZUFbjju1h6+lyT2yqqcoaLE2C/bzMrXaNzOQ/iA+BSfqj6INo8IAddUEWDMTVn/C92afX/Wul9svKjiqOZMNTMtqLLwyY0O0AMgcYYQvPnyNbHX1o7HFj1IxmhKF2u0+PuZRzvBvI6kuhiQvTwO5Pogr5DV6rmV9Zby2GdsP5v+/zLtYEC/PKYIr3gBVpolqHkF6w79ejp3LsO9lflATruLNR902YvrFi8aW9d3lQjO724nvlesc924ZWZxx5e9jzb6je1psx4sekQwYKrAXxEHiy4KiuBr4uK3PPe6qtvFbxVqK4vc=
+  on:
+    tags: true
+    branch: master
+    python: "3.6"
