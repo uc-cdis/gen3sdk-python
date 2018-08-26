@@ -11,8 +11,6 @@ install:
   - pip install -r requirements.txt
   - pip install -r test-requirements.txt
   - if [[ $TRAVIS_PYTHON_VERSION == 3.6 ]]; then pip install -e git+https://git@github.com/uc-cdis/wool.git#egg=wool; fi
-  - ls -al
-  - pwd
   - mv $VIRTUAL_ENV/src/indexclient/indexclient gen3/.
 
 script:
