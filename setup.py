@@ -27,7 +27,7 @@ setup(
     ),
     long_description=README + "\n\n" + CHANGELOG,
     long_description_content_type="text/markdown",
-    author="Center for Translation Data Science",
+    author="Center for Translational Data Science",
     author_email="support@datacommons.io",
     license="Apache 2.0",
     url="https://gen3.org/",
