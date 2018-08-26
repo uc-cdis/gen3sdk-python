@@ -17,6 +17,7 @@ def test_submission_import():
 
     from gen3.submission import Gen3Submission
 
+
 def test_file_import():
 
     from gen3.file import Gen3File

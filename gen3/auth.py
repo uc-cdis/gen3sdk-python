@@ -8,12 +8,26 @@ class Gen3AuthError(Exception):
 
 
 class Gen3Auth(AuthBase):
-    """
-    Adds a bearer token to the request and fetches it from the refresh token if necessary.
+    """Gen3 auth helper class for use with requests auth.
+
+    Implements requests.auth.AuthBase in order to support JWT authentication.
+    Generates access tokens from the provided refresh token file or string.
+    Automatically refreshes access tokens when they expire.
+
+    Args:
+        endpoint (str): The URL of the data commons.
+        refresh_file (str): The file containing the downloaded json web token.
+        refresh_token (str): The json web token.
+
+    Examples:
+        This generates the Gen3Auth class pointed at the sandbox commons while
+        using the credentials.json downloaded from the commons profile page.
+
+        >>> auth = Gen3Auth("https://nci-crdc-demo.datacommons.io", refresh_file="credentials.json")
+
     """
 
     def __init__(self, endpoint, refresh_file=None, refresh_token=None):
-
         if not refresh_file and not refresh_token:
             raise ValueError(
                 "Either parameter 'refresh_file' or parameter 'refresh_token' must be specified."
@@ -42,16 +56,34 @@ class Gen3Auth(AuthBase):
         self._endpoint = endpoint
 
     def __call__(self, request):
+        """Adds authorization header to the request
+
+        This gets called by the python.requests package on outbound requests
+        so that authentication can be added.
+
+        Args:
+            request (object): The incoming request object
+
+        """
         request.headers["Authorization"] = self._get_auth_value()
         request.register_hook("response", self._handle_401)
         return request
 
     def _handle_401(self, response, **kwargs):
-        """
-        Handle cases where the access token may have expired
+        """Handles failed requests when authorization failed.
+
+        This gets called after a failed request when an HTTP 401 error
+        occurs. This then tries to refresh the access token in the event
+        that it expired.
+
+        Args:
+            request (object): The failed request object
+
         """
         if not response.status_code == 401:
             return response
+
+        print("Got 401!")
 
         # Free the original connection
         response.content
@@ -63,6 +95,8 @@ class Gen3Auth(AuthBase):
         self._access_token = None
         newreq.headers["Authorization"] = self._get_auth_value()
 
+        print(newreq)
+
         _response = response.connection.send(newreq, **kwargs)
         _response.history.append(response)
         _response.request = newreq
@@ -70,6 +104,12 @@ class Gen3Auth(AuthBase):
         return _response
 
     def _get_auth_value(self):
+        """Returns the Authorization header value for the request
+
+        This gets called when added the Authorization header to the request.
+        This fetches the access token from the refresh token if the access token is missing.
+
+        """
         if not self._access_token:
             auth_url = "{}/user/credentials/cdis/access_token".format(self._endpoint)
             try:
