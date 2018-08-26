@@ -80,6 +80,8 @@ class Gen3Auth(AuthBase):
             request (object): The failed request object
 
         """
+        print("Status:")
+        print(response.status_code)
         if not response.status_code == 401:
             return response
 
