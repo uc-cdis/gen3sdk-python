@@ -13,7 +13,7 @@ install:
   - if [[ $TRAVIS_PYTHON_VERSION == 3.6 ]]; then pip install -e git+https://git@github.com/uc-cdis/wool.git#egg=wool; fi
   - ls -al
   - pwd
-  - mv src/indexclient/indexclient gen3/.
+  - mv $VIRTUAL_ENV/src/indexclient/indexclient gen3/.
 
 script:
   - sed -i.bak "s/0.1.0/$(git describe --tags --abbrev=0 --match=[0-9]*)/g" setup.py
