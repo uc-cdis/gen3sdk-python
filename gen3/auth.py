@@ -71,9 +71,9 @@ class Gen3Auth(AuthBase):
 
     def _get_auth_value(self):
         if not self._access_token:
-            auth_url = "{}/user/credentials/cdis/access_token".format(self.endpoint)
+            auth_url = "{}/user/credentials/cdis/access_token".format(self._endpoint)
             try:
-                self._access_token = requests.post(auth_url, json=keys).json()[
+                self._access_token = requests.post(auth_url, json=self._refresh_token).json()[
                     "access_token"
                 ]
             except Exception as e:
