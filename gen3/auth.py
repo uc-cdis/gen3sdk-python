@@ -82,7 +82,7 @@ class Gen3Auth(AuthBase):
         """
         print("Status:")
         print(response.status_code)
-        if not response.status_code == 401:
+        if not response.status_code == 401 and not response.status_code == 403:
             return response
 
         print("Got 401!")
