@@ -80,12 +80,8 @@ class Gen3Auth(AuthBase):
             request (object): The failed request object
 
         """
-        print("Status:")
-        print(response.status_code)
         if not response.status_code == 401 and not response.status_code == 403:
             return response
-
-        print("Got 401!")
 
         # Free the original connection
         response.content
@@ -96,8 +92,6 @@ class Gen3Auth(AuthBase):
 
         self._access_token = None
         newreq.headers["Authorization"] = self._get_auth_value()
-
-        print(newreq)
 
         _response = response.connection.send(newreq, **kwargs)
         _response.history.append(response)
