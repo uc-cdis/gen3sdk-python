@@ -7,7 +7,7 @@ def get_version():
         tag = check_output(
             ["git", "describe", "--tags", "--abbrev=0", "--match=[0-9]*"]
         )
-        return tag.strip("\n")
+        return tag.decode('utf-8').strip("\n")
     except Exception:
         # if somehow you get the repo not from git,
         # hardcode default major version
