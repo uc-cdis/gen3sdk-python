@@ -14,7 +14,7 @@ script:
 - sed -i.bak "s/0.1.0/$(git describe --tags --abbrev=0 --match=[0-9]*)/g" setup.py
 - python setup.py install
 - py.test -vv tests
-- if [[ $TRAVIS_PYTHON_VERSION == 3.6 ]]; then wool; fi
+- if [[ $TRAVIS_PYTHON_VERSION == 3.6 && $PR_NUMBER != false ]]; then wool; fi
 deploy:
   skip_cleanup: true
   provider: pypi
