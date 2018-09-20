@@ -129,6 +129,35 @@ class Gen3Submission:
         output = requests.put(api_url, auth=self._auth_provider, json=json).text
         return output
 
+    def delete_node(self, program, project, uuid):
+        """Delete a node from a project.
+        Args:
+            program (str): The program to delete from.
+            project (str): The project to delete from.
+            uuid (str): The uuid of the node to delete
+    
+        Examples:
+            This deletes a node from the CCLE project on the sandbox commons.
+            >>> Gen3Submission.delete_node("DCF", "CCLE", uuid)
+        """
+        api_url = "{}/api/v0/submission/{}/{}/entities/{}".format(self._endpoint, program, project, uuid)
+        output = requests.delete(api_url, auth=self._auth_provider).text
+        return output
+
+    def create_project(self, program, json):
+        """Create a project.
+        Args:
+            program (str): The program to create a project on
+            json (object): The json of the project to create
+    
+        Examples:
+            This creates a project on the DCF program on the sandbox commons.
+            >>> Gen3Submission.create_project("DCF", json)
+        """
+        api_url = "{}/api/v0/submission/{}".format(self._endpoint, program)
+        output = requests.put(api_url, auth=self._auth_provider, json=json).text
+        return output
+
     def delete_project(self, program, project):
         """Delete a project.
 
@@ -146,6 +175,19 @@ class Gen3Submission:
         """
         api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
         output = requests.delete(api_url, auth=self._auth_provider).text
+        return output
+
+    def create_program(self, json):
+        """Create a program.
+        Args:
+            json (object): The json of the program to create
+    
+        Examples:
+            This creates a program on the sandbox commons.
+            >>> Gen3Submission.create_program(json)
+        """
+        api_url = "{}/api/v0/submission/".format(self._endpoint)
+        output = requests.post(api_url, auth=self._auth_provider, json=json).text
         return output
 
     def delete_program(self, program):
