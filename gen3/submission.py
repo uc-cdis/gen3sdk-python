@@ -140,7 +140,9 @@ class Gen3Submission:
             This deletes a node from the CCLE project on the sandbox commons.
             >>> Gen3Submission.delete_node("DCF", "CCLE", uuid)
         """
-        api_url = "{}/api/v0/submission/{}/{}/entities/{}".format(self._endpoint, program, project, uuid)
+        api_url = "{}/api/v0/submission/{}/{}/entities/{}".format(
+            self._endpoint, program, project, uuid
+        )
         output = requests.delete(api_url, auth=self._auth_provider).text
         return output
 
@@ -207,20 +209,7 @@ class Gen3Submission:
         api_url = "{}/api/v0/submission/{}".format(self._endpoint, program)
         output = requests.delete(api_url, auth=self._auth_provider).text
         return output
-
-    def get_dictionary_all(self):
-        """Returns the dictionary object for a commons.
-
-        This gets the current json dictionary schema for a commons.
-   
-        Examples:
-            This returns the dictionary schema for a commons.
-
-            >>> Gen3Submission.get_dictionary_all()
-
-        """
-        return get_dictionary_node("_all")
-
+    
     def get_dictionary_node(self, node_type):
         """Returns the dictionary schema for a specific node.
 
@@ -241,6 +230,19 @@ class Gen3Submission:
         output = requests.get(api_url).text
         data = json.loads(output)
         return data
+
+    def get_dictionary_all(self):
+        """Returns the dictionary object for a commons.
+
+        This gets the current json dictionary schema for a commons.
+   
+        Examples:
+            This returns the dictionary schema for a commons.
+
+            >>> Gen3Submission.get_dictionary_all()
+
+        """
+        return self.get_dictionary_node("_all")
 
     def get_graphql_schema(self):
         """Returns the GraphQL schema for a commons.
