@@ -138,6 +138,7 @@ class Gen3Submission:
     
         Examples:
             This deletes a node from the CCLE project on the sandbox commons.
+            
             >>> Gen3Submission.delete_node("DCF", "CCLE", uuid)
         """
         api_url = "{}/api/v0/submission/{}/{}/entities/{}".format(
@@ -154,6 +155,7 @@ class Gen3Submission:
     
         Examples:
             This creates a project on the DCF program on the sandbox commons.
+            
             >>> Gen3Submission.create_project("DCF", json)
         """
         api_url = "{}/api/v0/submission/{}".format(self._endpoint, program)
@@ -186,6 +188,7 @@ class Gen3Submission:
     
         Examples:
             This creates a program on the sandbox commons.
+            
             >>> Gen3Submission.create_program(json)
         """
         api_url = "{}/api/v0/submission/".format(self._endpoint)
