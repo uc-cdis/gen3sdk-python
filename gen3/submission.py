@@ -38,7 +38,7 @@ class Gen3Submission:
             query_txt (str): Query text.
             variables (:obj:`object`, optional): Dictionary of variables to pass with the query.
             max_tries (:obj:`int`, optional): Number of times to retry if the request fails.
-   
+
         Examples:
             This executes a query to get the list of all the project codes for all the projects
             in the data commons.
@@ -70,15 +70,15 @@ class Gen3Submission:
         return data
 
     def export_node(self, program, project, uuid):
-        """Export a single node into json.
+        """Export a single record into json.
 
         Args:
-            program (str): The program the node is under.
-            project (str): The project the node is under.
-            uuid (str): The UUID of the node to export.
-   
+            program (str): The program the record is under.
+            project (str): The project the record is under.
+            uuid (str): The UUID of the record to export.
+
         Examples:
-            This exports a node from the sandbox commons.
+            This exports a single record from the sandbox commons.
 
             >>> Gen3Submission.export_node("DCF", "CCLE", "d70b41b9-6f90-4714-8420-e043ab8b77b9")
 
@@ -91,15 +91,15 @@ class Gen3Submission:
         return data
 
     def export_node_all_type(self, program, project, node_type):
-        """Export all nodes of a single type.
+        """Export all records in a single node.
 
         Args:
-            program (str): The program to export nodes under.
-            project (str): The project to export nodes under.
-            node_type (str): The label of the node type to export.
-   
+            program (str): The program to which records belong.
+            project (str): The project to which records belong.
+            node_type (str): The name of the node to export.
+
         Examples:
-            This exports all "sample" types from the CCLE project on the sandbox commons.
+            This exports all records in the "sample" node from the CCLE project in the sandbox commons.
 
             >>> Gen3Submission.export_node_all_type("DCF", "CCLE", "sample")
 
@@ -112,15 +112,15 @@ class Gen3Submission:
         return data
 
     def submit_node(self, program, project, json):
-        """Submit a node to a project.
+        """Submit record(s) to a project as json.
 
         Args:
             program (str): The program to submit to.
             project (str): The project to submit to.
-            json (object): The json of the node to submit
-   
+            json (object): The json defining the record(s) to submit. For multiple records, the json should be an array of records.
+
         Examples:
-            This submits a node to the CCLE project on the sandbox commons.
+            This submits records to the CCLE project in the sandbox commons.
 
             >>> Gen3Submission.submit_node("DCF", "CCLE", json)
 
@@ -130,15 +130,15 @@ class Gen3Submission:
         return output
 
     def delete_node(self, program, project, uuid):
-        """Delete a node from a project.
+        """Delete a record from a project.
         Args:
             program (str): The program to delete from.
             project (str): The project to delete from.
-            uuid (str): The uuid of the node to delete
-    
+            uuid (str): The uuid of the record to delete
+
         Examples:
-            This deletes a node from the CCLE project on the sandbox commons.
-            
+            This deletes a record from the CCLE project in the sandbox commons.
+
             >>> Gen3Submission.delete_node("DCF", "CCLE", uuid)
         """
         api_url = "{}/api/v0/submission/{}/{}/entities/{}".format(
@@ -152,10 +152,10 @@ class Gen3Submission:
         Args:
             program (str): The program to create a project on
             json (object): The json of the project to create
-    
+
         Examples:
-            This creates a project on the DCF program on the sandbox commons.
-            
+            This creates a project on the DCF program in the sandbox commons.
+
             >>> Gen3Submission.create_project("DCF", json)
         """
         api_url = "{}/api/v0/submission/{}".format(self._endpoint, program)
@@ -170,7 +170,7 @@ class Gen3Submission:
         Args:
             program (str): The program containing the project to delete.
             project (str): The project to delete.
-   
+
         Examples:
             This deletes the "CCLE" project from the "DCF" program.
 
@@ -185,10 +185,10 @@ class Gen3Submission:
         """Create a program.
         Args:
             json (object): The json of the program to create
-    
+
         Examples:
-            This creates a program on the sandbox commons.
-            
+            This creates a program in the sandbox commons.
+
             >>> Gen3Submission.create_program(json)
         """
         api_url = "{}/api/v0/submission/".format(self._endpoint)
@@ -202,7 +202,7 @@ class Gen3Submission:
 
         Args:
             program (str): The program to delete.
-   
+
         Examples:
             This deletes the "DCF" program.
 
@@ -212,15 +212,15 @@ class Gen3Submission:
         api_url = "{}/api/v0/submission/{}".format(self._endpoint, program)
         output = requests.delete(api_url, auth=self._auth_provider).text
         return output
-    
+
     def get_dictionary_node(self, node_type):
         """Returns the dictionary schema for a specific node.
 
         This gets the current json dictionary schema for a specific node type in a commons.
 
         Args:
-            node_type (str): The node_type to retrieve.
-   
+            node_type (str): The node_type (or name of the node) to retrieve.
+
         Examples:
             This returns the dictionary schema the "subject" node.
 
@@ -235,10 +235,10 @@ class Gen3Submission:
         return data
 
     def get_dictionary_all(self):
-        """Returns the dictionary object for a commons.
+        """Returns the entire dictionary object for a commons.
 
-        This gets the current json dictionary schema for a commons.
-   
+        This gets a json of the current dictionary schema for a commons.
+
         Examples:
             This returns the dictionary schema for a commons.
 
@@ -251,7 +251,7 @@ class Gen3Submission:
         """Returns the GraphQL schema for a commons.
 
         This runs the GraphQL introspection query against a commons and returns the results.
-   
+
         Examples:
             This returns the GraphQL schema.
 
