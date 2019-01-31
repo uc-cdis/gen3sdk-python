@@ -77,6 +77,7 @@ class Gen3Submission:
             project (str): The project the record is under.
             uuid (str): The UUID of the record to export.
             fileformat (str): Export data as either 'json' or 'tsv'
+
         Examples:
             This exports a single record from the sandbox commons.
 
@@ -106,6 +107,7 @@ class Gen3Submission:
             project (str): The project to which records belong.
             node_type (str): The name of the node to export.
             fileformat (str): Export data as either 'json' or 'tsv'
+
         Examples:
             This exports all records in the "sample" node from the CCLE project in the sandbox commons.
 
