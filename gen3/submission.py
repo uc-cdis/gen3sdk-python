@@ -31,6 +31,14 @@ class Gen3Submission:
         self._auth_provider = auth_provider
         self._endpoint = endpoint
 
+    def __export_file(self, filename, output):
+        """Writes an API response to a file.
+        """
+        outfile = open(filename, "w")
+        outfile.write(output)
+        outfile.close
+        print("\nOutput written to file: "+filename)
+
     def query(self, query_txt, variables=None, max_tries=1):
         """Execute a GraphQL query against a data commons.
 
@@ -94,7 +102,7 @@ class Gen3Submission:
             if fileformat == 'json': output = json.loads(output)
             return output
         else:
-            export_file(filename, output)
+            self.__export_file(filename, output)
             return output
 
     def export_node(self, program, project, node_type, fileformat, filename=None):
@@ -122,7 +130,7 @@ class Gen3Submission:
             if fileformat == 'json': output = json.loads(output)
             return output
         else:
-            export_file(filename, output)
+            self.__export_file(filename, output)
             return output
 
     def submit_record(self, program, project, json):
@@ -276,11 +284,3 @@ class Gen3Submission:
         output = requests.get(api_url).text
         data = json.loads(output)
         return data
-
-def export_file(filename, output):
-    """Writes an API response to a file.
-    """
-    outfile = open(filename, "w")
-    outfile.write(output)
-    outfile.close
-    print("\nOutput written to file: "+filename)
