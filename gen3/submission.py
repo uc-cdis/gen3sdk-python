@@ -69,7 +69,7 @@ class Gen3Submission:
 
         return data
 
-    def export_record(self, program, project, uuid, fileformat):
+    def export_record(self, program, project, uuid, fileformat, filename=None):
         """Export a single record into json.
 
         Args:
@@ -77,29 +77,27 @@ class Gen3Submission:
             project (str): The project the record is under.
             uuid (str): The UUID of the record to export.
             fileformat (str): Export data as either 'json' or 'tsv'
+            filename (str): Name of the file to export to; if no filename is provided, prints data to screen
 
         Examples:
             This exports a single record from the sandbox commons.
 
-            >>> Gen3Submission.export_record("DCF", "CCLE", "d70b41b9-6f90-4714-8420-e043ab8b77b9","json")
+            >>> Gen3Submission.export_record("DCF", "CCLE", "d70b41b9-6f90-4714-8420-e043ab8b77b9", "json", filename="DCF-CCLE_one_record.json")
 
         """
+        assert fileformat in ["json","tsv"],"File format must be either 'json' or 'tsv'"
         api_url = "{}/api/v0/submission/{}/{}/export?ids={}&format={}".format(
             self._endpoint, program, project, uuid, fileformat
         )
         output = requests.get(api_url, auth=self._auth_provider).text
-        if fileformat is 'json':
-            data = json.loads(output)
-            return data
+        if filename is None:
+            if fileformat == 'json': output = json.loads(output)
+            return output
         else:
-            filename = program+"_"+project+"_"+uuid+"."+fileformat
-            outfile = open(filename, "w")
-            outfile.write(output)
-            outfile.close
-            print("\nOutput written to file: "+filename)
+            export_file(filename, output)
             return output
 
-    def export_node(self, program, project, node_type, fileformat):
+    def export_node(self, program, project, node_type, fileformat, filename=None):
         """Export all records in a single node type of a project.
 
         Args:
@@ -107,26 +105,24 @@ class Gen3Submission:
             project (str): The project to which records belong.
             node_type (str): The name of the node to export.
             fileformat (str): Export data as either 'json' or 'tsv'
+            filename (str): Name of the file to export to; if no filename is provided, prints data to screen
 
         Examples:
             This exports all records in the "sample" node from the CCLE project in the sandbox commons.
 
-            >>> Gen3Submission.export_node("DCF", "CCLE", "sample", "tsv")
+            >>> Gen3Submission.export_node("DCF", "CCLE", "sample", "tsv", filename="DCF-CCLE_sample_node.tsv")
 
         """
+        assert fileformat in ["json","tsv"],"File format must be either 'json' or 'tsv'"
         api_url = "{}/api/v0/submission/{}/{}/export/?node_label={}&format={}".format(
             self._endpoint, program, project, node_type, fileformat
         )
         output = requests.get(api_url, auth=self._auth_provider).text
-        if fileformat is 'json':
-            data = json.loads(output)
-            return data
+        if filename is None:
+            if fileformat == 'json': output = json.loads(output)
+            return output
         else:
-            filename = program+"_"+project+"_"+node_type+"."+fileformat
-            outfile = open(filename, "w")
-            outfile.write(output)
-            outfile.close
-            print("\nOutput written to file: "+filename)
+            export_file(filename, output)
             return output
 
     def submit_record(self, program, project, json):
@@ -280,3 +276,11 @@ class Gen3Submission:
         output = requests.get(api_url).text
         data = json.loads(output)
         return data
+
+def export_file(filename, output):
+    """Writes an API response to a file.
+    """
+    outfile = open(filename, "w")
+    outfile.write(output)
+    outfile.close
+    print("\nOutput written to file: "+filename)
