@@ -16,3 +16,6 @@ This is the client for interacting with the Indexd service for GUID brokering an
 
 This is the client for interacting with the Gen3 submission service including GraphQL queries.
 
+## Mount
+
+This client facilitates mounting data files listed in a manifest for local analysis.

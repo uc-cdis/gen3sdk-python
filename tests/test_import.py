@@ -21,3 +21,8 @@ def test_submission_import():
 def test_file_import():
 
     from gen3.file import Gen3File
+
+
+def test_mount_import():
+
+    from gen3.mount import Gen3Mount
