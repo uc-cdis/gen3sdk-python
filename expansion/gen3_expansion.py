@@ -244,14 +244,14 @@ def delete_uploaded_files(guids,api):
     if isinstance(guids, str):
         guids = [guids]
     if isinstance(guids, list):
-    for guid in guids:
-        fence_url = api + 'user/data/'
-        response = requests.delete(fence_url + guid,auth=auth)
-        if (response.status_code == 204):
-            print("Successfully deleted GUID {}".format(guid))
-        else:
-            print("Error deleting GUID {}:".format(guid))
-            print(response.reason)
+        for guid in guids:
+            fence_url = api + 'user/data/'
+            response = requests.delete(fence_url + guid,auth=auth)
+            if (response.status_code == 204):
+                print("Successfully deleted GUID {}".format(guid))
+            else:
+                print("Error deleting GUID {}:".format(guid))
+                print(response.reason)
 
 
 
