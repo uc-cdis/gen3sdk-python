@@ -1,18 +1,37 @@
 ## Gen3 SDK Expansion pack
 
+# Install gen3sdk via pip
+!pip install --force --upgrade gen3 --ignore-installed certifi
+
+# Download and configure gen3-client
+!wget https://github.com/uc-cdis/cdis-data-client/releases/download/0.4.1/dataclient_linux.zip
+!unzip dataclient_linux.zip
+!mkdir /home/jovyan/.gen3
+!mv gen3-client /home/jovyan/.gen3
+!rm dataclient_linux.zip
+!/home/jovyan/.gen3/gen3-client configure --profile=bpa --apiendpoint=https://data.bloodpac.org --cred=/home/jovyan/pd/bpa-credentials.json
+
 import requests, json, fnmatch, os, os.path, sys, subprocess, glob
 import pandas as pd
 from pandas.io.json import json_normalize
+from collections import Counter
 
 import gen3
 from gen3.auth import Gen3Auth
 from gen3.submission import Gen3Submission
 from gen3.file import Gen3File
 
-endpoint = 'https://my.datacommons.org'
-auth = Gen3Auth(endpoint, refresh_file='my-credentials.json')
-sub = Gen3Submission(endpoint, auth)
-file = Gen3File(endpoint, auth)
+#plotting
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+
+
+
+api = 'https://my.datacommons.org'
+auth = Gen3Auth(api, refresh_file='my-credentials.json')
+sub = Gen3Submission(api, auth)
+file = Gen3File(api, auth)
 
 ### AWS S3 Tools:
 def s3_ls(path, bucket, profile, pattern='*'):
@@ -142,7 +161,7 @@ def get_node_tsvs(node,projects=None):
         if os.path.isfile(filename):
             print("File previously downloaded.")
         else:
-            prog,proj = project.split('-')
+            prog,proj = project.split('-',1)
             sub.export_node(prog,proj,node,'tsv',filename)
         df1 = pd.read_csv(filename, sep='\t', header=0)
         dfs.append(df1)
@@ -159,16 +178,16 @@ def get_node_tsvs(node,projects=None):
 def get_project_tsvs(projects):
     # Get a TSV for every node in a project
     all_nodes = list(set(json_normalize(sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id']))  #get all the 'node_id's in the data model
+
     if isinstance(projects,str):
         projects = [projects]
+
     for project_id in projects:
-        #create the directory to store TSVs
-        mydir = str('project_tsvs/'+project_id+'_tsvs')
+        mydir = str('project_tsvs/'+project_id+'_tsvs') #create the directory to store TSVs
         if not os.path.exists(mydir):
             os.makedirs(mydir)
         for node in all_nodes:
-            #check if the project has records in the node
-            res = sub.query("""{node (of_type:"%s", project_id:"%s"){project_id}}""" % (node,project_id))
+            res = sub.query("""{node (of_type:"%s", project_id:"%s"){project_id}}""" % (node,project_id)) #check if the project has records in the node
             df = json_normalize(res['data']['node'])
             if not df.empty:
                 filename = str(mydir+'/'+project_id+'_'+node+'.tsv')
@@ -178,7 +197,8 @@ def get_project_tsvs(projects):
                     prog,proj = project_id.split('-',1)
                     sub.export_node(prog,proj,node,'tsv',filename)
                     print(filename+' exported to '+mydir)
-    cmd = ['ls',mydir]
+
+    cmd = ['ls',mydir] #look in the download directory
     try:
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
     except Exception as e:
@@ -213,48 +233,6 @@ def delete_node(node,project_id):
     results['other'] = other
     return results
 
-
-
-
-
-def get_urls(guids,api):
-    if isinstance(guids, str):
-        guids = [guids]
-    if isinstance(guids, list):
-        urls = {}
-        for guid in guids:
-            index_url = "{}index/{}".format(api, guid)
-            output = requests.get(index_url, auth=auth).text
-            guid_index = json.loads(output)
-            url = guid_index['urls'][0]
-            urls[guid] = url
-    else:
-        print("Please provide one or a list of data file GUIDs: get_urls\(guids=guid_list\)")
-    return urls
-
-
-def delete_uploaded_files(guids,api):
-# DELETE http://petstore.swagger.io/?url=https://raw.githubusercontent.com/uc-cdis/fence/master/openapis/swagger.yaml#/data/delete_data__file_id_
-# ​/data​/{file_id}
-# delete all locations of a stored data file and remove its record from indexd.
-# After a user uploads a data file and it is registered in indexd,
-# but before it is mapped into the graph via metadata submission,
-# this endpoint will delete the file from its storage locations (saved in the record in indexd)
-# and delete the record in indexd.
-    if isinstance(guids, str):
-        guids = [guids]
-    if isinstance(guids, list):
-        for guid in guids:
-            fence_url = api + 'user/data/'
-            response = requests.delete(fence_url + guid,auth=auth)
-            if (response.status_code == 204):
-                print("Successfully deleted GUID {}".format(guid))
-            else:
-                print("Error deleting GUID {}:".format(guid))
-                print(response.reason)
-
-
-
 def delete_records(uuids,project_id):
     ## Delete a list of records in 'uuids' from a project
     program,project = project_id.split('-',1)
@@ -277,3 +255,233 @@ def delete_records(uuids,project_id):
     results['success'] = success
     results['other'] = other
     return results
+
+def get_urls(guids,api):
+    # Get URLs for a list of GUIDs
+    if isinstance(guids, str):
+        guids = [guids]
+    if isinstance(guids, list):
+        urls = {}
+        for guid in guids:
+            index_url = "{}/index/{}".format(api, guid)
+            output = requests.get(index_url, auth=auth).text
+            guid_index = json.loads(output)
+            url = guid_index['urls'][0]
+            urls[guid] = url
+    else:
+        print("Please provide one or a list of data file GUIDs: get_urls\(guids=guid_list\)")
+    return urls
+
+def get_guid_for_filename(file_names,api):
+    # Get GUIDs for a list of file_names
+    if isinstance(file_names, str):
+        file_names = [file_names]
+    if not isinstance(file_names,list):
+        print("Please provide one or a list of data file file_names: get_guid_for_filename\(file_names=file_name_list\)")
+    guids = {}
+    for file_name in file_names:
+        index_url = api + '/index/index/?file_name=' + file_name
+        output = requests.get(index_url, auth=auth).text
+        index_record = json.loads(output)
+        if len(index_record['records']) > 0:
+            guid = index_record['records'][0]['did']
+            guids[file_name] = guid
+    return guids
+
+def delete_uploaded_files(guids,api):
+# DELETE http://petstore.swagger.io/?url=https://raw.githubusercontent.com/uc-cdis/fence/master/openapis/swagger.yaml#/data/delete_data__file_id_
+# ​/data​/{file_id}
+# delete all locations of a stored data file and remove its record from indexd.
+# After a user uploads a data file and it is registered in indexd,
+# but before it is mapped into the graph via metadata submission,
+# this endpoint will delete the file from its storage locations (saved in the record in indexd)
+# and delete the record in indexd.
+    if isinstance(guids, str):
+        guids = [guids]
+    if isinstance(guids, list):
+        for guid in guids:
+            fence_url = api + 'user/data/'
+            response = requests.delete(fence_url + guid,auth=auth)
+            if (response.status_code == 204):
+                print("Successfully deleted GUID {}".format(guid))
+            else:
+                print("Error deleting GUID {}:".format(guid))
+                print(response.reason)
+
+def plot_categorical_property(property,df):
+    #plot a bar graph of categorical variable counts in a dataframe
+    df = df[df[property].notnull()]
+    N = len(df)
+    categories, counts = zip(*Counter(df[property]).items())
+    y_pos = np.arange(len(categories))
+    plt.bar(y_pos, counts, align='center', alpha=0.5)
+    #plt.figtext(.8, .8, 'N = '+str(N))
+    plt.xticks(y_pos, categories)
+    plt.ylabel('Counts')
+    plt.title(str('Counts by '+category+' (N = '+str(N)+')'))
+    plt.xticks(rotation=90, horizontalalignment='center')
+    #add N for each bar
+    plt.show()
+
+def plot_numeric_property(property,df):
+    #plot a histogram of numeric variable in a dataframe
+    df = df[df[property].notnull()]
+    data = list(df[property])
+    N = len(data)
+    fig = sns.distplot(data, hist=False, kde=True,
+             bins=int(180/5), color = 'darkblue',
+             kde_kws={'linewidth': 2})
+    plt.figtext(.8, .8, 'N = '+str(N))
+    plt.xlabel(property)
+    plt.ylabel("Probability")
+    plt.title("PDF for all projects "+property) # You can comment this line out if you don't need title
+    plt.show(fig)
+
+    projects = list(set(df['project_id']))
+    for project in projects:
+        proj_df = df[df['project_id']==project]
+        data = list(proj_df[property])
+        N = len(data)
+        fig = sns.distplot(data, hist=False, kde=True,
+                 bins=int(180/5), color = 'darkblue',
+                 kde_kws={'linewidth': 2})
+        plt.figtext(.8, .8, 'N = '+str(N))
+        plt.xlabel(property)
+        plt.ylabel("Probability")
+        plt.title("PDF for "+property+' in ' + project) # You can comment this line out if you don't need title
+        plt.show(fig)
+
+def node_record_counts(project_id):
+    query_txt = """{node (first:-1, project_id:"%s"){type}}""" % (project_id)
+    res = sub.query(query_txt)
+    df = json_normalize(res['data']['node'])
+    counts = Counter(df['type'])
+    df = pd.DataFrame.from_dict(counts, orient='index').reset_index()
+    df = df.rename(columns={'index':'node', 0:'count'})
+    return df
+
+def list_project_files(project_id):
+    query_txt = """{datanode(first:-1,project_id: "%s") {type file_name id object_id}}""" % (project_id)
+    res = sub.query(query_txt)
+    if len(res['data']['datanode']) == 0:
+        print('Project ' + project_id + ' has no records in any data_file node.')
+        return None
+    else:
+        df = json_normalize(res['data']['datanode'])
+        json_normalize(Counter(df['type']))
+        #guids = df.loc[(df['type'] == node)]['object_id']
+        return df
+
+def get_data_file_tsvs(projects=None,remove_empty=True):
+    # Download TSVs for all data file nodes in the specified projects
+    #if no projects specified, get node for all projects
+    if projects is None:
+        projects = list(json_normalize(sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+    elif isinstance(projects, str):
+        projects = [projects]
+    # Make a directory for files
+    mydir = 'downloaded_data_file_tsvs'
+    if not os.path.exists(mydir):
+        os.makedirs(mydir)
+    # list all data_file 'node_id's in the data model
+    dnodes = list(set(json_normalize(sub.query("""{_node_type (first:-1,category:"data_file") {id}}""")['data']['_node_type'])['id']))
+    mnodes = list(set(json_normalize(sub.query("""{_node_type (first:-1,category:"metadata_file") {id}}""")['data']['_node_type'])['id']))
+    inodes = list(set(json_normalize(sub.query("""{_node_type (first:-1,category:"index_file") {id}}""")['data']['_node_type'])['id']))
+    nodes = list(set(dnodes + mnodes + inodes))
+    # get TSVs and return a master pandas DataFrame with records from every project
+    dfs = []
+    df_len = 0
+    for node in nodes:
+        for project in projects:
+            filename = str(mydir+'/'+project+'_'+node+'.tsv')
+            if os.path.isfile(filename):
+                print('\n'+filename + " previously downloaded.")
+            else:
+                prog,proj = project.split('-',1)
+                sub.export_node(prog,proj,node,'tsv',filename) # use the gen3sdk to download a tsv for the node
+            df1 = pd.read_csv(filename, sep='\t', header=0) # read in the downloaded TSV to append to the master (all projects) TSV
+            dfs.append(df1)
+            df_len+=len(df1) # Counting the total number of records in the node
+            print(filename +' has '+str(len(df1))+' records.')
+            if remove_empty is True:
+                if df1.empty:
+                    print('Removing empty file: ' + filename)
+                    cmd = ['rm',filename] #look in the download directory
+                    try:
+                        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+                    except Exception as e:
+                        output = e.output.decode('UTF-8')
+                        print("ERROR:" + output)
+        all_data = pd.concat(dfs, ignore_index=True, sort=False)
+        print('\nlength of all dfs: ' +str(df_len)) # this should match len(all_data) below
+        nodefile = str('master_'+node+'.tsv')
+        all_data.to_csv(str(mydir+'/'+nodefile),sep='\t')
+        print('Master node TSV with '+str(len(all_data))+' total records written to '+nodefile+'.') # this should match df_len above
+    return all_data
+
+def list_guids_in_nodes(nodes=None,projects=None):
+    # Get GUIDs for node(s) in project(s)
+    if nodes is None: # get all data_file/metadata_file/index_file 'node_id's in the data model
+        categories = ['data_file','metadata_file','index_file']
+        nodes = []
+        for category in categories:
+            query_txt = """{_node_type (first:-1,category:"%s") {id}}""" % category
+            df = json_normalize(sub.query(query_txt)['data']['_node_type'])
+            if not df.empty:
+                nodes = list(set(nodes + list(set(df['id']))))
+    elif isinstance(nodes,str):
+        nodes = [nodes]
+    if projects is None:
+        projects = list(json_normalize(sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+    elif isinstance(projects, str):
+        projects = [projects]
+    all_guids = {} # all_guids will be a nested dict: {project_id: {node1:[guids1],node2:[guids2]} }
+    for project in projects:
+        all_guids[project] = {}
+        for node in nodes:
+            guids=[]
+            query_txt = """{%s (first:-1,project_id:"%s") {project_id file_size file_name object_id id}}""" % (node,project)
+            res = sub.query(query_txt)
+            if len(res['data'][node]) == 0:
+                print(project + ' has no records in node ' + node + '.')
+                guids = None
+            else:
+                df = json_normalize(res['data'][node])
+                guids = list(df['object_id'])
+                print(project + ' has '+str(len(guids))+' records in node ' + node + '.')
+            all_guids[project][node] = guids
+            # nested dict: all_guids[project][node]
+    return all_guids
+
+
+def download_files_by_guids(guids=None):
+    # Make a directory for files
+    mydir = 'downloaded_data_files'
+    if not os.path.exists(mydir):
+        os.makedirs(mydir)
+    if isinstance(guids, str):
+        guids = [guids]
+    if isinstance(guids, list):
+        file_names = {}
+        for guid in guids:
+            cmd = client+' download --profile='+profile+' --guid='+guid
+            try:
+                output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
+                try:
+                    file_name = re.search('Successfully downloaded (.+)\\n', output).group(1)
+                    cmd = 'mv ' + file_name + ' ' + mydir
+                    try:
+                        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
+                    except Exception as e:
+                        output = e.output.decode('UTF-8')
+                        print("ERROR:" + output)
+                except AttributeError:
+                    file_name = '' # apply your error handling
+                print('Successfully downloaded: '+file_name)
+                file_names[guid] = file_name
+            except Exception as e:
+                output = e.output.decode('UTF-8')
+                print("ERROR:" + output)
+    else:
+        print('Provide a list of guids to download: "get_file_by_guid(guids=guid_list)"')
+    return file_names
