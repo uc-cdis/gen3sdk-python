@@ -1,7 +1,7 @@
 ## Gen3 SDK Expansion pack
 
 # Install gen3sdk via pip
-!pip install --force --upgrade gen3 --ignore-installed certifi
+#!pip install --force --upgrade gen3 --ignore-installed certifi
 
 # Import some Python packages
 import requests, json, fnmatch, os, os.path, sys, subprocess, glob
@@ -19,20 +19,23 @@ import numpy as np
 import seaborn as sns
 
 # Download and configure gen3-client in Jupyter Notebook
-api = 'https://datacommons.org'
-profile = 'prof'
-client = '/home/jovyan/.gen3/gen3-client'
-creds = '/home/jovyan/pd/my-credentials.json'
+#api = 'https://data.bloodpac.org/' # BloodPAC
+#api = 'https://data.braincommons.org/' # BRAIN Commons
+#api = 'https://dcf-interop.kidsfirstdrc.org/' #Kids First
+api = 'https://gen3.datastage.io/' # STAGE (old "DCP")
+profile = 'stage'
+client = 'gen3-client'
+creds = '/Users/christopher/Downloads/stage-credentials.json'
 
 auth = Gen3Auth(api, refresh_file=creds)
 sub = Gen3Submission(api, auth)
 file = Gen3File(api, auth)
 
-!curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*linux |  cut -d '"' -f 4 | wget -qi -
-!unzip dataclient_linux.zip
-!mkdir /home/jovyan/.gen3
-!mv gen3-client /home/jovyan/.gen3
-!rm dataclient_linux.zip
+# !curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*linux |  cut -d '"' -f 4 | wget -qi -
+# !unzip dataclient_linux.zip
+# !mkdir /home/jovyan/.gen3
+# !mv gen3-client /home/jovyan/.gen3
+# !rm dataclient_linux.zip
 #!/home/jovyan/.gen3/gen3-client configure --profile=bpa --apiendpoint=https://data.bloodpac.org --cred=/home/jovyan/pd/bpa-credentials.json
 cmd = client +' configure --profile='+profile+' --apiendpoint='+api+' --cred='+creds
 try:
