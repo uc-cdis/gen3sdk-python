@@ -1,9 +1,9 @@
-## Gen3 SDK Expansion pack
+## Gen3 SDK Functions
 
-# Install gen3sdk via pip
-#!pip install --force --upgrade gen3 --ignore-installed certifi
+## Install gen3sdk via pip
+!pip install --force --upgrade gen3 --ignore-installed certifi
 
-# Import some Python packages
+## Import some Python packages
 import requests, json, fnmatch, os, os.path, sys, subprocess, glob
 import pandas as pd
 from pandas.io.json import json_normalize
@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
-# Download and configure gen3-client in Jupyter Notebook
+## Download and configure gen3-client in Jupyter Notebook
 #api = 'https://data.bloodpac.org/' # BloodPAC
 #api = 'https://data.braincommons.org/' # BRAIN Commons
 #api = 'https://dcf-interop.kidsfirstdrc.org/' #Kids First
@@ -31,6 +31,7 @@ auth = Gen3Auth(api, refresh_file=creds)
 sub = Gen3Submission(api, auth)
 file = Gen3File(api, auth)
 
+## Download and configure the gen3-client
 # !curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*linux |  cut -d '"' -f 4 | wget -qi -
 # !unzip dataclient_linux.zip
 # !mkdir /home/jovyan/.gen3
