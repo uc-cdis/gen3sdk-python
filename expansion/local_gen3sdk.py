@@ -4,7 +4,7 @@
 !pip install --force --upgrade gen3 --ignore-installed certifi
 
 ## Import some Python packages
-import requests, json, fnmatch, os, os.path, sys, subprocess, glob
+import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath
 import pandas as pd
 from pandas.io.json import json_normalize
 from collections import Counter
@@ -22,10 +22,14 @@ import seaborn as sns
 #api = 'https://data.bloodpac.org/' # BloodPAC
 #api = 'https://data.braincommons.org/' # BRAIN Commons
 #api = 'https://dcf-interop.kidsfirstdrc.org/' #Kids First
-api = 'https://gen3.datastage.io/' # STAGE (old "DCP")
-profile = 'stage'
+#api = 'https://gen3.datastage.io/' # STAGE (old "DCP")
+#profile = 'stage'
 client = 'gen3-client'
-creds = '/Users/christopher/Downloads/stage-credentials.json'
+#creds = '/Users/christopher/Downloads/stage-credentials.json'
+api = 'https://vpodc.org/' # VA
+profile = 'vpodc'
+creds = '/Users/christopher/Downloads/vpodc-credentials.json'
+
 
 auth = Gen3Auth(api, refresh_file=creds)
 sub = Gen3Submission(api, auth)
@@ -68,7 +72,7 @@ def s3_files(path, bucket, profile, pattern='*',verbose=True):
     s3_path = bucket + path
     cmd = ['aws', 's3', 'ls', s3_path, '--profile', profile]
     try:
-        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
     except Exception as e:
         output = e.output.decode('UTF-8')
         print("ERROR:" + output)
@@ -104,7 +108,7 @@ def get_s3_files(path, bucket, profile, files=None, mydir=None):
               print(s3_filepath)
               cmd = ['aws', 's3', '--profile', profile, 'cp', s3_filepath, mydir]
               try:
-                  output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+                  output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
               except Exception as e:
                   output = e.output.decode('UTF-8')
                   print("ERROR:" + output)
@@ -113,7 +117,7 @@ def get_s3_files(path, bucket, profile, files=None, mydir=None):
        print("Syncing directory " + s3_path)
        cmd = ['aws', 's3', '--profile', profile, 'sync', s3_path, mydir]
        try:
-          output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+          output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
        except Exception as e:
           output = e.output.decode('UTF-8')
           print("ERROR:" + output)
@@ -167,6 +171,8 @@ def get_node_tsvs(node,projects=None):
         os.makedirs(mydir)
     if projects is None: #if no projects specified, get node for all projects
         project_ids = list(json_normalize(sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+    elif isinstance(projects, str):
+        projects = [projects]
     dfs = []
     df_len = 0
     for project in projects:
@@ -322,7 +328,7 @@ def get_urls(guids,api):
         print("Please provide one or a list of data file GUIDs: get_urls\(guids=guid_list\)")
     return urls
 
-def get_guid_for_filename(file_names,api):
+def get_guids_for_filenames(file_names,api):
     # Get GUIDs for a list of file_names
     if isinstance(file_names, str):
         file_names = [file_names]
@@ -535,3 +541,37 @@ def download_files_by_guids(guids=None):
     else:
         print('Provide a list of guids to download: "get_file_by_guid(guids=guid_list)"')
     return file_names
+
+
+def get_records_for_uuids(ids,project,api):
+    dfs = []
+    for uuid in ids:
+        #Gen3Submission.export_record("DCF", "CCLE", "d70b41b9-6f90-4714-8420-e043ab8b77b9", "json", filename="DCF-CCLE_one_record.json")
+        #export_record(self, program, project, uuid, fileformat, filename=None)
+        mydir = str('project_uuids/'+project+'_tsvs') #create the directory to store TSVs
+        if not os.path.exists(mydir):
+            os.makedirs(mydir)
+        filename = str(mydir+'/'+project+'_'+uuid+'.tsv')
+        if os.path.isfile(filename):
+            print("File previously downloaded.")
+        else:
+            prog,proj = project.split('-',1)
+            sub.export_record(prog,proj,uuid,'tsv',filename)
+        df1 = pd.read_csv(filename, sep='\t', header=0)
+        dfs.append(df1)
+    all_data = pd.concat(dfs, ignore_index=True)
+    master = str('master_uuids_'+project+'.tsv')
+    all_data.to_csv(str(mydir+'/'+master),sep='\t')
+    print('Master node TSV with '+str(len(all_data))+' total records written to '+master+'.')
+    return all_data
+
+def find_duplicate_filenames(node,project):
+    #download the node
+    df = get_node_tsvs(node,project)
+    counts = Counter(df['file_name'])
+    count_df = pd.DataFrame.from_dict(counts, orient='index').reset_index()
+    count_df = count_df.rename(columns={'index':'file_name', 0:'count'})
+    dup_df = count_df.loc[count_df['count']>1]
+    dup_files = list(dup_df['file_name'])
+    dups = df[df['file_name'].isin(dup_files)]
+    return dups

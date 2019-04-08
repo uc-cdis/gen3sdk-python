@@ -4,7 +4,7 @@
 !pip install --force --upgrade gen3 --ignore-installed certifi
 
 # Import some Python packages
-import requests, json, fnmatch, os, os.path, sys, subprocess, glob
+import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy
 import pandas as pd
 from pandas.io.json import json_normalize
 from collections import Counter
@@ -320,7 +320,7 @@ def get_urls(guids,api):
         print("Please provide one or a list of data file GUIDs: get_urls\(guids=guid_list\)")
     return urls
 
-def get_guid_for_filename(file_names,api):
+def get_guids_for_filenames(file_names,api):
     # Get GUIDs for a list of file_names
     if isinstance(file_names, str):
         file_names = [file_names]
