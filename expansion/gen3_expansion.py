@@ -153,7 +153,7 @@ def get_project_ids(node=None,name=None):
 
 
 # Create master TSV of data from each project per node
-def get_node_tsvs(node,projects=None):
+def get_node_tsvs(node, projects=None, overwrite=False):
     #Get a TSV of the node(s) specified for each project specified
     if not isinstance(node, str): # Create folder on VM for downloaded files
         mydir = 'downloaded_tsvs'
@@ -169,7 +169,7 @@ def get_node_tsvs(node,projects=None):
     df_len = 0
     for project in projects:
         filename = str(mydir+'/'+project+'_'+node+'.tsv')
-        if os.path.isfile(filename):
+        if (os.path.isfile(filename)) and (overwrite is False):
             print("File previously downloaded.")
         else:
             prog,proj = project.split('-',1)
@@ -559,11 +559,11 @@ def get_records_for_uuids(ids,project,api):
 
 def find_duplicate_filenames(node,project):
     #download the node
-    df = get_node_tsvs(node,project)
+    df = get_node_tsvs(node,project,overwrite=True)
     counts = Counter(df['file_name'])
     count_df = pd.DataFrame.from_dict(counts, orient='index').reset_index()
     count_df = count_df.rename(columns={'index':'file_name', 0:'count'})
     dup_df = count_df.loc[count_df['count']>1]
     dup_files = list(dup_df['file_name'])
-    dups = df[df['file_name'].isin(dup_files)]
+    dups = df[df['file_name'].isin(dup_files)].sort_values(by='md5sum', ascending=False)
     return dups
