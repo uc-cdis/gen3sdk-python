@@ -3,20 +3,20 @@
 # # Install gen3sdk via pip
 # !pip install --force --upgrade gen3 --ignore-installed certifi
 #
-# # Import some Python packages
-# import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy
-# import pandas as pd
-# from pandas.io.json import json_normalize
-# from collections import Counter
-#
-# import gen3
-# from gen3.auth import Gen3Auth
-# from gen3.submission import Gen3Submission
-# from gen3.file import Gen3File
-#
-# import matplotlib.pyplot as plt
-# import numpy as np
-# import seaborn as sns
+# Import some Python packages
+import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy
+import pandas as pd
+from pandas.io.json import json_normalize
+from collections import Counter
+
+import gen3
+from gen3.auth import Gen3Auth
+from gen3.submission import Gen3Submission
+from gen3.file import Gen3File
+
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
 #
 # # Download and configure gen3-client in Jupyter Notebook
 # api = 'https://datacommons.org'
