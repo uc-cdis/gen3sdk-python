@@ -637,12 +637,14 @@ def delete_duplicates(dups,project_id,api):
     success = []
     results = {}
     sids = list(dups.keys())
+    total = len(sids)
+    count = 1
     for sid in sids:
         while len(dups[sid]) > 1:
             uuid = dups[sid].pop(1)
             r = json.loads(sub.delete_record(program,project,uuid))
             if r['code'] == 200:
-                print("Deleted record id: "+uuid)
+                print("Deleted record id ("+count+"/"+total+"): "+uuid)
                 success.append(uuid)
             else:
                 print("Could not deleted record id: "+uuid)
@@ -650,4 +652,5 @@ def delete_duplicates(dups,project_id,api):
                 failure.append(uuid)
         results['failure'] = failure
         results['success'] = success
+        count += 1
     return results
