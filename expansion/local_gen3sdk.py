@@ -1,7 +1,7 @@
 ## Gen3 SDK Functions
 
 ## Install gen3sdk via pip
-!pip install --force --upgrade gen3 --ignore-installed certifi
+#!pip install --force --upgrade gen3 --ignore-installed certifi
 
 ## Import some Python packages
 import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath

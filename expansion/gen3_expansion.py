@@ -17,30 +17,30 @@ from gen3.file import Gen3File
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-#
-# # Download and configure gen3-client in Jupyter Notebook
-# api = 'https://datacommons.org'
-# profile = 'prof'
-# client = '/home/jovyan/.gen3/gen3-client'
-# creds = '/home/jovyan/pd/my-credentials.json'
-#
-# auth = Gen3Auth(api, refresh_file=creds)
-# sub = Gen3Submission(api, auth)
-# file = Gen3File(api, auth)
-#
-# !curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*linux |  cut -d '"' -f 4 | wget -qi -
-# !unzip dataclient_linux.zip
-# !mkdir /home/jovyan/.gen3
-# !mv gen3-client /home/jovyan/.gen3
-# !rm dataclient_linux.zip
-# #!/home/jovyan/.gen3/gen3-client configure --profile=bpa --apiendpoint=https://data.bloodpac.org --cred=/home/jovyan/pd/bpa-credentials.json
-# cmd = client +' configure --profile='+profile+' --apiendpoint='+api+' --cred='+creds
-# try:
-#     output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
-# except Exception as e:
-#     output = e.output.decode('UTF-8')
-#     print("ERROR:" + output)
-# print(subprocess.check_output(client).decode('UTF-8')) #check that installation is complete
+
+# Download and configure gen3-client in Jupyter Notebook
+api = 'https://datacommons.org'
+profile = 'prof'
+client = '/home/jovyan/.gen3/gen3-client'
+creds = '/home/jovyan/pd/my-credentials.json'
+
+auth = Gen3Auth(api, refresh_file=creds)
+sub = Gen3Submission(api, auth)
+file = Gen3File(api, auth)
+
+!curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*linux |  cut -d '"' -f 4 | wget -qi -
+!unzip dataclient_linux.zip
+!mkdir /home/jovyan/.gen3
+!mv gen3-client /home/jovyan/.gen3
+!rm dataclient_linux.zip
+#!/home/jovyan/.gen3/gen3-client configure --profile=bpa --apiendpoint=https://data.bloodpac.org --cred=/home/jovyan/pd/bpa-credentials.json
+cmd = client +' configure --profile='+profile+' --apiendpoint='+api+' --cred='+creds
+try:
+    output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
+except Exception as e:
+    output = e.output.decode('UTF-8')
+    print("ERROR:" + output)
+print(subprocess.check_output(client).decode('UTF-8')) #check that installation is complete
 
 ### AWS S3 Tools:
 def s3_ls(path, bucket, profile, pattern='*'):
@@ -567,3 +567,22 @@ def find_duplicate_filenames(node,project):
     dup_files = list(dup_df['file_name'])
     dups = df[df['file_name'].isin(dup_files)].sort_values(by='md5sum', ascending=False)
     return dups
+
+def paginate_query(node,project,props=['id','submitter_id'],chunk_size=1000):
+    properties = ' '.join(map(str,props))
+    # get size of query:
+    query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
+    res = sub.query(query_txt)
+    count_name = '_'.join(map(str,['',node,'count']))
+    qsize = res['data'][count_name]
+
+    offset = 0
+    dfs = []
+    while offset < qsize:
+            query_txt = """{%s (first: %s, offset: %s, project_id:"%s"){%s}}""" % (node, chunk_size, offset, project_id, properties)
+            res = sub.query(query_txt)
+            df1 = json_normalize(res['data'][node])
+            dfs.append(df1)
+            offset += chunk_size
+    df = pd.concat(dfs, ignore_index=True)
+    return df
