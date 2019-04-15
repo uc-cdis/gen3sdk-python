@@ -609,10 +609,10 @@ def get_duplicates(nodes,projects,api):
 
     pdups = {}
     for project_id in projects:
-        pdups[project_id] = []
+        pdups[project_id] = {}
         print("Getting duplicates in project "+project_id)
         for node in nodes:
-            print("\t"+node)
+            print("\tChecking "+node+" node")
             df = paginate_query(node=node,project_id=project_id,props=['id','submitter_id'],chunk_size=1000)
             counts = Counter(df['submitter_id'])
             c = pd.DataFrame.from_dict(counts, orient='index').reset_index()
@@ -622,5 +622,32 @@ def get_duplicates(nodes,projects,api):
             ids = {}
             for sid in dups:
                 ids[sid] = list(df.loc[df['submitter_id']==sid]['id'])
-            pdups[project_id].append([node,ids])
+            pdups[project_id][node] = ids
     return pdups
+
+
+
+def delete_duplicates(dups,project_id,api):
+
+    if not isinstance(dups, dict):
+        print("Must provide duplicates as a dictionary of keys:submitter_ids and values:ids")
+
+    program,project = project_id.split('-',1)
+    failure = []
+    success = []
+    results = {}
+    sids = list(dups.keys())
+    for sid in sids:
+        while len(dups[sid]) > 1:
+            uuid = dups[sid].pop(1)
+            r = json.loads(sub.delete_record(program,project,uuid))
+            if r['code'] == 200:
+                print("Deleted record id: "+uuid)
+                success.append(uuid)
+            else:
+                print("Could not deleted record id: "+uuid)
+                print("API Response: " + r['code'])
+                failure.append(uuid)
+        results['failure'] = failure
+        results['success'] = success
+    return results
