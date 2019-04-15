@@ -607,8 +607,12 @@ def get_duplicates(nodes,projects,api):
     elif isinstance(nodes, str):
         nodes = [nodes]
 
+    pdups = {}
     for project_id in projects:
+        pdups[project_id] = []
+        print("Getting duplicates in project "+project_id)
         for node in nodes:
+            print("\t"+node)
             df = paginate_query(node=node,project_id=project_id,props=['id','submitter_id'],chunk_size=1000)
             counts = Counter(df['submitter_id'])
             c = pd.DataFrame.from_dict(counts, orient='index').reset_index()
@@ -618,4 +622,5 @@ def get_duplicates(nodes,projects,api):
             ids = {}
             for sid in dups:
                 ids[sid] = list(df.loc[df['submitter_id']==sid]['id'])
-    return ids
+            pdups[project_id].append([node,ids])
+    return pdups
