@@ -568,7 +568,8 @@ def find_duplicate_filenames(node,project):
     dups = df[df['file_name'].isin(dup_files)].sort_values(by='md5sum', ascending=False)
     return dups
 
-def paginate_query(node,project,props=['id','submitter_id'],chunk_size=1000):
+def paginate_query(node,project_id,props=['id','submitter_id'],chunk_size=1000):
+    program,project = project_id.split('-',1)
     properties = ' '.join(map(str,props))
     # get size of query:
     query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
