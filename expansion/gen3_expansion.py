@@ -587,3 +587,35 @@ def paginate_query(node,project_id,props=['id','submitter_id'],chunk_size=1000):
             offset += chunk_size
     df = pd.concat(dfs, ignore_index=True)
     return df
+
+
+# find duplicates
+def get_duplicates(nodes,projects,api):
+    #if no projects specified, get node for all projects
+    if projects is None:
+        projects = list(json_normalize(sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+    elif isinstance(projects, str):
+        projects = [projects]
+
+    # if no nodes specified, get all nodes in data commons
+    if nodes is None:
+        all_nodes = sorted(list(set(json_normalize(sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
+        remove_nodes = ['program','project','root','data_release'] #remove these nodes from list of nodes
+        for node in remove_nodes:
+            if node in all_nodes: all_nodes.remove(node)
+        nodes = all_nodes
+    elif isinstance(nodes, str):
+        nodes = [nodes]
+
+    for project_id in projects:
+        for node in nodes:
+            df = paginate_query(node=node,project_id=project_id,props=['id','submitter_id'],chunk_size=1000)
+            counts = Counter(df['submitter_id'])
+            c = pd.DataFrame.from_dict(counts, orient='index').reset_index()
+            c = c.rename(columns={'index':'submitter_id', 0:'count'})
+            dupc = c.loc[c['count']>1]
+            dups= list(set(dupc['submitter_id']))
+            ids = {}
+            for sid in dups:
+                ids[sid] = list(df.loc[df['submitter_id']==sid]['id'])
+    return ids
