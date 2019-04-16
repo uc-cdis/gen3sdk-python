@@ -576,11 +576,12 @@ def paginate_query(node,project_id,props=['id','submitter_id'],chunk_size=1000):
     res = sub.query(query_txt)
     count_name = '_'.join(map(str,['',node,'count']))
     qsize = res['data'][count_name]
-
+    print('Total of ' + str(qsize) + ' records in node ' + node)
     offset = 0
     dfs = []
     df = pd.DataFrame()
     while offset < qsize:
+            print('Offset set to: '+str(offset))
             query_txt = """{%s (first: %s, offset: %s, project_id:"%s"){%s}}""" % (node, chunk_size, offset, project_id, properties)
             res = sub.query(query_txt)
             df1 = json_normalize(res['data'][node])
