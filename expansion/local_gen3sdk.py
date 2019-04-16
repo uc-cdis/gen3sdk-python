@@ -20,16 +20,17 @@ import seaborn as sns
 
 ## Download and configure gen3-client in Jupyter Notebook
 #api = 'https://data.bloodpac.org/' # BloodPAC
-#api = 'https://data.braincommons.org/' # BRAIN Commons
+api = 'https://data.braincommons.org/' # BRAIN Commons
+profile = 'bc'
+creds = '/Users/christopher/Downloads/bc-credentials.json'
 #api = 'https://dcf-interop.kidsfirstdrc.org/' #Kids First
 #api = 'https://gen3.datastage.io/' # STAGE (old "DCP")
 #profile = 'stage'
-client = 'gen3-client'
 #creds = '/Users/christopher/Downloads/stage-credentials.json'
-api = 'https://vpodc.org/' # VA
-profile = 'vpodc'
-creds = '/Users/christopher/Downloads/vpodc-credentials.json'
-
+# api = 'https://vpodc.org/' # VA
+#profile = 'vpodc'
+#creds = '/Users/christopher/Downloads/vpodc-credentials.json'
+client = 'gen3-client'
 
 auth = Gen3Auth(api, refresh_file=creds)
 sub = Gen3Submission(api, auth)

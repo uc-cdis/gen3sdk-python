@@ -579,17 +579,17 @@ def paginate_query(node,project_id,props=['id','submitter_id'],chunk_size=1000):
 
     offset = 0
     dfs = []
+    df = pd.DataFrame()
     while offset < qsize:
             query_txt = """{%s (first: %s, offset: %s, project_id:"%s"){%s}}""" % (node, chunk_size, offset, project_id, properties)
             res = sub.query(query_txt)
             df1 = json_normalize(res['data'][node])
             dfs.append(df1)
             offset += chunk_size
-    df = pd.concat(dfs, ignore_index=True)
+    if len(dfs) > 0:
+        df = pd.concat(dfs, ignore_index=True)
     return df
 
-
-# find duplicates
 def get_duplicates(nodes,projects,api):
     #if no projects specified, get node for all projects
     if projects is None:
@@ -614,15 +614,17 @@ def get_duplicates(nodes,projects,api):
         for node in nodes:
             print("\tChecking "+node+" node")
             df = paginate_query(node=node,project_id=project_id,props=['id','submitter_id'],chunk_size=1000)
-            counts = Counter(df['submitter_id'])
-            c = pd.DataFrame.from_dict(counts, orient='index').reset_index()
-            c = c.rename(columns={'index':'submitter_id', 0:'count'})
-            dupc = c.loc[c['count']>1]
-            dups= list(set(dupc['submitter_id']))
-            ids = {}
-            for sid in dups:
-                ids[sid] = list(df.loc[df['submitter_id']==sid]['id'])
-            pdups[project_id][node] = ids
+            if not df.empty:
+                counts = Counter(df['submitter_id'])
+                c = pd.DataFrame.from_dict(counts, orient='index').reset_index()
+                c = c.rename(columns={'index':'submitter_id', 0:'count'})
+                dupc = c.loc[c['count']>1]
+                if not dupc.empty:
+                    dups= list(set(dupc['submitter_id']))
+                    ids = {}
+                    for sid in dups:
+                        ids[sid] = list(df.loc[df['submitter_id']==sid]['id'])
+                    pdups[project_id][node] = ids
     return pdups
 
 
