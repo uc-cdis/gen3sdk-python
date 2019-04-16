@@ -632,7 +632,7 @@ def get_duplicates(nodes,projects,api):
 def delete_duplicates(dups,project_id,api):
 
     if not isinstance(dups, dict):
-        print("Must provide duplicates as a dictionary of keys:submitter_ids and values:ids")
+        print("Must provide duplicates as a dictionary of keys:submitter_ids and values:ids; use get_duplicates function")
 
     program,project = project_id.split('-',1)
     failure = []
