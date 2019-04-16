@@ -656,3 +656,26 @@ def delete_duplicates(dups,project_id,api):
         results['success'] = success
         count += 1
     return results
+
+
+def query_records(node,project_id,api,chunk_size=100):
+    schema = sub.get_dictionary_node(node)
+    props = list(schema['properties'].keys())
+    links = list(schema['links'])
+    # need to get links out of the list of properties because they're handled differently in the query
+    link_names = []
+    for link in links:
+        link_list = list(link)
+        if 'subgroup' in link_list:
+            subgroup = link['subgroup']
+            for sublink in subgroup:
+                link_names.append(sublink['name'])
+        else:
+            link_names.append(link['name'])
+    for link in link_names:
+        if link in props:
+            props.remove(link)
+            props.append(str(link + '{id submitter_id}'))
+
+    df = paginate_query(node,project_id,props,chunk_size)
+    return df
