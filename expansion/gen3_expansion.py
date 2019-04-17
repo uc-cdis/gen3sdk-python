@@ -4,7 +4,7 @@
 # !pip install --force --upgrade gen3 --ignore-installed certifi
 #
 # Import some Python packages
-import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy
+import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy, re
 import pandas as pd
 from pandas.io.json import json_normalize
 from collections import Counter
@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
-# Download and configure gen3-client in Jupyter Notebook
+# Create the gen3sdk objects for authentication and submission
 api = 'https://datacommons.org'
 profile = 'prof'
 client = '/home/jovyan/.gen3/gen3-client'
@@ -28,6 +28,7 @@ auth = Gen3Auth(api, refresh_file=creds)
 sub = Gen3Submission(api, auth)
 file = Gen3File(api, auth)
 
+# Download and configure gen3-client in Jupyter Notebook
 !curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*linux |  cut -d '"' -f 4 | wget -qi -
 !unzip dataclient_linux.zip
 !mkdir /home/jovyan/.gen3
@@ -592,6 +593,7 @@ def paginate_query(node,project_id,props=['id','submitter_id'],chunk_size=1000):
     return df
 
 def get_duplicates(nodes,projects,api):
+    # Get duplicate SUBMITTER_IDs in a node, which SHOULD NEVER HAPPEN but alas it has, thus this script
     #if no projects specified, get node for all projects
     if projects is None:
         projects = list(json_normalize(sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
@@ -659,7 +661,8 @@ def delete_duplicates(dups,project_id,api):
     return results
 
 
-def query_records(node,project_id,api,chunk_size=100):
+def query_records(node,project_id,api,chunk_size=500):
+    # Using paginated query, Download all data in a node as a DataFrame and save as TSV
     schema = sub.get_dictionary_node(node)
     props = list(schema['properties'].keys())
     links = list(schema['links'])
@@ -679,4 +682,6 @@ def query_records(node,project_id,api,chunk_size=100):
             props.append(str(link + '{id submitter_id}'))
 
     df = paginate_query(node,project_id,props,chunk_size)
+    outfile = '_'.join(project_id,node,'query.tsv')
+    df.to_csv(outfile, sep='\t', index=False, encoding='utf-8')
     return df
