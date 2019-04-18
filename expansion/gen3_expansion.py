@@ -686,11 +686,9 @@ def query_records(node,project_id,api,chunk_size=500):
     df.to_csv(outfile, sep='\t', index=False, encoding='utf-8')
     return df
 
-
-def summarize_submission(errors_file,submission_file,write_tsvs=True):
-    #res = summarize_submission(errors_file,submission_file,write_tsvs=True)
-    # Group entities in details into succeeded (successfully created/updated) and failed valid/invalid
-    with open(errors_file, 'r') as file:
+# Group entities in details into succeeded (successfully created/updated) and failed valid/invalid
+def summarize_submission(tsv,details,write_tsvs):
+    with open(details, 'r') as file:
         f = file.read().rstrip('\n')
     chunks = f.split('\n\n')
     invalid = []
@@ -708,11 +706,13 @@ def summarize_submission(errors_file,submission_file,write_tsvs=True):
             responses.append(response)
             for entity in entities:
                 sid = entity['unique_keys'][0]['submitter_id']
-                if entity['valid']:
+                if entity['valid']: #valid but failed
                     valid.append(sid)
-                else:
-                    messages.append(entity['errors'][0]['message'])
+                else: #invalid and failed
+                    message = entity['errors'][0]['message']
+                    messages.append(message)
                     invalid.append(sid)
+                    print('Invalid record: '+sid+'\n\tmessage: '+message)
         elif 'code' not in d:
             responses.append('Chunk ' + str(chunk_count) + ' Timed-Out: '+str(d))
         else:
@@ -729,18 +729,23 @@ def summarize_submission(errors_file,submission_file,write_tsvs=True):
     results['succeeded'] = succeeded
     results['responses'] = responses
     submitted = succeeded + valid + invalid # 1231 in test data
+
     # Find the rows in submitted TSV that are not in either failed or succeeded, 8 time outs in test data, 8*30 = 240 records
     if write_tsvs is True:
-        df = pd.read_csv(submission_file, sep='\t',header=0)
+        print("Writing TSVs: ")
+        df = pd.read_csv(tsv, sep='\t',header=0)
         missing_df = df.loc[~df['submitter_id'].isin(submitted)] # these are records that timed-out, 240 in test data
         valid_df = df.loc[df['submitter_id'].isin(valid)] # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
         invalid_df = df.loc[df['submitter_id'].isin(invalid)] # these are records that failed due to being invalid and should be reformatted
-
-        sub_name = ntpath.basename(submission_file)
+        sub_name = ntpath.basename(tsv)
         missing_file = 'missing_' + sub_name
         valid_file = 'valid_' + sub_name
         invalid_file = 'invalid_' + sub_name
         missing_df.to_csv(missing_file, sep='\t', index=False, encoding='utf-8')
         valid_df.to_csv(valid_file, sep='\t', index=False, encoding='utf-8')
         invalid_df.to_csv(invalid_file, sep='\t', index=False, encoding='utf-8')
+        print('\t' + missing_file)
+        print('\t' + valid_file)
+        print('\t' + invalid_file)
+
     return results
