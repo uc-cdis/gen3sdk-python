@@ -729,12 +729,14 @@ def summarize_submission(tsv,details,write_tsvs):
     results['succeeded'] = succeeded
     results['responses'] = responses
     submitted = succeeded + valid + invalid # 1231 in test data
+    missing_df = df.loc[~df['submitter_id'].isin(submitted)] # these are records that timed-out, 240 in test data
+    missing = list(missing_df['submitter_id'])
+    results['missing'] = missing
 
     # Find the rows in submitted TSV that are not in either failed or succeeded, 8 time outs in test data, 8*30 = 240 records
     if write_tsvs is True:
         print("Writing TSVs: ")
         df = pd.read_csv(tsv, sep='\t',header=0)
-        missing_df = df.loc[~df['submitter_id'].isin(submitted)] # these are records that timed-out, 240 in test data
         valid_df = df.loc[df['submitter_id'].isin(valid)] # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
         invalid_df = df.loc[df['submitter_id'].isin(invalid)] # these are records that failed due to being invalid and should be reformatted
         sub_name = ntpath.basename(tsv)
