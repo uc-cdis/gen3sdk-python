@@ -109,3 +109,6 @@ tests/resources/keys/*.pem
 
 # graphql schema
 schema.json
+
+#scratch code
+scratch.py
