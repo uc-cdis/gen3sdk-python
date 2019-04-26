@@ -15,9 +15,14 @@ import seaborn as sns
 
 ## Download and configure gen3-client in Jupyter Notebook
 #api = 'https://data.bloodpac.org/' # BloodPAC
-api = 'https://data.braincommons.org/' # BRAIN Commons
-profile = 'bc'
-creds = '/Users/christopher/Downloads/bc-credentials.json'
+# profile = 'bpa'
+# creds = '/Users/christopher/Downloads/bpa-credentials.json'
+# api = 'https://data.braincommons.org/' # BRAIN Commons
+# profile = 'bc'
+# creds = '/Users/christopher/Downloads/bc-credentials.json'
+api = 'https://nci-crdc-demo.datacommons.io/' # DCF  SAndbox Commons
+profile = 'dcf'
+creds = '/Users/christopher/Downloads/dcf-credentials.json'
 #api = 'https://dcf-interop.kidsfirstdrc.org/' #Kids First
 #api = 'https://gen3.datastage.io/' # STAGE (old "DCP")
 #profile = 'stage'
