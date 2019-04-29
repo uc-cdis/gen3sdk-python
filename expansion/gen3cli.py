@@ -8,6 +8,11 @@ import time
 import json
 import pandas as pd
 
+import gen3
+from gen3.auth import Gen3Auth
+from gen3.submission import Gen3Submission
+from gen3.file import Gen3File
+
 ## Need to handle re-authentication for error 401:
 ## <Response [401]>{
 # "message": "Authentication Error: Signature has expired"
@@ -58,7 +63,9 @@ class Gen3cli:
 		output = requests.put(api_url, auth=self._auth_provider, json=json).text
 		return output
 
-	def read_file(self, filename):
+	def submit_file(self, project_id, filename, chunk_size=30, row_offset=0):
+
+		# Read the file in as a pandas DataFrame
 		f = os.path.basename(filename)
 		if f.lower().endswith('.csv'):
 			df = pd.read_csv(filename, header=0, sep=',')
@@ -70,59 +77,111 @@ class Gen3cli:
 			df = pd.read_csv(filename, header=0, sep='\t')
 		else:
 			print("Please upload a file in CSV, TSV, or XLSX format.")
-			df = pd.DataFrame()
-		return df
+			exit()
 
-
-	def submit_file(self, project_id, filename, chunk_size=30, row_offset=0):
+		# Chunk the file
+		print("\nSubmitting "+filename+" with "+str(len(df))+" records.")
 		program,project = project_id.split('-',1)
-
-		df = Gen3cli.read_file(self, filename=filename)
-		total_rows = len(df)
-		print("Submitting "+filename+" with "+str(total_rows)+" records.")
+		api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
+		headers = {'content-type': 'text/tab-separated-values'}
 
 		start = row_offset
 		end = row_offset + chunk_size
 		chunk = df[start:end]
+
 		count = 0
-		responses = []
-		headers = {'content-type': 'text/tab-separated-values'}
 
-		while (start+len(chunk)) <= total_rows:
+		results = {'failed':{'messages':[],'submitter_ids':[]}, # these are invalid records
+					'other':[], # any unhandled API responses
+					'details':[], # entire API response details
+					'succeeded':[], # list of submitter_ids that were successfully updated/created
+					'responses':[], # list of API response codes
+					'missing':[]} # list of submitter_ids missing from API response details
+
+		while (start+len(chunk)) <= len(df):
+
+			timeout = False
+			valid = []
+			invalid = []
 			count+=1
-			print("Chunk "+str(count)+": ")
-			#itime = datetime.datetime.now()
-			api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
-			#d = chunk.to_csv(sep='\t',index=False)
-			#requests.put(api_url, auth=auth, data=d,headers=headers).text
-			output = requests.put(api_url, auth=self._auth_provider, data=chunk.to_csv(sep='\t',index=False), headers=headers).text
-			print(output)
-			responses.append(output)
-			#print(api_url)
-			#print(chunk) #debug
-			responses.append(str(chunk)) #debug
+			print("Chunk "+str(count)+" (chunk size: "+ str(chunk_size) + ", submitted: " + str(len(results['succeeded'])+len(results['failed']['submitter_ids'])) + " of " + str(len(df)) + "):  ")
 
-			if True:
+			response = requests.put(api_url, auth=self._auth_provider, data=chunk.to_csv(sep='\t',index=False), headers=headers).text
+			results['details'].append(response)
+
+			if '"code": 200' in response:
+				res = json.loads(response)
+				entities = res['entities']
+				print("\t Succeeded: "+str(len(entities))+" entities.")
+				results['responses'].append("Chunk "+str(count)+" Succeeded: "+str(len(entities))+" entities.")
+				#res = json.loads(response)
+				for entity in entities:
+					sid = entity['unique_keys'][0]['submitter_id']
+					results['succeeded'].append(sid)
+
+			elif '"code": 4' in response:
+				res = json.loads(response)
+				entities = res['entities']
+				print("\tFailed: "+str(len(entities))+" entities.")
+				results['responses'].append("Chunk "+str(count)+" Failed: "+str(len(entities))+" entities.")
+				#res = json.loads(response)
+				for entity in entities:
+					sid = entity['unique_keys'][0]['submitter_id']
+					if entity['valid']: #valid but failed
+						valid.append(sid)
+					else: #invalid and failed
+						message = entity['errors'][0]['message']
+						results['failed']['messages'].append(message)
+						results['failed']['submitter_ids'].append(sid)
+						invalid.append(sid)
+				print("\tInvalid records in this chunk: " + str(len(invalid)))
+
+			elif '"error": {"Request Timeout' in response:
+				print("\t Request Timeout: " + response)
+				results['responses'].append("Request Timeout: "+response)
+				timeout = True
+
+			elif '"code": 5' in response:
+				print("\t Internal Server Error: " + response)
+				results['responses'].append("Internal Server Error: " + response)
+
+			elif '"message": ' in response and 'code' not in response:
+				print("\t No code in the API response for Chunk " + str(count) + ": " + res['message'])
+				print("\t " + str(res['transactional_errors']))
+				results['responses'].append("Error Chunk " + str(count) + ": " + res['message'])
+				results['other'].append(res['transactional_errors'])
+
+			else:
+				print("\t Unhandled API-response: "+response)
+				results['responses'].append("Unhandled API response: "+response)
+
+			if len(valid) > 0:
+				chunk = chunk.loc[df['submitter_id'].isin(valid)] # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
+				print("Retrying submission of valid entities from failed chunk: " + str(len(chunk)) + " valid entities.")
+
+			elif timeout is False:
 			#end of loop
 				start+=chunk_size
 				end = start + chunk_size
 				chunk = df[start:end]
+
 			else:
-				retry=1
+				chunk_size = int(chunk_size/2)
+				end = start + chunk_size
+				chunk = df[start:end]
+				print("Retrying Chunk with reduced chunk_size: " + str(chunk_size))
+				timeout = False
 
-		return responses
+		print("Finished data submission.")
+		print("Successful records: " + str(len(set(results['succeeded']))))
+		print("Failed invalid records: " + str(len(set(results['failed']['submitter_ids']))))
 
-filename='subject_100.tsv'
-#	def submit_file(self, project_id, filename, chunk_size=30, row_offset=0):
-cli = Gen3cli(api, auth)
-res = cli.submit_file(filename=filename,project_id='DCF-demo')
+		return results
 
 
-import gen3
-from gen3.auth import Gen3Auth
-from gen3.submission import Gen3Submission
-from gen3.file import Gen3File
-api = 'https://nci-crdc-demo.datacommons.io/' # DCF  SAndbox Commons
+
+# Testing:
+api = 'https://nci-crdc-demo.datacommons.io/' # DCF  Sandbox Commons
 profile = 'dcf'
 creds = '/Users/christopher/Downloads/dcf-credentials.json'
 auth = Gen3Auth(api, refresh_file=creds)
@@ -130,16 +189,13 @@ auth = Gen3Auth(api, refresh_file=creds)
 #file = Gen3File(api, auth)
 cli = Gen3cli(api, auth)
 
-s = cli.read_file('subject_100.tsv')
-s.head()
-d = cli.read_file('diagnosis_100.xlsx')
-d.head()
-d = cli.read_file('diagnosis_100.poop')
-d.head()
 
-df = cli.read_file('subject_100.tsv')
+#filename = 'subject_10000.tsv'
+filename = 'invalid_subject_10000.tsv'
+#filename = 'subject_100.tsv'
+#filename = 'invalid_subject_100.tsv'
+cli = Gen3cli(api, auth)
 
-chunk1 = df[0:30]
-chunk2 = df[30:60]
-chunk3 = df[60:90]
-chunk4 = df[90:120]
+# submit_file(self, project_id, filename, chunk_size=30, row_offset=0):
+#res = cli.submit_file(filename=filename,project_id='internal-training',chunk_size=50)
+res = cli.submit_file(filename=filename,project_id='internal-training',chunk_size=5000)
