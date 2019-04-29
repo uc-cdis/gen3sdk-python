@@ -1,0 +1,70 @@
+{"error": {"Request Timeout or Service Unavailable"}}
+{"error": {"Request Timeout"}}
+
+{'message': "Authentication Error: invalid issuer https://nci-crdc-demo.datacommons.io/user; expected: [u'https://data.bloodpac.org/user', 'http://fence-service/']"}
+
+{
+  "code": 400,
+  "created_entity_count": 0,
+  "entities": [],
+  "entity_error_count": 0,
+  "message": "Transaction aborted due to 1 transactional error(s).",
+  "success": false,
+  "transaction_id": 138149,
+  "transactional_error_count": 1,
+  "transactional_errors": [
+    "Nothing to submit"
+  ],
+  "updated_entity_count": 0
+}
+
+
+
+{
+  "code": 400,
+  "created_entity_count": 0,
+  "entities": [
+    {
+      "action": "update",
+      "errors": [
+        {
+          "keys": [],
+          "message": "Entity is owned by project internal-training, not DCF-demo",
+          "type": "INVALID_PERMISSIONS"
+        },
+        {
+          "keys": [
+            "project_id"
+          ],
+          "message": "Key 'project_id' is a system property and cannot be updated from 'DCF-demo' to 'internal-training'",
+          "type": "INVALID_PERMISSIONS"
+        }
+      ],
+...
+  "entity_error_count": 30,
+  "message": "Transaction aborted due to 30 invalid entities.",
+  "success": false,
+  "transaction_id": 138123,
+  "transactional_error_count": 0,
+  "transactional_errors": [],
+  "updated_entity_count": 0
+}
+
+
+# invalid entities:
+{
+  "code": 400,
+  "created_entity_count": 0,
+  "entities": [
+   {'action': 'update',
+    'errors': [{'keys': ['studies'],
+      'message': "No link destination found for studies, unique_keys='[{'project_id': 'internal-training', 'submitter_id': 'study-01999'}]'",
+      'type': 'INVALID_LINK'}],
+    'id': '38152044-ef97-4916-9c3b-a9745a4f3237',
+    'related_cases': [],
+    'type': 'subject',
+    'unique_keys': [{'project_id': 'internal-training',
+      'submitter_id': 'subject-64'}],
+    'valid': False,
+    'warnings': []},
+...
