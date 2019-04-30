@@ -284,3 +284,119 @@ class Gen3Submission:
         output = requests.get(api_url).text
         data = json.loads(output)
         return data
+
+    def submit_file(self, project_id, filename, chunk_size=30, row_offset=0):
+
+        # Read the file in as a pandas DataFrame
+        f = os.path.basename(filename)
+        if f.lower().endswith('.csv'):
+            df = pd.read_csv(filename, header=0, sep=',')
+        elif f.lower().endswith('.xlsx'):
+            xl = pd.ExcelFile(filename) #load excel file
+            sheet = xl.sheet_names[0] #sheetname
+            df = xl.parse(sheet) #save sheet as dataframe
+        elif filename.lower().endswith(('.tsv','.txt')):
+            df = pd.read_csv(filename, header=0, sep='\t')
+        else:
+            print("Please upload a file in CSV, TSV, or XLSX format.")
+            exit()
+
+        # Chunk the file
+        print("\nSubmitting "+filename+" with "+str(len(df))+" records.")
+        program,project = project_id.split('-',1)
+        api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
+        headers = {'content-type': 'text/tab-separated-values'}
+
+        start = row_offset
+        end = row_offset + chunk_size
+        chunk = df[start:end]
+
+        count = 0
+
+        results = {'failed':{'messages':[],'submitter_ids':[]}, # these are invalid records
+                    'other':[], # any unhandled API responses
+                    'details':[], # entire API response details
+                    'succeeded':[], # list of submitter_ids that were successfully updated/created
+                    'responses':[], # list of API response codes
+                    'missing':[]} # list of submitter_ids missing from API response details
+
+        while (start+len(chunk)) <= len(df):
+
+            timeout = False
+            valid = []
+            invalid = []
+            count+=1
+            print("Chunk "+str(count)+" (chunk size: "+ str(chunk_size) + ", submitted: " + str(len(results['succeeded'])+len(results['failed']['submitter_ids'])) + " of " + str(len(df)) + "):  ")
+
+            response = requests.put(api_url, auth=self._auth_provider, data=chunk.to_csv(sep='\t',index=False), headers=headers).text
+            results['details'].append(response)
+
+            # Handle the API response
+            if '"code": 200' in response: #success
+                res = json.loads(response)
+                entities = res['entities']
+                print("\t Succeeded: "+str(len(entities))+" entities.")
+                results['responses'].append("Chunk "+str(count)+" Succeeded: "+str(len(entities))+" entities.")
+                #res = json.loads(response)
+                for entity in entities:
+                    sid = entity['unique_keys'][0]['submitter_id']
+                    results['succeeded'].append(sid)
+
+            elif '"code": 4' in response: #failure
+                res = json.loads(response)
+                entities = res['entities']
+                print("\tFailed: "+str(len(entities))+" entities.")
+                results['responses'].append("Chunk "+str(count)+" Failed: "+str(len(entities))+" entities.")
+                #res = json.loads(response)
+                for entity in entities:
+                    sid = entity['unique_keys'][0]['submitter_id']
+                    if entity['valid']: #valid but failed
+                        valid.append(sid)
+                    else: #invalid and failed
+                        message = entity['errors'][0]['message']
+                        results['failed']['messages'].append(message)
+                        results['failed']['submitter_ids'].append(sid)
+                        invalid.append(sid)
+                print("\tInvalid records in this chunk: " + str(len(invalid)))
+
+            elif '"error": {"Request Timeout' in response: # timeout
+                print("\t Request Timeout: " + response)
+                results['responses'].append("Request Timeout: "+response)
+                timeout = True
+
+            elif '"code": 5' in response: # internal server error
+                print("\t Internal Server Error: " + response)
+                results['responses'].append("Internal Server Error: " + response)
+
+            elif '"message": ' in response and 'code' not in response: # other?
+                print("\t No code in the API response for Chunk " + str(count) + ": " + res['message'])
+                print("\t " + str(res['transactional_errors']))
+                results['responses'].append("Error Chunk " + str(count) + ": " + res['message'])
+                results['other'].append(res['transactional_errors'])
+
+            else: # catch-all other
+                print("\t Unhandled API-response: "+response)
+                results['responses'].append("Unhandled API response: "+response)
+
+            if len(valid) > 0: # if valid entities failed bc grouped with invalid, retry submission
+                chunk = chunk.loc[df['submitter_id'].isin(valid)] # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
+                print("Retrying submission of valid entities from failed chunk: " + str(len(chunk)) + " valid entities.")
+
+            elif timeout is False: # get new chunk if didn't timeout
+            #end of loop
+                start+=chunk_size
+                end = start + chunk_size
+                chunk = df[start:end]
+
+            else: # if timeout, reduce chunk size and retry smaller chunk
+                chunk_size = int(chunk_size/2)
+                end = start + chunk_size
+                chunk = df[start:end]
+                print("Retrying Chunk with reduced chunk_size: " + str(chunk_size))
+                timeout = False
+
+        print("Finished data submission.")
+        print("Successful records: " + str(len(set(results['succeeded']))))
+        print("Failed invalid records: " + str(len(set(results['failed']['submitter_ids']))))
+
+        return results
