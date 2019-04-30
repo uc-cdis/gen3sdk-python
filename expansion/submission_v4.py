@@ -19,7 +19,7 @@ success = re.compile("^<Response \[200\]>$")
 # python2.7 submission_v4.py -m upload -a genomel -p genomel-pmu -k /Users/christopher/Downloads/genomel-credentials.json -l 50 -f /Users/christopher/Documents/Notes/genomel/genomel-pmu/submitted_unaligned_reads.tsv
 
 # delete example:
-# python2.7 submission_v4.py -m delete -a bc -p mjff-test_MJFF -k /Users/christopher/Downloads/credentials.json -l 100 -n case
+# python2.7 ~/Documents/GitHub/cgmeyer/gen3sdk-python/expansion/submission_v4.py -m delete -a bc -p mjff-training -k /Users/christopher/Downloads/bc-credentials.json -l 100 -n case
 
 # delete_project example:
 # python2.7 submission_v4.py -m delete_project -a bc -k /Users/christopher/Downloads/credentials.json -p mjff-FSToo
