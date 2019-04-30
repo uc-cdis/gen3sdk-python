@@ -293,10 +293,11 @@ class Gen3Submission:
         if f.lower().endswith('.csv'):
             df = pd.read_csv(filename, header=0, sep=',', dtype=str).fillna('')
         elif f.lower().endswith('.xlsx'):
-            xl = pd.ExcelFile(filename) #load excel file
+            xl = pd.ExcelFile(filename, dtype=str) #load excel file
             sheet = xl.sheet_names[0] #sheetname
             df = xl.parse(sheet) #save sheet as dataframe
-            df = df.fillna('')
+            converters = {col: str for col in list(df)}
+            df = pd.read_excel(filename, converters=converters).fillna('')
         elif filename.lower().endswith(('.tsv','.txt')):
             df = pd.read_csv(filename, header=0, sep='\t',dtype=str).fillna('')
         else:
