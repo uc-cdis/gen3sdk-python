@@ -1,10 +1,5 @@
 import requests
-import sys
-import getopt
 import os
-import argparse
-import datetime
-import time
 import json
 import pandas as pd
 
@@ -63,6 +58,7 @@ class Gen3cli:
 		output = requests.put(api_url, auth=self._auth_provider, json=json).text
 		return output
 
+
 	def submit_file(self, project_id, filename, chunk_size=30, row_offset=0):
 
 		# Read the file in as a pandas DataFrame
@@ -109,7 +105,8 @@ class Gen3cli:
 			response = requests.put(api_url, auth=self._auth_provider, data=chunk.to_csv(sep='\t',index=False), headers=headers).text
 			results['details'].append(response)
 
-			if '"code": 200' in response:
+			# Handle the API response
+			if '"code": 200' in response: #success
 				res = json.loads(response)
 				entities = res['entities']
 				print("\t Succeeded: "+str(len(entities))+" entities.")
@@ -119,7 +116,7 @@ class Gen3cli:
 					sid = entity['unique_keys'][0]['submitter_id']
 					results['succeeded'].append(sid)
 
-			elif '"code": 4' in response:
+			elif '"code": 4' in response: #failure
 				res = json.loads(response)
 				entities = res['entities']
 				print("\tFailed: "+str(len(entities))+" entities.")
@@ -136,36 +133,35 @@ class Gen3cli:
 						invalid.append(sid)
 				print("\tInvalid records in this chunk: " + str(len(invalid)))
 
-			elif '"error": {"Request Timeout' in response:
+			elif '"error": {"Request Timeout' in response or '413 Request Entity Too Large' in response: # timeout
 				print("\t Request Timeout: " + response)
 				results['responses'].append("Request Timeout: "+response)
 				timeout = True
 
-			elif '"code": 5' in response:
+			elif '"code": 5' in response: # internal server error
 				print("\t Internal Server Error: " + response)
 				results['responses'].append("Internal Server Error: " + response)
 
-			elif '"message": ' in response and 'code' not in response:
+			elif '"message": ' in response and 'code' not in response: # other?
 				print("\t No code in the API response for Chunk " + str(count) + ": " + res['message'])
 				print("\t " + str(res['transactional_errors']))
 				results['responses'].append("Error Chunk " + str(count) + ": " + res['message'])
 				results['other'].append(res['transactional_errors'])
 
-			else:
+			else: # catch-all for any other response
 				print("\t Unhandled API-response: "+response)
 				results['responses'].append("Unhandled API response: "+response)
 
-			if len(valid) > 0:
+			if len(valid) > 0: # if valid entities failed bc grouped with invalid, retry submission
 				chunk = chunk.loc[df['submitter_id'].isin(valid)] # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
 				print("Retrying submission of valid entities from failed chunk: " + str(len(chunk)) + " valid entities.")
 
-			elif timeout is False:
-			#end of loop
+			elif timeout is False: # get new chunk if didn't timeout
 				start+=chunk_size
 				end = start + chunk_size
 				chunk = df[start:end]
 
-			else:
+			else: # if timeout, reduce chunk size and retry smaller chunk
 				chunk_size = int(chunk_size/2)
 				end = start + chunk_size
 				chunk = df[start:end]
@@ -177,7 +173,6 @@ class Gen3cli:
 		print("Failed invalid records: " + str(len(set(results['failed']['submitter_ids']))))
 
 		return results
-
 
 
 # Testing:

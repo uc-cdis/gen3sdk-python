@@ -1,6 +1,7 @@
 import json
 import requests
-
+import pandas as pd
+import os
 
 class Gen3SubmissionQueryError(Exception):
     pass
@@ -359,7 +360,7 @@ class Gen3Submission:
                         invalid.append(sid)
                 print("\tInvalid records in this chunk: " + str(len(invalid)))
 
-            elif '"error": {"Request Timeout' in response: # timeout
+            elif '"error": {"Request Timeout' in response or '413 Request Entity Too Large' in response: # timeout
                 print("\t Request Timeout: " + response)
                 results['responses'].append("Request Timeout: "+response)
                 timeout = True
@@ -374,7 +375,7 @@ class Gen3Submission:
                 results['responses'].append("Error Chunk " + str(count) + ": " + res['message'])
                 results['other'].append(res['transactional_errors'])
 
-            else: # catch-all other
+            else: # catch-all for any other response
                 print("\t Unhandled API-response: "+response)
                 results['responses'].append("Unhandled API response: "+response)
 
@@ -383,7 +384,6 @@ class Gen3Submission:
                 print("Retrying submission of valid entities from failed chunk: " + str(len(chunk)) + " valid entities.")
 
             elif timeout is False: # get new chunk if didn't timeout
-            #end of loop
                 start+=chunk_size
                 end = start + chunk_size
                 chunk = df[start:end]
