@@ -44,9 +44,12 @@ class Gen3File:
             >>> Gen3File.get_presigned_url(query)
 
         """
-        api_url = "{}/user/data/download/{}&protocol={}".format(
+        api_url = "{}/user/data/download/{}?protocol={}".format(
             self._endpoint, guid, protocol
         )
         output = requests.get(api_url, auth=self._auth_provider).text
-        data = json.loads(output)
+        try:
+            data = json.loads(output)
+        except:
+            return output
         return data
