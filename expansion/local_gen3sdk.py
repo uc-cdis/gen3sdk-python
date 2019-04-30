@@ -17,23 +17,27 @@ import seaborn as sns
 #api = 'https://data.bloodpac.org/' # BloodPAC
 # profile = 'bpa'
 # creds = '/Users/christopher/Downloads/bpa-credentials.json'
-api = 'https://data.braincommons.org/' # BRAIN Commons
-profile = 'bc'
-creds = '/Users/christopher/Downloads/bc-credentials.json'
-#api = 'https://nci-crdc-demo.datacommons.io/' # DCF  SAndbox Commons
-#profile = 'dcf'
-#creds = '/Users/christopher/Downloads/dcf-credentials.json'
+# api = 'https://data.braincommons.org/' # BRAIN Commons
+# profile = 'bc'
+# creds = '/Users/christopher/Downloads/bc-credentials.json'
+# api = 'https://nci-crdc-demo.datacommons.io/' # DCF  SAndbox Commons
+# profile = 'dcf'
+# creds = '/Users/christopher/Downloads/dcf-credentials.json'
 #api = 'https://dcf-interop.kidsfirstdrc.org/' #Kids First
 #api = 'https://gen3.datastage.io/' # STAGE (old "DCP")
 #profile = 'stage'
 #creds = '/Users/christopher/Downloads/stage-credentials.json'
-# api = 'https://vpodc.org/' # VA
-#profile = 'vpodc'
-#creds = '/Users/christopher/Downloads/vpodc-credentials.json'
+api = 'https://vpodc.org/' # VA
+profile = 'vpodc'
+creds = '/Users/christopher/Downloads/vpodc-credentials.json'
 client = 'gen3-client'
 
 auth = Gen3Auth(api, refresh_file=creds)
+
+load /Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/gen3/submission.py
+
 sub = Gen3Submission(api, auth)
+
 file = Gen3File(api, auth)
 
 cmd = client +' configure --profile='+profile+' --apiendpoint='+api+' --cred='+creds

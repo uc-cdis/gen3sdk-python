@@ -297,7 +297,7 @@ class Gen3Submission:
             sheet = xl.sheet_names[0] #sheetname
             df = xl.parse(sheet) #save sheet as dataframe
         elif filename.lower().endswith(('.tsv','.txt')):
-            df = pd.read_csv(filename, header=0, sep='\t')
+            df = pd.read_csv(filename, header=0, sep='\t',dtype=str).fillna('')
         else:
             print("Please upload a file in CSV, TSV, or XLSX format.")
             exit()
