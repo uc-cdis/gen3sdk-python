@@ -402,3 +402,29 @@ class Gen3Submission:
         print("Failed invalid records: " + str(len(set(results['failed']['submitter_ids']))))
 
         return results
+
+    def write_tsvs_from_results(self,invalid_ids,filename):
+            # Read the file in as a pandas DataFrame
+        f = os.path.basename(filename)
+        if f.lower().endswith('.csv'):
+            df = pd.read_csv(filename, header=0, sep=',', dtype=str).fillna('')
+        elif f.lower().endswith('.xlsx'):
+            xl = pd.ExcelFile(filename, dtype=str) #load excel file
+            sheet = xl.sheet_names[0] #sheetname
+            df = xl.parse(sheet) #save sheet as dataframe
+            converters = {col: str for col in list(df)} #make sure int isn't converted to float
+            df = pd.read_excel(filename, converters=converters).fillna('') #remove nan
+        elif filename.lower().endswith(('.tsv','.txt')):
+            df = pd.read_csv(filename, header=0, sep='\t', dtype=str).fillna('')
+        else:
+            print("Please upload a file in CSV, TSV, or XLSX format.")
+            exit(1)
+
+        invalid_df = df.loc[df['submitter_id'].isin(invalid_ids)] # these are records that failed due to being invalid and should be reformatted
+        invalid_file = 'invalid_' + f + '.tsv'
+
+        print("Writing TSVs: ")
+        print('\t' + invalid_file)
+        invalid_df.to_csv(invalid_file, sep='\t', index=False, encoding='utf-8')
+
+        return invalid_df
