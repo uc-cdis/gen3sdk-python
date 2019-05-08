@@ -329,7 +329,7 @@ class Gen3Submission:
             valid = []
             invalid = []
             count+=1
-            print("Chunk "+str(count)+" (chunk size: "+ str(chunk_size) + ", submitted: " + str(len(results['succeeded'])+len(results['failed']['submitter_ids'])) + " of " + str(len(df)) + "):  ")
+            print("Chunk "+str(count)+" (chunk size: "+ str(chunk_size) + ", submitted: " + str(len(results['succeeded'])+len(results['failed']['submitter_ids'])) + " of " + str(len(df)) + ", now submitting rows "+str(start)+" to "+str(end)+"):  ")
 
             response = requests.put(api_url, auth=self._auth_provider, data=chunk.to_csv(sep='\t',index=False), headers=headers).text
             results['details'].append(response)
@@ -350,6 +350,7 @@ class Gen3Submission:
                 entities = res['entities']
                 print("\tFailed: "+str(len(entities))+" entities.")
                 results['responses'].append("Chunk "+str(count)+" Failed: "+str(len(entities))+" entities.")
+                print(res) #trouble-shooting
                 #res = json.loads(response)
                 for entity in entities:
                     sid = entity['unique_keys'][0]['submitter_id']
@@ -357,6 +358,7 @@ class Gen3Submission:
                         valid.append(sid)
                     else: #invalid and failed
                         message = entity['errors'][0]['message']
+                        print(message) #trouble-shooting
                         results['failed']['messages'].append(message)
                         results['failed']['submitter_ids'].append(sid)
                         invalid.append(sid)
@@ -386,7 +388,7 @@ class Gen3Submission:
                 print("Retrying submission of valid entities from failed chunk: " + str(len(chunk)) + " valid entities.")
 
             elif timeout is False: # get new chunk if didn't timeout
-                start+=chunk_size
+                start += chunk_size
                 end = start + chunk_size
                 chunk = df[start:end]
 

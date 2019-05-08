@@ -37,7 +37,6 @@ auth = Gen3Auth(api, refresh_file=creds)
 load /Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/gen3/submission.py
 
 sub = Gen3Submission(api, auth)
-
 file = Gen3File(api, auth)
 
 cmd = client +' configure --profile='+profile+' --apiendpoint='+api+' --cred='+creds
