@@ -163,7 +163,7 @@ def get_node_tsvs(node, projects=None, overwrite=False):
     if not os.path.exists(mydir):
         os.makedirs(mydir)
     if projects is None: #if no projects specified, get node for all projects
-        project_ids = list(json_normalize(sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+        projects = list(json_normalize(sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
     elif isinstance(projects, str):
         projects = [projects]
     dfs = []
