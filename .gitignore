@@ -112,3 +112,4 @@ schema.json
 
 #scratch code
 scratch.py
+local_gen3sdk.py
