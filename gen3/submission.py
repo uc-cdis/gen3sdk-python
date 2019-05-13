@@ -3,9 +3,14 @@ import requests
 import pandas as pd
 import os
 
-class Gen3SubmissionQueryError(Exception):
+class Gen3Error(Exception):
     pass
 
+class Gen3SubmissionQueryError(Gen3Error):
+    pass
+
+class Gen3UserError(Gen3Error):
+    pass
 
 class Gen3Submission:
     """Submit/Export/Query data from a Gen3 Submission system.
@@ -287,7 +292,20 @@ class Gen3Submission:
         return data
 
     def submit_file(self, project_id, filename, chunk_size=30, row_offset=0):
+        """Submit record(s) to a project as json.
 
+        Args:
+            project_id (str): The project_id to submit to.
+            filename (str): The file containing data to submit. The format can be TSV, CSV or XLSX (first worksheet only for now).
+            chunk_size (integer): The number of rows of data to submit for each request to the API.
+            row_offset (integer): The number of rows of data to skip; '0' starts submission from the first row and submits all data.
+
+        Examples:
+            This submits a spreadsheet file containing multiple records in rows to the CCLE project in the sandbox commons.
+
+            >>> Gen3Submission.submit_file("DCF-CCLE","data_spreadsheet.tsv")
+
+        """
         # Read the file in as a pandas DataFrame
         f = os.path.basename(filename)
         if f.lower().endswith('.csv'):
@@ -301,8 +319,7 @@ class Gen3Submission:
         elif filename.lower().endswith(('.tsv','.txt')):
             df = pd.read_csv(filename, header=0, sep='\t', dtype=str).fillna('')
         else:
-            print("Please upload a file in CSV, TSV, or XLSX format.")
-            exit()
+            raise Gen3UserError('Please upload a file in CSV, TSV, or XLSX format.')
 
         # Chunk the file
         print("\nSubmitting "+filename+" with "+str(len(df))+" records.")
