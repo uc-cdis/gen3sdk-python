@@ -57,7 +57,7 @@ class Gen3Expansion:
         print("\nOutput written to file: "+filename)
 
     ### AWS S3 Tools:
-    def s3_ls(path, bucket, profile, pattern='*'):
+    def s3_ls(self, path, bucket, profile, pattern='*'):
         ''' Print the results of an `aws s3 ls` command '''
         s3_path = bucket + path
         cmd = ['aws', 's3', 'ls', s3_path, '--profile', profile]
@@ -73,7 +73,7 @@ class Gen3Expansion:
         else:
             return output
 
-    def s3_files(path, bucket, profile, pattern='*',verbose=True):
+    def s3_files(self, path, bucket, profile, pattern='*',verbose=True):
         ''' Get a list of files returned by an `aws s3 ls` command '''
         s3_path = bucket + path
         cmd = ['aws', 's3', 'ls', s3_path, '--profile', profile]
@@ -91,7 +91,7 @@ class Gen3Expansion:
             for (i, item) in enumerate(output, start=0): print(i, '\t', item)
         return output
 
-    def get_s3_files(path, bucket, profile, files=None, mydir=None):
+    def get_s3_files(self, path, bucket, profile, files=None, mydir=None):
         ''' Transfer data from object storage to the VM in the private subnet '''
 
         # Set the path to the directory where files reside
@@ -129,11 +129,9 @@ class Gen3Expansion:
               print("ERROR:" + output)
         print("Finished")
 
-
-
     # Functions for downloading metadata in TSVs
     # Get a list of project_ids
-    def get_project_ids(node=None,name=None):
+    def get_project_ids(self, node=None,name=None):
         project_ids = []
         queries = []
         #Return all project_ids in the data commons if no node is provided or if node is program but no name provided
@@ -167,7 +165,7 @@ class Gen3Expansion:
 
 
     # Create master TSV of data from each project per node
-    def get_node_tsvs(node, projects=None, overwrite=False):
+    def get_node_tsvs(self, node, projects=None, overwrite=False):
         #Get a TSV of the node(s) specified for each project specified
         if not isinstance(node, str): # Create folder on VM for downloaded files
             mydir = 'downloaded_tsvs'
@@ -199,7 +197,7 @@ class Gen3Expansion:
         print('Master node TSV with '+str(len(all_data))+' total records written to '+nodefile+'.')
         return all_data
 
-    def get_project_tsvs(projects):
+    def get_project_tsvs(self, projects):
         # Get a TSV for every node in a project
         all_nodes = sorted(list(set(json_normalize(sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
         remove_nodes = ['program','project','root','data_release'] #remove these nodes from list of nodes
@@ -235,7 +233,7 @@ class Gen3Expansion:
             output = 'ERROR:' + e.output.decode('UTF-8')
         return output
 
-    def get_project_tsvs_faster(projects):
+    def get_project_tsvs_faster(self, projects):
         # Get a TSV for every node in a project
         all_nodes = sorted(list(set(json_normalize(sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
         remove_nodes = ['program','project','root','data_release'] #remove these nodes from list of nodes
@@ -271,7 +269,7 @@ class Gen3Expansion:
             output = 'ERROR:' + e.output.decode('UTF-8')
         return output
 
-    def delete_node(node,project):
+    def delete_node(self, node,project):
         failure = []
         success = []
         results = {}
@@ -296,7 +294,7 @@ class Gen3Expansion:
         return results
 
 
-    def delete_records(uuids,project_id):
+    def delete_records(self, uuids,project_id):
         ## Delete a list of records in 'uuids' from a project
         program,project = project_id.split('-',1)
         failure = []
@@ -318,7 +316,7 @@ class Gen3Expansion:
         results['success'] = success
         return results
 
-    def get_urls(guids,api):
+    def get_urls(self, guids,api):
         # Get URLs for a list of GUIDs
         if isinstance(guids, str):
             guids = [guids]
@@ -334,7 +332,7 @@ class Gen3Expansion:
             print("Please provide one or a list of data file GUIDs: get_urls\(guids=guid_list\)")
         return urls
 
-    def get_guids_for_filenames(file_names,api):
+    def get_guids_for_filenames(self, file_names,api):
         # Get GUIDs for a list of file_names
         if isinstance(file_names, str):
             file_names = [file_names]
@@ -350,7 +348,7 @@ class Gen3Expansion:
                 guids[file_name] = guid
         return guids
 
-    def delete_uploaded_files(guids,api):
+    def delete_uploaded_files(self, guids, api):
     # DELETE http://petstore.swagger.io/?url=https://raw.githubusercontent.com/uc-cdis/fence/master/openapis/swagger.yaml#/data/delete_data__file_id_
     # ​/data​/{file_id}
     # delete all locations of a stored data file and remove its record from indexd.
@@ -370,7 +368,7 @@ class Gen3Expansion:
                     print("Error deleting GUID {}:".format(guid))
                     print(response.reason)
 
-    def plot_categorical_property(property,df):
+    def plot_categorical_property(self, property, df):
         #plot a bar graph of categorical variable counts in a dataframe
         df = df[df[property].notnull()]
         N = len(df)
@@ -385,7 +383,7 @@ class Gen3Expansion:
         #add N for each bar
         plt.show()
 
-    def plot_numeric_property(property,df):
+    def plot_numeric_property(self, property, df):
         #plot a histogram of numeric variable in a dataframe
         df = df[df[property].notnull()]
         data = list(df[property])
@@ -413,7 +411,7 @@ class Gen3Expansion:
             plt.title("PDF for "+property+' in ' + project) # You can comment this line out if you don't need title
             plt.show(fig)
 
-    def node_record_counts(project_id):
+    def node_record_counts(self, project_id):
         query_txt = """{node (first:-1, project_id:"%s"){type}}""" % (project_id)
         res = sub.query(query_txt)
         df = json_normalize(res['data']['node'])
@@ -422,7 +420,7 @@ class Gen3Expansion:
         df = df.rename(columns={'index':'node', 0:'count'})
         return df
 
-    def list_project_files(project_id):
+    def list_project_files(self, project_id):
         query_txt = """{datanode(first:-1,project_id: "%s") {type file_name id object_id}}""" % (project_id)
         res = sub.query(query_txt)
         if len(res['data']['datanode']) == 0:
@@ -434,7 +432,7 @@ class Gen3Expansion:
             #guids = df.loc[(df['type'] == node)]['object_id']
             return df
 
-    def get_data_file_tsvs(projects=None,remove_empty=True):
+    def get_data_file_tsvs(self, projects=None,remove_empty=True):
         # Download TSVs for all data file nodes in the specified projects
         #if no projects specified, get node for all projects
         if projects is None:
@@ -481,7 +479,7 @@ class Gen3Expansion:
             print('Master node TSV with '+str(len(all_data))+' total records written to '+nodefile+'.') # this should match df_len above
         return all_data
 
-    def list_guids_in_nodes(nodes=None,projects=None):
+    def list_guids_in_nodes(self, nodes=None,projects=None):
         # Get GUIDs for node(s) in project(s)
         if nodes is None: # get all data_file/metadata_file/index_file 'node_id's in the data model
             categories = ['data_file','metadata_file','index_file']
@@ -516,7 +514,7 @@ class Gen3Expansion:
         return all_guids
 
 
-    def download_files_by_guids(guids=None):
+    def download_files_by_guids(self, guids=None):
         # Make a directory for files
         mydir = 'downloaded_data_files'
         if not os.path.exists(mydir):
@@ -549,7 +547,7 @@ class Gen3Expansion:
         return file_names
 
 
-    def get_records_for_uuids(ids,project,api):
+    def get_records_for_uuids(self, ids, project, api):
         dfs = []
         for uuid in ids:
             #Gen3Submission.export_record("DCF", "CCLE", "d70b41b9-6f90-4714-8420-e043ab8b77b9", "json", filename="DCF-CCLE_one_record.json")
@@ -571,7 +569,7 @@ class Gen3Expansion:
         print('Master node TSV with '+str(len(all_data))+' total records written to '+master+'.')
         return all_data
 
-    def find_duplicate_filenames(node,project):
+    def find_duplicate_filenames(self, node, project):
         #download the node
         df = get_node_tsvs(node,project,overwrite=True)
         counts = Counter(df['file_name'])
@@ -582,7 +580,7 @@ class Gen3Expansion:
         dups = df[df['file_name'].isin(dup_files)].sort_values(by='md5sum', ascending=False)
         return dups
 
-    def paginate_query(node,project_id,props=['id','submitter_id'],chunk_size=1000):
+    def paginate_query(self, node, project_id, props=['id','submitter_id'], chunk_size=1000):
         program,project = project_id.split('-',1)
         properties = ' '.join(map(str,props))
         # get size of query:
@@ -605,7 +603,7 @@ class Gen3Expansion:
             df = pd.concat(dfs, ignore_index=True)
         return df
 
-    def get_duplicates(nodes,projects,api):
+    def get_duplicates(self, nodes, projects, api):
         # Get duplicate SUBMITTER_IDs in a node, which SHOULD NEVER HAPPEN but alas it has, thus this script
         #if no projects specified, get node for all projects
         if projects is None:
@@ -645,7 +643,7 @@ class Gen3Expansion:
 
 
 
-    def delete_duplicates(dups,project_id,api):
+    def delete_duplicates(self, dups, project_id, api):
 
         if not isinstance(dups, dict):
             print("Must provide duplicates as a dictionary of keys:submitter_ids and values:ids; use get_duplicates function")
@@ -674,7 +672,7 @@ class Gen3Expansion:
         return results
 
 
-    def query_records(node,project_id,api,chunk_size=500):
+    def query_records(self, node, project_id, api, chunk_size=500):
         # Using paginated query, Download all data in a node as a DataFrame and save as TSV
         schema = sub.get_dictionary_node(node)
         props = list(schema['properties'].keys())
@@ -700,7 +698,7 @@ class Gen3Expansion:
         return df
 
     # Group entities in details into succeeded (successfully created/updated) and failed valid/invalid
-    def summarize_submission(tsv,details,write_tsvs):
+    def summarize_submission(self, tsv, details, write_tsvs):
         with open(details, 'r') as file:
             f = file.read().rstrip('\n')
         chunks = f.split('\n\n')
