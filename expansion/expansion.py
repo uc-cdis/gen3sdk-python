@@ -38,7 +38,7 @@ class Gen3Expansion:
     def __init__(self, endpoint, auth_provider):
         self._auth_provider = auth_provider
         self._endpoint = endpoint
-        self.sub = new Gen3Submission()
+        self.sub = new Gen3Submission(api, auth)
 
     def __export_file(self, filename, output):
         """Writes text, e.g., an API response, to a file.
