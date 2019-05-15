@@ -13,23 +13,25 @@ import numpy as np
 import seaborn as sns
 
 class Gen3Expansion:
-    """Submit/Export/Query data from a Gen3 Submission system.
+    """Advanced scripts for interacting with the Gen3 submission, query and index APIs
 
-    A class for interacting with the Gen3 submission services.
-    Supports submitting and exporting from Sheepdog.
-    Supports GraphQL queries through Peregrine.
+    Supports advanced data submission and exporting from Sheepdog.
+    Supports paginated GraphQL queries through Peregrine.
+    Supports Flat Model (ElasticSearch) queries through Arranger/Guppy.
+    Supports Indexd queries.
+    Supports user authentication queries.
 
     Args:
         endpoint (str): The URL of the data commons.
         auth_provider (Gen3Auth): A Gen3Auth class instance.
 
     Examples:
-        This generates the Gen3Submission class pointed at the sandbox commons while
+        This generates the Gen3Expansion class pointed at the sandbox commons while
         using the credentials.json downloaded from the commons profile page.
 
         >>> endpoint = "https://nci-crdc-demo.datacommons.io"
         ... auth = Gen3Auth(endpoint, refresh_file="credentials.json")
-        ... sub = Gen3Submission(endpoint, auth)
+        ... exp = Gen3Expansion(endpoint, auth)
 
     """
 
