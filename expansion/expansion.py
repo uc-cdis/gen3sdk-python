@@ -38,6 +38,7 @@ class Gen3Expansion:
     def __init__(self, endpoint, auth_provider):
         self._auth_provider = auth_provider
         self._endpoint = endpoint
+        self.sub = new Gen3Submission()
 
     def __export_file(self, filename, output):
         """Writes text, e.g., an API response, to a file.
@@ -55,6 +56,7 @@ class Gen3Expansion:
         outfile.write(output)
         outfile.close
         print("\nOutput written to file: "+filename)
+
 
     ### AWS S3 Tools:
     def s3_ls(self, path, bucket, profile, pattern='*'):
@@ -763,3 +765,158 @@ class Gen3Expansion:
             print('\t' + invalid_file)
 
         return results
+
+    def submit_file(self, project_id, filename, chunk_size=30, row_offset=0):
+        """Submit record(s) to a project as json.
+
+        Args:
+            project_id (str): The project_id to submit to.
+            filename (str): The file containing data to submit. The format can be TSV, CSV or XLSX (first worksheet only for now).
+            chunk_size (integer): The number of rows of data to submit for each request to the API.
+            row_offset (integer): The number of rows of data to skip; '0' starts submission from the first row and submits all data.
+
+        Examples:
+            This submits a spreadsheet file containing multiple records in rows to the CCLE project in the sandbox commons.
+
+            >>> Gen3Submission.submit_file("DCF-CCLE","data_spreadsheet.tsv")
+
+        """
+        # Read the file in as a pandas DataFrame
+        f = os.path.basename(filename)
+        if f.lower().endswith('.csv'):
+            df = pd.read_csv(filename, header=0, sep=',', dtype=str).fillna('')
+        elif f.lower().endswith('.xlsx'):
+            xl = pd.ExcelFile(filename, dtype=str) #load excel file
+            sheet = xl.sheet_names[0] #sheetname
+            df = xl.parse(sheet) #save sheet as dataframe
+            converters = {col: str for col in list(df)} #make sure int isn't converted to float
+            df = pd.read_excel(filename, converters=converters).fillna('') #remove nan
+        elif filename.lower().endswith(('.tsv','.txt')):
+            df = pd.read_csv(filename, header=0, sep='\t', dtype=str).fillna('')
+        else:
+            raise Gen3UserError('Please upload a file in CSV, TSV, or XLSX format.')
+
+        # Chunk the file
+        print("\nSubmitting "+filename+" with "+str(len(df))+" records.")
+        program,project = project_id.split('-',1)
+        api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
+        headers = {'content-type': 'text/tab-separated-values'}
+
+        start = row_offset
+        end = row_offset + chunk_size
+        chunk = df[start:end]
+
+        count = 0
+
+        results = {'failed':{'messages':[],'submitter_ids':[]}, # these are invalid records
+                    'other':[], # any unhandled API responses
+                    'details':[], # entire API response details
+                    'succeeded':[], # list of submitter_ids that were successfully updated/created
+                    'responses':[], # list of API response codes
+                    'missing':[]} # list of submitter_ids missing from API response details
+
+        while (start+len(chunk)) <= len(df):
+
+            timeout = False
+            valid = []
+            invalid = []
+            count+=1
+            print("Chunk "+str(count)+" (chunk size: "+ str(chunk_size) + ", submitted: " + str(len(results['succeeded'])+len(results['failed']['submitter_ids'])) + " of " + str(len(df)) + "):  ")
+
+            response = requests.put(api_url, auth=self._auth_provider, data=chunk.to_csv(sep='\t',index=False), headers=headers).text
+            results['details'].append(response)
+
+            # Handle the API response
+            if '"code": 200' in response: #success
+                res = json.loads(response)
+                entities = res['entities']
+                print("\t Succeeded: "+str(len(entities))+" entities.")
+                results['responses'].append("Chunk "+str(count)+" Succeeded: "+str(len(entities))+" entities.")
+                #res = json.loads(response)
+                for entity in entities:
+                    sid = entity['unique_keys'][0]['submitter_id']
+                    results['succeeded'].append(sid)
+
+            elif '"code": 4' in response: #failure
+                res = json.loads(response)
+                entities = res['entities']
+                print("\tFailed: "+str(len(entities))+" entities.")
+                results['responses'].append("Chunk "+str(count)+" Failed: "+str(len(entities))+" entities.")
+                #res = json.loads(response)
+                for entity in entities:
+                    sid = entity['unique_keys'][0]['submitter_id']
+                    if entity['valid']: #valid but failed
+                        valid.append(sid)
+                    else: #invalid and failed
+                        message = entity['errors'][0]['message']
+                        results['failed']['messages'].append(message)
+                        results['failed']['submitter_ids'].append(sid)
+                        invalid.append(sid)
+                print("\tInvalid records in this chunk: " + str(len(invalid)))
+
+            elif '"error": {"Request Timeout' in response or '413 Request Entity Too Large' in response: # timeout
+                print("\t Request Timeout: " + response)
+                results['responses'].append("Request Timeout: "+response)
+                timeout = True
+
+            elif '"code": 5' in response: # internal server error
+                print("\t Internal Server Error: " + response)
+                results['responses'].append("Internal Server Error: " + response)
+
+            elif '"message": ' in response and 'code' not in response: # other?
+                print("\t No code in the API response for Chunk " + str(count) + ": " + res['message'])
+                print("\t " + str(res['transactional_errors']))
+                results['responses'].append("Error Chunk " + str(count) + ": " + res['message'])
+                results['other'].append(res['transactional_errors'])
+
+            else: # catch-all for any other response
+                print("\t Unhandled API-response: "+response)
+                results['responses'].append("Unhandled API response: "+response)
+
+            if len(valid) > 0: # if valid entities failed bc grouped with invalid, retry submission
+                chunk = chunk.loc[df['submitter_id'].isin(valid)] # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
+                print("Retrying submission of valid entities from failed chunk: " + str(len(chunk)) + " valid entities.")
+
+            elif timeout is False: # get new chunk if didn't timeout
+                start+=chunk_size
+                end = start + chunk_size
+                chunk = df[start:end]
+
+            else: # if timeout, reduce chunk size and retry smaller chunk
+                chunk_size = int(chunk_size/2)
+                end = start + chunk_size
+                chunk = df[start:end]
+                print("Retrying Chunk with reduced chunk_size: " + str(chunk_size))
+                timeout = False
+
+        print("Finished data submission.")
+        print("Successful records: " + str(len(set(results['succeeded']))))
+        print("Failed invalid records: " + str(len(set(results['failed']['submitter_ids']))))
+
+        return results
+
+    def write_tsvs_from_results(self,invalid_ids,filename):
+            # Read the file in as a pandas DataFrame
+        f = os.path.basename(filename)
+        if f.lower().endswith('.csv'):
+            df = pd.read_csv(filename, header=0, sep=',', dtype=str).fillna('')
+        elif f.lower().endswith('.xlsx'):
+            xl = pd.ExcelFile(filename, dtype=str) #load excel file
+            sheet = xl.sheet_names[0] #sheetname
+            df = xl.parse(sheet) #save sheet as dataframe
+            converters = {col: str for col in list(df)} #make sure int isn't converted to float
+            df = pd.read_excel(filename, converters=converters).fillna('') #remove nan
+        elif filename.lower().endswith(('.tsv','.txt')):
+            df = pd.read_csv(filename, header=0, sep='\t', dtype=str).fillna('')
+        else:
+            print("Please upload a file in CSV, TSV, or XLSX format.")
+            exit(1)
+
+        invalid_df = df.loc[df['submitter_id'].isin(invalid_ids)] # these are records that failed due to being invalid and should be reformatted
+        invalid_file = 'invalid_' + f + '.tsv'
+
+        print("Writing TSVs: ")
+        print('\t' + invalid_file)
+        invalid_df.to_csv(invalid_file, sep='\t', index=False, encoding='utf-8')
+
+        return invalid_df
