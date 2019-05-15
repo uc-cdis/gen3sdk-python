@@ -15,9 +15,9 @@ import seaborn as sns
 
 ## Download and configure gen3-client in Jupyter Notebook
 
-# profile = 'bpa'
-#api = 'https://data.bloodpac.org/' # BloodPAC
-# creds = '/Users/christopher/Downloads/bpa-credentials.json'
+profile = 'bpa'
+api = 'https://data.bloodpac.org/' # BloodPAC
+creds = '/Users/christopher/Downloads/bpa-credentials.json'
 
 # profile = 'bc'
 # api = 'https://data.braincommons.org/' # BRAIN Commons
