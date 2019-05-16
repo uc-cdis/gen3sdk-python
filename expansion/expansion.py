@@ -57,6 +57,49 @@ class Gen3Expansion:
         outfile.close
         print("\nOutput written to file: "+filename)
 
+    def get_node_tsvs(self, node, projects=None, overwrite=False):
+        """Gets a TSV of the structuerd data from each node specified for each project specified
+           Also creates a master TSV per node of merged data from each project.
+           Returns a DataFrame containing the merged data.
+
+        Args:
+            node (str): The name of the node to download structured data from.
+            projects (list): The projects to download the node from. If "None", downloads data from each project user has access to.
+
+        Example:
+        >>> df = get_node_tsvs('demographic')
+
+        """
+
+        if not isinstance(node, str): # Create folder on VM for downloaded files
+            mydir = 'downloaded_tsvs'
+        else:
+            mydir = str(node+'_tsvs')
+        if not os.path.exists(mydir):
+            os.makedirs(mydir)
+        if projects is None: #if no projects specified, get node for all projects
+            projects = list(json_normalize(sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+        elif isinstance(projects, str):
+            projects = [projects]
+        dfs = []
+        df_len = 0
+        for project in projects:
+            filename = str(mydir+'/'+project+'_'+node+'.tsv')
+            if (os.path.isfile(filename)) and (overwrite is False):
+                print("File previously downloaded.")
+            else:
+                prog,proj = project.split('-',1)
+                sub.export_node(prog,proj,node,'tsv',filename)
+            df1 = pd.read_csv(filename, sep='\t', header=0)
+            dfs.append(df1)
+            df_len+=len(df1)
+            print(filename +' has '+str(len(df1))+' records.')
+        all_data = pd.concat(dfs, ignore_index=True)
+        print('length of all dfs: ' +str(df_len))
+        nodefile = str('master_'+node+'.tsv')
+        all_data.to_csv(str(mydir+'/'+nodefile),sep='\t')
+        print('Master node TSV with '+str(len(all_data))+' total records written to '+nodefile+'.')
+        return all_data
 
     ### AWS S3 Tools:
     def s3_ls(self, path, bucket, profile, pattern='*'):
@@ -164,40 +207,6 @@ class Gen3Expansion:
                 df = json_normalize(res['data']['project'])
                 project_ids = project_ids + list(set(df['project_id']))
         return sorted(project_ids,key=str.lower)
-
-
-    # Create master TSV of data from each project per node
-    def get_node_tsvs(self, node, projects=None, overwrite=False):
-        #Get a TSV of the node(s) specified for each project specified
-        if not isinstance(node, str): # Create folder on VM for downloaded files
-            mydir = 'downloaded_tsvs'
-        else:
-            mydir = str(node+'_tsvs')
-        if not os.path.exists(mydir):
-            os.makedirs(mydir)
-        if projects is None: #if no projects specified, get node for all projects
-            projects = list(json_normalize(sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
-        elif isinstance(projects, str):
-            projects = [projects]
-        dfs = []
-        df_len = 0
-        for project in projects:
-            filename = str(mydir+'/'+project+'_'+node+'.tsv')
-            if (os.path.isfile(filename)) and (overwrite is False):
-                print("File previously downloaded.")
-            else:
-                prog,proj = project.split('-',1)
-                sub.export_node(prog,proj,node,'tsv',filename)
-            df1 = pd.read_csv(filename, sep='\t', header=0)
-            dfs.append(df1)
-            df_len+=len(df1)
-            print(filename +' has '+str(len(df1))+' records.')
-        all_data = pd.concat(dfs, ignore_index=True)
-        print('length of all dfs: ' +str(df_len))
-        nodefile = str('master_'+node+'.tsv')
-        all_data.to_csv(str(mydir+'/'+nodefile),sep='\t')
-        print('Master node TSV with '+str(len(all_data))+' total records written to '+nodefile+'.')
-        return all_data
 
     def get_project_tsvs(self, projects):
         # Get a TSV for every node in a project
