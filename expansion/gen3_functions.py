@@ -13,6 +13,7 @@ import numpy as np
 import seaborn as sns
 
 global sub
+
 sub = Gen3Submission(api, auth)
 
 ### AWS S3 Tools:
