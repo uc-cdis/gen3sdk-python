@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
-sub = Gen3Submission(api, auth)
+global sub = Gen3Submission(api, auth)
 
 ### AWS S3 Tools:
 def s3_ls(path, bucket, profile, pattern='*'):
