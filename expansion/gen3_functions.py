@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
+sub = Gen3Submission(api, auth)
+
 ### AWS S3 Tools:
 def s3_ls(path, bucket, profile, pattern='*'):
     ''' Print the results of an `aws s3 ls` command '''
