@@ -104,3 +104,31 @@ class Gen3Analysis:
                 display(df1)
         else:
             print("Length of DataFrame is zero.")
+
+def property_counts_by_project(prop,df):
+
+    categories = list(set(df[prop]))
+    projects = list(set(df['project_id']))
+
+    project_table = pd.DataFrame(columns=['Project','Total']+categories)
+    project_table
+
+    proj_counts = {}
+    for project in projects:
+        cat_counts = {}
+        cat_counts['Project'] = project
+        df1 = df.loc[df['project_id']==project]
+        total = 0
+        for category in categories:
+            cat_count = len(df1.loc[df1[prop]==category])
+            total+=cat_count
+            cat_counts[category] = cat_count
+
+        cat_counts['Total'] = total
+        index = len(project_table)
+        for key in list(cat_counts.keys()):
+            project_table.loc[index,key] = cat_counts[key]
+
+        project_table = project_table.sort_values(by='Total', ascending=False, na_position='first')
+
+    return project_table
