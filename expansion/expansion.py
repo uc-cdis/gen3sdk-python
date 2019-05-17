@@ -57,7 +57,8 @@ class Gen3Expansion:
         outfile.close
         print("\nOutput written to file: "+filename)
 
-    def get_node_tsvs(self, node, projects=None, overwrite=False):
+
+    def get_node_tsvs(self, node, projects=None, overwrite=False, remove_empty=True):
         """Gets a TSV of the structuerd data from each node specified for each project specified
            Also creates a master TSV per node of merged data from each project.
            Returns a DataFrame containing the merged data.
@@ -70,17 +71,18 @@ class Gen3Expansion:
         >>> df = get_node_tsvs('demographic')
 
         """
-
         if not isinstance(node, str): # Create folder on VM for downloaded files
             mydir = 'downloaded_tsvs'
         else:
             mydir = str(node+'_tsvs')
+
         if not os.path.exists(mydir):
             os.makedirs(mydir)
         if projects is None: #if no projects specified, get node for all projects
             projects = list(json_normalize(sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
         elif isinstance(projects, str):
             projects = [projects]
+
         dfs = []
         df_len = 0
         for project in projects:
@@ -90,16 +92,28 @@ class Gen3Expansion:
             else:
                 prog,proj = project.split('-',1)
                 sub.export_node(prog,proj,node,'tsv',filename)
-            df1 = pd.read_csv(filename, sep='\t', header=0)
+            df1 = pd.read_csv(filename, sep='\t', header=0, index_col=False)
             dfs.append(df1)
             df_len+=len(df1)
             print(filename +' has '+str(len(df1))+' records.')
+
+            if remove_empty is True:
+                if df1.empty:
+                    print('Removing empty file: ' + filename)
+                    cmd = ['rm',filename] #look in the download directory
+                    try:
+                        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+                    except Exception as e:
+                        output = e.output.decode('UTF-8')
+                        print("ERROR deleting file: " + output)
+
         all_data = pd.concat(dfs, ignore_index=True)
         print('length of all dfs: ' +str(df_len))
         nodefile = str('master_'+node+'.tsv')
-        all_data.to_csv(str(mydir+'/'+nodefile),sep='\t')
+        all_data.to_csv(str(mydir+'/'+nodefile),sep='\t',index=False)
         print('Master node TSV with '+str(len(all_data))+' total records written to '+nodefile+'.')
         return all_data
+
 
     ### AWS S3 Tools:
     def s3_ls(self, path, bucket, profile, pattern='*'):

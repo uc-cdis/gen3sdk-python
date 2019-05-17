@@ -1,3 +1,4 @@
+from IPython.display import display, HTML
 
 import json
 import requests
@@ -40,14 +41,6 @@ class Gen3Analysis:
         outfile.write(output)
         outfile.close
         print("\nOutput written to file: "+filename)
-
-    def property_counts_table(prop,df):
-        counts = Counter(df[prop])
-        df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
-        df1 = df1.rename(columns={'index':prop, 0:'count'}).sort_values(by='count', ascending=False)
-        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-            print(df1)
-
 
     def plot_categorical_property(property,df):
         #plot a bar graph of categorical variable counts in a dataframe
@@ -101,3 +94,13 @@ class Gen3Analysis:
         df = pd.DataFrame.from_dict(counts, orient='index').reset_index()
         df = df.rename(columns={'index':'node', 0:'count'})
         return df
+
+    def property_counts_table(prop,df):
+        counts = Counter(df[prop])
+        if len(counts) > 0:
+            df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
+            df1 = df1.rename(columns={'index':prop, 0:'count'}).sort_values(by='count', ascending=False)
+            with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+                display(df1)
+        else:
+            print("Length of DataFrame is zero.")
