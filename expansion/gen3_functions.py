@@ -723,3 +723,11 @@ def summarize_submission(tsv,details,write_tsvs):
         print('\t' + invalid_file)
 
     return results
+
+def property_counts_table(prop,df):
+    counts = Counter(df[prop])
+    df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
+    df1 = df1.rename(columns={'index':prop, 0:'count'}).sort_values(by='count', ascending=False)
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+        print(df1)
+        
