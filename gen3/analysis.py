@@ -107,7 +107,7 @@ class Gen3Analysis:
             print("Length of DataFrame is zero.")
 
 def property_counts_by_project(self, prop, df):
-
+    df = df[df[prop].notnull()]
     categories = list(set(df[prop]))
     projects = list(set(df['project_id']))
 

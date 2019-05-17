@@ -716,7 +716,7 @@ def property_counts_table(prop,df):
         display(df1)
 
 def property_counts_by_project(prop,df):
-
+    df = df[df[prop].notnull()]
     categories = list(set(df[prop]))
     projects = list(set(df['project_id']))
 
