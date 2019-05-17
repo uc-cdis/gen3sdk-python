@@ -353,50 +353,6 @@ def delete_uploaded_files(guids,api):
                 print("Error deleting GUID {}:".format(guid))
                 print(response.reason)
 
-def plot_categorical_property(property,df):
-    #plot a bar graph of categorical variable counts in a dataframe
-    df = df[df[property].notnull()]
-    N = len(df)
-    categories, counts = zip(*Counter(df[property]).items())
-    y_pos = np.arange(len(categories))
-    plt.bar(y_pos, counts, align='center', alpha=0.5)
-    #plt.figtext(.8, .8, 'N = '+str(N))
-    plt.xticks(y_pos, categories)
-    plt.ylabel('Counts')
-    plt.title(str('Counts by '+property+' (N = '+str(N)+')'))
-    plt.xticks(rotation=90, horizontalalignment='center')
-    #add N for each bar
-    plt.show()
-
-def plot_numeric_property(property,df,by_project=False):
-    #plot a histogram of numeric variable in a dataframe
-    df = df[df[property].notnull()]
-    data = list(df[property])
-    N = len(data)
-    fig = sns.distplot(data, hist=False, kde=True,
-             bins=int(180/5), color = 'darkblue',
-             kde_kws={'linewidth': 2})
-    plt.figtext(.8, .8, 'N = '+str(N))
-    plt.xlabel(property)
-    plt.ylabel("Probability")
-    plt.title("PDF for all projects "+property+' (N = '+str(N)+')') # You can comment this line out if you don't need title
-    plt.show(fig)
-
-    if by_project is True:
-        projects = list(set(df['project_id']))
-        for project in projects:
-            proj_df = df[df['project_id']==project]
-            data = list(proj_df[property])
-            N = len(data)
-            fig = sns.distplot(data, hist=False, kde=True,
-                     bins=int(180/5), color = 'darkblue',
-                     kde_kws={'linewidth': 2})
-            plt.figtext(.8, .8, 'N = '+str(N))
-            plt.xlabel(property)
-            plt.ylabel("Probability")
-            plt.title("PDF for "+property+' in ' + project+' (N = '+str(N)+')') # You can comment this line out if you don't need title
-            plt.show(fig)
-
 def node_record_counts(project_id):
     query_txt = """{node (first:-1, project_id:"%s"){type}}""" % (project_id)
     res = sub.query(query_txt)
@@ -404,6 +360,7 @@ def node_record_counts(project_id):
     counts = Counter(df['type'])
     df = pd.DataFrame.from_dict(counts, orient='index').reset_index()
     df = df.rename(columns={'index':'node', 0:'count'})
+    display(df)
     return df
 
 def list_project_files(project_id):
@@ -751,6 +708,7 @@ def summarize_submission(tsv,details,write_tsvs):
     return results
 
 def property_counts_table(prop,df):
+    df = df[df[prop].notnull()]
     counts = Counter(df[prop])
     df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
     df1 = df1.rename(columns={'index':prop, 0:'count'}).sort_values(by='count', ascending=False)
@@ -784,3 +742,48 @@ def property_counts_by_project(prop,df):
         project_table = project_table.sort_values(by='Total', ascending=False, na_position='first')
 
     return project_table
+
+
+def plot_categorical_property(property,df):
+    #plot a bar graph of categorical variable counts in a dataframe
+    df = df[df[property].notnull()]
+    N = len(df)
+    categories, counts = zip(*Counter(df[property]).items())
+    y_pos = np.arange(len(categories))
+    plt.bar(y_pos, counts, align='center', alpha=0.5)
+    #plt.figtext(.8, .8, 'N = '+str(N))
+    plt.xticks(y_pos, categories)
+    plt.ylabel('Counts')
+    plt.title(str('Counts by '+property+' (N = '+str(N)+')'))
+    plt.xticks(rotation=90, horizontalalignment='center')
+    #add N for each bar
+    plt.show()
+
+def plot_numeric_property(property,df,by_project=False):
+    #plot a histogram of numeric variable in a dataframe
+    df = df[df[property].notnull()]
+    data = list(df[property])
+    N = len(data)
+    fig = sns.distplot(data, hist=False, kde=True,
+             bins=int(180/5), color = 'darkblue',
+             kde_kws={'linewidth': 2})
+    plt.figtext(.8, .8, 'N = '+str(N))
+    plt.xlabel(property)
+    plt.ylabel("Probability")
+    plt.title("PDF for all projects "+property+' (N = '+str(N)+')') # You can comment this line out if you don't need title
+    plt.show(fig)
+
+    if by_project is True:
+        projects = list(set(df['project_id']))
+        for project in projects:
+            proj_df = df[df['project_id']==project]
+            data = list(proj_df[property])
+            N = len(data)
+            fig = sns.distplot(data, hist=False, kde=True,
+                     bins=int(180/5), color = 'darkblue',
+                     kde_kws={'linewidth': 2})
+            plt.figtext(.8, .8, 'N = '+str(N))
+            plt.xlabel(property)
+            plt.ylabel("Probability")
+            plt.title("PDF for "+property+' in ' + project+' (N = '+str(N)+')') # You can comment this line out if you don't need title
+            plt.show(fig)

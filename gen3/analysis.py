@@ -95,7 +95,8 @@ class Gen3Analysis:
         df = df.rename(columns={'index':'node', 0:'count'})
         return df
 
-    def property_counts_table(self, prop,df):
+    def property_counts_table(self, prop, df):
+        df = df[df[prop].notnull()]
         counts = Counter(df[prop])
         if len(counts) > 0:
             df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
@@ -105,7 +106,7 @@ class Gen3Analysis:
         else:
             print("Length of DataFrame is zero.")
 
-def property_counts_by_project(self, prop,df):
+def property_counts_by_project(self, prop, df):
 
     categories = list(set(df[prop]))
     projects = list(set(df['project_id']))
