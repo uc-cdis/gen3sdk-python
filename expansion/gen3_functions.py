@@ -755,7 +755,7 @@ def property_counts_table(prop,df):
     df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
     df1 = df1.rename(columns={'index':prop, 0:'count'}).sort_values(by='count', ascending=False)
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-        print(df1)
+        display(df1)
 
 def property_counts_by_project(prop,df):
 

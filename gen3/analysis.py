@@ -131,4 +131,5 @@ def property_counts_by_project(self, prop,df):
 
         project_table = project_table.sort_values(by='Total', ascending=False, na_position='first')
 
+    display(project_table)
     return project_table
