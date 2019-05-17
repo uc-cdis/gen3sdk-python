@@ -42,7 +42,7 @@ class Gen3Analysis:
         outfile.close
         print("\nOutput written to file: "+filename)
 
-    def plot_categorical_property(property,df):
+    def plot_categorical_property(self, property,df):
         #plot a bar graph of categorical variable counts in a dataframe
         df = df[df[property].notnull()]
         N = len(df)
@@ -57,7 +57,7 @@ class Gen3Analysis:
         #add N for each bar
         plt.show()
 
-    def plot_numeric_property(property,df,by_project=False):
+    def plot_numeric_property(self, property,df,by_project=False):
         #plot a histogram of numeric variable in a dataframe
         df = df[df[property].notnull()]
         data = list(df[property])
@@ -86,7 +86,7 @@ class Gen3Analysis:
                 plt.title("PDF for "+property+' in ' + project+' (N = '+str(N)+')') # You can comment this line out if you don't need title
                 plt.show(fig)
 
-    def node_record_counts(project_id):
+    def node_record_counts(self, project_id):
         query_txt = """{node (first:-1, project_id:"%s"){type}}""" % (project_id)
         res = Gen3Submission.query(query_txt)
         df = json_normalize(res['data']['node'])
@@ -95,7 +95,7 @@ class Gen3Analysis:
         df = df.rename(columns={'index':'node', 0:'count'})
         return df
 
-    def property_counts_table(prop,df):
+    def property_counts_table(self, prop,df):
         counts = Counter(df[prop])
         if len(counts) > 0:
             df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
@@ -105,7 +105,7 @@ class Gen3Analysis:
         else:
             print("Length of DataFrame is zero.")
 
-def property_counts_by_project(prop,df):
+def property_counts_by_project(self, prop,df):
 
     categories = list(set(df[prop]))
     projects = list(set(df['project_id']))

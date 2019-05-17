@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
+from IPython.display import display, HTML
 
 ### AWS S3 Tools:
 def s3_ls(path, bucket, profile, pattern='*'):
@@ -783,5 +784,3 @@ def property_counts_by_project(prop,df):
         project_table = project_table.sort_values(by='Total', ascending=False, na_position='first')
 
     return project_table
-
-property_counts_by_project(prop,df)
