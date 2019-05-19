@@ -1,5 +1,6 @@
 import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy, re
 import pandas as pd
+from pandas.tools.plotting import table
 from pandas.io.json import json_normalize
 from collections import Counter
 
@@ -787,3 +788,12 @@ def plot_numeric_property(property,df,by_project=False):
             plt.ylabel("Probability")
             plt.title("PDF for "+property+' in ' + project+' (N = '+str(N)+')') # You can comment this line out if you don't need title
             plt.show(fig)
+
+def save_table_image(df,filename='mytable.png'):
+    """ Saves a pandas DataFrame as a PNG image file.
+    """
+    ax = plt.subplot(111, frame_on=False) # no visible frame
+    ax.xaxis.set_visible(False)  # hide the x axis
+    ax.yaxis.set_visible(False)  # hide the y axis
+    table(ax, df)  # where df is your data frame
+    plt.savefig(filename)

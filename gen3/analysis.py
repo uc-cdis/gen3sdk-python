@@ -1,8 +1,11 @@
 from IPython.display import display, HTML
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+from pandas.tools.plotting import table
 
 import json
 import requests
-import pandas as pd
 import os
 
 class Gen3Error(Exception):
@@ -106,31 +109,40 @@ class Gen3Analysis:
         else:
             print("Length of DataFrame is zero.")
 
-def property_counts_by_project(self, prop, df):
-    df = df[df[prop].notnull()]
-    categories = list(set(df[prop]))
-    projects = list(set(df['project_id']))
+    def property_counts_by_project(self, prop, df):
+        df = df[df[prop].notnull()]
+        categories = list(set(df[prop]))
+        projects = list(set(df['project_id']))
 
-    project_table = pd.DataFrame(columns=['Project','Total']+categories)
-    project_table
+        project_table = pd.DataFrame(columns=['Project','Total']+categories)
+        project_table
 
-    proj_counts = {}
-    for project in projects:
-        cat_counts = {}
-        cat_counts['Project'] = project
-        df1 = df.loc[df['project_id']==project]
-        total = 0
-        for category in categories:
-            cat_count = len(df1.loc[df1[prop]==category])
-            total+=cat_count
-            cat_counts[category] = cat_count
+        proj_counts = {}
+        for project in projects:
+            cat_counts = {}
+            cat_counts['Project'] = project
+            df1 = df.loc[df['project_id']==project]
+            total = 0
+            for category in categories:
+                cat_count = len(df1.loc[df1[prop]==category])
+                total+=cat_count
+                cat_counts[category] = cat_count
 
-        cat_counts['Total'] = total
-        index = len(project_table)
-        for key in list(cat_counts.keys()):
-            project_table.loc[index,key] = cat_counts[key]
+            cat_counts['Total'] = total
+            index = len(project_table)
+            for key in list(cat_counts.keys()):
+                project_table.loc[index,key] = cat_counts[key]
 
-        project_table = project_table.sort_values(by='Total', ascending=False, na_position='first')
+            project_table = project_table.sort_values(by='Total', ascending=False, na_position='first')
 
-    display(project_table)
-    return project_table
+        display(project_table)
+        return project_table
+
+    def save_table_image(self, df,filename='mytable.png'):
+        """ Saves a pandas DataFrame as a PNG image file.
+        """
+        ax = plt.subplot(111, frame_on=False) # no visible frame
+        ax.xaxis.set_visible(False)  # hide the x axis
+        ax.yaxis.set_visible(False)  # hide the y axis
+        table(ax, df)  # where df is your data frame
+        plt.savefig(filename)
