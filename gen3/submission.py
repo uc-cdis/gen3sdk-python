@@ -392,7 +392,7 @@ class Gen3Submission:
                 print("\t No code in the API response for Chunk " + str(count) + ": " + res.get('message'))
                 print("\t " + str(res.get('transactional_errors')))
                 results['responses'].append("Error Chunk " + str(count) + ": " + res.get('message'))
-                results['other'].append(res['transactional_errors'])
+                results['other'].append(res.get('transactional_errors'))
 
             else: # catch-all for any other response
                 print("\t Unhandled API-response: "+response)
