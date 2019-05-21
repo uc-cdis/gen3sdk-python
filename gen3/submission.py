@@ -389,7 +389,7 @@ class Gen3Submission:
                 results['responses'].append("Internal Server Error: " + response)
 
             elif '"message": ' in response and 'code' not in response: # other?
-                print("\t No code in the API response for Chunk " + str(count) + ": " + res['message'])
+                print("\t No code in the API response for Chunk " + str(count) + ": " + res.get('message'))
                 print("\t " + str(res['transactional_errors']))
                 results['responses'].append("Error Chunk " + str(count) + ": " + res['message'])
                 results['other'].append(res['transactional_errors'])
