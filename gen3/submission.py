@@ -337,7 +337,7 @@ class Gen3Submission:
 
         # Chunk the file
         print("\nSubmitting {} with {} records.".format(filename, str(len(df))))
-        program,project = project_id.split('-',1)
+        program, project = project_id.split("-", 1)
         api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
         headers = {"content-type": "text/tab-separated-values"}
 
@@ -406,10 +406,16 @@ class Gen3Submission:
 
             elif '"code": 4' in response:  # failure
                 res = json.loads(response)
-                entities = res.get('entities', [])
-                print("\tFailed: "+str(len(entities))+" entities.")
-                results['responses'].append("Chunk "+str(count)+" Failed: "+str(len(entities))+" entities.")
-                #res = json.loads(response)
+                entities = res.get("entities", [])
+                print("\tFailed: " + str(len(entities)) + " entities.")
+                results["responses"].append(
+                    "Chunk "
+                    + str(count)
+                    + " Failed: "
+                    + str(len(entities))
+                    + " entities."
+                )
+                # res = json.loads(response)
                 for entity in entities:
                     sid = entity["unique_keys"][0]["submitter_id"]
                     if entity["valid"]:  # valid but failed
@@ -431,24 +437,39 @@ class Gen3Submission:
 
             elif '"code": 5' in response:  # internal server error
                 print("\t Internal Server Error: " + response)
-                results['responses'].append("Internal Server Error: " + response)
+                results["responses"].append("Internal Server Error: " + response)
 
-            elif '"message": ' in response and 'code' not in response: # other?
-                print("\t No code in the API response for Chunk " + str(count) + ": " + res.get('message'))
-                print("\t " + str(res.get('transactional_errors')))
-                results['responses'].append("Error Chunk " + str(count) + ": " + res.get('message'))
-                results['other'].append(res.get('transactional_errors'))
+            elif '"message": ' in response and "code" not in response:  # other?
+                print(
+                    "\t No code in the API response for Chunk "
+                    + str(count)
+                    + ": "
+                    + res.get("message")
+                )
+                print("\t " + str(res.get("transactional_errors")))
+                results["responses"].append(
+                    "Error Chunk " + str(count) + ": " + res.get("message")
+                )
+                results["other"].append(res.get("transactional_errors"))
 
-            else: # catch-all for any other response
-                print("\t Unhandled API-response: "+response)
-                results['responses'].append("Unhandled API response: "+response)
+            else:  # catch-all for any other response
+                print("\t Unhandled API-response: " + response)
+                results["responses"].append("Unhandled API response: " + response)
 
-            if len(valid) > 0: # if valid entities failed bc grouped with invalid, retry submission
-                chunk = chunk.loc[df['submitter_id'].isin(valid)] # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
-                print("Retrying submission of valid entities from failed chunk: " + str(len(chunk)) + " valid entities.")
+            if (
+                len(valid) > 0
+            ):  # if valid entities failed bc grouped with invalid, retry submission
+                chunk = chunk.loc[
+                    df["submitter_id"].isin(valid)
+                ]  # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
+                print(
+                    "Retrying submission of valid entities from failed chunk: "
+                    + str(len(chunk))
+                    + " valid entities."
+                )
 
-            elif timeout is False: # get new chunk if didn't timeout
-                start+=chunk_size
+            elif timeout is False:  # get new chunk if didn't timeout
+                start += chunk_size
                 end = start + chunk_size
                 chunk = df[start:end]
 
