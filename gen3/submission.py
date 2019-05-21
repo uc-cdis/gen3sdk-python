@@ -322,7 +322,7 @@ class Gen3Submission:
             raise Gen3UserError('Please upload a file in CSV, TSV, or XLSX format.')
 
         # Chunk the file
-        print("\nSubmitting "+filename+" with "+str(len(df))+" records.")
+        print("\nSubmitting {} with {} records.".format(filename, str(len(df))))
         program,project = project_id.split('-',1)
         api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
         headers = {'content-type': 'text/tab-separated-values'}
