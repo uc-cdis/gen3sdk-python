@@ -43,10 +43,7 @@ except Exception as e:
 print(subprocess.check_output(client).decode('UTF-8')) #check that installation is complete
 
 
-
-
 ### Run Locally:
-
 ## Import some Python packages
 import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath
 import pandas as pd

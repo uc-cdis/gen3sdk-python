@@ -461,12 +461,12 @@ def list_guids_in_nodes(nodes=None,projects=None):
 def download_files_by_guids(guids=None):
     # Make a directory for files
     mydir = 'downloaded_data_files'
+    file_names = {}
     if not os.path.exists(mydir):
         os.makedirs(mydir)
     if isinstance(guids, str):
         guids = [guids]
     if isinstance(guids, list):
-        file_names = {}
         for guid in guids:
             cmd = client+' download --profile='+profile+' --guid='+guid
             try:
@@ -489,7 +489,6 @@ def download_files_by_guids(guids=None):
     else:
         print('Provide a list of guids to download: "get_file_by_guid(guids=guid_list)"')
     return file_names
-
 
 def get_records_for_uuids(ids,project,api):
     dfs = []
