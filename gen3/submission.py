@@ -364,7 +364,7 @@ class Gen3Submission:
 
             elif '"code": 4' in response: #failure
                 res = json.loads(response)
-                entities = res['entities']
+                entities = res.get('entities', [])
                 print("\tFailed: "+str(len(entities))+" entities.")
                 results['responses'].append("Chunk "+str(count)+" Failed: "+str(len(entities))+" entities.")
                 #res = json.loads(response)
