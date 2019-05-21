@@ -542,12 +542,12 @@ class Gen3Expansion:
     def download_files_by_guids(self, guids=None):
         # Make a directory for files
         mydir = 'downloaded_data_files'
+        file_names = {}
         if not os.path.exists(mydir):
             os.makedirs(mydir)
         if isinstance(guids, str):
             guids = [guids]
         if isinstance(guids, list):
-            file_names = {}
             for guid in guids:
                 cmd = client+' download --profile='+profile+' --guid='+guid
                 try:
