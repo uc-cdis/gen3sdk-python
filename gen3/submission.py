@@ -391,7 +391,7 @@ class Gen3Submission:
             elif '"message": ' in response and 'code' not in response: # other?
                 print("\t No code in the API response for Chunk " + str(count) + ": " + res.get('message'))
                 print("\t " + str(res.get('transactional_errors')))
-                results['responses'].append("Error Chunk " + str(count) + ": " + res['message'])
+                results['responses'].append("Error Chunk " + str(count) + ": " + res.get('message'))
                 results['other'].append(res['transactional_errors'])
 
             else: # catch-all for any other response
