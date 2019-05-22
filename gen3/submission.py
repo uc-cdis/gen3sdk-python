@@ -362,7 +362,7 @@ class Gen3Submission:
         while (start + len(chunk)) <= len(df):
 
             timeout = False
-            valid = []
+            valid_but_failed = []
             invalid = []
             count += 1
             print(
@@ -466,7 +466,7 @@ class Gen3Submission:
                         for entity in entities:
                             sid = entity["unique_keys"][0]["submitter_id"]
                             if entity["valid"]:  # valid but failed
-                                valid.append(sid)
+                                valid_but_failed.append(sid)
                             else:  # invalid and failed
                                 message = entity["errors"][0]["message"]
                                 results["failed"]["messages"].append(message)
@@ -486,10 +486,10 @@ class Gen3Submission:
                     raise Gen3Error("Unable to parse API response as JSON!")
 
             if (
-                len(valid) > 0 and len(invalid) > 0
+                len(valid_but_failed) > 0 and len(invalid) > 0
             ):  # if valid entities failed bc grouped with invalid, retry submission
                 chunk = chunk.loc[
-                    df["submitter_id"].isin(valid)
+                    df["submitter_id"].isin(valid_but_failed)
                 ]  # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
                 print(
                     "Retrying submission of valid entities from failed chunk: "
@@ -498,7 +498,7 @@ class Gen3Submission:
                 )
 
             elif (
-                len(valid) > 0 and len(invalid) == 0
+                len(valid_but_failed) > 0 and len(invalid) == 0
             ):  # if all entities are valid but submission still failed, probably due to duplicate submitter_ids. Can remove this section once the API response is fixed: https://ctds-planx.atlassian.net/browse/PXP-3065
                 raise Gen3Error(
                     "Please check your data for duplicate submitter_ids or ids."
