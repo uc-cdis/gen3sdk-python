@@ -304,7 +304,7 @@ class Gen3Submission:
         return data
 
     def submit_file(self, project_id, filename, chunk_size=30, row_offset=0):
-        """Submit record(s) to a project as json.
+        """Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.
 
         Args:
             project_id (str): The project_id to submit to.
