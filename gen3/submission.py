@@ -385,59 +385,15 @@ class Gen3Submission:
                 data=chunk.to_csv(sep="\t", index=False),
                 headers=headers,
             ).text
+            print('\n\n\n'+response+'\n\n\n\n')
             results["details"].append(response)
 
             # Handle the API response
-            if '"code": 200' in response:  # success
-                res = json.loads(response)
-                entities = res["entities"]
-                print("\t Succeeded: " + str(len(entities)) + " entities.")
-                results["responses"].append(
-                    "Chunk "
-                    + str(count)
-                    + " Succeeded: "
-                    + str(len(entities))
-                    + " entities."
-                )
-                # res = json.loads(response)
-                for entity in entities:
-                    sid = entity["unique_keys"][0]["submitter_id"]
-                    results["succeeded"].append(sid)
+            if ("Request Timeout" in response or "413 Request Entity Too Large" in response): #time-out, response is not valid JSON at the moment
 
-            elif '"code": 4' in response:  # failure
-                res = json.loads(response)
-                entities = res.get("entities", [])
-                print("\tFailed: " + str(len(entities)) + " entities.")
-                results["responses"].append(
-                    "Chunk "
-                    + str(count)
-                    + " Failed: "
-                    + str(len(entities))
-                    + " entities."
-                )
-                # res = json.loads(response)
-                for entity in entities:
-                    sid = entity["unique_keys"][0]["submitter_id"]
-                    if entity["valid"]:  # valid but failed
-                        valid.append(sid)
-                    else:  # invalid and failed
-                        message = entity["errors"][0]["message"]
-                        results["failed"]["messages"].append(message)
-                        results["failed"]["submitter_ids"].append(sid)
-                        invalid.append(sid)
-                print("\tInvalid records in this chunk: " + str(len(invalid)))
-
-            elif (
-                '"error": {"Request Timeout' in response
-                or "413 Request Entity Too Large" in response
-            ):  # timeout
                 print("\t Request Timeout: " + response)
                 results["responses"].append("Request Timeout: " + response)
                 timeout = True
-
-            elif '"code": 5' in response:  # internal server error
-                print("\t Internal Server Error: " + response)
-                results["responses"].append("Internal Server Error: " + response)
 
             elif '"message": ' in response and "code" not in response:  # other?
                 print(
@@ -452,12 +408,68 @@ class Gen3Submission:
                 )
                 results["other"].append(res.get("transactional_errors"))
 
-            else:  # catch-all for any other response
+            elif "code" not in response:  # catch-all for any other response without a code
                 print("\t Unhandled API-response: " + response)
                 results["responses"].append("Unhandled API response: " + response)
 
+            else:
+                try:
+                    json_res = json.loads(response)
+
+                    if "code" not in json_res:
+                        print("\t Unhandled API-response: " + response)
+                        results["responses"].append("Unhandled API response: " + response)
+
+                    elif json_res["code"] == 200: # success
+
+                        entities = json_res["entities"]
+                        print("\t Succeeded: " + str(len(entities)) + " entities.")
+                        results["responses"].append(
+                            "Chunk "
+                            + str(count)
+                            + " Succeeded: "
+                            + str(len(entities))
+                            + " entities."
+                        )
+
+                        for entity in entities:
+                            sid = entity["unique_keys"][0]["submitter_id"]
+                            results["succeeded"].append(sid)
+
+                    elif json_res["code"] == 400 or json_res["code"] == 403 or json_res["code"] == 404: # failure
+
+                        entities = json_res.get("entities", [])
+                        print("\tFailed: " + str(len(entities)) + " entities.")
+                        results["responses"].append(
+                            "Chunk "
+                            + str(count)
+                            + " Failed: "
+                            + str(len(entities))
+                            + " entities."
+                        )
+
+                        for entity in entities:
+                            sid = entity["unique_keys"][0]["submitter_id"]
+                            if entity["valid"]:  # valid but failed
+                                valid.append(sid)
+                            else:  # invalid and failed
+                                message = entity["errors"][0]["message"]
+                                results["failed"]["messages"].append(message)
+                                results["failed"]["submitter_ids"].append(sid)
+                                invalid.append(sid)
+                        print("\tInvalid records in this chunk: " + str(len(invalid)))
+
+                    elif json_res["code"] == 500: # internal server error
+
+                        print("\t Internal Server Error: " + response)
+                        results["responses"].append("Internal Server Error: " + response)
+
+                except:
+                    print(response)
+                    raise Gen3Error("Unable to parse API response as JSON!")
+
             if (
-                len(valid) > 0
+                len(valid) > 0 and len(invalid) > 0
             ):  # if valid entities failed bc grouped with invalid, retry submission
                 chunk = chunk.loc[
                     df["submitter_id"].isin(valid)
@@ -468,17 +480,25 @@ class Gen3Submission:
                     + " valid entities."
                 )
 
+            elif (
+                len(valid) > 0 and len(invalid) == 0
+            ):  # if all entities are valid but submission still failed, probably due to duplicate submitter_ids. Can remove this section once the API response is fixed: https://ctds-planx.atlassian.net/browse/PXP-3065
+                raise Gen3SubmissionError("Please check your data for duplicate submitter_ids or ids.")
+
             elif timeout is False:  # get new chunk if didn't timeout
                 start += chunk_size
                 end = start + chunk_size
                 chunk = df[start:end]
 
             else:  # if timeout, reduce chunk size and retry smaller chunk
-                chunk_size = int(chunk_size / 2)
-                end = start + chunk_size
-                chunk = df[start:end]
-                print("Retrying Chunk with reduced chunk_size: " + str(chunk_size))
-                timeout = False
+                if chunk_size >= 2:
+                    chunk_size = int(chunk_size / 2)
+                    end = start + chunk_size
+                    chunk = df[start:end]
+                    print("Retrying Chunk with reduced chunk_size: " + str(chunk_size))
+                    timeout = False
+                else:
+                    raise Gen3SubmissionError("Submission is timing out. Please contact the Helpdesk.")
 
         print("Finished data submission.")
         print("Successful records: " + str(len(set(results["succeeded"]))))
