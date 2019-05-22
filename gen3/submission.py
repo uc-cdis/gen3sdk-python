@@ -379,23 +379,27 @@ class Gen3Submission:
                 + "):  "
             )
 
-            response = requests.put(
-                api_url,
-                auth=self._auth_provider,
-                data=chunk.to_csv(sep="\t", index=False),
-                headers=headers,
-            ).text
-            print("\n\n\n" + response + "\n\n\n\n")
+            try:
+                response = requests.put(
+                    api_url,
+                    auth=self._auth_provider,
+                    data=chunk.to_csv(sep="\t", index=False),
+                    headers=headers,
+                ).text
+            except requests.exceptions.ConnectionError as e:
+                response = "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response',))"
+
             results["details"].append(response)
 
             # Handle the API response
             if (
                 "Request Timeout" in response
                 or "413 Request Entity Too Large" in response
+                or "Connection aborted." in response
             ):  # time-out, response is not valid JSON at the moment
 
-                print("\t Request Timeout: " + response)
-                results["responses"].append("Request Timeout: " + response)
+                print("\t Reducing Chunk Size: " + response)
+                results["responses"].append("Reducing Chunk Size: " + response)
                 timeout = True
 
             elif '"message": ' in response and "code" not in response:  # other?
@@ -496,7 +500,7 @@ class Gen3Submission:
             elif (
                 len(valid) > 0 and len(invalid) == 0
             ):  # if all entities are valid but submission still failed, probably due to duplicate submitter_ids. Can remove this section once the API response is fixed: https://ctds-planx.atlassian.net/browse/PXP-3065
-                raise Gen3SubmissionError(
+                raise Gen3Error(
                     "Please check your data for duplicate submitter_ids or ids."
                 )
 
