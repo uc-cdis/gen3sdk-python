@@ -4,6 +4,9 @@ import seaborn as sns
 import pandas as pd
 from pandas.tools.plotting import table
 
+import gen3
+from gen3.submission import Gen3Submission
+
 import json
 import requests
 import os
@@ -12,7 +15,7 @@ class Gen3Error(Exception):
     pass
 
 
-class Gen3Analysis:
+class Gen3Analysis(Gen3Submission):
     """Analysis functions for exploratory data analysis in a Gen3 Data Commons.
 
     A class for interacting with the Gen3 query and data export services.

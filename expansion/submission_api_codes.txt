@@ -74,3 +74,174 @@ Chunk 66 (chunk size: 30, submitted: 0 of 9594, now submitting rows 0 to 30):
     'valid': False,
     'warnings': []},
 ...
+
+
+
+
+
+## Error:
+
+
+
+In [17]: data = sub.submit_file(project_id,filename,chunk_size=4000,row_offset=0)
+
+Submitting mjff-PPMI_expression_result_biospecimen_RNA.txt with 27010 records.
+Chunk 1 (chunk size: 4000, submitted: 0 of 27010):
+	 Request Timeout: <html>
+<head><title>413 Request Entity Too Large</title></head>
+<body>
+<center><h1>413 Request Entity Too Large</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+
+Retrying Chunk with reduced chunk_size: 2000
+Chunk 2 (chunk size: 2000, submitted: 0 of 27010):
+---------------------------------------------------------------------------
+RemoteDisconnected                        Traceback (most recent call last)
+~/anaconda3/lib/python3.6/site-packages/urllib3/connectionpool.py in urlopen(self, method, url, body, headers, retries, redirect, assert_same_host, timeout, pool_timeout, release_conn, chunked, body_pos, **response_kw)
+    599                                                   body=body, headers=headers,
+--> 600                                                   chunked=chunked)
+    601
+
+~/anaconda3/lib/python3.6/site-packages/urllib3/connectionpool.py in _make_request(self, conn, method, url, timeout, chunked, **httplib_request_kw)
+    383                     # otherwise it looks like a programming error was the cause.
+--> 384                     six.raise_from(e, None)
+    385         except (SocketTimeout, BaseSSLError, SocketError) as e:
+
+~/anaconda3/lib/python3.6/site-packages/urllib3/packages/six.py in raise_from(value, from_value)
+
+~/anaconda3/lib/python3.6/site-packages/urllib3/connectionpool.py in _make_request(self, conn, method, url, timeout, chunked, **httplib_request_kw)
+    379                 try:
+--> 380                     httplib_response = conn.getresponse()
+    381                 except Exception as e:
+
+~/anaconda3/lib/python3.6/http/client.py in getresponse(self)
+   1330             try:
+-> 1331                 response.begin()
+   1332             except ConnectionError:
+
+~/anaconda3/lib/python3.6/http/client.py in begin(self)
+    296         while True:
+--> 297             version, status, reason = self._read_status()
+    298             if status != CONTINUE:
+
+~/anaconda3/lib/python3.6/http/client.py in _read_status(self)
+    265             # sending a valid response.
+--> 266             raise RemoteDisconnected("Remote end closed connection without"
+    267                                      " response")
+
+RemoteDisconnected: Remote end closed connection without response
+
+During handling of the above exception, another exception occurred:
+
+ProtocolError                             Traceback (most recent call last)
+~/anaconda3/lib/python3.6/site-packages/requests/adapters.py in send(self, request, stream, timeout, verify, cert, proxies)
+    448                     retries=self.max_retries,
+--> 449                     timeout=timeout
+    450                 )
+
+~/anaconda3/lib/python3.6/site-packages/urllib3/connectionpool.py in urlopen(self, method, url, body, headers, retries, redirect, assert_same_host, timeout, pool_timeout, release_conn, chunked, body_pos, **response_kw)
+    637             retries = retries.increment(method, url, error=e, _pool=self,
+--> 638                                         _stacktrace=sys.exc_info()[2])
+    639             retries.sleep()
+
+~/anaconda3/lib/python3.6/site-packages/urllib3/util/retry.py in increment(self, method, url, response, error, _pool, _stacktrace)
+    366             if read is False or not self._is_method_retryable(method):
+--> 367                 raise six.reraise(type(error), error, _stacktrace)
+    368             elif read is not None:
+
+~/anaconda3/lib/python3.6/site-packages/urllib3/packages/six.py in reraise(tp, value, tb)
+    684         if value.__traceback__ is not tb:
+--> 685             raise value.with_traceback(tb)
+    686         raise value
+
+~/anaconda3/lib/python3.6/site-packages/urllib3/connectionpool.py in urlopen(self, method, url, body, headers, retries, redirect, assert_same_host, timeout, pool_timeout, release_conn, chunked, body_pos, **response_kw)
+    599                                                   body=body, headers=headers,
+--> 600                                                   chunked=chunked)
+    601
+
+~/anaconda3/lib/python3.6/site-packages/urllib3/connectionpool.py in _make_request(self, conn, method, url, timeout, chunked, **httplib_request_kw)
+    383                     # otherwise it looks like a programming error was the cause.
+--> 384                     six.raise_from(e, None)
+    385         except (SocketTimeout, BaseSSLError, SocketError) as e:
+
+~/anaconda3/lib/python3.6/site-packages/urllib3/packages/six.py in raise_from(value, from_value)
+
+~/anaconda3/lib/python3.6/site-packages/urllib3/connectionpool.py in _make_request(self, conn, method, url, timeout, chunked, **httplib_request_kw)
+    379                 try:
+--> 380                     httplib_response = conn.getresponse()
+    381                 except Exception as e:
+
+~/anaconda3/lib/python3.6/http/client.py in getresponse(self)
+   1330             try:
+-> 1331                 response.begin()
+   1332             except ConnectionError:
+
+~/anaconda3/lib/python3.6/http/client.py in begin(self)
+    296         while True:
+--> 297             version, status, reason = self._read_status()
+    298             if status != CONTINUE:
+
+~/anaconda3/lib/python3.6/http/client.py in _read_status(self)
+    265             # sending a valid response.
+--> 266             raise RemoteDisconnected("Remote end closed connection without"
+    267                                      " response")
+
+ProtocolError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response',))
+
+During handling of the above exception, another exception occurred:
+
+ConnectionError                           Traceback (most recent call last)
+<ipython-input-17-eae966c1c828> in <module>()
+----> 1 data = sub.submit_file(project_id,filename,chunk_size=4000,row_offset=0)
+
+<ipython-input-9-9a685b1a2533> in submit_file(self, project_id, filename, chunk_size, row_offset)
+    385                 auth=self._auth_provider,
+    386                 data=chunk.to_csv(sep="\t", index=False),
+--> 387                 headers=headers,
+    388             ).text
+    389             results["details"].append(response)
+
+~/anaconda3/lib/python3.6/site-packages/requests/api.py in put(url, data, **kwargs)
+    129     """
+    130
+--> 131     return request('put', url, data=data, **kwargs)
+    132
+    133
+
+~/anaconda3/lib/python3.6/site-packages/requests/api.py in request(method, url, **kwargs)
+     58     # cases, and look like a memory leak in others.
+     59     with sessions.Session() as session:
+---> 60         return session.request(method=method, url=url, **kwargs)
+     61
+     62
+
+~/anaconda3/lib/python3.6/site-packages/requests/sessions.py in request(self, method, url, params, data, headers, cookies, files, auth, timeout, allow_redirects, proxies, hooks, stream, verify, cert, json)
+    531         }
+    532         send_kwargs.update(settings)
+--> 533         resp = self.send(prep, **send_kwargs)
+    534
+    535         return resp
+
+~/anaconda3/lib/python3.6/site-packages/requests/sessions.py in send(self, request, **kwargs)
+    644
+    645         # Send the request
+--> 646         r = adapter.send(request, **kwargs)
+    647
+    648         # Total elapsed time of the request (approximately)
+
+~/anaconda3/lib/python3.6/site-packages/requests/adapters.py in send(self, request, stream, timeout, verify, cert, proxies)
+    496
+    497         except (ProtocolError, socket.error) as err:
+--> 498             raise ConnectionError(err, request=request)
+    499
+    500         except MaxRetryError as e:
+
+ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response',))
+
+In [18]:
+
+In [18]:
+
+In [18]:
