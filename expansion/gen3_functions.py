@@ -932,3 +932,36 @@ def write_tsvs_from_results(invalid_ids,filename):
     invalid_df.to_csv(invalid_file, sep='\t', index=False, encoding='utf-8')
 
     return invalid_df
+
+
+## To do
+# # get indexd records by uploader:
+# /index/index/?acl=null&uploader=cgmeyer@uchicago.edu
+#
+# api = 'https://vpodc.org/'
+# uploader = 'cgmeyer@uchicago.edu'
+# index_url = api + '/index/index/?limit=200&acl=null&uploader='+uploader
+# output = requests.get(index_url, auth=auth).text
+# index_record = json.loads(output)
+# index_record
+#
+# latest=[]
+# guids = []
+# records = index_record['records']
+# for record in records:
+#     if '2019-06' in record['updated_date'] or '2019-05-31' in record['updated_date']:
+#         print(record)
+#         latest.append(record)
+#         guids.append(record['did'])
+# len(latest)
+# len(guids)
+#
+# # add index search by md5
+# https://data.bloodpac.org/index/index/?hash=md5:14c626a4573f2d8e2a1cf796df68a4b8
+#
+# ## add index stats
+# api/index/_stats
+#
+# ## Add a check authentication command to Gen3sdk:
+#
+# user_endpoint = api + '/user/user/'
