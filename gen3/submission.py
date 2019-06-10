@@ -356,8 +356,7 @@ class Gen3Submission:
             "details": [],  # entire API response details
             "succeeded": [],  # list of submitter_ids that were successfully updated/created
             "responses": [],  # list of API response codes
-            "missing": [],
-        }  # list of submitter_ids missing from API response details
+        }
 
         while (start + len(chunk)) <= len(df):
 
@@ -500,8 +499,9 @@ class Gen3Submission:
             elif (
                 len(valid_but_failed) > 0 and len(invalid) == 0
             ):  # if all entities are valid but submission still failed, probably due to duplicate submitter_ids. Can remove this section once the API response is fixed: https://ctds-planx.atlassian.net/browse/PXP-3065
+                print(json_res) #trouble-shooting
                 raise Gen3Error(
-                    "Please check your data for duplicate submitter_ids or ids."
+                    "Please check your data for correct file encoding, special characters, or duplicate submitter_ids or ids."
                 )
 
             elif timeout is False:  # get new chunk if didn't timeout
