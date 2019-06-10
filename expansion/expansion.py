@@ -605,15 +605,26 @@ class Gen3Expansion:
         dups = df[df['file_name'].isin(dup_files)].sort_values(by='md5sum', ascending=False)
         return dups
 
-    def paginate_query(self, node, project_id, props=['id','submitter_id'], chunk_size=1000):
-        program,project = project_id.split('-',1)
+    def paginate_query(self, node, project_id=None, props=['id','submitter_id'], chunk_size=10000):
+
         properties = ' '.join(map(str,props))
+
+        if project_id is not None:
+            program,project = project_id.split('-',1)
+            query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
+        else:
+            query_txt = """{_%s_count}""" % (node)
+
         # get size of query:
-        query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
-        res = sub.query(query_txt)
-        count_name = '_'.join(map(str,['',node,'count']))
-        qsize = res['data'][count_name]
-        print('Total of ' + str(qsize) + ' records in node ' + node)
+        # First query the node count to get the expected number of results for the requested query:
+        try:
+            res = sub.query(query_txt)
+            count_name = '_'.join(map(str,['',node,'count']))
+            qsize = res['data'][count_name]
+            print('Total of ' + str(qsize) + ' records in node ' + node)
+        except:
+            print("Query to get _"+node+"_count failed! "+str(res))
+
         offset = 0
         dfs = []
         df = pd.DataFrame()
@@ -627,6 +638,54 @@ class Gen3Expansion:
         if len(dfs) > 0:
             df = pd.concat(dfs, ignore_index=True)
         return df
+
+    def paginate_query_json(self, node, project_id=None, props=['id','submitter_id'], chunk_size=10000):
+
+        if project_id is not None:
+            program,project = project_id.split('-',1)
+            query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
+        else:
+            query_txt = """{_%s_count}""" % (node)
+
+        # First query the node count to get the expected number of results for the requested query:
+        try:
+            res = sub.query(query_txt)
+            count_name = '_'.join(map(str,['',node,'count']))
+            qsize = res['data'][count_name]
+            print('Total of ' + str(qsize) + ' records in node ' + node)
+        except:
+            print("Query to get _"+node+"_count failed! "+str(res))
+
+        #Now paginate the actual query:
+        properties = ' '.join(map(str,props))
+        offset = 0
+        total = {}
+        total['data'] = {}
+        total['data'][node] = []
+        while offset < qsize:
+            print("Query Total: "+str(qsize)+", Offset: "+str(offset)+", Chunk_Size: "+str(chunk_size))
+
+            if project_id is not None:
+                query_txt = """{%s (first: %s, offset: %s, project_id:"%s"){%s}}""" % (node, chunk_size, offset, project_id, properties)
+            else:
+                query_txt = """{%s (first: %s, offset: %s){%s}}""" % (node, chunk_size, offset, properties)
+
+            res = sub.query(query_txt)
+            if 'data' in res:
+                total['data'][node] += res['data'][node]
+                offset += chunk_size
+            elif 'error' in res:
+                print(res['error'])
+                if chunk_size > 1:
+                    chunk_size = int(chunk_size/2)
+                    print("Halving chunk_size to: "+str(chunk_size)+".")
+                else:
+                    print("Query timing out with chunk_size of 1!")
+                    exit(1)
+            else:
+                print("Query Error: "+str(res))
+
+        return total
 
     def get_duplicates(self, nodes, projects, api):
         # Get duplicate SUBMITTER_IDs in a node, which SHOULD NEVER HAPPEN but alas it has, thus this script
