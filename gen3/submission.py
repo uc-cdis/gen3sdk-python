@@ -335,6 +335,12 @@ class Gen3Submission:
         else:
             raise Gen3UserError("Please upload a file in CSV, TSV, or XLSX format.")
 
+        # Check uniqueness of submitter_ids:
+        if len(list(df.submitter_id)) != len(list(df.submitter_id.unique())):
+            raise Gen3Error(
+                "Warning: file contains duplicate submitter_ids. \nNote: submitter_ids must be unique within a node!"
+            )
+
         # Chunk the file
         print("\nSubmitting {} with {} records.".format(filename, str(len(df))))
         program, project = project_id.split("-", 1)
@@ -499,7 +505,6 @@ class Gen3Submission:
             elif (
                 len(valid_but_failed) > 0 and len(invalid) == 0
             ):  # if all entities are valid but submission still failed, probably due to duplicate submitter_ids. Can remove this section once the API response is fixed: https://ctds-planx.atlassian.net/browse/PXP-3065
-                print(json_res) #trouble-shooting
                 raise Gen3Error(
                     "Please check your data for correct file encoding, special characters, or duplicate submitter_ids or ids."
                 )
