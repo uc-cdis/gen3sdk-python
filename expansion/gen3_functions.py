@@ -295,8 +295,8 @@ def delete_records(uuids,project_id):
                 print("Deleted record id: "+uuid)
                 success.append(uuid)
             else:
-                print("Could not deleted record id: "+uuid)
-                print("API Response: " + r['code'])
+                print("Could not delete record id: "+uuid)
+                print("API Response: " + str(r['code']))
                 failure.append(uuid)
     results['failure'] = failure
     results['success'] = success
@@ -484,8 +484,7 @@ def download_files_by_guids(guids=None):
                 print('Successfully downloaded: '+file_name)
                 file_names[guid] = file_name
             except Exception as e:
-                output = e.output.decode('UTF-8')
-                print("ERROR:" + output)
+                print("ERROR:" + str(output) + str(e))
     else:
         print('Provide a list of guids to download: "get_file_by_guid(guids=guid_list)"')
     return file_names
