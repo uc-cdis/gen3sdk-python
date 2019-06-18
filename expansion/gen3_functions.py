@@ -280,6 +280,7 @@ def delete_node(node,project):
     return results
 
 
+
 def delete_records(uuids,project_id):
     ## Delete a list of records in 'uuids' from a project
     program,project = project_id.split('-',1)

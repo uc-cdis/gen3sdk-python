@@ -96,12 +96,13 @@ auth = Gen3Auth(api, refresh_file=creds)
 sub = Gen3Submission(api, auth)
 
 
-# Download and configure gen3-client in Jupyter Notebook
+# Download and configure gen3-client in Jupyter Notebook; run in bash
 curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*osx |  cut -d '"' -f 4 | wget -qi -
 unzip dataclient_osx.zip
 mv gen3-client /Users/christopher/.gen3
 rm dataclient_osx.zip
 
+# Now configure your profile in python
 cmd = client +' configure --profile='+profile+' --apiendpoint='+api+' --cred='+creds
 try:
     output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
