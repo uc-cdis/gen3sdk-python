@@ -38,7 +38,11 @@ class Gen3Expansion:
     def __init__(self, endpoint, auth_provider):
         self._auth_provider = auth_provider
         self._endpoint = endpoint
-        self.sub = Gen3Submission(api, auth)
+        self.sub = Gen3Submission(endpoint, auth_provider)
+        #self.sub = Gen3Submission(api, auth)
+        # submission.py uses this:
+        #output = requests.post(api_url, auth=self._auth_provider, json=query).text
+        #self.sub = Gen3Submission(api, auth)
 
     def __export_file(self, filename, output):
         """Writes text, e.g., an API response, to a file.
@@ -79,7 +83,7 @@ class Gen3Expansion:
         if not os.path.exists(mydir):
             os.makedirs(mydir)
         if projects is None: #if no projects specified, get node for all projects
-            projects = list(json_normalize(sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+            projects = list(json_normalize(self.sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
         elif isinstance(projects, str):
             projects = [projects]
 
@@ -91,7 +95,7 @@ class Gen3Expansion:
                 print("File previously downloaded.")
             else:
                 prog,proj = project.split('-',1)
-                sub.export_node(prog,proj,node,'tsv',filename)
+                self.sub.export_node(prog,proj,node,'tsv',filename)
             df1 = pd.read_csv(filename, sep='\t', header=0, index_col=False)
             dfs.append(df1)
             df_len+=len(df1)
@@ -213,18 +217,18 @@ class Gen3Expansion:
         elif isinstance(node,str) and name is None:
             print('Getting all project_ids for projects with at least one record in the node \''+node+'\'')
             query = """{node (first:0,of_type:"%s"){project_id}}""" % (node)
-            df = json_normalize(sub.query(query)['data']['node'])
+            df = json_normalize(self.sub.query(query)['data']['node'])
             project_ids = project_ids + list(set(df['project_id']))
         if len(queries) > 0:
             for query in queries:
-                res = sub.query(query)
+                res = self.sub.query(query)
                 df = json_normalize(res['data']['project'])
                 project_ids = project_ids + list(set(df['project_id']))
         return sorted(project_ids,key=str.lower)
 
     def get_project_tsvs(self, projects):
         # Get a TSV for every node in a project
-        all_nodes = sorted(list(set(json_normalize(sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
+        all_nodes = sorted(list(set(json_normalize(self.sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
         remove_nodes = ['program','project','root','data_release'] #remove these nodes from list of nodes
         for node in remove_nodes:
             if node in all_nodes: all_nodes.remove(node)
@@ -237,7 +241,7 @@ class Gen3Expansion:
             for node in all_nodes:
                 query_txt = """{_%s_count (project_id:"%s")}""" % (node,project_id)
     #            query_txt = """{%s (first:1,project_id:"%s"){project_id}}""" % (node,project_id) #check for at least one record in project's node, else skip download; this query is very slightly faster than _node_count query, so use this if times-out (and other commented 'if' line below)
-                res = sub.query(query_txt)
+                res = self.sub.query(query_txt)
                 count = res['data'][str('_'+node+'_count')]
                 print(str(count) + ' records found in node ' + node + ' in project ' + project_id)
     #            if len(res['data'][node]) > 0: #using direct `node_id (first: 1)` type query
@@ -247,7 +251,7 @@ class Gen3Expansion:
                         print('Previously downloaded '+ filename )
                     else:
                         prog,proj = project_id.split('-',1)
-                        sub.export_node(prog,proj,node,'tsv',filename)
+                        self.sub.export_node(prog,proj,node,'tsv',filename)
                         print(filename+' exported to '+mydir)
                 else:
                     print('Skipping empty node '+node+' for project '+project_id)
@@ -260,7 +264,7 @@ class Gen3Expansion:
 
     def get_project_tsvs_faster(self, projects):
         # Get a TSV for every node in a project
-        all_nodes = sorted(list(set(json_normalize(sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
+        all_nodes = sorted(list(set(json_normalize(self.sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
         remove_nodes = ['program','project','root','data_release'] #remove these nodes from list of nodes
         for node in remove_nodes:
             if node in all_nodes: all_nodes.remove(node)
@@ -273,7 +277,7 @@ class Gen3Expansion:
             for node in all_nodes:
     #            query_txt = """{_%s_count (project_id:"%s")}""" % (node,project_id)
                 query_txt = """{%s (first:1,project_id:"%s"){project_id}}""" % (node,project_id) #check for at least one record in project's node, else skip download
-                res = sub.query(query_txt)
+                res = self.sub.query(query_txt)
     #            count = res['data'][str('_'+node+'_count')]
     #            print(str(count) + ' records found in node ' + node + ' in project ' + project_id)
                 if len(res['data'][node]) > 0: #using direct `node_id (first: 1)` type query
@@ -283,7 +287,7 @@ class Gen3Expansion:
                         print('Previously downloaded '+ filename )
                     else:
                         prog,proj = project_id.split('-',1)
-                        sub.export_node(prog,proj,node,'tsv',filename)
+                        self.sub.export_node(prog,proj,node,'tsv',filename)
                         print(filename+' exported to '+mydir)
                 else:
                     print('Skipping empty node '+node+' for project '+project_id)
@@ -301,11 +305,11 @@ class Gen3Expansion:
 
         query = """{_%s_count (project_id:"%s") %s (first: 0, project_id:"%s"){id}}""" % (node,project,node,project)
 
-        res = sub.query(query)
+        res = self.sub.query(query)
         ids = [x['id'] for x in res['data'][node]]
 
         for uuid in ids:
-            r = json.loads(sub.delete_record(program,project,uuid))
+            r = json.loads(self.sub.delete_record(program,project,uuid))
             code = r['code']
             if code == 200:
                 print('Deleted record: ' + uuid)
@@ -329,7 +333,7 @@ class Gen3Expansion:
             uuids = [uuids]
         if isinstance(uuids, list):
             for uuid in uuids:
-                r = json.loads(sub.delete_record(program,project,uuid))
+                r = json.loads(self.sub.delete_record(program,project,uuid))
                 if r['code'] == 200:
                     print("Deleted record id: "+uuid)
                     success.append(uuid)
@@ -438,7 +442,7 @@ class Gen3Expansion:
 
     def node_record_counts(self, project_id):
         query_txt = """{node (first:-1, project_id:"%s"){type}}""" % (project_id)
-        res = sub.query(query_txt)
+        res = self.sub.query(query_txt)
         df = json_normalize(res['data']['node'])
         counts = Counter(df['type'])
         df = pd.DataFrame.from_dict(counts, orient='index').reset_index()
@@ -447,7 +451,7 @@ class Gen3Expansion:
 
     def list_project_files(self, project_id):
         query_txt = """{datanode(first:-1,project_id: "%s") {type file_name id object_id}}""" % (project_id)
-        res = sub.query(query_txt)
+        res = self.sub.query(query_txt)
         if len(res['data']['datanode']) == 0:
             print('Project ' + project_id + ' has no records in any data_file node.')
             return None
@@ -461,7 +465,7 @@ class Gen3Expansion:
         # Download TSVs for all data file nodes in the specified projects
         #if no projects specified, get node for all projects
         if projects is None:
-            projects = list(json_normalize(sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+            projects = list(json_normalize(self.sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
         elif isinstance(projects, str):
             projects = [projects]
         # Make a directory for files
@@ -469,9 +473,9 @@ class Gen3Expansion:
         if not os.path.exists(mydir):
             os.makedirs(mydir)
         # list all data_file 'node_id's in the data model
-        dnodes = list(set(json_normalize(sub.query("""{_node_type (first:-1,category:"data_file") {id}}""")['data']['_node_type'])['id']))
-        mnodes = list(set(json_normalize(sub.query("""{_node_type (first:-1,category:"metadata_file") {id}}""")['data']['_node_type'])['id']))
-        inodes = list(set(json_normalize(sub.query("""{_node_type (first:-1,category:"index_file") {id}}""")['data']['_node_type'])['id']))
+        dnodes = list(set(json_normalize(self.sub.query("""{_node_type (first:-1,category:"data_file") {id}}""")['data']['_node_type'])['id']))
+        mnodes = list(set(json_normalize(self.sub.query("""{_node_type (first:-1,category:"metadata_file") {id}}""")['data']['_node_type'])['id']))
+        inodes = list(set(json_normalize(self.sub.query("""{_node_type (first:-1,category:"index_file") {id}}""")['data']['_node_type'])['id']))
         nodes = list(set(dnodes + mnodes + inodes))
         # get TSVs and return a master pandas DataFrame with records from every project
         dfs = []
@@ -483,7 +487,7 @@ class Gen3Expansion:
                     print('\n'+filename + " previously downloaded.")
                 else:
                     prog,proj = project.split('-',1)
-                    sub.export_node(prog,proj,node,'tsv',filename) # use the gen3sdk to download a tsv for the node
+                    self.sub.export_node(prog,proj,node,'tsv',filename) # use the gen3sdk to download a tsv for the node
                 df1 = pd.read_csv(filename, sep='\t', header=0) # read in the downloaded TSV to append to the master (all projects) TSV
                 dfs.append(df1)
                 df_len+=len(df1) # Counting the total number of records in the node
@@ -511,13 +515,13 @@ class Gen3Expansion:
             nodes = []
             for category in categories:
                 query_txt = """{_node_type (first:-1,category:"%s") {id}}""" % category
-                df = json_normalize(sub.query(query_txt)['data']['_node_type'])
+                df = json_normalize(self.sub.query(query_txt)['data']['_node_type'])
                 if not df.empty:
                     nodes = list(set(nodes + list(set(df['id']))))
         elif isinstance(nodes,str):
             nodes = [nodes]
         if projects is None:
-            projects = list(json_normalize(sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+            projects = list(json_normalize(self.sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
         elif isinstance(projects, str):
             projects = [projects]
         all_guids = {} # all_guids will be a nested dict: {project_id: {node1:[guids1],node2:[guids2]} }
@@ -526,7 +530,7 @@ class Gen3Expansion:
             for node in nodes:
                 guids=[]
                 query_txt = """{%s (first:-1,project_id:"%s") {project_id file_size file_name object_id id}}""" % (node,project)
-                res = sub.query(query_txt)
+                res = self.sub.query(query_txt)
                 if len(res['data'][node]) == 0:
                     print(project + ' has no records in node ' + node + '.')
                     guids = None
@@ -585,7 +589,7 @@ class Gen3Expansion:
                 print("File previously downloaded.")
             else:
                 prog,proj = project.split('-',1)
-                sub.export_record(prog,proj,uuid,'tsv',filename)
+                self.sub.export_record(prog,proj,uuid,'tsv',filename)
             df1 = pd.read_csv(filename, sep='\t', header=0)
             dfs.append(df1)
         all_data = pd.concat(dfs, ignore_index=True)
@@ -618,7 +622,7 @@ class Gen3Expansion:
         # get size of query:
         # First query the node count to get the expected number of results for the requested query:
         try:
-            res = sub.query(query_txt)
+            res = self.sub.query(query_txt)
             count_name = '_'.join(map(str,['',node,'count']))
             qsize = res['data'][count_name]
             print('Total of ' + str(qsize) + ' records in node ' + node)
@@ -631,7 +635,7 @@ class Gen3Expansion:
         while offset < qsize:
                 print('Offset set to: '+str(offset))
                 query_txt = """{%s (first: %s, offset: %s, project_id:"%s"){%s}}""" % (node, chunk_size, offset, project_id, properties)
-                res = sub.query(query_txt)
+                res = self.sub.query(query_txt)
                 df1 = json_normalize(res['data'][node])
                 dfs.append(df1)
                 offset += chunk_size
@@ -649,7 +653,7 @@ class Gen3Expansion:
 
         # First query the node count to get the expected number of results for the requested query:
         try:
-            res = sub.query(query_txt)
+            res = self.sub.query(query_txt)
             count_name = '_'.join(map(str,['',node,'count']))
             qsize = res['data'][count_name]
             print('Total of ' + str(qsize) + ' records in node ' + node)
@@ -670,7 +674,7 @@ class Gen3Expansion:
             else:
                 query_txt = """{%s (first: %s, offset: %s){%s}}""" % (node, chunk_size, offset, properties)
 
-            res = sub.query(query_txt)
+            res = self.sub.query(query_txt)
             if 'data' in res:
                 total['data'][node] += res['data'][node]
                 offset += chunk_size
@@ -691,13 +695,13 @@ class Gen3Expansion:
         # Get duplicate SUBMITTER_IDs in a node, which SHOULD NEVER HAPPEN but alas it has, thus this script
         #if no projects specified, get node for all projects
         if projects is None:
-            projects = list(json_normalize(sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+            projects = list(json_normalize(self.sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
         elif isinstance(projects, str):
             projects = [projects]
 
         # if no nodes specified, get all nodes in data commons
         if nodes is None:
-            all_nodes = sorted(list(set(json_normalize(sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
+            all_nodes = sorted(list(set(json_normalize(self.sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
             remove_nodes = ['program','project','root','data_release'] #remove these nodes from list of nodes
             for node in remove_nodes:
                 if node in all_nodes: all_nodes.remove(node)
@@ -742,7 +746,7 @@ class Gen3Expansion:
         for sid in sids:
             while len(dups[sid]) > 1:
                 uuid = dups[sid].pop(1)
-                r = json.loads(sub.delete_record(program,project,uuid))
+                r = json.loads(self.sub.delete_record(program,project,uuid))
                 if r['code'] == 200:
                     print("Deleted record id ("+str(count)+"/"+str(total)+"): "+uuid)
                     success.append(uuid)
@@ -758,7 +762,7 @@ class Gen3Expansion:
 
     def query_records(self, node, project_id, api, chunk_size=500):
         # Using paginated query, Download all data in a node as a DataFrame and save as TSV
-        schema = sub.get_dictionary_node(node)
+        schema = self.sub.get_dictionary_node(node)
         props = list(schema['properties'].keys())
         links = list(schema['links'])
         # need to get links out of the list of properties because they're handled differently in the query
