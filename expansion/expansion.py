@@ -298,30 +298,77 @@ class Gen3Expansion:
             output = 'ERROR:' + e.output.decode('UTF-8')
         return output
 
-    def delete_node(self, node,project):
+    # def delete_node(self, node,project):
+    #     failure = []
+    #     success = []
+    #     results = {}
+    #
+    #     query = """{_%s_count (project_id:"%s") %s (first: 0, project_id:"%s"){id}}""" % (node,project,node,project)
+    #
+    #     res = self.sub.query(query)
+    #     ids = [x['id'] for x in res['data'][node]]
+    #
+    #     for uuid in ids:
+    #         r = json.loads(self.sub.delete_record(program,project,uuid))
+    #         code = r['code']
+    #         if code == 200:
+    #             print('Deleted record: ' + uuid)
+    #             success.append(uuid)
+    #         else:
+    #             print('Failed to delete: ' + uuid + ', code: ' + code)
+    #             print(r.text)
+    #             failure.append(uuid)
+    #     results['failure'] = failure
+    #     results['success'] = success
+    #     return results
+
+    def delete_node(self,node,project_id,chunk_size=10):
+
+        program,project = project_id.split('-',1)
+
+        res = self.paginate_query_json(node,project_id)
+        ids = [x['id'] for x in res['data'][node]]
+        print("\n\nTotal of "+str(len(ids))+" records in "+node+" node of project "+project_id+".")
+
         failure = []
         success = []
+        retry = []
         results = {}
+        total = 0
 
-        query = """{_%s_count (project_id:"%s") %s (first: 0, project_id:"%s"){id}}""" % (node,project,node,project)
+        while (len(success)+len(failure)) < len(ids): #loop sorts all ids into success or failure
 
-        res = self.sub.query(query)
-        ids = [x['id'] for x in res['data'][node]]
-
-        for uuid in ids:
-            r = json.loads(self.sub.delete_record(program,project,uuid))
-            code = r['code']
-            if code == 200:
-                print('Deleted record: ' + uuid)
-                success.append(uuid)
+            if len(retry) > 0:
+                print("Retrying deletion of "+str(len(retry))+" valid uuids.")
+                list_ids = ",".join(retry)
+                retry = []
             else:
-                print('Failed to delete: ' + uuid + ', code: ' + code)
-                print(r.text)
-                failure.append(uuid)
+                list_ids  = ",".join(ids[total:total+chunk_size])
+
+            rurl = "{}/api/v0/submission/{}/{}/entities/{}".format(
+                self._endpoint,program,project,list_ids]
+            )
+            resp = requests.delete(rurl, auth=self._auth_provider)
+            print(resp.text) #trouble-shooting
+            output = json.loads(resp.text)
+
+            if output['success']:
+                total += len(output['entities'])
+                print("Deleted "+str(len(output['entities']))+" UUIDs. Progress: " + str(total) + "/" + str(len(ids)))
+                success.append([x['id'] for x in output['entities']])
+            else:
+                for entity in output['entities']:
+                    if entity['valid']:
+                        retry.append(entity['id'])
+                    else:
+                        failure.append(entity['id'])
+                total += len(failure)
+
+        print('\n Finished delete workflow. \n') #debug
+        print("Successfully deleted: "+str(len(success))+". Failed to delete: " + str(len(failure))+".")
         results['failure'] = failure
         results['success'] = success
         return results
-
 
     def delete_records(self, uuids,project_id):
         ## Delete a list of records in 'uuids' from a project
@@ -977,6 +1024,7 @@ class Gen3Expansion:
                 "Request Timeout" in response
                 or "413 Request Entity Too Large" in response
                 or "Connection aborted." in response
+                or "service failure - try again later" in response
             ):  # time-out, response is not valid JSON at the moment
 
                 print("\t Reducing Chunk Size: " + response)

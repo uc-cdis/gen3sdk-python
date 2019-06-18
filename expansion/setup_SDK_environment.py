@@ -89,12 +89,12 @@ creds = '/Users/christopher/Downloads/vpodc-credentials.json'
 client = 'gen3-client'
 
 auth = Gen3Auth(api, refresh_file=creds)
-
-#load /Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/gen3/submission.py
+sub = Gen3Submission(api, auth)
 #load /Users/christopher/Documents/GitHub/uc-cdis/gen3sdk-python/gen3/submission.py
 
-sub = Gen3Submission(api, auth)
-
+!wget https://raw.githubusercontent.com/cgmeyer/gen3sdk-python/master/expansion/expansion.py
+run ./expansion.py
+exp = Gen3Expansion(api, auth)
 
 # Download and configure gen3-client in Jupyter Notebook; run in bash
 curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*osx |  cut -d '"' -f 4 | wget -qi -
