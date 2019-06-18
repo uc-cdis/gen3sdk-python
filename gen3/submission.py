@@ -401,6 +401,7 @@ class Gen3Submission:
                 "Request Timeout" in response
                 or "413 Request Entity Too Large" in response
                 or "Connection aborted." in response
+                or "service failure - try again later" in response
             ):  # time-out, response is not valid JSON at the moment
 
                 print("\t Reducing Chunk Size: " + response)
