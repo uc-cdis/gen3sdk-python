@@ -848,135 +848,6 @@ class Gen3Expansion:
 
         return results
 
-    def submit_file(self, project_id, filename, chunk_size=30, row_offset=0):
-        """Submit record(s) to a project as json.
-
-        Args:
-            project_id (str): The project_id to submit to.
-            filename (str): The file containing data to submit. The format can be TSV, CSV or XLSX (first worksheet only for now).
-            chunk_size (integer): The number of rows of data to submit for each request to the API.
-            row_offset (integer): The number of rows of data to skip; '0' starts submission from the first row and submits all data.
-
-        Examples:
-            This submits a spreadsheet file containing multiple records in rows to the CCLE project in the sandbox commons.
-
-            >>> Gen3Submission.submit_file("DCF-CCLE","data_spreadsheet.tsv")
-
-        """
-        # Read the file in as a pandas DataFrame
-        f = os.path.basename(filename)
-        if f.lower().endswith('.csv'):
-            df = pd.read_csv(filename, header=0, sep=',', dtype=str).fillna('')
-        elif f.lower().endswith('.xlsx'):
-            xl = pd.ExcelFile(filename, dtype=str) #load excel file
-            sheet = xl.sheet_names[0] #sheetname
-            df = xl.parse(sheet) #save sheet as dataframe
-            converters = {col: str for col in list(df)} #make sure int isn't converted to float
-            df = pd.read_excel(filename, converters=converters).fillna('') #remove nan
-        elif filename.lower().endswith(('.tsv','.txt')):
-            df = pd.read_csv(filename, header=0, sep='\t', dtype=str).fillna('')
-        else:
-            raise Gen3UserError('Please upload a file in CSV, TSV, or XLSX format.')
-
-        # Chunk the file
-        print("\nSubmitting "+filename+" with "+str(len(df))+" records.")
-        program,project = project_id.split('-',1)
-        api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
-        headers = {'content-type': 'text/tab-separated-values'}
-
-        start = row_offset
-        end = row_offset + chunk_size
-        chunk = df[start:end]
-
-        count = 0
-
-        results = {'failed':{'messages':[],'submitter_ids':[]}, # these are invalid records
-                    'other':[], # any unhandled API responses
-                    'details':[], # entire API response details
-                    'succeeded':[], # list of submitter_ids that were successfully updated/created
-                    'responses':[], # list of API response codes
-                    'missing':[]} # list of submitter_ids missing from API response details
-
-        while (start+len(chunk)) <= len(df):
-
-            timeout = False
-            valid = []
-            invalid = []
-            count+=1
-            print("Chunk "+str(count)+" (chunk size: "+ str(chunk_size) + ", submitted: " + str(len(results['succeeded'])+len(results['failed']['submitter_ids'])) + " of " + str(len(df)) + "):  ")
-
-            response = requests.put(api_url, auth=self._auth_provider, data=chunk.to_csv(sep='\t',index=False), headers=headers).text
-            results['details'].append(response)
-
-            # Handle the API response
-            if '"code": 200' in response: #success
-                res = json.loads(response)
-                entities = res['entities']
-                print("\t Succeeded: "+str(len(entities))+" entities.")
-                results['responses'].append("Chunk "+str(count)+" Succeeded: "+str(len(entities))+" entities.")
-                #res = json.loads(response)
-                for entity in entities:
-                    sid = entity['unique_keys'][0]['submitter_id']
-                    results['succeeded'].append(sid)
-
-            elif '"code": 4' in response: #failure
-                res = json.loads(response)
-                entities = res['entities']
-                print("\tFailed: "+str(len(entities))+" entities.")
-                results['responses'].append("Chunk "+str(count)+" Failed: "+str(len(entities))+" entities.")
-                #res = json.loads(response)
-                for entity in entities:
-                    sid = entity['unique_keys'][0]['submitter_id']
-                    if entity['valid']: #valid but failed
-                        valid.append(sid)
-                    else: #invalid and failed
-                        message = entity['errors'][0]['message']
-                        results['failed']['messages'].append(message)
-                        results['failed']['submitter_ids'].append(sid)
-                        invalid.append(sid)
-                print("\tInvalid records in this chunk: " + str(len(invalid)))
-
-            elif '"error": {"Request Timeout' in response or '413 Request Entity Too Large' in response: # timeout
-                print("\t Request Timeout: " + response)
-                results['responses'].append("Request Timeout: "+response)
-                timeout = True
-
-            elif '"code": 5' in response: # internal server error
-                print("\t Internal Server Error: " + response)
-                results['responses'].append("Internal Server Error: " + response)
-
-            elif '"message": ' in response and 'code' not in response: # other?
-                print("\t No code in the API response for Chunk " + str(count) + ": " + res['message'])
-                print("\t " + str(res['transactional_errors']))
-                results['responses'].append("Error Chunk " + str(count) + ": " + res['message'])
-                results['other'].append(res['transactional_errors'])
-
-            else: # catch-all for any other response
-                print("\t Unhandled API-response: "+response)
-                results['responses'].append("Unhandled API response: "+response)
-
-            if len(valid) > 0: # if valid entities failed bc grouped with invalid, retry submission
-                chunk = chunk.loc[df['submitter_id'].isin(valid)] # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
-                print("Retrying submission of valid entities from failed chunk: " + str(len(chunk)) + " valid entities.")
-
-            elif timeout is False: # get new chunk if didn't timeout
-                start+=chunk_size
-                end = start + chunk_size
-                chunk = df[start:end]
-
-            else: # if timeout, reduce chunk size and retry smaller chunk
-                chunk_size = int(chunk_size/2)
-                end = start + chunk_size
-                chunk = df[start:end]
-                print("Retrying Chunk with reduced chunk_size: " + str(chunk_size))
-                timeout = False
-
-        print("Finished data submission.")
-        print("Successful records: " + str(len(set(results['succeeded']))))
-        print("Failed invalid records: " + str(len(set(results['failed']['submitter_ids']))))
-
-        return results
-
     def write_tsvs_from_results(self,invalid_ids,filename):
             # Read the file in as a pandas DataFrame
         f = os.path.basename(filename)
@@ -1002,3 +873,236 @@ class Gen3Expansion:
         invalid_df.to_csv(invalid_file, sep='\t', index=False, encoding='utf-8')
 
         return invalid_df
+
+
+    def submit_file(self, project_id, filename, chunk_size=30, row_offset=0):
+        """Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.
+
+        Args:
+            project_id (str): The project_id to submit to.
+            filename (str): The file containing data to submit. The format can be TSV, CSV or XLSX (first worksheet only for now).
+            chunk_size (integer): The number of rows of data to submit for each request to the API.
+            row_offset (integer): The number of rows of data to skip; '0' starts submission from the first row and submits all data.
+
+        Examples:
+            This submits a spreadsheet file containing multiple records in rows to the CCLE project in the sandbox commons.
+
+            >>> Gen3Submission.submit_file("DCF-CCLE","data_spreadsheet.tsv")
+
+        """
+        # Read the file in as a pandas DataFrame
+        f = os.path.basename(filename)
+        if f.lower().endswith(".csv"):
+            df = pd.read_csv(filename, header=0, sep=",", dtype=str).fillna("")
+        elif f.lower().endswith(".xlsx"):
+            xl = pd.ExcelFile(filename, dtype=str)  # load excel file
+            sheet = xl.sheet_names[0]  # sheetname
+            df = xl.parse(sheet)  # save sheet as dataframe
+            converters = {
+                col: str for col in list(df)
+            }  # make sure int isn't converted to float
+            df = pd.read_excel(filename, converters=converters).fillna("")  # remove nan
+        elif filename.lower().endswith((".tsv", ".txt")):
+            df = pd.read_csv(filename, header=0, sep="\t", dtype=str).fillna("")
+        else:
+            raise Gen3UserError("Please upload a file in CSV, TSV, or XLSX format.")
+
+        # Check uniqueness of submitter_ids:
+        if len(list(df.submitter_id)) != len(list(df.submitter_id.unique())):
+            raise Gen3Error(
+                "Warning: file contains duplicate submitter_ids. \nNote: submitter_ids must be unique within a node!"
+            )
+
+        # Chunk the file
+        print("\nSubmitting {} with {} records.".format(filename, str(len(df))))
+        program, project = project_id.split("-", 1)
+        api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
+        headers = {"content-type": "text/tab-separated-values"}
+
+        start = row_offset
+        end = row_offset + chunk_size
+        chunk = df[start:end]
+
+        count = 0
+
+        results = {
+            "failed": {
+                "messages": [],
+                "submitter_ids": [],
+            },  # these are invalid records
+            "other": [],  # any unhandled API responses
+            "details": [],  # entire API response details
+            "succeeded": [],  # list of submitter_ids that were successfully updated/created
+            "responses": [],  # list of API response codes
+        }
+
+        while (start + len(chunk)) <= len(df):
+
+            timeout = False
+            valid_but_failed = []
+            invalid = []
+            count += 1
+            print(
+                "Chunk "
+                + str(count)
+                + " (chunk size: "
+                + str(chunk_size)
+                + ", submitted: "
+                + str(
+                    len(results["succeeded"]) + len(results["failed"]["submitter_ids"])
+                )
+                + " of "
+                + str(len(df))
+                + "):  "
+            )
+
+            try:
+                response = requests.put(
+                    api_url,
+                    auth=self._auth_provider,
+                    data=chunk.to_csv(sep="\t", index=False),
+                    headers=headers,
+                ).text
+            except requests.exceptions.ConnectionError as e:
+                response = "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response',))"
+
+            results["details"].append(response)
+
+            # Handle the API response
+            if (
+                "Request Timeout" in response
+                or "413 Request Entity Too Large" in response
+                or "Connection aborted." in response
+            ):  # time-out, response is not valid JSON at the moment
+
+                print("\t Reducing Chunk Size: " + response)
+                results["responses"].append("Reducing Chunk Size: " + response)
+                timeout = True
+
+            elif '"message": ' in response and "code" not in response:  # other?
+                print(
+                    "\t No code in the API response for Chunk "
+                    + str(count)
+                    + ": "
+                    + res.get("message")
+                )
+                print("\t " + str(res.get("transactional_errors")))
+                results["responses"].append(
+                    "Error Chunk " + str(count) + ": " + res.get("message")
+                )
+                results["other"].append(res.get("transactional_errors"))
+
+            elif (
+                "code" not in response
+            ):  # catch-all for any other response without a code
+                print("\t Unhandled API-response: " + response)
+                results["responses"].append("Unhandled API response: " + response)
+
+            else:
+                try:
+                    json_res = json.loads(response)
+
+                    if "code" not in json_res:
+                        print("\t Unhandled API-response: " + response)
+                        results["responses"].append(
+                            "Unhandled API response: " + response
+                        )
+
+                    elif json_res["code"] == 200:  # success
+
+                        entities = json_res["entities"]
+                        print("\t Succeeded: " + str(len(entities)) + " entities.")
+                        results["responses"].append(
+                            "Chunk "
+                            + str(count)
+                            + " Succeeded: "
+                            + str(len(entities))
+                            + " entities."
+                        )
+
+                        for entity in entities:
+                            sid = entity["unique_keys"][0]["submitter_id"]
+                            results["succeeded"].append(sid)
+
+                    elif (
+                        json_res["code"] == 400
+                        or json_res["code"] == 403
+                        or json_res["code"] == 404
+                    ):  # failure
+
+                        entities = json_res.get("entities", [])
+                        print("\tFailed: " + str(len(entities)) + " entities.")
+                        results["responses"].append(
+                            "Chunk "
+                            + str(count)
+                            + " Failed: "
+                            + str(len(entities))
+                            + " entities."
+                        )
+
+                        for entity in entities:
+                            sid = entity["unique_keys"][0]["submitter_id"]
+                            if entity["valid"]:  # valid but failed
+                                valid_but_failed.append(sid)
+                            else:  # invalid and failed
+                                message = entity["errors"][0]["message"]
+                                results["failed"]["messages"].append(message)
+                                results["failed"]["submitter_ids"].append(sid)
+                                invalid.append(sid)
+                        print("\tInvalid records in this chunk: " + str(len(invalid)))
+
+                    elif json_res["code"] == 500:  # internal server error
+
+                        print("\t Internal Server Error: " + response)
+                        results["responses"].append(
+                            "Internal Server Error: " + response
+                        )
+
+                except:
+                    print(response)
+                    raise Gen3Error("Unable to parse API response as JSON!")
+
+            if (
+                len(valid_but_failed) > 0 and len(invalid) > 0
+            ):  # if valid entities failed bc grouped with invalid, retry submission
+                chunk = chunk.loc[
+                    df["submitter_id"].isin(valid_but_failed)
+                ]  # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
+                print(
+                    "Retrying submission of valid entities from failed chunk: "
+                    + str(len(chunk))
+                    + " valid entities."
+                )
+
+            elif (
+                len(valid_but_failed) > 0 and len(invalid) == 0
+            ):  # if all entities are valid but submission still failed, probably due to duplicate submitter_ids. Can remove this section once the API response is fixed: https://ctds-planx.atlassian.net/browse/PXP-3065
+                raise Gen3Error(
+                    "Please check your data for correct file encoding, special characters, or duplicate submitter_ids or ids."
+                )
+
+            elif timeout is False:  # get new chunk if didn't timeout
+                start += chunk_size
+                end = start + chunk_size
+                chunk = df[start:end]
+
+            else:  # if timeout, reduce chunk size and retry smaller chunk
+                if chunk_size >= 2:
+                    chunk_size = int(chunk_size / 2)
+                    end = start + chunk_size
+                    chunk = df[start:end]
+                    print("Retrying Chunk with reduced chunk_size: " + str(chunk_size))
+                    timeout = False
+                else:
+                    raise Gen3SubmissionError(
+                        "Submission is timing out. Please contact the Helpdesk."
+                    )
+
+        print("Finished data submission.")
+        print("Successful records: " + str(len(set(results["succeeded"]))))
+        print(
+            "Failed invalid records: "
+            + str(len(set(results["failed"]["submitter_ids"])))
+        )
+
+        return results
