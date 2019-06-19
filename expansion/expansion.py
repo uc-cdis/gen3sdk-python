@@ -322,10 +322,11 @@ class Gen3Expansion:
     #     results['success'] = success
     #     return results
 
-    def delete_node(self,node,project_id,chunk_size=10):
+    def delete_node(self,node,project_id,chunk_size=200):
 
         program,project = project_id.split('-',1)
 
+        print("Querying record UUIDs in the node "+node+" of project "+project_id+".")
         res = self.paginate_query_json(node,project_id)
         ids = [x['id'] for x in res['data'][node]]
         print("\n\nTotal of "+str(len(ids))+" records in "+node+" node of project "+project_id+".")
@@ -352,13 +353,13 @@ class Gen3Expansion:
                 resp = requests.delete(rurl, auth=self._auth_provider)
             except SSLError:
                 chunk_size = int(chunk_size/2)
-                print("chunk_size is too large. reducing to "+str(chunk_size))
+                print("SSLError.\nThe chunk_size is too large. reducing to "+str(chunk_size))
 
-            if '414 Request-URI Too Large' in resp.text:
+            if "414 Request-URI Too Large" in resp.text or "service failure" in resp.text:
                 chunk_size = int(chunk_size/2)
-                print("chunk_size is too large. reducing to "+str(chunk_size))
+                print("Service Failure.\nThe chunk_size is too large. Reducing to "+str(chunk_size))
             else:
-                #print(resp.text) #trouble-shooting
+                print(resp.text) #trouble-shooting
                 output = json.loads(resp.text)
 
                 if output['success']:
@@ -366,12 +367,14 @@ class Gen3Expansion:
                     print("Deleted "+str(len(output['entities']))+" UUIDs. Progress: " + str(total) + "/" + str(len(ids)))
                     success.append([x['id'] for x in output['entities']])
                 else:
+                    errors = []
                     for entity in output['entities']:
                         if entity['valid']:
                             retry.append(entity['id'])
                         else:
-                            print(entity['errors'][0]['message'])
+                            errors.append(entity['errors'][0]['message'])
                             failure.append(entity['id'])
+                    print("Error message(s): " + str(set(errors)))
                     total += len(failure)
 
         print('\n Finished delete workflow. \n') #debug
