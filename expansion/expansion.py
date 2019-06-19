@@ -355,7 +355,9 @@ class Gen3Expansion:
                 chunk_size = int(chunk_size/2)
                 print("SSLError.\nThe chunk_size is too large. reducing to "+str(chunk_size))
 
-            if "414 Request-URI Too Large" in resp.text or "service failure" in resp.text:
+            if "The requested URL was not found on the server." in resp.text:
+                print('\n Finished delete workflow. \n') #debug
+            elif "414 Request-URI Too Large" in resp.text or "service failure" in resp.text:
                 chunk_size = int(chunk_size/2)
                 print("Service Failure.\nThe chunk_size is too large. Reducing to "+str(chunk_size))
             else:
@@ -377,7 +379,6 @@ class Gen3Expansion:
                     print("Error message(s): " + str(set(errors)))
                     total += len(failure)
 
-        print('\n Finished delete workflow. \n') #debug
         print("Successfully deleted: "+str(len(success))+". Failed to delete: " + str(len(failure))+".")
         results['failure'] = failure
         results['success'] = success
