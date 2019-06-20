@@ -62,7 +62,7 @@ class Gen3Expansion:
         outfile = open(filename, "w")
         outfile.write(output)
         outfile.close
-        print("\nOutput written to file: "+filename)
+        print("Output written to file: "+filename+"\n")
 
 
     ### AWS S3 Tools:
@@ -282,9 +282,6 @@ class Gen3Expansion:
                     else:
                         prog,proj = project_id.split('-',1)
                         self.sub.export_node(prog,proj,node,'tsv',filename)
-
-                else:
-                    print('Skipping empty node '+node+' for project '+project_id)
 
         cmd = ['ls',mydir] #look in the download directory
         try:
