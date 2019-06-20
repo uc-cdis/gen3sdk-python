@@ -523,6 +523,42 @@ class Gen3Expansion:
                     print("Error deleting GUID {}:".format(guid))
                     print(response.reason)
 
+    def property_counts_table(self, prop, df):
+        df = df[df[prop].notnull()]
+        counts = Counter(df[prop])
+        df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
+        df1 = df1.rename(columns={'index':prop, 0:'count'}).sort_values(by='count', ascending=False)
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+            display(df1)
+
+    def property_counts_by_project(self, prop, df):
+        df = df[df[prop].notnull()]
+        categories = list(set(df[prop]))
+        projects = list(set(df['project_id']))
+
+        project_table = pd.DataFrame(columns=['Project','Total']+categories)
+        project_table
+
+        proj_counts = {}
+        for project in projects:
+            cat_counts = {}
+            cat_counts['Project'] = project
+            df1 = df.loc[df['project_id']==project]
+            total = 0
+            for category in categories:
+                cat_count = len(df1.loc[df1[prop]==category])
+                total+=cat_count
+                cat_counts[category] = cat_count
+
+            cat_counts['Total'] = total
+            index = len(project_table)
+            for key in list(cat_counts.keys()):
+                project_table.loc[index,key] = cat_counts[key]
+
+            project_table = project_table.sort_values(by='Total', ascending=False, na_position='first')
+
+        return project_table
+
     def plot_categorical_property(self, property, df):
         #plot a bar graph of categorical variable counts in a dataframe
         df = df[df[property].notnull()]
