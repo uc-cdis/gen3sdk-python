@@ -240,7 +240,7 @@ class Gen3Expansion:
         print('Master node TSV with '+str(len(all_data))+' total records written to '+nodefile+'.')
         return all_data
 
-    def get_project_tsvs(self, projects):
+    def get_project_tsvs(self, projects, overwrite=False):
         """Function gets a TSV for every node in a specified project.
             Exports TSV files into a directory "project_tsvs/".
             Function returns a list of the contents of the directory.
@@ -291,42 +291,6 @@ class Gen3Expansion:
         except Exception as e:
             output = 'ERROR:' + e.output.decode('UTF-8')
 
-        return output
-
-    def get_project_tsvs_faster(self, projects):
-        # Get a TSV for every node in a project
-        all_nodes = sorted(list(set(json_normalize(self.sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
-        remove_nodes = ['program','project','root','data_release'] #remove these nodes from list of nodes
-        for node in remove_nodes:
-            if node in all_nodes: all_nodes.remove(node)
-        if isinstance(projects,str):
-            projects = [projects]
-        for project_id in projects:
-            mydir = str('project_tsvs/'+project_id+'_tsvs') #create the directory to store TSVs
-            if not os.path.exists(mydir):
-                os.makedirs(mydir)
-            for node in all_nodes:
-    #            query_txt = """{_%s_count (project_id:"%s")}""" % (node,project_id)
-                query_txt = """{%s (first:1,project_id:"%s"){project_id}}""" % (node,project_id) #check for at least one record in project's node, else skip download
-                res = self.sub.query(query_txt)
-    #            count = res['data'][str('_'+node+'_count')]
-    #            print(str(count) + ' records found in node ' + node + ' in project ' + project_id)
-                if len(res['data'][node]) > 0: #using direct `node_id (first: 1)` type query
-    #            if count > 0:
-                    filename = str(mydir+'/'+project_id+'_'+node+'.tsv')
-                    if os.path.isfile(filename):
-                        print('Previously downloaded '+ filename )
-                    else:
-                        prog,proj = project_id.split('-',1)
-                        self.sub.export_node(prog,proj,node,'tsv',filename)
-                        print(filename+' exported to '+mydir)
-                else:
-                    print('Skipping empty node '+node+' for project '+project_id)
-        cmd = ['ls',mydir] #look in the download directory
-        try:
-            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
-        except Exception as e:
-            output = 'ERROR:' + e.output.decode('UTF-8')
         return output
 
     def paginate_query(self, node, project_id=None, props=['id','submitter_id'], chunk_size=10000, format='json'):
