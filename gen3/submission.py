@@ -354,10 +354,7 @@ class Gen3Submission:
         count = 0
 
         results = {
-            "failed": {
-                "messages": [],
-                "submitter_ids": [],
-            },  # these are invalid records
+            "invalid": {},  # these are invalid records
             "other": [],  # any unhandled API responses
             "details": [],  # entire API response details
             "succeeded": [],  # list of submitter_ids that were successfully updated/created
@@ -377,7 +374,7 @@ class Gen3Submission:
                     str(chunk_size),
                     str(
                         len(results["succeeded"])
-                        + len(results["failed"]["submitter_ids"])
+                        + len(results["invalid"])
                     ),
                     str(len(df)),
                 )
@@ -448,7 +445,7 @@ class Gen3Submission:
                     ):  # failure
 
                         entities = json_res.get("entities", [])
-                        print("\tFailed: {} entities.".format(str(len(entities))))
+                        print("\tChunk Failed: {} entities.".format(str(len(entities))))
                         results["responses"].append(
                             "Chunk {} Failed: {} entities.".format(
                                 str(count), str(len(entities))
@@ -461,8 +458,7 @@ class Gen3Submission:
                                 valid_but_failed.append(sid)
                             else:  # invalid and failed
                                 message = entity["errors"][0]["message"]
-                                results["failed"]["messages"].append(message)
-                                results["failed"]["submitter_ids"].append(sid)
+                                results["invalid"][sid] = message
                                 invalid.append(sid)
                         print(
                             "\tInvalid records in this chunk: {}".format(
@@ -525,7 +521,7 @@ class Gen3Submission:
         print("Successful records: {}".format(str(len(set(results["succeeded"])))))
         print(
             "Failed invalid records: {}".format(
-                str(len(set(results["failed"]["submitter_ids"])))
+                str(len(results["invalid"]))
             )
         )
 
