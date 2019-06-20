@@ -148,7 +148,10 @@ class Gen3Expansion:
                 name(str): The name of the programs to get projects in.
 
             Example:
-                get_project_ids(name='program')
+                get_project_ids()
+                get_project_ids(node='demographic')
+                get_project_ids(node='program',name='training')
+                get_project_ids(node='case',name='case-01')
         """
         project_ids = []
         queries = []
@@ -398,7 +401,7 @@ class Gen3Expansion:
         program,project = project_id.split('-',1)
 
         try:
-            res = self.paginate_query_json(node,project_id)
+            res = self.paginate_query(node,project_id)
             uuids = [x['id'] for x in res['data'][node]]
         except:
             raise Gen3Error("Failed to get UUIDs in node '"+node+"' of project '"+project_id+"'.")
