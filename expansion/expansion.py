@@ -574,7 +574,7 @@ class Gen3Expansion:
         #add N for each bar
         plt.show()
 
-    def plot_numeric_property(self, property, df):
+    def plot_numeric_property(self, property, df, by_project=False):
         #plot a histogram of numeric variable in a dataframe
         df = df[df[property].notnull()]
         data = list(df[property])
@@ -585,7 +585,7 @@ class Gen3Expansion:
         plt.figtext(.8, .8, 'N = '+str(N))
         plt.xlabel(property)
         plt.ylabel("Probability")
-        plt.title("PDF for all projects "+property) # You can comment this line out if you don't need title
+        plt.title("PDF for all projects "+property+' (N = '+str(N)+')') # You can comment this line out if you don't need title
         plt.show(fig)
 
         if by_project is True:
