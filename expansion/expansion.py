@@ -12,6 +12,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
+class Gen3Error(Exception):
+    pass
+
 class Gen3Expansion:
     """Advanced scripts for interacting with the Gen3 submission, query and index APIs
 
@@ -298,62 +301,145 @@ class Gen3Expansion:
             output = 'ERROR:' + e.output.decode('UTF-8')
         return output
 
-    # def delete_node(self, node,project):
-    #     failure = []
-    #     success = []
-    #     results = {}
-    #
-    #     query = """{_%s_count (project_id:"%s") %s (first: 0, project_id:"%s"){id}}""" % (node,project,node,project)
-    #
-    #     res = self.sub.query(query)
-    #     ids = [x['id'] for x in res['data'][node]]
-    #
-    #     for uuid in ids:
-    #         r = json.loads(self.sub.delete_record(program,project,uuid))
-    #         code = r['code']
-    #         if code == 200:
-    #             print('Deleted record: ' + uuid)
-    #             success.append(uuid)
-    #         else:
-    #             print('Failed to delete: ' + uuid + ', code: ' + code)
-    #             print(r.text)
-    #             failure.append(uuid)
-    #     results['failure'] = failure
-    #     results['success'] = success
-    #     return results
 
-    def delete_node(self,node,project_id,chunk_size=200):
+    def paginate_query(self, node, project_id=None, props=['id','submitter_id'], chunk_size=10000):
 
+        properties = ' '.join(map(str,props))
+
+        if project_id is not None:
+            program,project = project_id.split('-',1)
+            query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
+        else:
+            query_txt = """{_%s_count}""" % (node)
+
+        # get size of query:
+        # First query the node count to get the expected number of results for the requested query:
+        try:
+            res = self.sub.query(query_txt)
+            count_name = '_'.join(map(str,['',node,'count']))
+            qsize = res['data'][count_name]
+            print('Total of ' + str(qsize) + ' records in node ' + node)
+        except:
+            print("Query to get _"+node+"_count failed! "+str(res))
+
+        offset = 0
+        dfs = []
+        df = pd.DataFrame()
+        while offset < qsize:
+                print('Offset set to: '+str(offset))
+                query_txt = """{%s (first: %s, offset: %s, project_id:"%s"){%s}}""" % (node, chunk_size, offset, project_id, properties)
+                res = self.sub.query(query_txt)
+                df1 = json_normalize(res['data'][node])
+                dfs.append(df1)
+                offset += chunk_size
+        if len(dfs) > 0:
+            df = pd.concat(dfs, ignore_index=True)
+        return df
+
+    def paginate_query_json(self, node, project_id=None, props=['id','submitter_id'], chunk_size=10000):
+
+        if project_id is not None:
+            program,project = project_id.split('-',1)
+            query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
+        else:
+            query_txt = """{_%s_count}""" % (node)
+
+        # First query the node count to get the expected number of results for the requested query:
+        try:
+            res = self.sub.query(query_txt)
+            count_name = '_'.join(map(str,['',node,'count']))
+            qsize = res['data'][count_name]
+            print("Total of " + str(qsize) + " records in node '"+node+"' of project '"+str(project_id)+"'.")
+        except:
+            print("Query to get _"+node+"_count failed! "+str(res))
+
+        #Now paginate the actual query:
+        properties = ' '.join(map(str,props))
+        offset = 0
+        total = {}
+        total['data'] = {}
+        total['data'][node] = []
+        while offset < qsize:
+
+            if project_id is not None:
+                query_txt = """{%s (first: %s, offset: %s, project_id:"%s"){%s}}""" % (node, chunk_size, offset, project_id, properties)
+            else:
+                query_txt = """{%s (first: %s, offset: %s){%s}}""" % (node, chunk_size, offset, properties)
+
+            res = self.sub.query(query_txt)
+            if 'data' in res:
+                total['data'][node] += res['data'][node]
+                offset += chunk_size
+            elif 'error' in res:
+                print(res['error'])
+                if chunk_size > 1:
+                    chunk_size = int(chunk_size/2)
+                    print("Halving chunk_size to: "+str(chunk_size)+".")
+                else:
+                    print("Query timing out with chunk_size of 1!")
+                    exit(1)
+            else:
+                print("Query Error: "+str(res))
+
+            print("Records retrieved: "+str(len(total['data'][node]))+" of "+str(qsize)+" (Query offset: "+str(offset)+", Query chunk_Size: "+str(chunk_size)+").")
+
+        return total
+
+    def get_uuids_in_node(self,node,project_id):
+        """
+        This function returns a list of all the UUIDs of records
+        in a particular node of a given project.
+        """
         program,project = project_id.split('-',1)
 
-        print("Querying record UUIDs in the node "+node+" of project "+project_id+".")
-        res = self.paginate_query_json(node,project_id)
-        ids = [x['id'] for x in res['data'][node]]
-        print("\n\nTotal of "+str(len(ids))+" records in "+node+" node of project "+project_id+".")
+        try:
+            res = self.paginate_query_json(node,project_id)
+            uuids = [x['id'] for x in res['data'][node]]
+        except:
+            raise Gen3Error("Failed to get UUIDs in node '"+node+"' of project '"+project_id+"'.")
 
+        return uuids
+
+    def delete_records(self, uuids, project_id, chunk_size=200):
+        """
+        This function attempts to delete a list of UUIDs from a project.
+        It returns a dictionary with a list of successfully deleted UUIDs,
+        a list of those that failed, all the API responses, and all the error messages.
+        """
+        program,project = project_id.split('-',1)
+
+        if isinstance(uuids, str):
+            uuids = [uuids]
+
+        if not isinstance(uuids, list):
+            raise Gen3UserError("Please provide a list of UUID(s) to delete with the 'uuid' argument.")
+
+        responses = []
+        errors = []
         failure = []
         success = []
         retry = []
         results = {}
         total = 0
 
-        while (len(success)+len(failure)) < len(ids): #loop sorts all ids into success or failure
+        while (len(success)+len(failure)) < len(uuids): #loop sorts all uuids into success or failure
 
             if len(retry) > 0:
                 print("Retrying deletion of "+str(len(retry))+" valid uuids.")
                 list_ids = ",".join(retry)
                 retry = []
             else:
-                list_ids  = ",".join(ids[total:total+chunk_size])
+                list_ids  = ",".join(uuids[total:total+chunk_size])
 
             rurl = "{}/api/v0/submission/{}/{}/entities/{}".format(
                 self._endpoint,program,project,list_ids
             )
             try:
                 resp = requests.delete(rurl, auth=self._auth_provider)
-            except SSLError:
+
+            except:
                 chunk_size = int(chunk_size/2)
-                print("SSLError.\nThe chunk_size is too large. reducing to "+str(chunk_size))
+                raise Gen3Error("The chunk_size is too large. reducing to "+str(chunk_size))
 
             if "The requested URL was not found on the server." in resp.text:
                 print('\n Finished delete workflow. \n') #debug
@@ -361,49 +447,53 @@ class Gen3Expansion:
                 chunk_size = int(chunk_size/2)
                 print("Service Failure.\nThe chunk_size is too large. Reducing to "+str(chunk_size))
             else:
-                print(resp.text) #trouble-shooting
+                #print(resp.text) #trouble-shooting
                 output = json.loads(resp.text)
+                responses.append(output)
 
                 if output['success']:
                     total += len(output['entities'])
-                    print("Deleted "+str(len(output['entities']))+" UUIDs. Progress: " + str(total) + "/" + str(len(ids)))
-                    success.append([x['id'] for x in output['entities']])
+                    success += [x['id'] for x in output['entities']]
                 else:
-                    errors = []
                     for entity in output['entities']:
                         if entity['valid']:
                             retry.append(entity['id'])
                         else:
                             errors.append(entity['errors'][0]['message'])
                             failure.append(entity['id'])
-                    print("Error message(s): " + str(set(errors)))
+                    for error in list(set(errors)):
+                        print("Error message for "+str(errors.count(error))+" records: " + str(error))
                     total += len(failure)
 
-        print("Successfully deleted: "+str(len(success))+". Failed to delete: " + str(len(failure))+".")
+            print("Progress: "+str(len(success)+len(failure))+"/"+str(len(uuids))+" (Success: "+str(len(success)) + ", Failure: "+str(len(failure))+").")
+
         results['failure'] = failure
         results['success'] = success
+        results['responses'] = responses
+        results['errors'] = errors
+        print("Finished deletion script.")
+
         return results
 
-    def delete_records(self, uuids,project_id):
-        ## Delete a list of records in 'uuids' from a project
-        program,project = project_id.split('-',1)
-        failure = []
-        success = []
-        results = {}
-        if isinstance(uuids, str):
-            uuids = [uuids]
-        if isinstance(uuids, list):
-            for uuid in uuids:
-                r = json.loads(self.sub.delete_record(program,project,uuid))
-                if r['code'] == 200:
-                    print("Deleted record id: "+uuid)
-                    success.append(uuid)
-                else:
-                    print("Could not deleted record id: "+uuid)
-                    print("API Response: " + r['code'])
-                    failure.append(uuid)
-        results['failure'] = failure
-        results['success'] = success
+    def delete_node(self,node,project_id,chunk_size=200):
+        """
+        This function attempts to delete all the records in a particular node of a project.
+        It returns the results of the delete_records function.
+        """
+        try:
+            uuids = self.get_uuids_in_node(node,project_id)
+        except:
+            raise Gen3Error("Failed to get UUIDs in the node '"+node+"' of project '"+project_id+"'.")
+
+        print("\nAttemping to delete "+str(len(uuids))+" records in the node '"+node+"' of project '"+project_id+"'.")
+
+        try:
+            results = self.delete_records(uuids, project_id, chunk_size=200)
+            print("Successfully deleted "+str(len(results['success']))+" records in the node '"+node+"' of project '"+project_id+"'.")
+            print("Failed to delete "+str(len(results['failure']))+" records. See results['errors'] for the error messages.")
+        except:
+            raise Gen3Error("Failed to delete UUIDs in the node '"+node+"' of project '"+project_id+"'.")
+
         return results
 
     def get_urls(self, guids,api):
@@ -637,9 +727,9 @@ class Gen3Expansion:
         return file_names
 
 
-    def get_records_for_uuids(self, ids, project, api):
+    def get_records_for_uuids(self, uuids, project, api):
         dfs = []
-        for uuid in ids:
+        for uuid in uuids:
             #Gen3Submission.export_record("DCF", "CCLE", "d70b41b9-6f90-4714-8420-e043ab8b77b9", "json", filename="DCF-CCLE_one_record.json")
             #export_record(self, program, project, uuid, fileformat, filename=None)
             mydir = str('project_uuids/'+project+'_tsvs') #create the directory to store TSVs
@@ -669,88 +759,6 @@ class Gen3Expansion:
         dup_files = list(dup_df['file_name'])
         dups = df[df['file_name'].isin(dup_files)].sort_values(by='md5sum', ascending=False)
         return dups
-
-    def paginate_query(self, node, project_id=None, props=['id','submitter_id'], chunk_size=10000):
-
-        properties = ' '.join(map(str,props))
-
-        if project_id is not None:
-            program,project = project_id.split('-',1)
-            query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
-        else:
-            query_txt = """{_%s_count}""" % (node)
-
-        # get size of query:
-        # First query the node count to get the expected number of results for the requested query:
-        try:
-            res = self.sub.query(query_txt)
-            count_name = '_'.join(map(str,['',node,'count']))
-            qsize = res['data'][count_name]
-            print('Total of ' + str(qsize) + ' records in node ' + node)
-        except:
-            print("Query to get _"+node+"_count failed! "+str(res))
-
-        offset = 0
-        dfs = []
-        df = pd.DataFrame()
-        while offset < qsize:
-                print('Offset set to: '+str(offset))
-                query_txt = """{%s (first: %s, offset: %s, project_id:"%s"){%s}}""" % (node, chunk_size, offset, project_id, properties)
-                res = self.sub.query(query_txt)
-                df1 = json_normalize(res['data'][node])
-                dfs.append(df1)
-                offset += chunk_size
-        if len(dfs) > 0:
-            df = pd.concat(dfs, ignore_index=True)
-        return df
-
-    def paginate_query_json(self, node, project_id=None, props=['id','submitter_id'], chunk_size=10000):
-
-        if project_id is not None:
-            program,project = project_id.split('-',1)
-            query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
-        else:
-            query_txt = """{_%s_count}""" % (node)
-
-        # First query the node count to get the expected number of results for the requested query:
-        try:
-            res = self.sub.query(query_txt)
-            count_name = '_'.join(map(str,['',node,'count']))
-            qsize = res['data'][count_name]
-            print('Total of ' + str(qsize) + ' records in node ' + node)
-        except:
-            print("Query to get _"+node+"_count failed! "+str(res))
-
-        #Now paginate the actual query:
-        properties = ' '.join(map(str,props))
-        offset = 0
-        total = {}
-        total['data'] = {}
-        total['data'][node] = []
-        while offset < qsize:
-            print("Query Total: "+str(qsize)+", Offset: "+str(offset)+", Chunk_Size: "+str(chunk_size))
-
-            if project_id is not None:
-                query_txt = """{%s (first: %s, offset: %s, project_id:"%s"){%s}}""" % (node, chunk_size, offset, project_id, properties)
-            else:
-                query_txt = """{%s (first: %s, offset: %s){%s}}""" % (node, chunk_size, offset, properties)
-
-            res = self.sub.query(query_txt)
-            if 'data' in res:
-                total['data'][node] += res['data'][node]
-                offset += chunk_size
-            elif 'error' in res:
-                print(res['error'])
-                if chunk_size > 1:
-                    chunk_size = int(chunk_size/2)
-                    print("Halving chunk_size to: "+str(chunk_size)+".")
-                else:
-                    print("Query timing out with chunk_size of 1!")
-                    exit(1)
-            else:
-                print("Query Error: "+str(res))
-
-        return total
 
     def get_duplicates(self, nodes, projects, api):
         # Get duplicate SUBMITTER_IDs in a node, which SHOULD NEVER HAPPEN but alas it has, thus this script
@@ -783,11 +791,11 @@ class Gen3Expansion:
                     c = c.rename(columns={'index':'submitter_id', 0:'count'})
                     dupc = c.loc[c['count']>1]
                     if not dupc.empty:
-                        dups= list(set(dupc['submitter_id']))
-                        ids = {}
+                        dups = list(set(dupc['submitter_id']))
+                        uuids = {}
                         for sid in dups:
-                            ids[sid] = list(df.loc[df['submitter_id']==sid]['id'])
-                        pdups[project_id][node] = ids
+                            uuids[sid] = list(df.loc[df['submitter_id']==sid]['id'])
+                        pdups[project_id][node] = uuids
         return pdups
 
 
@@ -795,7 +803,7 @@ class Gen3Expansion:
     def delete_duplicates(self, dups, project_id, api):
 
         if not isinstance(dups, dict):
-            print("Must provide duplicates as a dictionary of keys:submitter_ids and values:ids; use get_duplicates function")
+            print("Must provide duplicates as a dictionary of keys:submitter_ids and values:uuids; use get_duplicates function")
 
         program,project = project_id.split('-',1)
         failure = []
@@ -1028,6 +1036,7 @@ class Gen3Expansion:
                     data=chunk.to_csv(sep="\t", index=False),
                     headers=headers,
                 ).text
+
             except requests.exceptions.ConnectionError as e:
                 response = "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response',))"
 
@@ -1144,7 +1153,7 @@ class Gen3Expansion:
                 len(valid_but_failed) > 0 and len(invalid) == 0
             ):  # if all entities are valid but submission still failed, probably due to duplicate submitter_ids. Can remove this section once the API response is fixed: https://ctds-planx.atlassian.net/browse/PXP-3065
                 raise Gen3Error(
-                    "Please check your data for correct file encoding, special characters, or duplicate submitter_ids or ids."
+                    "Please check your data for correct file encoding, special characters, or duplicate submitter_ids or uuids."
                 )
 
             elif timeout is False:  # get new chunk if didn't timeout
