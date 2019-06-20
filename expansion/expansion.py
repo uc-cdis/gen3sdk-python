@@ -705,8 +705,7 @@ class Gen3Expansion:
                 # nested dict: all_guids[project][node]
         return all_guids
 
-
-    def download_files_by_guids(self, guids=None):
+    def download_files_by_guids(self, guids=None, profile='profile', client='home/jovyan/.gen3/gen3-client'):
         # Make a directory for files
         mydir = 'downloaded_data_files'
         file_names = {}
