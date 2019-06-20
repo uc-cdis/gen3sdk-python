@@ -369,13 +369,10 @@ class Gen3Submission:
             invalid = []
             count += 1
             print(
-                "Chunk {} (chunk size: {}, submitted: {} of {}".format(
+                "Chunk {} (chunk size: {}, submitted: {} of {})".format(
                     str(count),
                     str(chunk_size),
-                    str(
-                        len(results["succeeded"])
-                        + len(results["invalid"])
-                    ),
+                    str(len(results["succeeded"]) + len(results["invalid"])),
                     str(len(df)),
                 )
             )
@@ -409,13 +406,7 @@ class Gen3Submission:
                     print(str(e))
                     raise Gen3Error("Unable to parse API response as JSON!")
 
-                if "code" not in json_res:
-                    print("\t Unhandled API-response: {}".format(response))
-                    results["responses"].append(
-                        "Unhandled API response: {}".format(response)
-                    )
-
-                elif "message" in json_res and "code" not in json_res:
+                if "message" in json_res and "code" not in json_res:
                     print(
                         "\t No code in the API response for Chunk {}: {}".format(
                             str(count), res.get("message")
@@ -426,6 +417,12 @@ class Gen3Submission:
                         "Error Chunk {}: {}".format(str(count), res.get("message"))
                     )
                     results["other"].append(res.get("transactional_errors"))
+
+                elif "code" not in json_res:
+                    print("\t Unhandled API-response: {}".format(response))
+                    results["responses"].append(
+                        "Unhandled API response: {}".format(response)
+                    )
 
                 elif json_res["code"] == 200:  # success
 
@@ -460,13 +457,11 @@ class Gen3Submission:
                         if entity["valid"]:  # valid but failed
                             valid_but_failed.append(sid)
                         else:  # invalid and failed
-                            message = entity["errors"][0]["message"]
+                            message = str(entity["errors"])
                             results["invalid"][sid] = message
                             invalid.append(sid)
                     print(
-                        "\tInvalid records in this chunk: {}".format(
-                            str(len(invalid))
-                        )
+                        "\tInvalid records in this chunk: {}".format(str(len(invalid)))
                     )
 
                 elif json_res["code"] == 500:  # internal server error
@@ -518,10 +513,6 @@ class Gen3Submission:
 
         print("Finished data submission.")
         print("Successful records: {}".format(str(len(set(results["succeeded"])))))
-        print(
-            "Failed invalid records: {}".format(
-                str(len(results["invalid"]))
-            )
-        )
+        print("Failed invalid records: {}".format(str(len(results["invalid"]))))
 
         return results
