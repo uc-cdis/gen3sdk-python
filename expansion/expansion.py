@@ -65,63 +65,6 @@ class Gen3Expansion:
         print("\nOutput written to file: "+filename)
 
 
-    def get_node_tsvs(self, node, projects=None, overwrite=False, remove_empty=True):
-        """Gets a TSV of the structuerd data from particular node for each project specified.
-           Also creates a master TSV of merged data from each project for the specified node.
-           Returns a DataFrame containing the merged data for the specified node.
-
-        Args:
-            node (str): The name of the node to download structured data from.
-            projects (list): The projects to download the node from. If "None", downloads data from each project user has access to.
-
-        Example:
-        >>> df = get_node_tsvs('demographic')
-
-        """
-        if not isinstance(node, str): # Create folder on VM for downloaded files
-            mydir = 'downloaded_tsvs'
-        else:
-            mydir = str(node+'_tsvs')
-
-        if not os.path.exists(mydir):
-            os.makedirs(mydir)
-        if projects is None: #if no projects specified, get node for all projects
-            projects = list(json_normalize(self.sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
-        elif isinstance(projects, str):
-            projects = [projects]
-
-        dfs = []
-        df_len = 0
-        for project in projects:
-            filename = str(mydir+'/'+project+'_'+node+'.tsv')
-            if (os.path.isfile(filename)) and (overwrite is False):
-                print("File previously downloaded.")
-            else:
-                prog,proj = project.split('-',1)
-                self.sub.export_node(prog,proj,node,'tsv',filename)
-            df1 = pd.read_csv(filename, sep='\t', header=0, index_col=False)
-            dfs.append(df1)
-            df_len+=len(df1)
-            print(filename +' has '+str(len(df1))+' records.')
-
-            if remove_empty is True:
-                if df1.empty:
-                    print('Removing empty file: ' + filename)
-                    cmd = ['rm',filename] #look in the download directory
-                    try:
-                        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
-                    except Exception as e:
-                        output = e.output.decode('UTF-8')
-                        print("ERROR deleting file: " + output)
-
-        all_data = pd.concat(dfs, ignore_index=True)
-        print('length of all dfs: ' +str(df_len))
-        nodefile = str('master_'+node+'.tsv')
-        all_data.to_csv(str(mydir+'/'+nodefile),sep='\t',index=False)
-        print('Master node TSV with '+str(len(all_data))+' total records written to '+nodefile+'.')
-        return all_data
-
-
     ### AWS S3 Tools:
     def s3_ls(self, path, bucket, profile, pattern='*'):
         ''' Print the results of an `aws s3 ls` command '''
@@ -196,8 +139,17 @@ class Gen3Expansion:
         print("Finished")
 
     # Functions for downloading metadata in TSVs
-    # Get a list of project_ids
+
     def get_project_ids(self, node=None,name=None):
+        """Get a list of project_ids to have access to in data commons.
+
+            Args:
+                node(str): The node you want projects to have at least one record in.
+                name(str): The name of the programs to get projects in.
+
+            Example:
+                get_project_ids(name='program')
+        """
         project_ids = []
         queries = []
         #Return all project_ids in the data commons if no node is provided or if node is program but no name provided
@@ -229,6 +181,62 @@ class Gen3Expansion:
                 project_ids = project_ids + list(set(df['project_id']))
         return sorted(project_ids,key=str.lower)
 
+    def get_node_tsvs(self, node, projects=None, overwrite=False, remove_empty=True):
+        """Gets a TSV of the structuerd data from particular node for each project specified.
+           Also creates a master TSV of merged data from each project for the specified node.
+           Returns a DataFrame containing the merged data for the specified node.
+
+        Args:
+            node (str): The name of the node to download structured data from.
+            projects (list): The projects to download the node from. If "None", downloads data from each project user has access to.
+
+        Example:
+        >>> df = get_node_tsvs('demographic')
+
+        """
+        if not isinstance(node, str): # Create folder on VM for downloaded files
+            mydir = 'downloaded_tsvs'
+        else:
+            mydir = str(node+'_tsvs')
+
+        if not os.path.exists(mydir):
+            os.makedirs(mydir)
+        if projects is None: #if no projects specified, get node for all projects
+            projects = list(json_normalize(self.sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+        elif isinstance(projects, str):
+            projects = [projects]
+
+        dfs = []
+        df_len = 0
+        for project in projects:
+            filename = str(mydir+'/'+project+'_'+node+'.tsv')
+            if (os.path.isfile(filename)) and (overwrite is False):
+                print("File previously downloaded.")
+            else:
+                prog,proj = project.split('-',1)
+                self.sub.export_node(prog,proj,node,'tsv',filename)
+            df1 = pd.read_csv(filename, sep='\t', header=0, index_col=False)
+            dfs.append(df1)
+            df_len+=len(df1)
+            print(filename +' has '+str(len(df1))+' records.')
+
+            if remove_empty is True:
+                if df1.empty:
+                    print('Removing empty file: ' + filename)
+                    cmd = ['rm',filename] #look in the download directory
+                    try:
+                        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+                    except Exception as e:
+                        output = e.output.decode('UTF-8')
+                        print("ERROR deleting file: " + output)
+
+        all_data = pd.concat(dfs, ignore_index=True)
+        print('length of all dfs: ' +str(df_len))
+        nodefile = str('master_'+node+'.tsv')
+        all_data.to_csv(str(mydir+'/'+nodefile),sep='\t',index=False)
+        print('Master node TSV with '+str(len(all_data))+' total records written to '+nodefile+'.')
+        return all_data
+
     def get_project_tsvs(self, projects):
         """Function gets a TSV for every node in a specified project.
             Exports TSV files into a directory "project_tsvs/".
@@ -245,34 +253,41 @@ class Gen3Expansion:
         remove_nodes = ['program','project','root','data_release'] #remove these nodes from list of nodes
         for node in remove_nodes:
             if node in all_nodes: all_nodes.remove(node)
+
         if isinstance(projects,str):
             projects = [projects]
+
         for project_id in projects:
             mydir = str('project_tsvs/'+project_id+'_tsvs') #create the directory to store TSVs
+
             if not os.path.exists(mydir):
                 os.makedirs(mydir)
+
             for node in all_nodes:
                 query_txt = """{_%s_count (project_id:"%s")}""" % (node,project_id)
-    #            query_txt = """{%s (first:1,project_id:"%s"){project_id}}""" % (node,project_id) #check for at least one record in project's node, else skip download; this query is very slightly faster than _node_count query, so use this if times-out (and other commented 'if' line below)
                 res = self.sub.query(query_txt)
                 count = res['data'][str('_'+node+'_count')]
                 print(str(count) + ' records found in node ' + node + ' in project ' + project_id)
-    #            if len(res['data'][node]) > 0: #using direct `node_id (first: 1)` type query
+
                 if count > 0:
                     filename = str(mydir+'/'+project_id+'_'+node+'.tsv')
-                    if os.path.isfile(filename):
+
+                    if (os.path.isfile(filename)) and (overwrite is False):
                         print('Previously downloaded '+ filename )
+
                     else:
                         prog,proj = project_id.split('-',1)
                         self.sub.export_node(prog,proj,node,'tsv',filename)
-                        print(filename+' exported to '+mydir)
+
                 else:
                     print('Skipping empty node '+node+' for project '+project_id)
+
         cmd = ['ls',mydir] #look in the download directory
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
         except Exception as e:
             output = 'ERROR:' + e.output.decode('UTF-8')
+
         return output
 
     def get_project_tsvs_faster(self, projects):
