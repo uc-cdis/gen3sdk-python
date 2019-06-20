@@ -66,9 +66,9 @@ class Gen3Expansion:
 
 
     def get_node_tsvs(self, node, projects=None, overwrite=False, remove_empty=True):
-        """Gets a TSV of the structuerd data from each node specified for each project specified
-           Also creates a master TSV per node of merged data from each project.
-           Returns a DataFrame containing the merged data.
+        """Gets a TSV of the structuerd data from particular node for each project specified.
+           Also creates a master TSV of merged data from each project for the specified node.
+           Returns a DataFrame containing the merged data for the specified node.
 
         Args:
             node (str): The name of the node to download structured data from.
@@ -230,7 +230,17 @@ class Gen3Expansion:
         return sorted(project_ids,key=str.lower)
 
     def get_project_tsvs(self, projects):
-        # Get a TSV for every node in a project
+        """Function gets a TSV for every node in a specified project.
+            Exports TSV files into a directory "project_tsvs/".
+            Function returns a list of the contents of the directory.
+
+        Args:
+            projects (str/list): The project_id(s) of the project(s) to download. Can be a single project_id or a list of project_ids.
+
+        Example:
+        >>> get_project_tsvs(projects = ['internal-test'])
+
+        """
         all_nodes = sorted(list(set(json_normalize(self.sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
         remove_nodes = ['program','project','root','data_release'] #remove these nodes from list of nodes
         for node in remove_nodes:
@@ -301,43 +311,19 @@ class Gen3Expansion:
             output = 'ERROR:' + e.output.decode('UTF-8')
         return output
 
+    def paginate_query(self, node, project_id=None, props=['id','submitter_id'], chunk_size=10000, format='json'):
+        """Function to paginate a query to avoid time-outs.
+        Returns a json of all the records in the node.
 
-    def paginate_query(self, node, project_id=None, props=['id','submitter_id'], chunk_size=10000):
+        Args:
+            node (str): The node to query.
+            project_id(str): The project_id to limit the query to. Default is None.
+            props(list): A list of properties in the node to return.
+            chunk_size(int): The number of records to return per query. Default is 10000.
 
-        properties = ' '.join(map(str,props))
-
-        if project_id is not None:
-            program,project = project_id.split('-',1)
-            query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
-        else:
-            query_txt = """{_%s_count}""" % (node)
-
-        # get size of query:
-        # First query the node count to get the expected number of results for the requested query:
-        try:
-            res = self.sub.query(query_txt)
-            count_name = '_'.join(map(str,['',node,'count']))
-            qsize = res['data'][count_name]
-            print('Total of ' + str(qsize) + ' records in node ' + node)
-        except:
-            print("Query to get _"+node+"_count failed! "+str(res))
-
-        offset = 0
-        dfs = []
-        df = pd.DataFrame()
-        while offset < qsize:
-                print('Offset set to: '+str(offset))
-                query_txt = """{%s (first: %s, offset: %s, project_id:"%s"){%s}}""" % (node, chunk_size, offset, project_id, properties)
-                res = self.sub.query(query_txt)
-                df1 = json_normalize(res['data'][node])
-                dfs.append(df1)
-                offset += chunk_size
-        if len(dfs) > 0:
-            df = pd.concat(dfs, ignore_index=True)
-        return df
-
-    def paginate_query_json(self, node, project_id=None, props=['id','submitter_id'], chunk_size=10000):
-
+        Example:
+            paginate_query('demographic')
+        """
         if project_id is not None:
             program,project = project_id.split('-',1)
             query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
@@ -383,7 +369,11 @@ class Gen3Expansion:
 
             print("Records retrieved: "+str(len(total['data'][node]))+" of "+str(qsize)+" (Query offset: "+str(offset)+", Query chunk_Size: "+str(chunk_size)+").")
 
-        return total
+        if format is 'tsv':
+            df = json_normalize(total['data'][node])
+            return df
+        else:
+            return total
 
     def get_uuids_in_node(self,node,project_id):
         """
