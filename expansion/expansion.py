@@ -375,6 +375,11 @@ class Gen3Expansion:
         This function attempts to delete a list of UUIDs from a project.
         It returns a dictionary with a list of successfully deleted UUIDs,
         a list of those that failed, all the API responses, and all the error messages.
+
+        Args:
+            uuids(list): A list of the UUIDs to delete.
+            project_id(str): The project to delete the IDs from.
+            chunk_size(int): The number of records to delete in each API request.
         """
         program,project = project_id.split('-',1)
 
@@ -528,7 +533,7 @@ class Gen3Expansion:
         #plt.figtext(.8, .8, 'N = '+str(N))
         plt.xticks(y_pos, categories)
         plt.ylabel('Counts')
-        plt.title(str('Counts by '+category+' (N = '+str(N)+')'))
+        plt.title(str('Counts by '+property+' (N = '+str(N)+')'))
         plt.xticks(rotation=90, horizontalalignment='center')
         #add N for each bar
         plt.show()
@@ -547,19 +552,20 @@ class Gen3Expansion:
         plt.title("PDF for all projects "+property) # You can comment this line out if you don't need title
         plt.show(fig)
 
-        projects = list(set(df['project_id']))
-        for project in projects:
-            proj_df = df[df['project_id']==project]
-            data = list(proj_df[property])
-            N = len(data)
-            fig = sns.distplot(data, hist=False, kde=True,
-                     bins=int(180/5), color = 'darkblue',
-                     kde_kws={'linewidth': 2})
-            plt.figtext(.8, .8, 'N = '+str(N))
-            plt.xlabel(property)
-            plt.ylabel("Probability")
-            plt.title("PDF for "+property+' in ' + project) # You can comment this line out if you don't need title
-            plt.show(fig)
+        if by_project is True:
+            projects = list(set(df['project_id']))
+            for project in projects:
+                proj_df = df[df['project_id']==project]
+                data = list(proj_df[property])
+                N = len(data)
+                fig = sns.distplot(data, hist=False, kde=True,
+                         bins=int(180/5), color = 'darkblue',
+                         kde_kws={'linewidth': 2})
+                plt.figtext(.8, .8, 'N = '+str(N))
+                plt.xlabel(property)
+                plt.ylabel("Probability")
+                plt.title("PDF for "+property+' in ' + project+' (N = '+str(N)+')') # You can comment this line out if you don't need title
+                plt.show(fig)
 
     def node_record_counts(self, project_id):
         query_txt = """{node (first:-1, project_id:"%s"){type}}""" % (project_id)
