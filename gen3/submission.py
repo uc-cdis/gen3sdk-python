@@ -439,7 +439,7 @@ class Gen3Submission:
 
                     elif json_res["code"] == 200:  # success
 
-                        entities = json_res["entities"]
+                        entities = json_res.get("entities", [])
                         print("\t Succeeded: " + str(len(entities)) + " entities.")
                         results["responses"].append(
                             "Chunk "
