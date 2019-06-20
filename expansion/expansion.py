@@ -247,6 +247,7 @@ class Gen3Expansion:
 
         Args:
             projects (str/list): The project_id(s) of the project(s) to download. Can be a single project_id or a list of project_ids.
+            overwrite (boolean): If False, the TSV file is not downloaded if there is an existing file with the same name.
 
         Example:
         >>> get_project_tsvs(projects = ['internal-test'])
