@@ -1,2 +1,4 @@
 requests
 -e git+https://github.com/uc-cdis/indexclient.git@1.5.6#egg=indexclient
+
+pandas
