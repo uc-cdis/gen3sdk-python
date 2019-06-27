@@ -291,6 +291,7 @@ class Gen3Expansion:
 
         return output
 
+# Query Functions
     def paginate_query(self, node, project_id=None, props=['id','submitter_id'], chunk_size=10000, format='json'):
         """Function to paginate a query to avoid time-outs.
         Returns a json of all the records in the node.
@@ -370,6 +371,19 @@ class Gen3Expansion:
 
         return uuids
 
+    def list_project_files(self, project_id):
+        query_txt = """{datanode(first:-1,project_id: "%s") {type file_name id object_id}}""" % (project_id)
+        res = self.sub.query(query_txt)
+        if len(res['data']['datanode']) == 0:
+            print('Project ' + project_id + ' has no records in any data_file node.')
+            return None
+        else:
+            df = json_normalize(res['data']['datanode'])
+            json_normalize(Counter(df['type']))
+            #guids = df.loc[(df['type'] == node)]['object_id']
+            return df
+
+# Delete Sheepdog records/nodes
     def delete_records(self, uuids, project_id, chunk_size=200):
         """
         This function attempts to delete a list of UUIDs from a project.
@@ -471,6 +485,7 @@ class Gen3Expansion:
 
         return results
 
+# IndexD functions:
     def get_urls(self, guids,api):
         # Get URLs for a list of GUIDs
         if isinstance(guids, str):
@@ -523,6 +538,7 @@ class Gen3Expansion:
                     print("Error deleting GUID {}:".format(guid))
                     print(response.reason)
 
+# Analysis Functions
     def property_counts_table(self, prop, df):
         df = df[df[prop].notnull()]
         counts = Counter(df[prop])
@@ -612,17 +628,6 @@ class Gen3Expansion:
         df = df.rename(columns={'index':'node', 0:'count'})
         return df
 
-    def list_project_files(self, project_id):
-        query_txt = """{datanode(first:-1,project_id: "%s") {type file_name id object_id}}""" % (project_id)
-        res = self.sub.query(query_txt)
-        if len(res['data']['datanode']) == 0:
-            print('Project ' + project_id + ' has no records in any data_file node.')
-            return None
-        else:
-            df = json_normalize(res['data']['datanode'])
-            json_normalize(Counter(df['type']))
-            #guids = df.loc[(df['type'] == node)]['object_id']
-            return df
 
     def get_data_file_tsvs(self, projects=None,remove_empty=True):
         # Download TSVs for all data file nodes in the specified projects

@@ -19,8 +19,6 @@ import seaborn as sns
 
 # Create the gen3sdk objects for authentication and submission
 api = 'https://datacommons.org'
-profile = 'prof'
-client = '/home/jovyan/.gen3/gen3-client'
 creds = '/home/jovyan/pd/my-credentials.json'
 
 auth = Gen3Auth(api, refresh_file=creds)
@@ -28,6 +26,9 @@ sub = Gen3Submission(api, auth)
 file = Gen3File(api, auth)
 
 # Download and configure gen3-client in Jupyter Notebook
+profile = 'prof'
+client = '/home/jovyan/.gen3/gen3-client'
+
 !curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*linux |  cut -d '"' -f 4 | wget -qi -
 !unzip dataclient_linux.zip
 !mkdir /home/jovyan/.gen3
@@ -89,6 +90,8 @@ creds = '/Users/christopher/Downloads/vpodc-credentials.json'
 client = 'gen3-client'
 
 auth = Gen3Auth(api, refresh_file=creds)
+
+run /Users/christopher/Documents/GitHub/uc-cdis/gen3sdk-python/gen3/submission.py
 sub = Gen3Submission(api, auth)
 #load /Users/christopher/Documents/GitHub/uc-cdis/gen3sdk-python/gen3/submission.py
 
