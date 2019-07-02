@@ -25,6 +25,12 @@ auth = Gen3Auth(api, refresh_file=creds)
 sub = Gen3Submission(api, auth)
 file = Gen3File(api, auth)
 
+# Get the gen3sdk expansion functions
+!wget https://raw.githubusercontent.com/cgmeyer/gen3sdk-python/master/expansion/expansion.py
+%run ./expansion.py
+exp = Gen3Expansion(api, auth)
+
+
 # Download and configure gen3-client in Jupyter Notebook
 profile = 'prof'
 client = '/home/jovyan/.gen3/gen3-client'
@@ -35,13 +41,23 @@ client = '/home/jovyan/.gen3/gen3-client'
 !mv gen3-client /home/jovyan/.gen3
 !rm dataclient_linux.zip
 #!/home/jovyan/.gen3/gen3-client configure --profile=bpa --apiendpoint=https://data.bloodpac.org --cred=/home/jovyan/pd/bpa-credentials.json
+# Configure a profile
 cmd = client +' configure --profile='+profile+' --apiendpoint='+api+' --cred='+creds
 try:
     output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
 except Exception as e:
     output = e.output.decode('UTF-8')
     print("ERROR:" + output)
-print(subprocess.check_output(client).decode('UTF-8')) #check that installation is complete
+
+# Check authorization privileges
+cmd = client +' auth --profile='+profile
+try:
+    output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
+    print("\n"+output)
+except Exception as e:
+    output = e.output.decode('UTF-8')
+    print("ERROR:" + output)
+
 
 ####################################################################################
 ####################################################################################
@@ -86,17 +102,20 @@ api = 'https://vpodc.org/' # VA
 profile = 'vpodc'
 creds = '/Users/christopher/Downloads/vpodc-credentials.json'
 
+api = 'https://qa-brain.planx-pla.net/'
+profile = 'qa-brain'
+creds = '/Users/christopher/Downloads/qa-credentials.json'
 
 client = 'gen3-client'
 
 auth = Gen3Auth(api, refresh_file=creds)
 
 run /Users/christopher/Documents/GitHub/uc-cdis/gen3sdk-python/gen3/submission.py
-sub = Gen3Submission(api, auth)
 #load /Users/christopher/Documents/GitHub/uc-cdis/gen3sdk-python/gen3/submission.py
+sub = Gen3Submission(api, auth)
 
 !wget https://raw.githubusercontent.com/cgmeyer/gen3sdk-python/master/expansion/expansion.py
-run ./expansion.py
+%run ./expansion.py
 exp = Gen3Expansion(api, auth)
 
 # Download and configure gen3-client in Jupyter Notebook; run in bash
@@ -107,9 +126,12 @@ rm dataclient_osx.zip
 
 # Now configure your profile in python
 cmd = client +' configure --profile='+profile+' --apiendpoint='+api+' --cred='+creds
+auth_cmd = client +' auth --profile='+profile
 try:
     output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
+    output = subprocess.check_output(auth_cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
+    print(output)
 except Exception as e:
     output = e.output.decode('UTF-8')
     print("ERROR:" + output)
-print(subprocess.check_output(client).decode('UTF-8')) #check that installation is complete
+!$auth_cmd

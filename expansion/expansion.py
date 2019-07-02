@@ -477,7 +477,7 @@ class Gen3Expansion:
         print("\nAttemping to delete "+str(len(uuids))+" records in the node '"+node+"' of project '"+project_id+"'.")
 
         try:
-            results = self.delete_records(uuids, project_id, chunk_size=200)
+            results = self.delete_records(uuids, project_id, chunk_size=chunk_size)
             print("Successfully deleted "+str(len(results['success']))+" records in the node '"+node+"' of project '"+project_id+"'.")
             print("Failed to delete "+str(len(results['failure']))+" records. See results['errors'] for the error messages.")
         except:
