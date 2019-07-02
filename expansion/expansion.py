@@ -963,7 +963,6 @@ class Gen3Expansion:
 
         return invalid_df
 
-
     def submit_file(self, project_id, filename, chunk_size=30, row_offset=0):
         """Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.
 
@@ -995,6 +994,7 @@ class Gen3Expansion:
             df = pd.read_csv(filename, header=0, sep="\t", dtype=str).fillna("")
         else:
             raise Gen3UserError("Please upload a file in CSV, TSV, or XLSX format.")
+        df.rename(columns = {c: c.lstrip('*') for c in df.columns}, inplace = True) # remove any leading asterisks in the DataFrame column names
 
         # Check uniqueness of submitter_ids:
         if len(list(df.submitter_id)) != len(list(df.submitter_id.unique())):
@@ -1015,16 +1015,14 @@ class Gen3Expansion:
         count = 0
 
         results = {
-            "failed": {
-                "messages": [],
-                "submitter_ids": [],
-            },  # these are invalid records
+            "invalid": {},  # these are invalid records
             "other": [],  # any unhandled API responses
             "details": [],  # entire API response details
             "succeeded": [],  # list of submitter_ids that were successfully updated/created
             "responses": [],  # list of API response codes
         }
 
+        # Start the chunking loop:
         while (start + len(chunk)) <= len(df):
 
             timeout = False
@@ -1032,17 +1030,12 @@ class Gen3Expansion:
             invalid = []
             count += 1
             print(
-                "Chunk "
-                + str(count)
-                + " (chunk size: "
-                + str(chunk_size)
-                + ", submitted: "
-                + str(
-                    len(results["succeeded"]) + len(results["failed"]["submitter_ids"])
+                "Chunk {} (chunk size: {}, submitted: {} of {})".format(
+                    str(count),
+                    str(chunk_size),
+                    str(len(results["succeeded"]) + len(results["invalid"])),
+                    str(len(df)),
                 )
-                + " of "
-                + str(len(df))
-                + "):  "
             )
 
             try:
@@ -1052,11 +1045,8 @@ class Gen3Expansion:
                     data=chunk.to_csv(sep="\t", index=False),
                     headers=headers,
                 ).text
-
             except requests.exceptions.ConnectionError as e:
-                response = "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response',))"
-
-            results["details"].append(response)
+                results["details"].append(e.message)
 
             # Handle the API response
             if (
@@ -1066,92 +1056,82 @@ class Gen3Expansion:
                 or "service failure - try again later" in response
             ):  # time-out, response is not valid JSON at the moment
 
-                print("\t Reducing Chunk Size: " + response)
-                results["responses"].append("Reducing Chunk Size: " + response)
+                print("\t Reducing Chunk Size: {}".format(response))
+                results["responses"].append("Reducing Chunk Size: {}".format(response))
                 timeout = True
-
-            elif '"message": ' in response and "code" not in response:  # other?
-                print(
-                    "\t No code in the API response for Chunk "
-                    + str(count)
-                    + ": "
-                    + res.get("message")
-                )
-                print("\t " + str(res.get("transactional_errors")))
-                results["responses"].append(
-                    "Error Chunk " + str(count) + ": " + res.get("message")
-                )
-                results["other"].append(res.get("transactional_errors"))
-
-            elif (
-                "code" not in response
-            ):  # catch-all for any other response without a code
-                print("\t Unhandled API-response: " + response)
-                results["responses"].append("Unhandled API response: " + response)
 
             else:
                 try:
                     json_res = json.loads(response)
-
-                    if "code" not in json_res:
-                        print("\t Unhandled API-response: " + response)
-                        results["responses"].append(
-                            "Unhandled API response: " + response
-                        )
-
-                    elif json_res["code"] == 200:  # success
-
-                        entities = json_res["entities"]
-                        print("\t Succeeded: " + str(len(entities)) + " entities.")
-                        results["responses"].append(
-                            "Chunk "
-                            + str(count)
-                            + " Succeeded: "
-                            + str(len(entities))
-                            + " entities."
-                        )
-
-                        for entity in entities:
-                            sid = entity["unique_keys"][0]["submitter_id"]
-                            results["succeeded"].append(sid)
-
-                    elif (
-                        json_res["code"] == 400
-                        or json_res["code"] == 403
-                        or json_res["code"] == 404
-                    ):  # failure
-
-                        entities = json_res.get("entities", [])
-                        print("\tFailed: " + str(len(entities)) + " entities.")
-                        results["responses"].append(
-                            "Chunk "
-                            + str(count)
-                            + " Failed: "
-                            + str(len(entities))
-                            + " entities."
-                        )
-
-                        for entity in entities:
-                            sid = entity["unique_keys"][0]["submitter_id"]
-                            if entity["valid"]:  # valid but failed
-                                valid_but_failed.append(sid)
-                            else:  # invalid and failed
-                                message = entity["errors"][0]["message"]
-                                results["failed"]["messages"].append(message)
-                                results["failed"]["submitter_ids"].append(sid)
-                                invalid.append(sid)
-                        print("\tInvalid records in this chunk: " + str(len(invalid)))
-
-                    elif json_res["code"] == 500:  # internal server error
-
-                        print("\t Internal Server Error: " + response)
-                        results["responses"].append(
-                            "Internal Server Error: " + response
-                        )
-
-                except:
+                except JSONDecodeError as e:
                     print(response)
+                    print(str(e))
                     raise Gen3Error("Unable to parse API response as JSON!")
+
+                if "message" in json_res and "code" not in json_res:
+                    print(
+                        "\t No code in the API response for Chunk {}: {}".format(
+                            str(count), res.get("message")
+                        )
+                    )
+                    print("\t {}".format(str(res.get("transactional_errors"))))
+                    results["responses"].append(
+                        "Error Chunk {}: {}".format(str(count), res.get("message"))
+                    )
+                    results["other"].append(res.get("transactional_errors"))
+
+                elif "code" not in json_res:
+                    print("\t Unhandled API-response: {}".format(response))
+                    results["responses"].append(
+                        "Unhandled API response: {}".format(response)
+                    )
+
+                elif json_res["code"] == 200:  # success
+
+                    entities = json_res.get("entities", [])
+                    print("\t Succeeded: {} entities.".format(str(len(entities))))
+                    results["responses"].append(
+                        "Chunk {} Succeeded: {} entities.".format(
+                            str(count), str(len(entities))
+                        )
+                    )
+
+                    for entity in entities:
+                        sid = entity["unique_keys"][0]["submitter_id"]
+                        results["succeeded"].append(sid)
+
+                elif (
+                    json_res["code"] == 400
+                    or json_res["code"] == 403
+                    or json_res["code"] == 404
+                ):  # failure
+
+                    entities = json_res.get("entities", [])
+                    print("\tChunk Failed: {} entities.".format(str(len(entities))))
+                    results["responses"].append(
+                        "Chunk {} Failed: {} entities.".format(
+                            str(count), str(len(entities))
+                        )
+                    )
+
+                    for entity in entities:
+                        sid = entity["unique_keys"][0]["submitter_id"]
+                        if entity["valid"]:  # valid but failed
+                            valid_but_failed.append(sid)
+                        else:  # invalid and failed
+                            message = str(entity["errors"])
+                            results["invalid"][sid] = message
+                            invalid.append(sid)
+                    print(
+                        "\tInvalid records in this chunk: {}".format(str(len(invalid)))
+                    )
+
+                elif json_res["code"] == 500:  # internal server error
+
+                    print("\t Internal Server Error: {}".format(response))
+                    results["responses"].append(
+                        "Internal Server Error: {}".format(response)
+                    )
 
             if (
                 len(valid_but_failed) > 0 and len(invalid) > 0
@@ -1160,16 +1140,16 @@ class Gen3Expansion:
                     df["submitter_id"].isin(valid_but_failed)
                 ]  # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
                 print(
-                    "Retrying submission of valid entities from failed chunk: "
-                    + str(len(chunk))
-                    + " valid entities."
+                    "Retrying submission of valid entities from failed chunk: {} valid entities.".format(
+                        str(len(chunk))
+                    )
                 )
 
             elif (
                 len(valid_but_failed) > 0 and len(invalid) == 0
             ):  # if all entities are valid but submission still failed, probably due to duplicate submitter_ids. Can remove this section once the API response is fixed: https://ctds-planx.atlassian.net/browse/PXP-3065
                 raise Gen3Error(
-                    "Please check your data for correct file encoding, special characters, or duplicate submitter_ids or uuids."
+                    "Please check your data for correct file encoding, special characters, or duplicate submitter_ids or ids."
                 )
 
             elif timeout is False:  # get new chunk if didn't timeout
@@ -1182,7 +1162,11 @@ class Gen3Expansion:
                     chunk_size = int(chunk_size / 2)
                     end = start + chunk_size
                     chunk = df[start:end]
-                    print("Retrying Chunk with reduced chunk_size: " + str(chunk_size))
+                    print(
+                        "Retrying Chunk with reduced chunk_size: {}".format(
+                            str(chunk_size)
+                        )
+                    )
                     timeout = False
                 else:
                     raise Gen3SubmissionError(
@@ -1190,10 +1174,7 @@ class Gen3Expansion:
                     )
 
         print("Finished data submission.")
-        print("Successful records: " + str(len(set(results["succeeded"]))))
-        print(
-            "Failed invalid records: "
-            + str(len(set(results["failed"]["submitter_ids"])))
-        )
+        print("Successful records: {}".format(str(len(set(results["succeeded"])))))
+        print("Failed invalid records: {}".format(str(len(results["invalid"]))))
 
         return results
