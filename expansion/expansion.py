@@ -494,7 +494,7 @@ class Gen3Expansion:
             urls = {}
             for guid in guids:
                 index_url = "{}/index/{}".format(api, guid)
-                output = requests.get(index_url, auth=auth).text
+                output = requests.get(index_url, auth=self._auth_provider).text
                 guid_index = json.loads(output)
                 url = guid_index['urls'][0]
                 urls[guid] = url
@@ -511,7 +511,7 @@ class Gen3Expansion:
         guids = {}
         for file_name in file_names:
             index_url = api + '/index/index/?file_name=' + file_name
-            output = requests.get(index_url, auth=auth).text
+            output = requests.get(index_url, auth=self._auth_provider).text
             index_record = json.loads(output)
             if len(index_record['records']) > 0:
                 guid = index_record['records'][0]['did']
@@ -531,7 +531,7 @@ class Gen3Expansion:
         if isinstance(guids, list):
             for guid in guids:
                 fence_url = api + 'user/data/'
-                response = requests.delete(fence_url + guid,auth=auth)
+                response = requests.delete(fence_url + guid,auth=self._auth_provider)
                 if (response.status_code == 204):
                     print("Successfully deleted GUID {}".format(guid))
                 else:
