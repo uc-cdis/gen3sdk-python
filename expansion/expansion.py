@@ -292,7 +292,7 @@ class Gen3Expansion:
         return output
 
 # Query Functions
-    def paginate_query(self, node, project_id=None, props=['id','submitter_id'], chunk_size=10000, format='json'):
+    def paginate_query(self, node, project_id=None, props=['id','submitter_id'], chunk_size=10000, format='json',args=None):
         """Function to paginate a query to avoid time-outs.
         Returns a json of all the records in the node.
 
@@ -307,9 +307,15 @@ class Gen3Expansion:
         """
         if project_id is not None:
             program,project = project_id.split('-',1)
-            query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
+            if args is None:
+                query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
+            else:
+                query_txt = """{_%s_count (project_id:"%s", %s)}""" % (node, project_id, args)
         else:
-            query_txt = """{_%s_count}""" % (node)
+            if args is None:
+                query_txt = """{_%s_count}""" % (node)
+            else:
+                query_txt = """{_%s_count (%s)}""" % (node, args)
 
         # First query the node count to get the expected number of results for the requested query:
         try:
@@ -329,10 +335,15 @@ class Gen3Expansion:
         while offset < qsize:
 
             if project_id is not None:
-                query_txt = """{%s (first: %s, offset: %s, project_id:"%s"){%s}}""" % (node, chunk_size, offset, project_id, properties)
+                if args is None:
+                    query_txt = """{%s (first: %s, offset: %s, project_id:"%s"){%s}}""" % (node, chunk_size, offset, project_id, properties)
+                else:
+                    query_txt = """{%s (first: %s, offset: %s, project_id:"%s", %s){%s}}""" % (node, chunk_size, offset, project_id, args, properties)
             else:
-                query_txt = """{%s (first: %s, offset: %s){%s}}""" % (node, chunk_size, offset, properties)
-
+                if args is None:
+                    query_txt = """{%s (first: %s, offset: %s){%s}}""" % (node, chunk_size, offset, properties)
+                else:
+                    query_txt = """{%s (first: %s, offset: %s, %s){%s}}""" % (node, chunk_size, offset, args, properties)
             res = self.sub.query(query_txt)
             if 'data' in res:
                 total['data'][node] += res['data'][node]
