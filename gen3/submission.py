@@ -411,6 +411,7 @@ class Gen3Submission:
                     raise Gen3Error("Unable to parse API response as JSON!")
 
                 if "message" in json_res and "code" not in json_res:
+                    print(json_res)  # trouble-shooting
                     print(
                         "\t No code in the API response for Chunk {}: {}".format(
                             str(count), json_res.get("message")
@@ -420,7 +421,7 @@ class Gen3Submission:
                     results["responses"].append(
                         "Error Chunk {}: {}".format(str(count), json_res.get("message"))
                     )
-                    results["other"].append(json_res.get("transactional_errors"))
+                    results["other"].append(json_res.get("message"))
 
                 elif "code" not in json_res:
                     print("\t Unhandled API-response: {}".format(response))
