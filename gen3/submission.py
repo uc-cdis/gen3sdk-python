@@ -334,7 +334,9 @@ class Gen3Submission:
             df = pd.read_csv(filename, header=0, sep="\t", dtype=str).fillna("")
         else:
             raise Gen3UserError("Please upload a file in CSV, TSV, or XLSX format.")
-        df.rename(columns = {c: c.lstrip('*') for c in df.columns}, inplace = True) # remove any leading asterisks in the DataFrame column names
+        df.rename(
+            columns={c: c.lstrip("*") for c in df.columns}, inplace=True
+        )  # remove any leading asterisks in the DataFrame column names
 
         # Check uniqueness of submitter_ids:
         if len(list(df.submitter_id)) != len(list(df.submitter_id.unique())):
