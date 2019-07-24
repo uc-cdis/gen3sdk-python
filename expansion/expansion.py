@@ -974,6 +974,7 @@ class Gen3Expansion:
 
         return invalid_df
 
+
     def submit_file(self, project_id, filename, chunk_size=30, row_offset=0):
         """Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.
 
@@ -1005,7 +1006,9 @@ class Gen3Expansion:
             df = pd.read_csv(filename, header=0, sep="\t", dtype=str).fillna("")
         else:
             raise Gen3UserError("Please upload a file in CSV, TSV, or XLSX format.")
-        df.rename(columns = {c: c.lstrip('*') for c in df.columns}, inplace = True) # remove any leading asterisks in the DataFrame column names
+        df.rename(
+            columns={c: c.lstrip("*") for c in df.columns}, inplace=True
+        )  # remove any leading asterisks in the DataFrame column names
 
         # Check uniqueness of submitter_ids:
         if len(list(df.submitter_id)) != len(list(df.submitter_id.unique())):
@@ -1080,16 +1083,17 @@ class Gen3Expansion:
                     raise Gen3Error("Unable to parse API response as JSON!")
 
                 if "message" in json_res and "code" not in json_res:
+                    print(json_res)  # trouble-shooting
                     print(
                         "\t No code in the API response for Chunk {}: {}".format(
-                            str(count), res.get("message")
+                            str(count), json_res.get("message")
                         )
                     )
-                    print("\t {}".format(str(res.get("transactional_errors"))))
+                    print("\t {}".format(str(json_res.get("transactional_errors"))))
                     results["responses"].append(
-                        "Error Chunk {}: {}".format(str(count), res.get("message"))
+                        "Error Chunk {}: {}".format(str(count), json_res.get("message"))
                     )
-                    results["other"].append(res.get("transactional_errors"))
+                    results["other"].append(json_res.get("message"))
 
                 elif "code" not in json_res:
                     print("\t Unhandled API-response: {}".format(response))
