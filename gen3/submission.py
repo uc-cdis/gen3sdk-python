@@ -221,6 +221,83 @@ class Gen3Submission:
         output = requests.delete(api_url, auth=self._auth_provider).text
         return output
 
+#**********************************************************************************************
+# 7/16/2019 - Michael Martinson
+
+    def view_programs(self):
+        """List registered programs
+
+        """
+        api_url = f"{self._endpoint}/api/v0/submission/"
+        output = requests.get(api_url, auth=self._auth_provider).text
+        return output
+
+    def view_projects(self, program):
+        """List registered projects for a given program
+
+        Args:
+            program: the name of the program you want the projects from
+
+        Example:
+            This lists all the projects under the DCF program
+
+            >>> Gen3Submission.view_projects("DCF")
+
+        """
+        api_url = f"{self._endpoint}/api/v0/submission/{program}"
+        output = requests.get(api_url, auth=self._auth_provider).text
+        return output
+
+    def get_project_dictionary(self, program, project):
+        """Get dictionary schema for a given project
+
+        Args:
+            program: the name of the program the project is from
+            project: the name of the project you want the dictionary schema from
+
+        Example:
+
+            >>> Gen3Submission.get_project_dictionary("DCF", "CCLE")
+
+        """
+        api_url = f"{self._endpoint}/api/v0/submission/{program}/{project}/_dictionary"
+        output = requests.get(api_url, auth=self._auth_provider).text
+        return output
+
+    def get_project_manifest(self, program, project):
+        """Get a projects file manifest 
+
+        Args:
+            program: the name of the program the project is from
+            project: the name of the project you want the manifest from
+
+        Example:
+
+            >>> Gen3Submission.get_project_manifest("DCF", "CCLE")
+
+        """
+        api_url = f"{self._endpoint}/api/v0/submission/{program}/{project}/manifest"
+        output = requests.get(api_url, auth=self._auth_provider).text
+        return output
+
+    def open_project(self, program, project):
+        """Mark a project ``open``. Opening a project means uploads, deletions, etc. are allowed. 
+
+        Args:
+            program: the name of the program the project is from
+            project: the name of the project you want to 'open'
+
+        Example:
+
+            >>> Gen3Submission.get_project_manifest("DCF", "CCLE")
+
+        """
+        api_url = f"{self._endpoint}/api/v0/submission/{program}/{project}/open"
+        output = requests.put(api_url, auth=self._auth_provider).text
+        return output
+
+#**********************************************************************************************
+
     def create_program(self, json):
         """Create a program.
         Args:
@@ -323,7 +400,10 @@ class Gen3Submission:
         if f.lower().endswith(".csv"):
             df = pd.read_csv(filename, header=0, sep=",", dtype=str).fillna("")
         elif f.lower().endswith(".xlsx"):
-            xl = pd.ExcelFile(filename, dtype=str)  # load excel file
+            #xl = pd.ExcelFile(filename, dtype=str)  # load excel file
+            # This ^ was previous code but ExcelFile() does not have an argument dtype 
+            # so I removed it and it works
+            xl = pd.ExcelFile(filename)  # load excel file
             sheet = xl.sheet_names[0]  # sheetname
             df = xl.parse(sheet)  # save sheet as dataframe
             converters = {
