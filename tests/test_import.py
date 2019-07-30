@@ -1,12 +1,8 @@
+import pytest 
+
 def test_import():
 
     import gen3
-
-
-def test_indexclient_import():
-
-    from gen3.indexclient.client import IndexClient
-
 
 def test_auth_import():
 
