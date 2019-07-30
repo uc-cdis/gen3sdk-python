@@ -270,7 +270,7 @@ class Gen3Submission:
         api_url = "{}/api/v0/submission/{}/{}/export/?node_label={}&format={}".format(
             self._endpoint, program, project, node_type, fileformat
         )
-        output = requests.get(api_url, auth=self._auth_provider)
+        output = requests.get(api_url, auth=self._auth_provider).text
         if filename is None:
             if fileformat == "json":
                 output = json.loads(output)
@@ -332,7 +332,7 @@ class Gen3Submission:
 
         """
         api_url = "{}/api/v0/submission/getschema".format(self._endpoint)
-        output = requests.get(api_url)
+        output = requests.get(api_url).text
         data = json.loads(output)
         return data
 
@@ -355,7 +355,7 @@ class Gen3Submission:
         api_url = "{}/api/v0/submission/_dictionary/{}".format(
             self._endpoint, node_type
         )
-        output = requests.get(api_url)
+        output = requests.get(api_url).text
         data = json.loads(output)
         return data
 

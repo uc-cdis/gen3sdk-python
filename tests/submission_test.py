@@ -2,8 +2,33 @@ import pytest, os
 
 def test_view(sub):
     ''' 
+        tests: 
+        view_programs
+        get_graphql_schema
+        get_dictionary_all
+
     '''
     assert sub.view_programs().status_code == 200
+    try: 
+        sub.get_graphql_schema()
+    except:
+        assert False
+    try: 
+        sub.get_dictionary_all()
+    except:
+        assert False
+
+def test_exportnode(sub):
+    ''' 
+        tests:
+        export_node
+
+    '''
+    resp = sub.export_node(
+        'DEV', 'test', 'experiment', 'json', 'node_file.json')
+    assert os.path.exists('node_file.json')
+    os.remove('node_file.json')
+    assert not os.path.exists('node_file.json')
 
 def test_newprog_and_proj(sub):
     ''' Create, get, and delete a program and project
@@ -11,6 +36,9 @@ def test_newprog_and_proj(sub):
         tests:
         create_program
         delete_program
+        view_projects
+        get_project_dictionary 
+
     '''
     # create a program
     p = sub.create_program(
@@ -18,10 +46,12 @@ def test_newprog_and_proj(sub):
 		    "dbgap_accession_number": "programmjm",
 		    "name": "programmjm",
             'type':'program'
-		    }).json()
+		    })
     assert p.status_code == 200
+
     # test the existence of the program and the view_projects function
     assert sub.view_projects('programmjm').status_code == 200
+
     # create a project 
     pj = sub.create_project(
         'programmjm',
@@ -30,8 +60,9 @@ def test_newprog_and_proj(sub):
             'dbgap_accession_number': 'projectmjm',
             'name': 'projectmjm',
             'availability_type': 'Open'
-        }).json()
+        })
     assert pj.status_code == 200
+    
     # test the existence of the project and the function:
     # get_project_dictionary
     assert sub.get_project_dictionary('programmjm', 'projectmjm').status_code == 200
@@ -49,6 +80,7 @@ def test_newrecord(sub):
         submit_record
         delete_record
         export_record
+
     '''
     # create a new record in programs/prog1/projects/proj1
     rec = sub.submit_record(
@@ -59,6 +91,7 @@ def test_newrecord(sub):
             'type':'experiment'
         })
     assert rec.status_code == 200
+
     # export the record
     sub.export_record(
         'prog1', 'proj1',
@@ -73,3 +106,12 @@ def test_newrecord(sub):
         'prog1', 'proj1', rec.json()['entities'][0]['id'])
     assert resp.status_code == 200 or 204
 
+
+''' Not tested:
+
+    - open_project: I do not have authorization to perform this request
+    - query : visual tests
+    - get_project_manifest: lack of swagger documentation. 
+      error about not submitting ids
+    - submit_file
+'''
