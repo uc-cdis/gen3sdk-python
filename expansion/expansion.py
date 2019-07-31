@@ -731,7 +731,7 @@ class Gen3Expansion:
             guids = [guids]
         if isinstance(guids, list):
             for guid in guids:
-                cmd = client+' download-single --profile='+profile+' --guid='+guid
+                cmd = client+' download-single --filename-format=combined --profile='+profile+' --guid='+guid
                 try:
                     output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
                     try:

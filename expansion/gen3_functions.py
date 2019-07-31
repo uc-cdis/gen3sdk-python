@@ -469,7 +469,7 @@ def download_files_by_guids(guids=None):
         guids = [guids]
     if isinstance(guids, list):
         for guid in guids:
-            cmd = client+' download --profile='+profile+' --guid='+guid
+            cmd = client+' download-single --filename-format=combined --profile='+profile+' --guid='+guid
             try:
                 output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
                 try:

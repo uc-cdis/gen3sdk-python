@@ -88,6 +88,10 @@ profile = 'bc'
 api = 'https://data.braincommons.org/' # BRAIN Commons
 creds = '/Users/christopher/Downloads/bc-credentials.json'
 
+profile = 'ndh'
+api = 'https://niaid.bionimbus.org/'
+creds = '/Users/christopher/Downloads/ndh-credentials.json'
+
 # api = 'https://nci-crdc-demo.datacommons.io/' # DCF  SAndbox Commons
 # profile = 'dcf'
 # creds = '/Users/christopher/Downloads/dcf-credentials.json'
@@ -110,12 +114,11 @@ client = 'gen3-client'
 
 auth = Gen3Auth(api, refresh_file=creds)
 
-run /Users/christopher/Documents/GitHub/uc-cdis/gen3sdk-python/gen3/submission.py
+%run /Users/christopher/Documents/GitHub/uc-cdis/gen3sdk-python/gen3/submission.py
 #load /Users/christopher/Documents/GitHub/uc-cdis/gen3sdk-python/gen3/submission.py
 sub = Gen3Submission(api, auth)
 
-!wget https://raw.githubusercontent.com/cgmeyer/gen3sdk-python/master/expansion/expansion.py
-%run ./expansion.py
+%run /Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/expansion/expansion.py
 exp = Gen3Expansion(api, auth)
 
 # Download and configure gen3-client in Jupyter Notebook; run in bash
