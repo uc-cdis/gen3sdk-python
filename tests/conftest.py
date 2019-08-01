@@ -5,13 +5,14 @@ from cdisutilstest.code.conftest import (  # pylint: disable=unused-import
 )
 import pytest
 
-#endpoint = 'https://endpoint.net/'
-#auth = auth.Gen3Auth(endpoint, refresh_file="credentials.json")
+# endpoint = 'https://endpoint.net/'
+# auth = auth.Gen3Auth(endpoint, refresh_file="credentials.json")
 #
-#@pytest.fixture
-#def sub():
+# @pytest.fixture
+# def sub():
 #    return submission.Gen3Submission(endpoint, auth)
 #
+
 
 @pytest.fixture(scope="function")
 def index_client(indexd_client):
@@ -24,4 +25,3 @@ def index_client(indexd_client):
     https://docs.pytest.org/en/latest/fixture.html#parametrizing-fixtures
     """
     return indexd_client
-
