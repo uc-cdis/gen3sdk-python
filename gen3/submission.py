@@ -3,7 +3,6 @@ import requests
 import pandas as pd
 import os
 
-
 class Gen3Error(Exception):
     pass
 
@@ -49,7 +48,7 @@ class Gen3Submission:
         outfile.close
         print("\nOutput written to file: " + filename)
 
-### Program functions
+    ### Program functions
 
     def view_programs(self):
         """List registered programs
@@ -91,7 +90,7 @@ class Gen3Submission:
         output = requests.delete(api_url, auth=self._auth_provider)
         return output
 
-### Project functions
+    ### Project functions
 
     def view_projects(self, program):
         """List registered projects for a given program
@@ -139,8 +138,7 @@ class Gen3Submission:
             >>> Gen3Submission.delete_project("DCF", "CCLE")
 
         """
-        api_url = "{}/api/v0/submission/{}/{}".format(
-            self._endpoint, program, project)
+        api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
         output = requests.delete(api_url, auth=self._auth_provider)
         return output
 
@@ -176,7 +174,7 @@ class Gen3Submission:
         output = requests.put(api_url, auth=self._auth_provider)
         return output
 
-### Record functions
+    ### Record functions
 
     def submit_record(self, program, project, json):
         """Submit record(s) to a project as json.
@@ -192,8 +190,7 @@ class Gen3Submission:
             >>> Gen3Submission.submit_record("DCF", "CCLE", json)
 
         """
-        api_url = "{}/api/v0/submission/{}/{}".format(
-            self._endpoint, program, project)
+        api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
         output = requests.put(api_url, auth=self._auth_provider, json=json)
         return output
 
@@ -279,7 +276,7 @@ class Gen3Submission:
             self.__export_file(filename, output)
             return output
 
-### Query functions
+    ### Query functions
 
     def query(self, query_txt, variables=None, max_tries=1):
         """Execute a GraphQL query against a data commons.
@@ -305,8 +302,7 @@ class Gen3Submission:
 
         tries = 0
         while tries < max_tries:
-            output = requests.post(
-                api_url, auth=self._auth_provider, json=query)
+            output = requests.post(api_url, auth=self._auth_provider, json=query)
             data = json.loads(output)
 
             if "errors" in data:
@@ -336,7 +332,7 @@ class Gen3Submission:
         data = json.loads(output)
         return data
 
-### Dictionary functions
+    ### Dictionary functions
 
     def get_dictionary_node(self, node_type):
         """Returns the dictionary schema for a specific node.
@@ -371,8 +367,8 @@ class Gen3Submission:
 
         """
         return self.get_dictionary_node("_all")
-        
-### File functions
+
+    ### File functions
 
     def get_project_manifest(self, program, project):
         """Get a projects file manifest
@@ -410,8 +406,8 @@ class Gen3Submission:
         if f.lower().endswith(".csv"):
             df = pd.read_csv(filename, header=0, sep=",", dtype=str).fillna("")
         elif f.lower().endswith(".xlsx"):
-            #xl = pd.ExcelFile(filename, dtype=str)  # load excel file
-            # This ^ was previous code but ExcelFile() does not have an argument dtype 
+            # xl = pd.ExcelFile(filename, dtype=str)  # load excel file
+            # This ^ was previous code but ExcelFile() does not have an argument dtype
             # so I removed it and it works
             xl = pd.ExcelFile(filename)  # load excel file
             sheet = xl.sheet_names[0]  # sheetname
@@ -424,7 +420,9 @@ class Gen3Submission:
             df = pd.read_csv(filename, header=0, sep="\t", dtype=str).fillna("")
         else:
             raise Gen3UserError("Please upload a file in CSV, TSV, or XLSX format.")
-        df.rename(columns = {c: c.lstrip('*') for c in df.columns}, inplace = True) # remove any leading asterisks in the DataFrame column names
+        df.rename(
+            columns={c: c.lstrip("*") for c in df.columns}, inplace=True
+        )  # remove any leading asterisks in the DataFrame column names
 
         # Check uniqueness of submitter_ids:
         if len(list(df.submitter_id)) != len(list(df.submitter_id.unique())):
