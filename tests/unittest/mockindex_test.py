@@ -68,6 +68,32 @@ def testbulk(indexd_client):
 # -------------------------------------------------------------------
 
 
+def test_getwithparams(indexd_client):
+    ''' test get_with_params
+    '''
+    # put a new record in the index
+    rec1 = indexd_client.add_record(
+        hashes={"md5": "374c12456782738abcfe387492837483"}, size=0
+    )
+    # put a new record in the index
+    rec2 = indexd_client.add_record(
+        hashes={"md5": "adbc12447582738abcfe387492837483"}, size=1
+    )
+    # put a new record in the index
+    rec3 = indexd_client.add_record(
+        hashes={"md5": "adbc82746782738abcfe387492837483"}, size=2
+    )
+    check1 = indexd_client.get_with_params({'size':rec1['size']})
+    assert rec1['did']==check1['did']
+    check2 = indexd_client.get_with_params({'hashes':rec2['hashes']})
+    assert rec2['did']==check2['did']
+    check3 = indexd_client.get_with_params({'size':rec3['size'], 'hashes':rec3['hashes']})
+    assert rec3['did']==check3['did']
+ 
+
+# -------------------------------------------------------------------
+
+
 def testnewrecord(indexd_client):
     """ Test the creation, update, and deletion a record
 
@@ -163,8 +189,6 @@ def testblank(indexd_client):
     """ Test create and update blank record
     """
     newblank = indexd_client.create_blank("mjmartinson")
-    print("|" * 60)
-    print(newblank)
     checkrec = get_rec(indexd_client, newblank["did"])
     assert (
         newblank["did"] == checkrec["did"]

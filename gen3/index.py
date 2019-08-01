@@ -91,6 +91,18 @@ class Gen3Index:
         rec = self.client.get(guid)
         return rec.to_json()
 
+    def get_with_params(self, params=None):
+        """
+        Return a document object corresponding to the supplied parameters, such
+        as ``{'hashes': {'md5': '...'}, 'size': '...', 'metadata': {'file_state': '...'}}``.
+
+            - need to include all the hashes in the request
+            - index client like signpost or indexd will need to handle the
+              query param `'hash': 'hash_type:hash'`
+        """
+        rec = self.client.get_with_params(params)
+        return rec.to_json()
+
     def get_latestversion(self, guid, has_version=False):
         """ Get the metadata of the latest index record version associated
             with the given id
