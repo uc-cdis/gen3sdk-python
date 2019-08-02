@@ -69,8 +69,8 @@ def testbulk(indexd_client):
 
 
 def test_getwithparams(indexd_client):
-    ''' test get_with_params
-    '''
+    """ test get_with_params
+    """
     # put a new record in the index
     rec1 = indexd_client.add_record(
         hashes={"md5": "374c12456782738abcfe387492837483"}, size=0
@@ -83,13 +83,15 @@ def test_getwithparams(indexd_client):
     rec3 = indexd_client.add_record(
         hashes={"md5": "adbc82746782738abcfe387492837483"}, size=2
     )
-    check1 = indexd_client.get_with_params({'size':rec1['size']})
-    assert rec1['did']==check1['did']
-    check2 = indexd_client.get_with_params({'hashes':rec2['hashes']})
-    assert rec2['did']==check2['did']
-    check3 = indexd_client.get_with_params({'size':rec3['size'], 'hashes':rec3['hashes']})
-    assert rec3['did']==check3['did']
- 
+    check1 = indexd_client.get_with_params({"size": rec1["size"]})
+    assert rec1["did"] == check1["did"]
+    check2 = indexd_client.get_with_params({"hashes": rec2["hashes"]})
+    assert rec2["did"] == check2["did"]
+    check3 = indexd_client.get_with_params(
+        {"size": rec3["size"], "hashes": rec3["hashes"]}
+    )
+    assert rec3["did"] == check3["did"]
+
 
 # -------------------------------------------------------------------
 

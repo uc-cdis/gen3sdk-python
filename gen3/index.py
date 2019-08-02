@@ -22,7 +22,7 @@ class Gen3Index:
     """
 
     def __init__(self, endpoint, auth_provider):
-        self.client = client.IndexClient(endpoint + "/", auth=auth_provider)
+        self.client = client.IndexClient(endpoint, auth=auth_provider)
 
     ### Get Requests
 
@@ -81,7 +81,7 @@ class Gen3Index:
 
         """
         p = {"size": size, "hash": hashes, "ids": ids}
-        urls = self.client._get("/urls", params=p).json()
+        urls = self.client._get("urls", params=p).json()
         return [url for _, url in urls.items()]
 
     def get_record(self, guid):
