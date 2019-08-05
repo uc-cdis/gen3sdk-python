@@ -1,23 +1,8 @@
-import requests
-from gen3 import auth, submission, index
 from cdisutilstest.code.conftest import (  # pylint: disable=unused-import
     indexd_server,
     indexd_client,
 )
 import pytest
-
-# endpoint = 'https://endpoint.net/'
-# auth = auth.Gen3Auth(endpoint, refresh_file="credentials.json")
-
-# @pytest.fixture
-# def sub():
-#   return submission.Gen3Submission(endpoint, auth)
-#
-#
-# @pytest.fixture
-# def indexd():
-#   return index.Gen3Index(endpoint + "index/", auth)
-
 
 # for unittest with mock server
 @pytest.fixture(scope="function")
