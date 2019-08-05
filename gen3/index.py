@@ -145,6 +145,7 @@ class Gen3Index:
         urls_metadata=None,
         version=None,
         authz=None,
+        uploader=None,
     ):
         """ Create a new record and add it to the index
 
@@ -177,6 +178,7 @@ class Gen3Index:
             urls_metadata,
             version,
             authz,
+            uploader,
         )
         return rec.to_json()
 
@@ -213,6 +215,7 @@ class Gen3Index:
         urls_metadata=None,
         version=None,
         authz=None,
+        uploader=None,
     ):
         """ Add new version for the document associated to the provided uuid
 
@@ -255,6 +258,7 @@ class Gen3Index:
             "acl": acl,
             "authz": authz,
             "version": version,
+            "uploader": uploader,
         }
         if did:
             json["did"] = did
@@ -327,6 +331,7 @@ class Gen3Index:
         acl=None,
         authz=None,
         urls_metadata=None,
+        uploader=None,
     ):
         """ Update an existing entry in the index
 
@@ -346,6 +351,7 @@ class Gen3Index:
             "acl": acl,
             "authz": authz,
             "urls_metadata": urls_metadata,
+            "uploader": uploader,
         }
         rec = self.client.get(guid)
         for k, v in updatable_attrs.items():

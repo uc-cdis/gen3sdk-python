@@ -81,7 +81,7 @@ def test_getwithparams(indexd_client):
     )
     # put a new record in the index
     rec3 = indexd_client.add_record(
-        hashes={"md5": "adbc82746782738abcfe387492837483"}, size=2
+        hashes={"md5": "adbc82746782738abcfe387492837483"}, size=2, uploader="me"
     )
     check1 = indexd_client.get_with_params({"size": rec1["size"]})
     assert rec1["did"] == check1["did"]
@@ -109,7 +109,7 @@ def testnewrecord(indexd_client):
 
     # put a new record in the index
     newrec = indexd_client.add_record(
-        hashes={"md5": "adbc12456782738abcfe387492837483"}, size=0
+        hashes={"md5": "adbc12456782738abcfe387492837483"}, size=0, uploader="you"
     )
     # testing global get
     checkrec = indexd_client.global_get(newrec["baseid"])
@@ -121,12 +121,13 @@ def testnewrecord(indexd_client):
 
     # update the record
     updated = indexd_client.update_record(
-        newrec["did"], acl=["prog1", "proj1"], file_name="fakefilename"
+        newrec["did"], acl=["prog1", "proj1"], file_name="fakefilename", uploader="me"
     )
     updatedrec = get_rec(indexd_client, updated["did"])
     # Note: I am not sure why the program and project are flipped!!
     assert updatedrec["acl"] == ["prog1", "proj1"]
     assert updatedrec["file_name"] == "fakefilename"
+    assert updatedrec["uploader"] == "me"
     assert updatedrec["did"] == checkrec["did"]
     assert updatedrec["rev"] != checkrec["rev"]
 
