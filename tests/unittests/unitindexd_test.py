@@ -13,7 +13,7 @@ def get_rec(indexd_client, guid):
 def testsystem(indexd_client):
     """ Test that indexd_client is healthy 
     """
-    assert indexd_client.get_status()[0].status_code == 200
+    assert indexd_client.get_status().status_code == 200
     assert indexd_client.get_version()
     assert indexd_client.get_stats()
     assert indexd_client.get_index()

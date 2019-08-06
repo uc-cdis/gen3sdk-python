@@ -407,9 +407,6 @@ class Gen3Submission:
         if f.lower().endswith(".csv"):
             df = pd.read_csv(filename, header=0, sep=",", dtype=str).fillna("")
         elif f.lower().endswith(".xlsx"):
-            # xl = pd.ExcelFile(filename, dtype=str)  # load excel file
-            # This ^ was previous code but ExcelFile() does not have an argument dtype
-            # so I removed it and it works
             xl = pd.ExcelFile(filename)  # load excel file
             sheet = xl.sheet_names[0]  # sheetname
             df = xl.parse(sheet)  # save sheet as dataframe

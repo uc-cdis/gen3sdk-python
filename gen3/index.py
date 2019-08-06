@@ -31,28 +31,32 @@ class Gen3Index:
 
         """
         response = self.client._get("_status")
-        if response.status_code == 200:
-            return response, "Indexd is Healthy!"
-        else:
-            return response, "Something is Wrong!"
+        response.raise_for_status()
+        return response
 
     def get_version(self):
         """ Return the version of indexd
 
         """
-        return self.client._get("_version").json()
+        response = self.client._get("_version")
+        response.raise_for_status()
+        return response.json()
 
     def get_stats(self):
         """ Return basic info about the records in indexd
 
         """
-        return self.client._get("_stats").json()
+        response = self.client._get("_stats")
+        response.raise_for_status()
+        return response.json()
 
     def get_index(self):
         """ Get a list of all records
 
         """
-        return self.client._get("index/").json()
+        response = self.client._get("index/")
+        response.raise_for_status()
+        return response.json()
 
     def global_get(self, guid, no_dist=False):
         """ Get the metadata associated with the given id, alias, or
@@ -126,7 +130,9 @@ class Gen3Index:
                 - record id
 
         """
-        versions = self.client._get(f"/index/{guid}/versions").json()
+        response = self.client._get(f"/index/{guid}/versions")
+        response.raise_for_status()
+        versions = response.json()
 
         return [r for _, r in versions.items()]
 
@@ -192,12 +198,15 @@ class Gen3Index:
 
         """
         json = {"uploader": uploader, "file_name": file_name}
-        rec = self.client._post(
+        response = self.client._post(
             "index/blank",
             headers={"content-type": "application/json"},
             auth=self.client.auth,
             data=client.json_dumps(json),
-        ).json()
+        )
+        response.raise_for_status()
+        rec = response.json()
+
         return self.get_record(rec["did"])
 
     def add_new_version(
@@ -258,13 +267,16 @@ class Gen3Index:
         }
         if did:
             json["did"] = did
-        rec = self.client._post(
+        response = self.client._post(
             "index",
             guid,
             headers={"content-type": "application/json"},
             data=client.json_dumps(json),
             auth=self.client.auth,
-        ).json()
+        )
+        response.raise_for_status()
+        rec = response.json()
+
         if rec and "did" in rec:
             return self.get_record(rec["did"])
         return None
@@ -307,14 +319,17 @@ class Gen3Index:
         """
         p = {"rev": rev}
         json = {"hashes": hashes, "size": size}
-        rec = self.client._put(
+        response = self.client._put(
             "index/blank/",
             guid,
             headers={"content-type": "application/json"},
             params=p,
             auth=self.client.auth,
             data=client.json_dumps(json),
-        ).json()
+        )
+        response.raise_for_status()
+        rec = response.json()
+
         return self.get_record(rec["did"])
 
     def update_record(
