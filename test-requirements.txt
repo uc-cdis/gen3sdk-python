@@ -1,1 +1,2 @@
+-e git+https://github.com/uc-cdis/cdisutils-test.git@fdc53fb3d5333d53f625f0f0712eaa2fa19c803f#egg=cdisutilstest
 pytest>=3.2.3
