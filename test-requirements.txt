@@ -1,3 +1,4 @@
+pytest>=3.2.3
 -e git+https://github.com/uc-cdis/cdisutils-test.git@fdc53fb3d5333d53f625f0f0712eaa2fa19c803f#egg=cdisutilstest
 -e git+https://github.com/uc-cdis/indexd.git@28fa621a924952be902628cfc5c1186bda38e922#egg=indexd
-pytest>=3.2.3
+-e git+https://github.com/uc-cdis/doiclient.git@1.0.0#egg=doiclient
