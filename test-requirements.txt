@@ -2,3 +2,6 @@ pytest>=3.2.3
 -e git+https://github.com/uc-cdis/cdisutils-test.git@fdc53fb3d5333d53f625f0f0712eaa2fa19c803f#egg=cdisutilstest
 -e git+https://github.com/uc-cdis/indexd.git@28fa621a924952be902628cfc5c1186bda38e922#egg=indexd
 -e git+https://github.com/uc-cdis/doiclient.git@1.0.0#egg=doiclient
+-e git+https://github.com/uc-cdis/dosclient.git@1.0.0#egg=dosclient
+-e git+https://github.com/uc-cdis/cdislogging.git@0.0.2#egg=cdislogging
+-e git+https://github.com/uc-cdis/cdis-python-utils.git@0.1.7#egg=cdispyutils
