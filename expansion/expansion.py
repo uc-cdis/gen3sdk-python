@@ -647,7 +647,7 @@ class Gen3Expansion:
             plt.figtext(.8, .8, 'N = '+str(N))
             plt.xlabel(numeric_property)
             plt.ylabel("Probability")
-            plt.title("PDF for "+numeric_property+' by ' + category_property +' (N = '+str(N)+')') # You can comment this line out if you don't need title
+            plt.title("PDF of "+numeric_property+' for ' + category +' (N = '+str(N)+')') # You can comment this line out if you don't need title
             plt.show(fig)
 
     def node_record_counts(self, project_id):
