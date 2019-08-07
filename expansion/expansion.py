@@ -610,7 +610,7 @@ class Gen3Expansion:
         fig = sns.distplot(data, hist=False, kde=True,
                  bins=int(180/5), color = 'darkblue',
                  kde_kws={'linewidth': 2})
-        plt.figtext(.8, .8, 'N = '+str(N))
+#        plt.figtext(.8, .8, 'N = '+str(N))
         plt.xlabel(property)
         plt.ylabel("Probability")
         plt.title("PDF for all projects "+property+' (N = '+str(N)+')') # You can comment this line out if you don't need title
@@ -625,7 +625,7 @@ class Gen3Expansion:
                 fig = sns.distplot(data, hist=False, kde=True,
                          bins=int(180/5), color = 'darkblue',
                          kde_kws={'linewidth': 2})
-                plt.figtext(.8, .8, 'N = '+str(N))
+#                plt.figtext(.8, .8, 'N = '+str(N))
                 plt.xlabel(property)
                 plt.ylabel("Probability")
                 plt.title("PDF for "+property+' in ' + project+' (N = '+str(N)+')') # You can comment this line out if you don't need title
@@ -645,7 +645,7 @@ class Gen3Expansion:
             fig = sns.distplot(data, hist=False, kde=True,
                      bins=int(180/5), color = 'darkblue',
                      kde_kws={'linewidth': 2})
-            plt.figtext(.8, .8, 'N = '+str(N))
+#            plt.figtext(.8, .8, 'N = '+str(N))
             plt.xlabel(numeric_property)
             plt.ylabel("Probability")
             plt.title("PDF of "+numeric_property+' for ' + category +' (N = '+str(N)+')') # You can comment this line out if you don't need title
@@ -663,7 +663,7 @@ class Gen3Expansion:
                          bins = 3, kde_kws = {'linewidth': 2}, label = category)
 
             plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-        plt.figtext(.65, .8, 'N = '+str(N))
+#        plt.figtext(.65, .8, 'N = '+str(N))
         plt.title(numeric_property+' for ' + category +' (N = '+str(N)+')') # You can comment this line out if you don't need title
         plt.show(fig)
 
@@ -688,7 +688,7 @@ class Gen3Expansion:
 
                 plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
-            plt.figtext(.8, .8, 'N = '+str(N))
+#            plt.figtext(.8, .8, 'N = '+str(N))
             plt.title(numeric_property+' for ' + category +' (N = '+str(N)+')') # You can comment this line out if you don't need title
             plt.show(fig)
 
