@@ -5,9 +5,11 @@ def test_import():
 
     import gen3
 
+
 def test_cdisutilstest():
 
     import cdisutilstest
+
 
 def test_indexclient():
 

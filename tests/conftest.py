@@ -1,12 +1,15 @@
-from cdisutilstest.code.conftest import (  # pylint: disable=unused-import
-    indexd_server,
-    indexd_client,
+from cdisutilstest.code.conftest import indexd_server  # pylint: disable=unused-import
+from cdisutilstest.code.indexd_fixture import (
+    setup_database,
+    clear_database,
+    create_user,
 )
+from gen3.index import Gen3Index
 import pytest
 
 # for unittest with mock server
-@pytest.fixture(scope="function")
-def index_client(indexd_client):
+@pytest.fixture
+def index_client(indexd_server):
     """ 
     Handles getting all the docs from an
     indexing endpoint. Currently this is changing from
@@ -15,4 +18,12 @@ def index_client(indexd_client):
     tests:
     https://docs.pytest.org/en/latest/fixture.html#parametrizing-fixtures
     """
-    return indexd_client
+    setup_database()
+    client = Gen3Index(indexd_server.baseurl, ("admin", "admin"))
+    yield client
+    clear_database
+
+
+@pytest.fixture
+def gen3_index(index_client):
+    return index_client

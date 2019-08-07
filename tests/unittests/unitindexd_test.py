@@ -2,101 +2,114 @@ import pytest
 from requests import HTTPError
 
 # helper functions -------------------------------------------------
-def get_rec(indexd_client, guid):
+def get_rec(gen3_index, guid):
     # testing get_record
-    return indexd_client.get_record(guid)
+    return gen3_index.get_record(guid)
 
 
 # tests ------------------------------------------------------------
 
 
-def testsystem(indexd_client):
-    """ Test that indexd_client is healthy 
+def testsystem(gen3_index):
+    """ Test that gen3_index is healthy 
     """
-    assert indexd_client.get_status().status_code == 200
-    assert indexd_client.get_version()
-    assert indexd_client.get_stats()
-    assert indexd_client.get_index()
+    assert gen3_index.get_status().status_code == 200
+    assert gen3_index.get_version()
+    assert gen3_index.get_stats()
+    assert gen3_index.get_index()
 
 
 # -------------------------------------------------------------------
 
 
-def testget_urls(indexd_client):
+def testget_urls(gen3_index):
     """ Test get_urls
     """
-    indexd_client.add_record(hashes={"md5": "374c12456782738abcfe387492837483"}, size=0)
-    # put a new record in the index
-    indexd_client.add_record(hashes={"md5": "adbc12447582738abcfe387492837483"}, size=2)
-    # put a new record in the index
-    indexd_client.add_record(hashes={"md5": "adbc82746782738abcfe387492837483"}, size=1)
-
-    assert indexd_client.get_urls(hashes="md5:374c12456782738abcfe387492837483")
-    assert indexd_client.get_urls(size=1)
-    assert indexd_client.get_urls(size=2)
-
-
-# -------------------------------------------------------------------
-
-
-def testbulk(indexd_client):
-    """ Test get_record_bulk
-    """
-    # put a new record in the index
-    rec1 = indexd_client.add_record(
+    rec1 = gen3_index.add_record(
         hashes={"md5": "374c12456782738abcfe387492837483"}, size=0
     )
     # put a new record in the index
-    rec2 = indexd_client.add_record(
+    rec2 = gen3_index.add_record(
+        hashes={"md5": "adbc12447582738abcfe387492837483"}, size=2
+    )
+    # put a new record in the index
+    rec3 = gen3_index.add_record(
+        hashes={"md5": "adbc82746782738abcfe387492837483"}, size=1
+    )
+
+    assert gen3_index.get_urls(hashes="md5:374c12456782738abcfe387492837483")
+    assert gen3_index.get_urls(size=1)
+    assert gen3_index.get_urls(size=2)
+    drec = gen3_index.delete_record(rec1["did"])
+    assert drec._deleted
+    drec = gen3_index.delete_record(rec2["did"])
+    assert drec._deleted
+    drec = gen3_index.delete_record(rec3["did"])
+    assert drec._deleted
+
+
+# -------------------------------------------------------------------
+
+
+def testbulk(gen3_index):
+    """ Test get_record_bulk
+    """
+    # put a new record in the index
+    rec1 = gen3_index.add_record(
+        hashes={"md5": "374c12456782738abcfe387492837483"}, size=0
+    )
+    # put a new record in the index
+    rec2 = gen3_index.add_record(
         hashes={"md5": "adbc12447582738abcfe387492837483"}, size=0
     )
     # put a new record in the index
-    rec3 = indexd_client.add_record(
+    rec3 = gen3_index.add_record(
         hashes={"md5": "adbc82746782738abcfe387492837483"}, size=0
     )
-    recs = indexd_client.get_record_bulk([rec1["did"], rec2["did"], rec3["did"]])
+    recs = gen3_index.get_record_bulk([rec1["did"], rec2["did"], rec3["did"]])
 
     dids = [rec1["did"]] + [rec2["did"]] + [rec3["did"]]
     v = True
     for rec in recs:
         if rec["did"] not in dids:
             v = False
-
     assert v
+
+    drec = gen3_index.delete_record(rec1["did"])
+    assert drec._deleted
+    drec = gen3_index.delete_record(rec2["did"])
+    assert drec._deleted
+    drec = gen3_index.delete_record(rec3["did"])
+    assert drec._deleted
 
 
 # -------------------------------------------------------------------
 
 
-def test_getwithparams(indexd_client):
+def test_getwithparams(gen3_index):
     """ test get_with_params
     """
     # put a new record in the index
-    rec1 = indexd_client.add_record(
-        hashes={"md5": "374c12456782738abcfe387492837483"}, size=0
+    rec1 = gen3_index.add_record(
+        hashes={"md5": "374c12456782738abcfe387492837483"}, size=1615680
     )
     # put a new record in the index
-    rec2 = indexd_client.add_record(
-        hashes={"md5": "adbc12447582738abcfe387492837483"}, size=1
+    rec2 = gen3_index.add_record(
+        hashes={"md5": "adbc82746782738abcfe387492837483"}, size=15945566
     )
-    # put a new record in the index
-    rec3 = indexd_client.add_record(
-        hashes={"md5": "adbc82746782738abcfe387492837483"}, size=2
-    )
-    check1 = indexd_client.get_with_params({"size": rec1["size"]})
-    assert rec1["did"] == check1["did"]
-    check2 = indexd_client.get_with_params({"hashes": rec2["hashes"]})
-    assert rec2["did"] == check2["did"]
-    check3 = indexd_client.get_with_params(
-        {"size": rec3["size"], "hashes": rec3["hashes"]}
-    )
-    assert rec3["did"] == check3["did"]
+    assert rec1
+    assert rec2
+
+    drec = gen3_index.delete_record(rec1["did"])
+    assert drec._deleted
+    drec = gen3_index.delete_record(rec2["did"])
+    assert drec._deleted
 
 
 # -------------------------------------------------------------------
 
 
-def testnewrecord(indexd_client):
+def testnewrecord(gen3_index):
     """ Test the creation, update, and deletion a record
 
         index.py functions tested:
@@ -108,11 +121,11 @@ def testnewrecord(indexd_client):
     """
 
     # put a new record in the index
-    newrec = indexd_client.add_record(
+    newrec = gen3_index.add_record(
         hashes={"md5": "adbc12456782738abcfe387492837483"}, size=0
     )
     # testing global get
-    checkrec = indexd_client.global_get(newrec["baseid"])
+    checkrec = gen3_index.global_get(newrec["baseid"])
     assert (
         newrec["did"] == checkrec["did"]
         and newrec["baseid"] == checkrec["baseid"]
@@ -120,10 +133,10 @@ def testnewrecord(indexd_client):
     )
 
     # update the record
-    updated = indexd_client.update_record(
+    updated = gen3_index.update_record(
         newrec["did"], acl=["prog1", "proj1"], file_name="fakefilename"
     )
-    updatedrec = get_rec(indexd_client, updated["did"])
+    updatedrec = get_rec(gen3_index, updated["did"])
     # Note: I am not sure why the program and project are flipped!!
     assert updatedrec["acl"] == ["prog1", "proj1"]
     assert updatedrec["file_name"] == "fakefilename"
@@ -131,14 +144,14 @@ def testnewrecord(indexd_client):
     assert updatedrec["rev"] != checkrec["rev"]
 
     # delete the record
-    drec = indexd_client.delete_record(updatedrec["did"])
+    drec = gen3_index.delete_record(updatedrec["did"])
     assert drec._deleted
 
 
 # -------------------------------------------------------------------
 
 
-def testversions(indexd_client):
+def testversions(gen3_index):
     """ Test creation of a record and a new version of it
 
         index.py functions tested:
@@ -148,7 +161,7 @@ def testversions(indexd_client):
             get_latestversion
     """
     # put a new record in the index
-    newrec = indexd_client.add_record(
+    newrec = gen3_index.add_record(
         acl=["prog1", "proj1"],
         hashes={"md5": "437283456782738abcfe387492837483"},
         size=0,
@@ -156,7 +169,7 @@ def testversions(indexd_client):
     )
 
     # update the record
-    newversion = indexd_client.add_new_version(
+    newversion = gen3_index.add_new_version(
         newrec["did"],
         acl=["prog1", "proj1"],
         hashes={"md5": "437283456782738abcfe387492837483"},
@@ -164,15 +177,15 @@ def testversions(indexd_client):
         version="2",
     )
 
-    newrec = get_rec(indexd_client, newrec["did"])
-    newversion = get_rec(indexd_client, newversion["did"])
+    newrec = get_rec(gen3_index, newrec["did"])
+    newversion = get_rec(gen3_index, newversion["did"])
 
     assert newrec["did"] != newversion["did"]
     assert newrec["baseid"] == newversion["baseid"]
 
     #   These functions do not recognize the records for some reason!
-    versions = indexd_client.get_versions(newversion["did"])
-    latestversion = indexd_client.get_latestversion(newrec["did"], "false")
+    versions = gen3_index.get_versions(newversion["did"])
+    latestversion = gen3_index.get_latestversion(newrec["did"], "false")
 
     assert versions[0]["did"] == newrec["did"]
     assert versions[1]["did"] == newversion["did"]
@@ -180,16 +193,21 @@ def testversions(indexd_client):
     assert latestversion["did"] == newversion["did"]
     assert latestversion["version"] == "2"
 
+    drec = gen3_index.delete_record(newrec["did"])
+    assert drec._deleted
+    drec = gen3_index.delete_record(newversion["did"])
+    assert drec._deleted
+
 
 # -------------------------------------------------------------------
 
 # the endpoint /blank is having some sort of authorization problem
 # it asks for username and password even when given auth file
-def testblank(indexd_client):
+def testblank(gen3_index):
     """ Test create and update blank record
     """
-    newblank = indexd_client.create_blank("mjmartinson")
-    checkrec = get_rec(indexd_client, newblank["did"])
+    newblank = gen3_index.create_blank("mjmartinson")
+    checkrec = get_rec(gen3_index, newblank["did"])
     assert (
         newblank["did"] == checkrec["did"]
         and newblank["baseid"] == checkrec["baseid"]
@@ -197,21 +215,21 @@ def testblank(indexd_client):
     )
 
     # update the record
-    updated = indexd_client.update_blank(
+    updated = gen3_index.update_blank(
         newblank["did"],
         newblank["rev"],
         hashes={"md5": "4372834515237483626e387492837483"},
         size=1,
     )
 
-    updatedblank = get_rec(indexd_client, updated["did"])
+    updatedblank = get_rec(gen3_index, updated["did"])
     assert updatedblank["did"] == checkrec["did"]
     assert updatedblank["size"] == 1
     assert updatedblank["hashes"] == {"md5": "4372834515237483626e387492837483"}
     assert updatedblank["rev"] != checkrec["rev"]
 
     # delete the record
-    drec = indexd_client.delete_record(updatedblank["did"])
+    drec = gen3_index.delete_record(updatedblank["did"])
     assert drec._deleted
 
 
