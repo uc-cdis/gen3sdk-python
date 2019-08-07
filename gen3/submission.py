@@ -57,7 +57,8 @@ class Gen3Submission:
         """
         api_url = f"{self._endpoint}/api/v0/submission/"
         output = requests.get(api_url, auth=self._auth_provider)
-        return output
+        output.raise_for_status()
+        return output.json()
 
     def create_program(self, json):
         """Create a program.
@@ -71,7 +72,8 @@ class Gen3Submission:
         """
         api_url = "{}/api/v0/submission/".format(self._endpoint)
         output = requests.post(api_url, auth=self._auth_provider, json=json)
-        return output
+        output.raise_for_status()
+        return output.json()
 
     def delete_program(self, program):
         """Delete a program.
@@ -89,7 +91,8 @@ class Gen3Submission:
         """
         api_url = "{}/api/v0/submission/{}".format(self._endpoint, program)
         output = requests.delete(api_url, auth=self._auth_provider)
-        return output
+        output.raise_for_status()
+        return output.json()
 
     ### Project functions
 
@@ -107,7 +110,8 @@ class Gen3Submission:
         """
         api_url = f"{self._endpoint}/api/v0/submission/{program}"
         output = requests.get(api_url, auth=self._auth_provider)
-        return output
+        output.raise_for_status()
+        return output.json()
 
     def create_project(self, program, json):
         """Create a project.
@@ -122,7 +126,8 @@ class Gen3Submission:
         """
         api_url = "{}/api/v0/submission/{}".format(self._endpoint, program)
         output = requests.put(api_url, auth=self._auth_provider, json=json)
-        return output
+        output.raise_for_status()
+        return output.json()
 
     def delete_project(self, program, project):
         """Delete a project.
@@ -141,7 +146,8 @@ class Gen3Submission:
         """
         api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
         output = requests.delete(api_url, auth=self._auth_provider)
-        return output
+        output.raise_for_status()
+        return output.json()
 
     def get_project_dictionary(self, program, project):
         """Get dictionary schema for a given project
@@ -157,7 +163,8 @@ class Gen3Submission:
         """
         api_url = f"{self._endpoint}/api/v0/submission/{program}/{project}/_dictionary"
         output = requests.get(api_url, auth=self._auth_provider)
-        return output
+        output.raise_for_status()
+        return output.json()
 
     def open_project(self, program, project):
         """Mark a project ``open``. Opening a project means uploads, deletions, etc. are allowed.
@@ -173,7 +180,8 @@ class Gen3Submission:
         """
         api_url = f"{self._endpoint}/api/v0/submission/{program}/{project}/open"
         output = requests.put(api_url, auth=self._auth_provider)
-        return output
+        output.raise_for_status()
+        return output.json()
 
     ### Record functions
 
@@ -193,7 +201,8 @@ class Gen3Submission:
         """
         api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
         output = requests.put(api_url, auth=self._auth_provider, json=json)
-        return output
+        output.raise_for_status()
+        return output.json()
 
     def delete_record(self, program, project, uuid):
         """Delete a record from a project.
@@ -211,7 +220,8 @@ class Gen3Submission:
             self._endpoint, program, project, uuid
         )
         output = requests.delete(api_url, auth=self._auth_provider)
-        return output
+        output.raise_for_status()
+        return output.json()
 
     def export_record(self, program, project, uuid, fileformat, filename=None):
         """Export a single record into json.
