@@ -1,7 +1,8 @@
-import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy, re
+import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy, re, operator
 import pandas as pd
 from pandas.io.json import json_normalize
 from collections import Counter
+from statistics import mean
 
 import gen3
 from gen3.auth import Gen3Auth
@@ -691,6 +692,41 @@ class Gen3Expansion:
             plt.title(numeric_property+' for ' + category +' (N = '+str(N)+')') # You can comment this line out if you don't need title
             plt.show(fig)
 
+
+
+    def plot_top10_numeric_property_by_2_categories(self, numeric_property, category_property, category_property_2, df):
+        df = df[df[numeric_property].notnull()]
+        categories = list(set(df[category_property]))
+
+        for category in categories:
+            df_2 = df[df[category_property]==category]
+            categories_2 = list(set(df_2[category_property_2])) #This is a list of all category_property_2 values for each category_property value.
+            N = len(df_2)
+
+            category_2_means = {}
+
+            for category_2 in categories_2:
+                df_3 = df_2[df_2[numeric_property].notnull()]
+                data = list(df_3.loc[df_2[category_property_2]==category_2][numeric_property])
+
+                if len(data) > 5:
+                    category_2_means[category_2] = mean(data)
+
+            sorted_means = sorted(category_2_means.items(), key=operator.itemgetter(1), reverse=True)[0:10]
+            categories_2_list = [x[0] for x in sorted_means]
+
+            for category_2 in categories_2_list: # category_2 is compound
+                subset = df_2[df_2[category_property_2] == category_2]
+
+                fig = sns.distplot(subset[numeric_property].dropna(), hist = False, kde = True,
+                            bins = 3,
+                            kde_kws = {'linewidth': 2}, label = category_2)
+
+                plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+
+        #    plt.figtext(.65, .8, 'N = '+str(N)) # N is already in the plot title
+            plt.title(numeric_property+' for ' + category +' (N = '+str(N)+')') # You can comment this line out if you don't need title
+            plt.show(fig)
 
     def node_record_counts(self, project_id):
         query_txt = """{node (first:-1, project_id:"%s"){type}}""" % (project_id)
