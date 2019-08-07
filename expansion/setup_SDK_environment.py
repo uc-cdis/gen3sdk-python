@@ -92,9 +92,9 @@ profile = 'ndh'
 api = 'https://niaid.bionimbus.org/'
 creds = '/Users/christopher/Downloads/ndh-credentials.json'
 
-# api = 'https://nci-crdc-demo.datacommons.io/' # DCF  SAndbox Commons
-# profile = 'dcf'
-# creds = '/Users/christopher/Downloads/dcf-credentials.json'
+api = 'https://nci-crdc-demo.datacommons.io/' # DCF  SAndbox Commons
+profile = 'dcf'
+creds = '/Users/christopher/Downloads/dcf-credentials.json'
 
 #api = 'https://dcf-interop.kidsfirstdrc.org/' #Kids First
 

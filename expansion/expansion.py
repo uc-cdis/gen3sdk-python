@@ -630,6 +630,26 @@ class Gen3Expansion:
                 plt.title("PDF for "+property+' in ' + project+' (N = '+str(N)+')') # You can comment this line out if you don't need title
                 plt.show(fig)
 
+    def plot_numeric_property_by_category(self, numeric_property, category_property, df):
+        #plot a histogram of numeric variable in a dataframe
+        df = df[df[numeric_property].notnull()]
+        data = list(df[numeric_property])
+        N = len(data)
+
+        categories = list(set(df[category_property]))
+        for category in categories:
+            df_2 = df[df[category_property]==category]
+            data = list(df_2[numeric_property])
+            N = len(data)
+            fig = sns.distplot(data, hist=False, kde=True,
+                     bins=int(180/5), color = 'darkblue',
+                     kde_kws={'linewidth': 2})
+            plt.figtext(.8, .8, 'N = '+str(N))
+            plt.xlabel(numeric_property)
+            plt.ylabel("Probability")
+            plt.title("PDF for "+numeric_property+' by ' + category_property +' (N = '+str(N)+')') # You can comment this line out if you don't need title
+            plt.show(fig)
+
     def node_record_counts(self, project_id):
         query_txt = """{node (first:-1, project_id:"%s"){type}}""" % (project_id)
         res = self.sub.query(query_txt)
