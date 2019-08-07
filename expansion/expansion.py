@@ -712,21 +712,20 @@ class Gen3Expansion:
                 if len(data) > 5:
                     category_2_means[category_2] = mean(data)
 
-            sorted_means = sorted(category_2_means.items(), key=operator.itemgetter(1), reverse=True)[0:10]
-            categories_2_list = [x[0] for x in sorted_means]
+            if len(category_2_means) > 1:
+                sorted_means = sorted(category_2_means.items(), key=operator.itemgetter(1), reverse=True)[0:10]
+                categories_2_list = [x[0] for x in sorted_means]
 
-            for category_2 in categories_2_list: # category_2 is compound
-                subset = df_2[df_2[category_property_2] == category_2]
+                for category_2 in categories_2_list:
+                    subset = df_2[df_2[category_property_2] == category_2]
+                    fig = sns.distplot(subset[numeric_property].dropna(), hist = False, kde = True,
+                                bins = 3,
+                                kde_kws = {'linewidth': 2}, label = category_2)
 
-                fig = sns.distplot(subset[numeric_property].dropna(), hist = False, kde = True,
-                            bins = 3,
-                            kde_kws = {'linewidth': 2}, label = category_2)
+                    plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
-                plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-
-        #    plt.figtext(.65, .8, 'N = '+str(N)) # N is already in the plot title
-            plt.title(numeric_property+' for ' + category +' (N = '+str(N)+')') # You can comment this line out if you don't need title
-            plt.show(fig)
+                plt.title(numeric_property+' for ' + category +' (N = '+str(N)+')') # You can comment this line out if you don't need title
+                plt.show(fig)
 
     def node_record_counts(self, project_id):
         query_txt = """{node (first:-1, project_id:"%s"){type}}""" % (project_id)
