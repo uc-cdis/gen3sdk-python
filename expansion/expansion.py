@@ -650,6 +650,32 @@ class Gen3Expansion:
             plt.title("PDF of "+numeric_property+' for ' + category +' (N = '+str(N)+')') # You can comment this line out if you don't need title
             plt.show(fig)
 
+    def plot_numeric_property_by_2_categories(self, numeric_property, category_property, category_property_2, df):
+        #plot a histogram of numeric variable in a dataframe
+        df = df[df[numeric_property].notnull()]
+        data = list(df[numeric_property])
+        N = len(data)
+        categories = list(set(df[category_property]))
+
+        for category in categories:
+            df_2 = df[df[category_property]==category]
+            categories_2 = list(set(df_2[category_property_2])) #This is a list of all compounds tested for each tissue type.
+            N = len(df_2)
+
+            for category_2 in categories_2:
+                subset = df_2[df_2[category_property_2] == category_2]
+
+                fig = sns.distplot(subset[numeric_property].dropna(), hist = False, kde = True,
+                            bins = 3,
+                            kde_kws = {'linewidth': 2}, label = category_2)
+
+                plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+
+            plt.figtext(.8, .8, 'N = '+str(N))
+            plt.title(numeric_property+' for ' + category +' (N = '+str(N)+')') # You can comment this line out if you don't need title
+            plt.show(fig)
+
+
     def node_record_counts(self, project_id):
         query_txt = """{node (first:-1, project_id:"%s"){type}}""" % (project_id)
         res = self.sub.query(query_txt)
