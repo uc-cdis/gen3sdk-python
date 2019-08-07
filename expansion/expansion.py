@@ -662,7 +662,7 @@ class Gen3Expansion:
                          bins = 3, kde_kws = {'linewidth': 2}, label = category)
 
             plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-        plt.figtext(.75, .75, 'N = '+str(N))
+        plt.figtext(.65, .8, 'N = '+str(N))
         plt.title(numeric_property+' for ' + category +' (N = '+str(N)+')') # You can comment this line out if you don't need title
         plt.show(fig)
 
