@@ -1,13 +1,10 @@
 import pytest
 from requests import HTTPError
 
-# helper functions -------------------------------------------------
+
 def get_rec(gen3_index, guid):
     # testing get_record
     return gen3_index.get_record(guid)
-
-
-# tests ------------------------------------------------------------
 
 
 def testsystem(gen3_index):
@@ -17,9 +14,6 @@ def testsystem(gen3_index):
     assert gen3_index.get_version()
     assert gen3_index.get_stats()
     assert gen3_index.get_index()
-
-
-# -------------------------------------------------------------------
 
 
 def testget_urls(gen3_index):
@@ -46,9 +40,6 @@ def testget_urls(gen3_index):
     assert drec._deleted
     drec = gen3_index.delete_record(rec3["did"])
     assert drec._deleted
-
-
-# -------------------------------------------------------------------
 
 
 def testbulk(gen3_index):
@@ -83,9 +74,6 @@ def testbulk(gen3_index):
     assert drec._deleted
 
 
-# -------------------------------------------------------------------
-
-
 def test_getwithparams(gen3_index):
     """ test get_with_params
     """
@@ -104,9 +92,6 @@ def test_getwithparams(gen3_index):
     assert drec._deleted
     drec = gen3_index.delete_record(rec2["did"])
     assert drec._deleted
-
-
-# -------------------------------------------------------------------
 
 
 def testnewrecord(gen3_index):
@@ -146,9 +131,6 @@ def testnewrecord(gen3_index):
     # delete the record
     drec = gen3_index.delete_record(updatedrec["did"])
     assert drec._deleted
-
-
-# -------------------------------------------------------------------
 
 
 def testversions(gen3_index):
@@ -199,8 +181,6 @@ def testversions(gen3_index):
     assert drec._deleted
 
 
-# -------------------------------------------------------------------
-
 # the endpoint /blank is having some sort of authorization problem
 # it asks for username and password even when given auth file
 def testblank(gen3_index):
@@ -231,6 +211,3 @@ def testblank(gen3_index):
     # delete the record
     drec = gen3_index.delete_record(updatedblank["did"])
     assert drec._deleted
-
-
-# -------------------------------------------------------------------
