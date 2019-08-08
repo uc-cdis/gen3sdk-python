@@ -683,14 +683,15 @@ class Gen3Expansion:
             sorted_means = sorted(category_means.items(), key=operator.itemgetter(1), reverse=True)[0:10]
             categories_list = [x[0] for x in sorted_means]
 
+        N = 0
         for category in categories_list:
             subset = df[df[category_property] == category]
-
+            N += len(subset)
             fig = sns.distplot(subset[numeric_property].dropna(), hist = False, kde = True,
                          bins = 3, kde_kws = {'linewidth': 2}, label = category)
 
             plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-#        N = len(df)
+
         plt.title(numeric_property+' by ' + category_property +' (N = '+str(N)+')')
         plt.show(fig)
 
