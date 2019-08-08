@@ -21,7 +21,7 @@ def index_client(indexd_server):
     setup_database()
     client = Gen3Index(indexd_server.baseurl, create_user("admin", "admin"))
     yield client
-    clear_database
+    clear_database()
 
 
 @pytest.fixture
