@@ -677,7 +677,7 @@ class Gen3Expansion:
             data = list(df_2.loc[df_2[category_property]==category][numeric_property])
 
             if len(data) > 5:
-                category_2_means[category_2] = mean(data)
+                category_means[category] = mean(data)
 
         if len(category_means) > 1:
             sorted_means = sorted(category_means.items(), key=operator.itemgetter(1), reverse=True)[0:10]
