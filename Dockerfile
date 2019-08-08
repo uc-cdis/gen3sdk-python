@@ -9,7 +9,7 @@ RUN pip install -r requirements.txt \
     && pip install -r test-requirements.txt
 
 COPY . /gen3
-RUN mv src/indexclient/indexclient gen3/.
+RUN cp src/indexclient/indexclient gen3/.
 RUN python setup.py install
 
 RUN py.test -vv tests
