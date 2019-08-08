@@ -653,12 +653,12 @@ class Gen3Expansion:
 
     def plot_numeric_by_category(self, numeric_property, category_property, df):
         sns.set(style="darkgrid")
-        N = len(df)
         categories = list(set(df[category_property]))
 
+        N = 0
         for category in categories:
             subset = df[df[category_property] == category]
-
+            N += len(subset)
             fig = sns.distplot(subset[numeric_property].dropna(), hist = False, kde = True,
                          bins = 3, kde_kws = {'linewidth': 2}, label = category)
 
@@ -705,11 +705,11 @@ class Gen3Expansion:
         for category in categories:
             df_2 = df[df[category_property]==category]
             categories_2 = list(set(df_2[category_property_2])) #This is a list of all compounds tested for each tissue type.
-            N = len(df_2)
 
+            N = 0
             for category_2 in categories_2:
                 subset = df_2[df_2[category_property_2] == category_2]
-
+                N += len(subset)
                 fig = sns.distplot(subset[numeric_property].dropna(), hist = False, kde = True,
                             bins = 3,
                             kde_kws = {'linewidth': 2}, label = category_2)
@@ -728,10 +728,8 @@ class Gen3Expansion:
         for category in categories:
             df_2 = df[df[category_property]==category]
             categories_2 = list(set(df_2[category_property_2])) #This is a list of all category_property_2 values for each category_property value.
-            N = len(df_2)
 
             category_2_means = {}
-
             for category_2 in categories_2:
                 df_3 = df_2[df_2[numeric_property].notnull()]
                 data = list(df_3.loc[df_3[category_property_2]==category_2][numeric_property])
@@ -743,8 +741,10 @@ class Gen3Expansion:
                 sorted_means = sorted(category_2_means.items(), key=operator.itemgetter(1), reverse=True)[0:10]
                 categories_2_list = [x[0] for x in sorted_means]
 
+                N = 0
                 for category_2 in categories_2_list:
                     subset = df_2[df_2[category_property_2] == category_2]
+                    N += len(subset)
                     fig = sns.distplot(subset[numeric_property].dropna(), hist = False, kde = True,
                                 bins = 3,
                                 kde_kws = {'linewidth': 2}, label = category_2)
