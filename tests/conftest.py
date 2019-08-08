@@ -1,4 +1,4 @@
-from cdisutilstest.code.conftest import indexd_server  
+from cdisutilstest.code.conftest import indexd_server
 from cdisutilstest.code.indexd_fixture import (
     setup_database,
     clear_database,
