@@ -667,8 +667,35 @@ class Gen3Expansion:
         plt.title(numeric_property+' by ' + category_property +' (N = '+str(N)+')') # You can comment this line out if you don't need title
         plt.show(fig)
 
+    def plot_top10_numeric_by_category(self, numeric_property, category_property, df):
+        sns.set(style="darkgrid")
+        categories = list(set(df[category_property]))
+
+        category_means = {}
+        for category in categories:
+            df_2 = df[df[numeric_property].notnull()]
+            data = list(df_2.loc[df_2[category_property]==category][numeric_property])
+
+            if len(data) > 5:
+                category_2_means[category_2] = mean(data)
+
+        if len(category_means) > 1:
+            sorted_means = sorted(category_means.items(), key=operator.itemgetter(1), reverse=True)[0:10]
+            categories_list = [x[0] for x in sorted_means]
+
+        for category in categories_list:
+            subset = df[df[category_property] == category]
+
+            fig = sns.distplot(subset[numeric_property].dropna(), hist = False, kde = True,
+                         bins = 3, kde_kws = {'linewidth': 2}, label = category)
+
+            plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+#        N = len(df)
+        plt.title(numeric_property+' by ' + category_property +' (N = '+str(N)+')')
+        plt.show(fig)
+
     def plot_numeric_property_by_2_categories(self, numeric_property, category_property, category_property_2, df):
-        #plot a histogram of numeric variable in a dataframe
+
         df = df[df[numeric_property].notnull()]
         data = list(df[numeric_property])
         N = len(data)
@@ -688,7 +715,6 @@ class Gen3Expansion:
 
                 plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
-#            plt.figtext(.8, .8, 'N = '+str(N))
             plt.title(numeric_property+' for ' + category +' (N = '+str(N)+')') # You can comment this line out if you don't need title
             plt.show(fig)
 
@@ -707,7 +733,7 @@ class Gen3Expansion:
 
             for category_2 in categories_2:
                 df_3 = df_2[df_2[numeric_property].notnull()]
-                data = list(df_3.loc[df_2[category_property_2]==category_2][numeric_property])
+                data = list(df_3.loc[df_3[category_property_2]==category_2][numeric_property])
 
                 if len(data) > 5:
                     category_2_means[category_2] = mean(data)
