@@ -27,7 +27,9 @@ class Gen3Index:
     ### Get Requests
 
     def get_status(self):
-        """ Return if indexd is healthy or not
+        """ 
+       
+        Return if indexd is healthy or not
 
         """
         response = self.client._get("_status")
@@ -35,7 +37,9 @@ class Gen3Index:
         return response
 
     def get_version(self):
-        """ Return the version of indexd
+        """ 
+        
+        Return the version of indexd
 
         """
         response = self.client._get("_version")
@@ -43,24 +47,30 @@ class Gen3Index:
         return response.json()
 
     def get_stats(self):
-        """ Return basic info about the records in indexd
+        """ 
+        
+        Return basic info about the records in indexd
 
         """
         response = self.client._get("_stats")
         response.raise_for_status()
         return response.json()
 
-    def get_index(self):
-        """ Get a list of all records
+    def get_all_records(self):
+        """ 
+        
+        Get a list of all records
 
         """
         response = self.client._get("index/")
         response.raise_for_status()
         return response.json()
 
-    def global_get(self, guid, no_dist=False):
-        """ Get the metadata associated with the given id, alias, or
-            distributed identifier
+    def get(self, guid, no_dist=False):
+        """ 
+        
+        Get the metadata associated with the given id, alias, or
+        distributed identifier
 
         Args:
              guid: string
@@ -73,7 +83,9 @@ class Gen3Index:
         return rec.to_json()
 
     def get_urls(self, size=None, hashes=None, ids=None):
-        """ Get a list of urls that match query params
+        """ 
+        
+        Get a list of urls that match query params
 
         Args:
             size: integer
@@ -89,7 +101,9 @@ class Gen3Index:
         return [url for _, url in urls.items()]
 
     def get_record(self, guid):
-        """ Get the metadata associated with a given id
+        """ 
+        
+        Get the metadata associated with a given id
 
         """
         rec = self.client.get(guid)
@@ -97,19 +111,23 @@ class Gen3Index:
 
     def get_with_params(self, params=None):
         """
+
         Return a document object corresponding to the supplied parameters, such
         as ``{'hashes': {'md5': '...'}, 'size': '...', 'metadata': {'file_state': '...'}}``.
 
             - need to include all the hashes in the request
             - index client like signpost or indexd will need to handle the
               query param `'hash': 'hash_type:hash'`
+
         """
         rec = self.client.get_with_params(params)
         return rec.to_json()
 
-    def get_latestversion(self, guid, has_version=False):
-        """ Get the metadata of the latest index record version associated
-            with the given id
+    def get_latest_version(self, guid, has_version=False):
+        """ 
+        
+        Get the metadata of the latest index record version associated
+        with the given id
 
         Args:
             guid: string
@@ -122,8 +140,10 @@ class Gen3Index:
         return rec.to_json()
 
     def get_versions(self, guid):
-        """ Get the metadata of index record version associated with the
-            given id
+        """ 
+        
+        Get the metadata of index record version associated with the
+        given id
 
         Args:
             guid: string
@@ -152,7 +172,9 @@ class Gen3Index:
         version=None,
         authz=None,
     ):
-        """ Create a new record and add it to the index
+        """ 
+        
+        Create a new record and add it to the index
 
         Args:
             hashes (dict): {hash type: hash value,}
@@ -187,7 +209,9 @@ class Gen3Index:
         return rec.to_json()
 
     def create_blank(self, uploader, file_name=None):
-        """ Create a blank record
+        """ 
+        
+        Create a blank record
 
         Args:
             json - json in the format:
@@ -223,9 +247,11 @@ class Gen3Index:
         version=None,
         authz=None,
     ):
-        """ Add new version for the document associated to the provided uuid
+        """ 
+        
+        Add new version for the document associated to the provided uuid
 
-            - Since data content is immutable, when you want to change the
+        - Since data content is immutable, when you want to change the
               size or hash, a new index document with a new uuid needs to be
               created as its new version. That uuid is returned in the did
               field of the response. The old index document is not deleted.
@@ -281,8 +307,10 @@ class Gen3Index:
             return self.get_record(rec["did"])
         return None
 
-    def get_record_bulk(self, dids):
-        """ Get a list of documents given a list of dids
+    def get_records(self, dids):
+        """ 
+        
+        Get a list of documents given a list of dids
 
         Args:
             dids: list
@@ -307,7 +335,9 @@ class Gen3Index:
     ### Put Requests
 
     def update_blank(self, guid, rev, hashes, size):
-        """ Update only hashes and size for a blank index
+        """ 
+        
+        Update only hashes and size for a blank index
 
         Args:
             guid (string): record id
@@ -343,7 +373,9 @@ class Gen3Index:
         authz=None,
         urls_metadata=None,
     ):
-        """ Update an existing entry in the index
+        """ 
+        
+        Update an existing entry in the index
 
         Args:
              guid: string
@@ -372,7 +404,9 @@ class Gen3Index:
     ### Delete Requests
 
     def delete_record(self, guid):
-        """ Delete an entry from the index
+        """ 
+        
+        Delete an entry from the index
 
         Args:
             guid: string

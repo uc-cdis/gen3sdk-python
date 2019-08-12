@@ -8,16 +8,22 @@ def get_rec(gen3_index, guid):
 
 
 def testsystem(gen3_index):
-    """ Test that gen3_index is healthy 
+    """ 
+    
+    Test that gen3_index is healthy 
+
     """
     assert gen3_index.get_status().status_code == 200
     assert gen3_index.get_version()
     assert gen3_index.get_stats()
-    assert gen3_index.get_index()
+    assert gen3_index.get_all_records()
 
 
 def testget_urls(gen3_index):
-    """ Test get_urls
+    """ 
+    
+    Test get_urls
+
     """
     rec1 = gen3_index.add_record(
         hashes={"md5": "374c12456782738abcfe387492837483"}, size=0
@@ -43,7 +49,10 @@ def testget_urls(gen3_index):
 
 
 def testbulk(gen3_index):
-    """ Test get_record_bulk
+    """ 
+
+    Test get_records
+
     """
     # put a new record in the index
     rec1 = gen3_index.add_record(
@@ -57,7 +66,7 @@ def testbulk(gen3_index):
     rec3 = gen3_index.add_record(
         hashes={"md5": "adbc82746782738abcfe387492837483"}, size=0
     )
-    recs = gen3_index.get_record_bulk([rec1["did"], rec2["did"], rec3["did"]])
+    recs = gen3_index.get_records([rec1["did"], rec2["did"], rec3["did"]])
 
     dids = [rec1["did"]] + [rec2["did"]] + [rec3["did"]]
     v = True
@@ -75,7 +84,10 @@ def testbulk(gen3_index):
 
 
 def test_getwithparams(gen3_index):
-    """ test get_with_params
+    """ 
+    
+    test get_with_params
+
     """
     # put a new record in the index
     rec1 = gen3_index.add_record(
@@ -95,14 +107,17 @@ def test_getwithparams(gen3_index):
 
 
 def testnewrecord(gen3_index):
-    """ Test the creation, update, and deletion a record
+    """ 
+    
+    Test the creation, update, and deletion a record
 
         index.py functions tested:
             add_record 
-            global_get
+            get
             get_record
             update_record
             delete_record
+
     """
 
     # put a new record in the index
@@ -110,7 +125,7 @@ def testnewrecord(gen3_index):
         hashes={"md5": "adbc12456782738abcfe387492837483"}, size=0
     )
     # testing global get
-    checkrec = gen3_index.global_get(newrec["baseid"])
+    checkrec = gen3_index.get(newrec["baseid"])
     assert (
         newrec["did"] == checkrec["did"]
         and newrec["baseid"] == checkrec["baseid"]
@@ -134,13 +149,16 @@ def testnewrecord(gen3_index):
 
 
 def testversions(gen3_index):
-    """ Test creation of a record and a new version of it
+    """ 
+    
+    Test creation of a record and a new version of it
 
-        index.py functions tested:
-            add_record
-            add_new_version
-            get_versions
-            get_latestversion
+    index.py functions tested:
+        add_record
+        add_new_version
+        get_versions
+        get_latest_version
+
     """
     # put a new record in the index
     newrec = gen3_index.add_record(
@@ -167,13 +185,13 @@ def testversions(gen3_index):
 
     #   These functions do not recognize the records for some reason!
     versions = gen3_index.get_versions(newversion["did"])
-    latestversion = gen3_index.get_latestversion(newrec["did"], "false")
+    latest_version = gen3_index.get_latest_version(newrec["did"], "false")
 
     assert versions[0]["did"] == newrec["did"]
     assert versions[1]["did"] == newversion["did"]
 
-    assert latestversion["did"] == newversion["did"]
-    assert latestversion["version"] == "2"
+    assert latest_version["did"] == newversion["did"]
+    assert latest_version["version"] == "2"
 
     drec = gen3_index.delete_record(newrec["did"])
     assert drec._deleted
@@ -184,7 +202,10 @@ def testversions(gen3_index):
 # the endpoint /blank is having some sort of authorization problem
 # it asks for username and password even when given auth file
 def testblank(gen3_index):
-    """ Test create and update blank record
+    """ 
+    
+    Test create and update blank record
+
     """
     newblank = gen3_index.create_blank("mjmartinson")
     checkrec = get_rec(gen3_index, newblank["did"])
