@@ -51,7 +51,7 @@ class Gen3Submission:
 
     ### Program functions
 
-    def view_programs(self):
+    def get_programs(self):
         """List registered programs
 
         """
@@ -92,11 +92,11 @@ class Gen3Submission:
         api_url = "{}/api/v0/submission/{}".format(self._endpoint, program)
         output = requests.delete(api_url, auth=self._auth_provider)
         output.raise_for_status()
-        return output.json()
+        return output
 
     ### Project functions
 
-    def view_projects(self, program):
+    def get_projects(self, program):
         """List registered projects for a given program
 
         Args:
@@ -105,7 +105,7 @@ class Gen3Submission:
         Example:
             This lists all the projects under the DCF program
 
-            >>> Gen3Submission.view_projects("DCF")
+            >>> Gen3Submission.get_projects("DCF")
 
         """
         api_url = f"{self._endpoint}/api/v0/submission/{program}"
@@ -147,7 +147,7 @@ class Gen3Submission:
         api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
         output = requests.delete(api_url, auth=self._auth_provider)
         output.raise_for_status()
-        return output.json()
+        return output
 
     def get_project_dictionary(self, program, project):
         """Get dictionary schema for a given project
@@ -221,7 +221,7 @@ class Gen3Submission:
         )
         output = requests.delete(api_url, auth=self._auth_provider)
         output.raise_for_status()
-        return output.json()
+        return output
 
     def export_record(self, program, project, uuid, fileformat, filename=None):
         """Export a single record into json.

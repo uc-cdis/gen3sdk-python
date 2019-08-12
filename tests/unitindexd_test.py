@@ -7,7 +7,7 @@ def get_rec(gen3_index, guid):
     return gen3_index.get_record(guid)
 
 
-def testsystem(gen3_index):
+def test_system(gen3_index):
     """ 
     
     Test that gen3_index is healthy 
@@ -19,7 +19,7 @@ def testsystem(gen3_index):
     assert gen3_index.get_all_records()
 
 
-def testget_urls(gen3_index):
+def test_get_urls(gen3_index):
     """ 
     
     Test get_urls
@@ -48,7 +48,7 @@ def testget_urls(gen3_index):
     assert drec._deleted
 
 
-def testbulk(gen3_index):
+def test_bulk(gen3_index):
     """ 
 
     Test get_records
@@ -83,7 +83,7 @@ def testbulk(gen3_index):
     assert drec._deleted
 
 
-def test_getwithparams(gen3_index):
+def test_get_with_params(gen3_index):
     """ 
     
     test get_with_params
@@ -106,7 +106,7 @@ def test_getwithparams(gen3_index):
     assert drec._deleted
 
 
-def testnewrecord(gen3_index):
+def test_new_record(gen3_index):
     """ 
     
     Test the creation, update, and deletion a record
@@ -148,7 +148,7 @@ def testnewrecord(gen3_index):
     assert drec._deleted
 
 
-def testversions(gen3_index):
+def test_versions(gen3_index):
     """ 
     
     Test creation of a record and a new version of it
@@ -201,7 +201,7 @@ def testversions(gen3_index):
 
 # the endpoint /blank is having some sort of authorization problem
 # it asks for username and password even when given auth file
-def testblank(gen3_index):
+def test_blank(gen3_index):
     """ 
     
     Test create and update blank record
