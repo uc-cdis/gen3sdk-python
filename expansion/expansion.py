@@ -241,7 +241,7 @@ class Gen3Expansion:
         print('Master node TSV with '+str(len(all_data))+' total records written to '+nodefile+'.')
         return all_data
 
-    def get_project_tsvs(self, projects, overwrite=False):
+    def get_project_tsvs(self, projects=None, overwrite=False):
         """Function gets a TSV for every node in a specified project.
             Exports TSV files into a directory "project_tsvs/".
             Function returns a list of the contents of the directory.
@@ -259,7 +259,9 @@ class Gen3Expansion:
         for node in remove_nodes:
             if node in all_nodes: all_nodes.remove(node)
 
-        if isinstance(projects,str):
+        if projects is None: #if no projects specified, get node for all projects
+            projects = list(json_normalize(self.sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+        elif isinstance(projects, str):
             projects = [projects]
 
         for project_id in projects:
