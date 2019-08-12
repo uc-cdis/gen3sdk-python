@@ -26,6 +26,7 @@ sub = Gen3Submission(api, auth)
 file = Gen3File(api, auth)
 
 # Get the gen3sdk expansion functions
+!rm -f -- expansion.py
 !wget https://raw.githubusercontent.com/cgmeyer/gen3sdk-python/master/expansion/expansion.py
 %run ./expansion.py
 exp = Gen3Expansion(api, auth)
@@ -37,7 +38,7 @@ client = '/home/jovyan/.gen3/gen3-client'
 
 !curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*linux |  cut -d '"' -f 4 | wget -qi -
 !unzip dataclient_linux.zip
-!mkdir /home/jovyan/.gen3
+!mkdir -p /home/jovyan/.gen3
 !mv gen3-client /home/jovyan/.gen3
 !rm dataclient_linux.zip
 #!/home/jovyan/.gen3/gen3-client configure --profile=bpa --apiendpoint=https://data.bloodpac.org --cred=/home/jovyan/pd/bpa-credentials.json
