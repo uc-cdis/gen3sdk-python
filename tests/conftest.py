@@ -8,9 +8,11 @@ from gen3.index import Gen3Index
 from gen3.submission import Gen3Submission
 import pytest
 
+
 @pytest.fixture
 def sub():
     return Gen3Submission("http://localhost/api", None)
+
 
 # for unittest with mock server
 @pytest.fixture

@@ -21,7 +21,7 @@ class Gen3Index:
 
     """
 
-    def __init__(self, endpoint, auth_provider):
+    def __init__(self, endpoint, auth_provider=None):
         self.client = client.IndexClient(endpoint, auth=auth_provider)
 
     ### Get Requests

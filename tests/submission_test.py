@@ -1,6 +1,7 @@
 import pytest, os, requests
 from unittest.mock import patch
 
+
 def test_get(sub):
     """ 
         tests: 
@@ -22,6 +23,7 @@ def test_get(sub):
         except:
             assert False
 
+
 def test_exportnode(sub):
     """ 
         tests:
@@ -37,6 +39,22 @@ def test_exportnode(sub):
         assert not os.path.exists("node_file.json")
 
 
+def test_create_program(sub):
+
+    with patch("gen3.submission.requests") as mock_request:
+        mock_request.status_code = 200
+        mock_request.json.return_value = '{ "key": "value" }'
+        # create a program
+        p = sub.create_program(
+            {
+                "dbgap_accession_number": "programmjm",
+                "name": "programmjm",
+                "type": "program",
+            }
+        )
+        assert p
+
+
 def test_newprog_and_proj(sub):
     """ Create, get, and delete a program and project
 
@@ -47,16 +65,6 @@ def test_newprog_and_proj(sub):
         get_project_dictionary 
 
     """
-    # create a program
-    p = sub.create_program(
-        {
-            "dbgap_accession_number": "programmjm",
-            "name": "programmjm",
-            "type": "program",
-        }
-    )
-    assert p
-
     # test the existence of the program and the get_projects function
     assert sub.get_projects("programmjm")
 
