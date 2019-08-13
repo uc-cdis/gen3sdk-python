@@ -13,7 +13,7 @@ def test_system(gen3_index):
     Test that gen3_index is healthy 
 
     """
-    assert gen3_index.get_status().status_code == 200
+    assert gen3_index.is_healthy()
     assert gen3_index.get_version()
     assert gen3_index.get_stats()
     assert gen3_index.get_all_records()

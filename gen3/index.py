@@ -21,20 +21,26 @@ class Gen3Index:
 
     """
 
-    def __init__(self, endpoint, auth_provider=None):
+    def __init__(self, endpoint, auth_provider=None, service_location="index"):
+        endpoint = endpoint.strip("/")
+        if not endpoint.endswith(service_location):
+            endpoint += service_location
+        endpoint += "/"
         self.client = client.IndexClient(endpoint, auth=auth_provider)
 
     ### Get Requests
+    def is_healthy(self):
+        """
 
-    def get_status(self):
-        """ 
-       
         Return if indexd is healthy or not
 
         """
-        response = self.client._get("_status")
-        response.raise_for_status()
-        return response
+        try:
+            response = self.client._get("_status")
+            response.raise_for_status()
+        except Exception:
+            return False
+        return response.text == "Healthy"
 
     def get_version(self):
         """ 
@@ -82,7 +88,7 @@ class Gen3Index:
         rec = self.client.global_get(guid, no_dist)
         return rec.to_json()
 
-    def get_urls(self, size=None, hashes=None, ids=None):
+    def get_urls(self, size=None, hashes=None, guids=None):
         """ 
         
         Get a list of urls that match query params
@@ -92,11 +98,13 @@ class Gen3Index:
                 - object size
             hashes: string
                 - hashes specified as algorithm:value
-            ids: string
-                - comma delimited ids
+            guids: list
+                - list of ids
 
         """
-        p = {"size": size, "hash": hashes, "ids": ids}
+        if guids:
+            guids = ",".join(guids)
+        p = {"size": size, "hash": hashes, "ids": guids}
         urls = self.client._get("urls", params=p).json()
         return [url for _, url in urls.items()]
 
