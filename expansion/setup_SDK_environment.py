@@ -25,11 +25,19 @@ auth = Gen3Auth(api, refresh_file=creds)
 sub = Gen3Submission(api, auth)
 file = Gen3File(api, auth)
 
+
+!wget https://raw.githubusercontent.com/uc-cdis/gen3sdk-python/master/gen3/submission.py
+%run ./submission.py
+sub = Gen3Submission(api, auth)
+
+
 # Get the gen3sdk expansion functions
 !rm -f -- expansion.py
 !wget https://raw.githubusercontent.com/cgmeyer/gen3sdk-python/master/expansion/expansion.py
 %run ./expansion.py
 exp = Gen3Expansion(api, auth)
+
+
 
 
 # Download and configure gen3-client in Jupyter Notebook
