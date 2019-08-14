@@ -1343,7 +1343,7 @@ class Gen3Expansion:
                 print("Error deleting GUID {}:".format(guid))
                 print(response.reason)
 
-    def uploader_index(self, uploader='cgmeyer@uchicago.edu', acl=None, limit=1024, format='tsv'):
+    def uploader_index(self, uploader='cgmeyer@uchicago.edu', acl=None, limit=1024, format='guids'):
         """Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.
 
         Args:
@@ -1379,28 +1379,28 @@ class Gen3Expansion:
             print(str(e))
             raise Gen3Error("Unable to parse indexd response as JSON!")
 
-        if format is 'tsv' and data['records'] is not None:
-            df = json_normalize(data['records'])
+        records = data['records']
+
+        if records is None:
+            print("No records in the index for uploader {} with acl {}.".format(uploader,acl))
+
+        elif format is 'tsv':
+            df = json_normalize(records)
+            df.to_csv("indexd_records_for_{}.tsv".format(uploader),sep="/t",index=False)
             return df
+
+        elif format is 'guids':
+            guids = []
+            for record in records:
+                guids.append(record['did'])
+            return guids
+
         else:
-            return data
+            return records
 
-# latest=[]
-# guids = []
-# records = index_record['records']
-# for record in records:
-#     if '2019-06' in record['updated_date'] or '2019-05-31' in record['updated_date']:
-#         print(record)
-#         latest.append(record)
-#         guids.append(record['did'])
-# len(latest)
-# len(guids)
-
-
-        # Read the file in as a pandas DataFrame
 
 ## To do
-# # get indexd records by uploader:
+# # find indexd records by upload date:
 # /index/index/?acl=null&uploader=cgmeyer@uchicago.edu
 #
 # api = 'https://vpodc.org/'
