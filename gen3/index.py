@@ -166,7 +166,7 @@ class Gen3Index:
 
     ### Post Requests
 
-    def add_record(
+    def create_record(
         self,
         hashes,
         size,
@@ -241,7 +241,7 @@ class Gen3Index:
 
         return self.get_record(rec["did"])
 
-    def add_new_version(
+    def create_new_version(
         self,
         guid,
         hashes,
