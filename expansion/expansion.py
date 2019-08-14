@@ -499,59 +499,6 @@ class Gen3Expansion:
 
         return results
 
-# IndexD functions:
-    def get_urls(self, guids,api):
-        # Get URLs for a list of GUIDs
-        if isinstance(guids, str):
-            guids = [guids]
-        if isinstance(guids, list):
-            urls = {}
-            for guid in guids:
-                index_url = "{}/index/{}".format(api, guid)
-                output = requests.get(index_url, auth=self._auth_provider).text
-                guid_index = json.loads(output)
-                url = guid_index['urls'][0]
-                urls[guid] = url
-        else:
-            print("Please provide one or a list of data file GUIDs: get_urls\(guids=guid_list\)")
-        return urls
-
-    def get_guids_for_filenames(self, file_names,api):
-        # Get GUIDs for a list of file_names
-        if isinstance(file_names, str):
-            file_names = [file_names]
-        if not isinstance(file_names,list):
-            print("Please provide one or a list of data file file_names: get_guid_for_filename\(file_names=file_name_list\)")
-        guids = {}
-        for file_name in file_names:
-            index_url = api + '/index/index/?file_name=' + file_name
-            output = requests.get(index_url, auth=self._auth_provider).text
-            index_record = json.loads(output)
-            if len(index_record['records']) > 0:
-                guid = index_record['records'][0]['did']
-                guids[file_name] = guid
-        return guids
-
-    def delete_uploaded_files(self, guids, api):
-    # DELETE http://petstore.swagger.io/?url=https://raw.githubusercontent.com/uc-cdis/fence/master/openapis/swagger.yaml#/data/delete_data__file_id_
-    # ​/data​/{file_id}
-    # delete all locations of a stored data file and remove its record from indexd.
-    # After a user uploads a data file and it is registered in indexd,
-    # but before it is mapped into the graph via metadata submission,
-    # this endpoint will delete the file from its storage locations (saved in the record in indexd)
-    # and delete the record in indexd.
-        if isinstance(guids, str):
-            guids = [guids]
-        if isinstance(guids, list):
-            for guid in guids:
-                fence_url = api + 'user/data/'
-                response = requests.delete(fence_url + guid,auth=self._auth_provider)
-                if (response.status_code == 204):
-                    print("Successfully deleted GUID {}".format(guid))
-                else:
-                    print("Error deleting GUID {}:".format(guid))
-                    print(response.reason)
-
 # Analysis Functions
     def property_counts_table(self, prop, df):
         df = df[df[prop].notnull()]
@@ -1319,3 +1266,167 @@ class Gen3Expansion:
         print("Failed invalid records: {}".format(str(len(results["invalid"]))))
 
         return results
+
+
+# indexd functions:
+    def get_urls(self, guids,api):
+        # Get URLs for a list of GUIDs
+        if isinstance(guids, str):
+            guids = [guids]
+        if isinstance(guids, list):
+            urls = {}
+            for guid in guids:
+                index_url = "{}/index/{}".format(api, guid)
+                output = requests.get(index_url, auth=self._auth_provider).text
+                guid_index = json.loads(output)
+                url = guid_index['urls'][0]
+                urls[guid] = url
+        else:
+            print("Please provide one or a list of data file GUIDs: get_urls\(guids=guid_list\)")
+        return urls
+
+    def get_guids_for_filenames(self, file_names,api):
+        # Get GUIDs for a list of file_names
+        if isinstance(file_names, str):
+            file_names = [file_names]
+        if not isinstance(file_names,list):
+            print("Please provide one or a list of data file file_names: get_guid_for_filename\(file_names=file_name_list\)")
+        guids = {}
+        for file_name in file_names:
+            index_url = api + '/index/index/?file_name=' + file_name
+            output = requests.get(index_url, auth=self._auth_provider).text
+            index_record = json.loads(output)
+            if len(index_record['records']) > 0:
+                guid = index_record['records'][0]['did']
+                guids[file_name] = guid
+        return guids
+
+    def delete_uploaded_files(self, guids):
+        """
+        DELETE http://petstore.swagger.io/?url=https://raw.githubusercontent.com/uc-cdis/fence/master/openapis/swagger.yaml#/data/delete_data__file_id_
+        Deletes all locations of a stored data file and remove its record from indexd.
+        After a user uploads a data file and it is registered in indexd,
+        but before it is mapped into the graph via metadata submission,
+        this endpoint will delete the file from its storage locations (saved in the record in indexd)
+        and delete the record in indexd.
+
+        Args:
+            guids (list): The list of GUIDs to delete.
+
+        Examples:
+            >>> Gen3Expansion.delete_uploaded_files(guids="dg.7519/fd0d91e0-87a6-4627-80b4-50d98614c560")
+            >>> Gen3Expansion.delete_uploaded_files(guids=["dg.7519/fd0d91e0-87a6-4627-80b4-50d98614c560","dg.7519/bc78b25d-6203-4d5f-9257-cc6bba3fc34f"])
+        """
+        if isinstance(guids, str):
+            guids = [guids]
+
+        if not isinstance(guids, list):
+            raise Gen3Error("Please, supply GUIDs as a list.")
+
+        for guid in guids:
+
+            fence_url = "{}user/data/".format(
+                self._endpoint
+            )
+
+            try:
+                response = requests.delete(
+                    fence_url + guid,
+                    auth=self._auth_provider
+                )
+            except requests.exceptions.ConnectionError as e:
+                raise Gen3Error(e)
+
+            if (response.status_code == 204):
+                print("Successfully deleted GUID {}".format(guid))
+            else:
+                print("Error deleting GUID {}:".format(guid))
+                print(response.reason)
+
+    def uploader_index(self, uploader='cgmeyer@uchicago.edu', acl=None, limit=1024, format='tsv'):
+        """Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.
+
+        Args:
+            uploader (str): The uploader's data commons login email.
+
+        Examples:
+            This returns all records of files that I uploaded to indexd.
+
+            >>> Gen3Submission.submit_file(uploader="cgmeyer@uchicago.edu")
+            #data.bloodpac.org/index/index/?limit=1024&acl=null&uploader=cgmeyer@uchicago.edu
+        """
+
+        if acl is not None:
+            index_url = "{}/index/index/?limit={}&acl={}&uploader={}".format(
+                self._endpoint,limit,acl,uploader
+            )
+        else:
+            index_url = "{}/index/index/?limit={}&uploader={}".format(
+                self._endpoint,limit,uploader
+            )
+        try:
+            response = requests.get(
+                index_url,
+                auth=self._auth_provider
+            ).text
+        except requests.exceptions.ConnectionError as e:
+            print(e)
+
+        try:
+            data = json.loads(response)
+        except JSONDecodeError as e:
+            print(response)
+            print(str(e))
+            raise Gen3Error("Unable to parse indexd response as JSON!")
+
+        if format is 'tsv' and data['records'] is not None:
+            df = json_normalize(data['records'])
+            return df
+        else:
+            return data
+
+# latest=[]
+# guids = []
+# records = index_record['records']
+# for record in records:
+#     if '2019-06' in record['updated_date'] or '2019-05-31' in record['updated_date']:
+#         print(record)
+#         latest.append(record)
+#         guids.append(record['did'])
+# len(latest)
+# len(guids)
+
+
+        # Read the file in as a pandas DataFrame
+
+## To do
+# # get indexd records by uploader:
+# /index/index/?acl=null&uploader=cgmeyer@uchicago.edu
+#
+# api = 'https://vpodc.org/'
+# uploader = 'cgmeyer@uchicago.edu'
+# index_url = api + '/index/index/?limit=200&acl=null&uploader='+uploader
+# output = requests.get(index_url, auth=auth).text
+# index_record = json.loads(output)
+# index_record
+#
+# latest=[]
+# guids = []
+# records = index_record['records']
+# for record in records:
+#     if '2019-06' in record['updated_date'] or '2019-05-31' in record['updated_date']:
+#         print(record)
+#         latest.append(record)
+#         guids.append(record['did'])
+# len(latest)
+# len(guids)
+#
+# # add index search by md5
+# https://data.bloodpac.org/index/index/?hash=md5:14c626a4573f2d8e2a1cf796df68a4b8
+#
+# ## add index stats
+# api/index/_stats
+#
+# ## Add a check authentication command to Gen3sdk:
+#
+# user_endpoint = api + '/user/user/'

@@ -123,7 +123,7 @@ client = 'gen3-client'
 
 auth = Gen3Auth(api, refresh_file=creds)
 
-%run /Users/christopher/Documents/GitHub/uc-cdis/gen3sdk-python/gen3/submission.py
+#%run /Users/christopher/Documents/GitHub/uc-cdis/gen3sdk-python/gen3/submission.py
 #load /Users/christopher/Documents/GitHub/uc-cdis/gen3sdk-python/gen3/submission.py
 sub = Gen3Submission(api, auth)
 

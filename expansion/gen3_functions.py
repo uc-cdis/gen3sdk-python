@@ -336,13 +336,6 @@ def get_guids_for_filenames(file_names,api):
     return guids
 
 def delete_uploaded_files(guids,api):
-# DELETE http://petstore.swagger.io/?url=https://raw.githubusercontent.com/uc-cdis/fence/master/openapis/swagger.yaml#/data/delete_data__file_id_
-# ​/data​/{file_id}
-# delete all locations of a stored data file and remove its record from indexd.
-# After a user uploads a data file and it is registered in indexd,
-# but before it is mapped into the graph via metadata submission,
-# this endpoint will delete the file from its storage locations (saved in the record in indexd)
-# and delete the record in indexd.
     if isinstance(guids, str):
         guids = [guids]
     if isinstance(guids, list):
