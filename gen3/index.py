@@ -24,7 +24,7 @@ class Gen3Index:
     def __init__(self, endpoint, auth_provider=None, service_location="index"):
         endpoint = endpoint.strip("/")
         if not endpoint.endswith(service_location):
-            endpoint += service_location
+            endpoint += '/' + service_location
         endpoint += "/"
         self.client = client.IndexClient(endpoint, auth=auth_provider)
 
