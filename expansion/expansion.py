@@ -1386,7 +1386,8 @@ class Gen3Expansion:
 
         elif format is 'tsv':
             df = json_normalize(records)
-            df.to_csv("indexd_records_for_{}.tsv".format(uploader),sep="/t",index=False)
+            filename = "indexd_records_for_{}.tsv".format(uploader)
+            df.to_csv(filename,sep='\t',index=False, encoding='utf-8')
             return df
 
         elif format is 'guids':

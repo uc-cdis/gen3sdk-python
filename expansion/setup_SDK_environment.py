@@ -22,8 +22,8 @@ api = 'https://datacommons.org'
 creds = '/home/jovyan/pd/my-credentials.json'
 
 auth = Gen3Auth(api, refresh_file=creds)
-sub = Gen3Submission(api, auth)
-file = Gen3File(api, auth)
+# sub = Gen3Submission(api, auth)
+# file = Gen3File(api, auth)
 
 
 !wget https://raw.githubusercontent.com/uc-cdis/gen3sdk-python/master/gen3/submission.py
@@ -71,31 +71,25 @@ except Exception as e:
 ####################################################################################
 ####################################################################################
 ####################################################################################
-### Run Locally:
+### Run Locally in "ipython":
 ## Import some Python packages
-import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath
+#!pip install --force --upgrade gen3 --ignore-installed certifi
+
 import pandas as pd
-from pandas.io.json import json_normalize
-from collections import Counter
 
 import gen3
 from gen3.auth import Gen3Auth
 from gen3.submission import Gen3Submission
 from gen3.file import Gen3File
 
-import matplotlib.pyplot as plt
-import numpy as np
-import seaborn as sns
-
 ## Download and configure gen3-client in Jupyter Notebook
+profile = 'bc'
+api = 'https://data.braincommons.org/' # BRAIN Commons
+creds = '/Users/christopher/Downloads/bc-credentials.json'
 
 profile = 'bpa'
 api = 'https://data.bloodpac.org/' # BloodPAC
 creds = '/Users/christopher/Downloads/bpa-credentials.json'
-
-profile = 'bc'
-api = 'https://data.braincommons.org/' # BRAIN Commons
-creds = '/Users/christopher/Downloads/bc-credentials.json'
 
 profile = 'ndh'
 api = 'https://niaid.bionimbus.org/'
@@ -137,8 +131,8 @@ mv gen3-client /Users/christopher/.gen3
 rm dataclient_osx.zip
 
 # Now configure your profile in python
-cmd = client +' configure --profile='+profile+' --apiendpoint='+api+' --cred='+creds
-auth_cmd = client +' auth --profile='+profile
+cmd = "{} configure --profile={} --apiendpoint={} --cred={}".format(client, profile, api, creds)
+auth_cmd = "{} auth --profile={}".format(client, profile)
 try:
     output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
     output = subprocess.check_output(auth_cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
@@ -146,4 +140,3 @@ try:
 except Exception as e:
     output = e.output.decode('UTF-8')
     print("ERROR:" + output)
-!$auth_cmd

@@ -1,19 +1,21 @@
 import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy, re
 import pandas as pd
-from pandas.tools.plotting import table
+#from pandas.tools.plotting import table
 from pandas.io.json import json_normalize
 from collections import Counter
 
 import gen3
 from gen3.auth import Gen3Auth
 from gen3.submission import Gen3Submission
-from gen3.file import Gen3File
 
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
 from IPython.display import display, HTML
+
+auth = Gen3Auth(api, refresh_file=creds)
+sub = Gen3Submission(api, auth)
 
 ### AWS S3 Tools:
 def s3_ls(path, bucket, profile, pattern='*'):
@@ -303,50 +305,7 @@ def delete_records(uuids,project_id):
     results['success'] = success
     return results
 
-def get_urls(guids,api):
-    # Get URLs for a list of GUIDs
-    if isinstance(guids, str):
-        guids = [guids]
-    if isinstance(guids, list):
-        urls = {}
-        for guid in guids:
-            index_url = "{}/index/{}".format(api, guid)
-            output = requests.get(index_url, auth=auth).text
-            guid_index = json.loads(output)
-            url = guid_index['urls'][0]
-            urls[guid] = url
-    else:
-        print("Please provide one or a list of data file GUIDs: get_urls\(guids=guid_list\)")
-    return urls
 
-def get_guids_for_filenames(file_names,api):
-    # Get GUIDs for a list of file_names
-    if isinstance(file_names, str):
-        file_names = [file_names]
-    if not isinstance(file_names,list):
-        print("Please provide one or a list of data file file_names: get_guid_for_filename\(file_names=file_name_list\)")
-    guids = {}
-    for file_name in file_names:
-        index_url = api + '/index/index/?file_name=' + file_name
-        output = requests.get(index_url, auth=auth).text
-        index_record = json.loads(output)
-        if len(index_record['records']) > 0:
-            guid = index_record['records'][0]['did']
-            guids[file_name] = guid
-    return guids
-
-def delete_uploaded_files(guids,api):
-    if isinstance(guids, str):
-        guids = [guids]
-    if isinstance(guids, list):
-        for guid in guids:
-            fence_url = api + 'user/data/' + guid
-            response = requests.delete(fence_url,auth=auth)
-            if (response.status_code == 204):
-                print("Successfully deleted GUID {}".format(guid))
-            else:
-                print("Error deleting GUID {}:".format(guid))
-                print(response.reason)
 
 def node_record_counts(project_id):
     query_txt = """{node (first:-1, project_id:"%s"){type}}""" % (project_id)
@@ -974,6 +933,107 @@ def paginate_query_json(node, project_id=None, props=['id','submitter_id'], chun
             print("Query Error: "+str(res))
 
     return total
+
+def get_urls(guids,api):
+    # Get URLs for a list of GUIDs
+    if isinstance(guids, str):
+        guids = [guids]
+    if isinstance(guids, list):
+        urls = {}
+        for guid in guids:
+            index_url = "{}/index/{}".format(api, guid)
+            output = requests.get(index_url, auth=auth).text
+            guid_index = json.loads(output)
+            url = guid_index['urls'][0]
+            urls[guid] = url
+    else:
+        print("Please provide one or a list of data file GUIDs: get_urls\(guids=guid_list\)")
+    return urls
+
+def get_guids_for_filenames(file_names,api):
+    # Get GUIDs for a list of file_names
+    if isinstance(file_names, str):
+        file_names = [file_names]
+    if not isinstance(file_names,list):
+        print("Please provide one or a list of data file file_names: get_guid_for_filename\(file_names=file_name_list\)")
+    guids = {}
+    for file_name in file_names:
+        index_url = api + '/index/index/?file_name=' + file_name
+        output = requests.get(index_url, auth=auth).text
+        index_record = json.loads(output)
+        if len(index_record['records']) > 0:
+            guid = index_record['records'][0]['did']
+            guids[file_name] = guid
+    return guids
+
+def delete_uploaded_files(guids,api):
+    if isinstance(guids, str):
+        guids = [guids]
+    if isinstance(guids, list):
+        for guid in guids:
+            fence_url = api + 'user/data/' + guid
+            response = requests.delete(fence_url,auth=auth)
+            if (response.status_code == 204):
+                print("Successfully deleted GUID {}".format(guid))
+            else:
+                print("Error deleting GUID {}:".format(guid))
+                print(response.reason)
+
+def uploader_index(uploader='cgmeyer@uchicago.edu', acl=None, limit=1024, format='guids'):
+    """Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.
+
+    Args:
+        uploader (str): The uploader's data commons login email.
+
+    Examples:
+        This returns all records of files that I uploaded to indexd.
+
+        >>> Gen3Submission.submit_file(uploader="cgmeyer@uchicago.edu")
+        #data.bloodpac.org/index/index/?limit=1024&acl=null&uploader=cgmeyer@uchicago.edu
+    """
+
+    if acl is not None:
+        index_url = "{}/index/index/?limit={}&acl={}&uploader={}".format(
+            api,limit,acl,uploader
+        )
+    else:
+        index_url = "{}/index/index/?limit={}&uploader={}".format(
+            api,limit,uploader
+        )
+    try:
+        response = requests.get(
+            index_url,
+            auth=auth
+        ).text
+    except requests.exceptions.ConnectionError as e:
+        print(e)
+
+    try:
+        data = json.loads(response)
+    except JSONDecodeError as e:
+        print(response)
+        print(str(e))
+        raise Gen3Error("Unable to parse indexd response as JSON!")
+
+    records = data['records']
+
+    if records is None:
+        print("No records in the index for uploader {} with acl {}.".format(uploader,acl))
+
+    elif format is 'tsv':
+        df = json_normalize(records)
+        filename = "indexd_records_for_{}.tsv".format(uploader)
+        df.to_csv(filename,sep='\t',index=False, encoding='utf-8')
+        return df
+
+    elif format is 'guids':
+        guids = []
+        for record in records:
+            guids.append(record['did'])
+        return guids
+
+    else:
+        return records
 
 ## To do
 # # get indexd records by uploader:
