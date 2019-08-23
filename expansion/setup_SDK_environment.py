@@ -82,7 +82,7 @@ from gen3.auth import Gen3Auth
 from gen3.submission import Gen3Submission
 from gen3.file import Gen3File
 
-## Download and configure gen3-client in Jupyter Notebook
+## Set gen3-client profile name, api endpoint of the data commons, and path to credentials file
 profile = 'bc'
 api = 'https://data.braincommons.org/' # BRAIN Commons
 creds = '/Users/christopher/Downloads/bc-credentials.json'
@@ -99,13 +99,13 @@ api = 'https://nci-crdc-demo.datacommons.io/' # DCF  SAndbox Commons
 profile = 'dcf'
 creds = '/Users/christopher/Downloads/dcf-credentials.json'
 
-#api = 'https://dcf-interop.kidsfirstdrc.org/' #Kids First
+# api = 'https://dcf-interop.kidsfirstdrc.org/' #Kids First
+#
+# profile = 'stage'
+# api = 'https://gen3.datastage.io/' # STAGE (old "DCP")
+# creds = '/Users/christopher/Downloads/stage-credentials.json'
 
-#profile = 'stage'
-#api = 'https://gen3.datastage.io/' # STAGE (old "DCP")
-#creds = '/Users/christopher/Downloads/stage-credentials.json'
-
-api = 'https://vpodc.org/' # VA
+api = 'https://vpodc.org/' #
 profile = 'vpodc'
 creds = '/Users/christopher/Downloads/vpodc-credentials.json'
 
@@ -117,20 +117,20 @@ client = 'gen3-client'
 
 auth = Gen3Auth(api, refresh_file=creds)
 
-#%run /Users/christopher/Documents/GitHub/uc-cdis/gen3sdk-python/gen3/submission.py
-#load /Users/christopher/Documents/GitHub/uc-cdis/gen3sdk-python/gen3/submission.py
-sub = Gen3Submission(api, auth)
+#!wget https://raw.githubusercontent.com/uc-cdis/gen3sdk-python/master/gen3/submission.py # get the latest beta version in GitHub
+#%run ./submission.py # run the latest version in GitHub
+sub = Gen3Submission(api, auth) # Initialize an instance this class, using your creds in 'auth'
 
-%run /Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/expansion/expansion.py
-exp = Gen3Expansion(api, auth)
+%run /Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/expansion/expansion.py # Download additional functions in Gen3Expansion class
+exp = Gen3Expansion(api, auth) # Initialize an instance, using it like exp.get_project_tsvs()
 
-# Download and configure gen3-client in Jupyter Notebook; run in bash
-curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*osx |  cut -d '"' -f 4 | wget -qi -
-unzip dataclient_osx.zip
-mv gen3-client /Users/christopher/.gen3
-rm dataclient_osx.zip
+# Download and configure gen3-client in Jupyter Notebook
+!curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*osx |  cut -d '"' -f 4 | wget -qi -
+!unzip dataclient_osx.zip
+!mv gen3-client /Users/christopher/.gen3
+!rm dataclient_osx.zip
 
-# Now configure your profile in python
+# Now configure your profile:
 cmd = "{} configure --profile={} --apiendpoint={} --cred={}".format(client, profile, api, creds)
 auth_cmd = "{} auth --profile={}".format(client, profile)
 try:
