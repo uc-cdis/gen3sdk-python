@@ -987,6 +987,8 @@ def uploader_index(uploader='cgmeyer@uchicago.edu', acl=None, limit=1024, format
 
     Examples:
         This returns all records of files that I uploaded to indexd.
+        If I set acl='null', then it will show me my unmapped files,
+        including any still in Status 'Generating...'.
 
         >>> Gen3Submission.submit_file(uploader="cgmeyer@uchicago.edu")
         #data.bloodpac.org/index/index/?limit=1024&acl=null&uploader=cgmeyer@uchicago.edu
