@@ -326,12 +326,11 @@ create_missing_links(node,link,old_parent,properties)
 
 
 properties = ['days_to_preg_serum','days_to_urine_dip','preg_not_required','preg_test_performed','serum_pregnancy_test_performed','serum_pregnancy_test_result','preg_serum_time','urine_pregnancy_dip_performed','urine_pregnancy_dip_result','urine_dip_time']
-properties = ['days_to_preg_serum']
 to_node = 'reproductive_health'
 from_node = 'imaging_exam'
 parent_node = 'visit'
 
-def move_properties(from_node,to_node,parent_node='visit',properties):
+def move_properties(from_node,to_node,properties,parent_node='visit'):
     """
     This function takes a node with properties to be moved (from_node) and moves those properties/data to a new node (to_node).
     Fxn also checks whether the data for proeprties to be moved actually has data. If not, no new records are created.
@@ -351,6 +350,8 @@ def move_properties(from_node,to_node,parent_node='visit',properties):
     from_no_link = df_from.loc[df_from[parent_link].isnull()] # from_node records with no link to parent_node
     if not from_no_link.empty: # if there are records with no links to parent node
         print("Warning: there are {} {} records with no links to {} node!".format(len(from_no_link),from_node,parent_node))
+        print("Returning original data.")
+        return df_from
     else:
         # only create reproductive_health nodes if they aren't all null
         proceed = False
@@ -370,18 +371,31 @@ def move_properties(from_node,to_node,parent_node='visit',properties):
             all_to = pd.concat([df_to,new_to],ignore_index=True)
             all_to.to_csv(to_name,sep='\t',index=False,encoding='utf-8')
 
-            print("New {} records created from properties moved from the {} TSV written to file:\n\t{}".format(to_node,from_node,to_name))
+            print("{} new {} records created from data moved from {} written to file:\n\t{}".format(len(all_to),to_node,from_node,to_name))
+            return all_to
         else:
             print("No non-null {} data found in {} records. No reproductive health TSV written.".format(to_node,from_node))
+            print("Returning original data.")
+            return df_from
 
+move_properties(from_node,to_node,properties,parent_node='visit')
 
+properties = {'days_to_preg_serum':'days_to_serum_pregnancy_test',
+    'days_to_urine_dip':'days_to_urine_pregnancy_dip',
+    'preg_not_required':'pregnancy_test_not_required',
+    'preg_test_performed':'pregnancy_test_performed',
+    'preg_serum_time':'serum_pregnancy_test_time',
+    'urine_dip_time':'urine_pregnancy_dip_time'}
+
+def change_property_names(node,properties):
+    """
+    Changes the names of columns in a TSV.
+    Args:
+        node(str): The name of the node TSV to change column names in.
+        properties(dict): A dict with keys of old prop names to change with values as new names.
+    """
             # change some column names to new prop name
-            new_to.rename(columns = {'days_to_preg_serum':'days_to_serum_pregnancy_test',
-                'days_to_urine_dip':'days_to_urine_pregnancy_dip',
-                'preg_not_required':'pregnancy_test_not_required',
-                'preg_test_performed':'pregnancy_test_performed',
-                'preg_serum_time':'serum_pregnancy_test_time',
-                'urine_dip_time':'urine_pregnancy_dip_time'},
+            new_to.rename(columns = properties,
                 inplace = True)
 
         # drop migrated properties from imaging_exam and
