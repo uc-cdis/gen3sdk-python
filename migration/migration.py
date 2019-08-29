@@ -301,23 +301,27 @@ def create_missing_links(node,link,old_parent,properties):
         link_df = pd.read_csv(link_file,sep='\t',header=0,dtype=str)
         existing = list(link_df['submitter_id'])
         missing = set(link_names).difference(existing) #lists items in link_names missing from existing
+        if len(missing) > 0:
+            print("Creating {} records in {} node for missing {} links.".format(len(missing),link,node))
+        else:
+            print("All {} records in {} node have a link to {}. No new records added.".format(len(existing),node,link))
+            return link_df
     except FileNotFoundError as e:
+        link_df = pd.DataFrame()
         print("No existing {} TSV found. Creating new TSV for links.".format(link))
+        missing = link_names
     parent_link = "{}s.submitter_id".format(old_parent)
-
-    new_links = df[[link_name,parent_link]]
+    new_links = df.loc[df[link_name].isin(missing)][[link_name,parent_link]]
     new_links = new_links.rename(columns={link_name:'submitter_id'})
     new_links['type'] = link
     for prop in properties:
         new_links[prop] = properties[prop]
-
-    all_links = pd.concat(link_df,new_links)
+    all_links = pd.concat([link_df,new_links],ignore_index=True)
     all_links.to_csv(link_file,sep='\t',index=False,encoding='utf-8')
+    print("{} new missing {} records saved into TSV file: {}".format(str(len(new_links)),link,link_file))
+    return all_links
 
-
-
-    print("New missing {} records saved into TSV file: {}".format(link,link_file))
-
+create_missing_links(node,link,old_parent,properties)
 
 
 
