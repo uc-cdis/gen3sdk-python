@@ -326,31 +326,57 @@ create_missing_links(node,link,old_parent,properties)
 
 
 properties = ['days_to_preg_serum','days_to_urine_dip','preg_not_required','preg_test_performed','serum_pregnancy_test_performed','serum_pregnancy_test_result','preg_serum_time','urine_pregnancy_dip_performed','urine_pregnancy_dip_result','urine_dip_time']
+properties = ['days_to_preg_serum']
 to_node = 'reproductive_health'
 from_node = 'imaging_exam'
-move_properties(to_node,from_node,properties)
+parent_node = 'visit'
 
-def move_properties(to_node,from_node,properties):
+def move_properties(from_node,to_node,parent_node='visit',properties):
     """
-    This function takes a node with data to be moved (to_node) and moves that data to a new node.
+    This function takes a node with properties to be moved (from_node) and moves those properties/data to a new node (to_node).
+    Fxn also checks whether the data for proeprties to be moved actually has data. If not, no new records are created.
     """
+    # Warn if there are from_node records with no links to parent_node,
+    # e.g., imaging_exam records with no links to visit.
+    from_name = "temp_{}_{}.tsv".format(project_id,from_node)
+    df_from = pd.read_csv(from_name,sep='\t',header=0,dtype=str)
+    to_name = "temp_{}_{}.tsv".format(project_id,to_node)
+    try:
+        df_to = pd.read_csv(to_name,sep='\t',header=0,dtype=str)
+    except FileNotFoundError as e:
+        df_to = pd.DataFrame()
+        print("No existing {} TSV found. Creating new TSV for data to be moved.".format(to_node))
 
-    # Warn if there are imaging_exams with no links to visit node
-    df_no_visits = df.loc[df['visits.submitter_id'].isnull()] # imaging_exams with no visit
-    if len(df_no_visits) > 0:
-        print("Warning: there are imaging_exams with no links to visit node!")
+    parent_link = "{}s.submitter_id".format(parent_node)
+    from_no_link = df_from.loc[df_from[parent_link].isnull()] # from_node records with no link to parent_node
+    if not from_no_link.empty: # if there are records with no links to parent node
+        print("Warning: there are {} {} records with no links to {} node!".format(len(from_no_link),from_node,parent_node))
     else:
         # only create reproductive_health nodes if they aren't all null
         proceed = False
         for prop in properties:
-            if len(df.loc[df[prop].notnull()]) > 0:
+            if len(df_from.loc[df_from[prop].notnull()]) > 0:
                 proceed = True
         if proceed:
             # create the reproductive_health nodes based on imaging exams
-            rh = df[['visits.submitter_id',properties]]
+            all_props = [parent_link] + properties
+            new_to = df_from[all_props]
+            new_to['type'] = to_node
+            new_to['project_id'] = project_id
+            new_to['submitter_id'] = df_from['submitter_id'] + "_reproductive_health"
+
+            # Write reproductive_health records:
+            # Check if to_name already exists
+            all_to = pd.concat([df_to,new_to],ignore_index=True)
+            all_to.to_csv(to_name,sep='\t',index=False,encoding='utf-8')
+
+            print("New {} records created from properties moved from the {} TSV written to file:\n\t{}".format(to_node,from_node,to_name))
+        else:
+            print("No non-null {} data found in {} records. No reproductive health TSV written.".format(to_node,from_node))
+
 
             # change some column names to new prop name
-            rh.rename(columns = {'days_to_preg_serum':'days_to_serum_pregnancy_test',
+            new_to.rename(columns = {'days_to_preg_serum':'days_to_serum_pregnancy_test',
                 'days_to_urine_dip':'days_to_urine_pregnancy_dip',
                 'preg_not_required':'pregnancy_test_not_required',
                 'preg_test_performed':'pregnancy_test_performed',
@@ -358,14 +384,6 @@ def move_properties(to_node,from_node,properties):
                 'urine_dip_time':'urine_pregnancy_dip_time'},
                 inplace = True)
 
-            rh['type']='reproductive_health'
-            rh['project_id'] = project_id
-            rh['submitter_id'] = df['submitter_id'] + "_reproductive_health"
-            # Write reproductive_health records:
-            outname = write_node_df(project_id=project_id, node='reproductive_health', df=rh)
-            print("Writing reproductive_health data from imaging_exam df to: {}".format(outname))
-        else:
-            print("No non-null reproductive health data found in imaging exam records. No reproductive health TSV written.")
         # drop migrated properties from imaging_exam and
         try:
             df = df.drop(columns=['days_to_preg_serum','days_to_urine_dip',
@@ -381,7 +399,7 @@ def move_properties(to_node,from_node,properties):
             print("Couldn't drop links from imaging exams: {}".format(e))
     return df
 
-
+move_properties(to_node,from_node,properties)
 
 
 
