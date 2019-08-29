@@ -248,57 +248,75 @@ link = 'visit'
 properties = ['visit_label','visit_method']
 values = ['Imaging','In-person Visit']
 
-def add_missing_link(node,link):
+def add_missing_links(node,link):
     """
-    This function creates missing visit records for those that require them for submission.
+    This function adds missing links to a node's TSV when the parent node changes.
+    Args:
+        node (str): This is the node TSV to add links to.
+        link (str): This is the name of the node to add links to.
+    Example:
+        This adds missing links to the visit node to the imaging_exam TSV.
+        add_missing_links('imaging_exam','visit')
     """
     filename = "temp_{}_{}.tsv".format(project_id, node)
-    try:
-        df1 = pd.read_csv(filename,sep='\t', header=0, dtype=str)
-        dfs.append(df1)
-        print("{} node found with {} records.".format(node,len(df1)))
-    except IOError as e:
-        print("Can't read file {}".format(filename))
-        pass
-
-
-
-    df_no_visits = df.loc[df['visits.submitter_id'].isnull()] # imaging_exams with no visit
-
-    if len(df_no_visits) > 0:
-        df_no_visits['visits.submitter_id'] = df_no_visits['submitter_id'] + '_visit' # visit submitter_id is "<ESID>_visit"
-        df_no_visits = df_no_visits.drop(columns=['visits.id'])
+    df = pd.read_csv(filename,sep='\t', header=0, dtype=str)
+    link_name = "{}s.submitter_id".format(link)
+    df_no_link = df.loc[df[link_name].isnull()] # imaging_exams with no visit
+    if len(df_no_link) > 0:
+        df_no_link[link_name] = df_no_link['submitter_id'] + "_{}".format(link) # visit submitter_id is "<ESID>_visit"
+        #df_no_link = df_no_link.drop(columns=['visits.id'])
         # Merge dummy visits back into original df
-        df_visits = df.loc[df['visits.submitter_id'].notnull()]
-        df_final = pd.concat([df_visits,df_no_visits], ignore_index=True, sort=False)
-        outname = write_node_df(project_id=project_id, node=node, df=df_final) # fxn writes TSV into "reformatted" directory
-        print("Visit links added to node {} and saved into TSV file: {}".format(node,outname))
-
-        # Create dummy visits for records in df with no visits.submitter_id
-        visits = df_no_visits[['visits.submitter_id','cases.submitter_id']]
-        visits = visits.rename(columns={'visits.submitter_id':'submitter_id'})
-        # add required properties
-        visits['type'] = 'visit'
-        visits['visit_label'] = label
-        visits['visit_method'] = method
-        # directories for new TSV files
-        # cmd = ['mkdir','-p','dummy_visits']
-        # try:
-        #     output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
-        # except FileNotFoundError as e:
-        #     print(e.errno)
-        visits_out = "missing_visits_{}_{}.tsv".format(project_id,node)
-        visits.to_csv(visits_out,sep='\t',index=False,encoding='utf-8')
-        print("New missing visits saved into TSV file: {}".format(visits_out))
-        # submit the new visits
-        if submit is True:
-            print("Submitting visits for node: {}.".format(node))
-            data=exp.submit_file(project_id=project_id,filename=visits_out)
-            print(data)
-        return df_final
+        df_link = df.loc[df[link_name].notnull()]
+        df_final = pd.concat([df_link,df_no_link],ignore_index=True,sort=False)
+        df_final.to_csv(filename, sep='\t', index=False, encoding='utf-8')
+        print("{} links to node {} added to for {} in TSV file: {}".format(str(len(df_no_link)),link,node,filename))
     else:
-        print("No records are missing visits in {}".format(node))
+        print("No records are missing links to {} in the {} TSV.".format(link,node))
+    return df_final
 
+
+node = 'imaging_exam'
+link = 'visit'
+old_parent = 'case'
+properties = {'visit_label':'Imaging','visit_method':'In-person Visit'}
+
+def create_missing_links(node,link,old_parent,properties):
+    """
+    This fxn creates links TSV for links in a node that don't exist.
+
+    Args:
+        node(str): This is the node TSV in which to look for links that don't exist.
+        link(str): This is the node to create the link records in.
+        old_parent(str): This is the parent node of 'node' prior to the dictionary change.
+        properties(dict): Dict of required properties/values to add to new link records.
+    Example:
+        This will create visit records that don't exist in the visit TSV but are in the imaging_exam TSV.
+    """
+    filename = "temp_{}_{}.tsv".format(project_id,node)
+    df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+    link_name = "{}s.submitter_id".format(link)
+    link_names = list(df[link_name])
+    link_file = "temp_{}_{}.tsv".format(project_id,link)
+    try:
+        link_df = pd.read_csv(link_file,sep='\t',header=0,dtype=str)
+        existing = list(link_df['submitter_id'])
+        missing = set(link_names).difference(existing) #lists items in link_names missing from existing
+    except FileNotFoundError as e:
+        print("No existing {} TSV found. Creating new TSV for links.".format(link))
+    parent_link = "{}s.submitter_id".format(old_parent)
+
+    new_links = df[[link_name,parent_link]]
+    new_links = new_links.rename(columns={link_name:'submitter_id'})
+    new_links['type'] = link
+    for prop in properties:
+        new_links[prop] = properties[prop]
+
+    all_links = pd.concat(link_df,new_links)
+    all_links.to_csv(link_file,sep='\t',index=False,encoding='utf-8')
+
+
+
+    print("New missing {} records saved into TSV file: {}".format(link,link_file))
 
 
 
