@@ -119,10 +119,10 @@ def create_missing_links(project_id,node,link,old_parent,properties):
     print("{} new missing {} records saved into TSV file: {}".format(str(len(new_links)),link,link_file))
     return all_links
 
-def move_properties(project_id,from_node,to_node,properties,parent_node='visit'):
+def move_properties(project_id,from_node,to_node,properties,parent_node=None):
     """
     This function takes a node with properties to be moved (from_node) and moves those properties/data to a new node (to_node).
-    Fxn also checks whether the data for proeprties to be moved actually has non-null data. If all data are null, no new records are created.
+    Fxn also checks whether the data for properties to be moved actually has non-null data. If all data are null, no new records are created.
     Args:
         from_node(str): Node TSV to copy data from.
         to_node(str): Node TSV to add copied data to.
@@ -140,34 +140,49 @@ def move_properties(project_id,from_node,to_node,properties,parent_node='visit')
     except FileNotFoundError as e:
         df_to = pd.DataFrame(columns=['submitter_id'])
         print("No existing {} TSV found. Creating new TSV for data to be moved.".format(to_node))
-    parent_link = "{}s.submitter_id".format(parent_node)
-    from_no_link = df_from.loc[df_from[parent_link].isnull()] # from_node records with no link to parent_node
-    if not from_no_link.empty: # if there are records with no links to parent node
-        print("Warning: there are {} {} records with no links to {} node!".format(len(from_no_link),from_node,parent_node))
-        print("Returning original data.")
+
+    # Check that the data to move is not entirely null. If it is, then give warning and quit.
+    proceed = False
+    exists = False
+    for prop in properties:
+        if len(df_from.loc[df_from[prop].notnull()]) > 0:
+            proceed = True
+        if prop in list(df_to.columns):
+            exists = True
+    if not proceed:
+        print("No non-null {} data found in {} records. No TSVs changed.".format(to_node,from_node))
+        print("Returning original {} data.".format(from_node))
         return df_from
-    else:
-        proceed = False # only create new records if data to move aren't entirely null
-        for prop in properties:
-            if len(df_from.loc[df_from[prop].notnull()]) > 0:
-                proceed = True
-        if proceed:
-            # create the reproductive_health nodes based on imaging exams
-            all_props = [parent_link] + properties
-            new_to = df_from[all_props]
-            new_to['type'] = to_node
-            new_to['project_id'] = project_id
-            new_to['submitter_id'] = df_from['submitter_id'] + "_reproductive_health"
-            #only write new_to records if submitter_ids don't already exist in df_to:
-            add_to = new_to.loc[~new_to['submitter_id'].isin(list(df_to.submitter_id))]
-            all_to = pd.concat([df_to,add_to],ignore_index=True,sort=False)
-            all_to.to_csv(to_name,sep='\t',index=False,encoding='utf-8')
-            print("{} new {} records created from data moved from {} written to file:\n\t{}".format(len(add_to),to_node,from_node,to_name))
-            return all_to
-        else:
-            print("No non-null {} data found in {} records. No TSVs changed.".format(to_node,from_node))
-            print("Returning original {} data.".format(from_node))
+    if exists:
+        print("Properties already exist in '{}' node.".format(to_node))
+        print("Returning original '{}' data.".format(from_node))
+        return df_from
+
+    if parent_node is not None:
+        parent_link = "{}s.submitter_id".format(parent_node)
+        from_no_link = df_from.loc[df_from[parent_link].isnull()] # from_node records with no link to parent_node
+        if not from_no_link.empty: # if there are records with no links to parent node
+            print("Warning: there are {} '{}' records with no links to parent '{}' node!".format(len(from_no_link),from_node,parent_node))
+            print("Returning original data.")
             return df_from
+    else:
+        parent_link = "{}s.submitter_id".format(to_node)
+
+    all_props = [parent_link] + properties
+    new_to = df_from[all_props] #demo_case = demo[['cases.submitter_id']+static_case]
+    if parent_node is None:
+        new_to.rename(columns={parent_link:'submitter_id'},inplace=True) #demo_case.rename(columns={'cases.submitter_id':'submitter_id'},inplace=True)
+        all_to = pd.merge(df_to,new_to,on='submitter_id', how='left') # May need to get unique values per cases.submitter_id from demo1 for some projects
+    else:
+        new_to['type'] = to_node
+        new_to['project_id'] = project_id
+        new_to['submitter_id'] = df_from['submitter_id'] + "_{}".format(to_node)
+        #only write new_to records if submitter_ids don't already exist in df_to:
+        add_to = new_to.loc[~new_to['submitter_id'].isin(list(df_to.submitter_id))]
+        all_to = pd.concat([df_to,add_to],ignore_index=True,sort=False)
+    all_to.to_csv(to_name,sep='\t',index=False,encoding='utf-8')
+    print("Properties moved to '{}' node from '{}'. Data saved in file:\n\t{}".format(to_node,from_node,to_name))
+    return all_to
 
 def change_property_names(project_id,node,properties):
     """
