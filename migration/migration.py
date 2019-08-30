@@ -325,3 +325,14 @@ def get_submission_order(dd,project_id,prefix='temp',suffix='tsv'):
                 print("No link target_type found for node '{}'".format(node))
     suborder = sorted(suborder.items(), key=operator.itemgetter(1))
     return suborder
+
+def submit_tsvs(project_id,suborder):
+    logname = "submission_logfile.txt"
+    with open(logname, 'w') as logfile:
+        for node in suborder:
+            filename="temp_{}_{}.tsv".format(project_id,node[0])
+            try:
+                data = exp.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
+                logfile.write(json.dumps(data)) #put in log file
+            except Exception as e:
+                print(e)
