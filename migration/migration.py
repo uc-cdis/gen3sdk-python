@@ -224,27 +224,64 @@ def drop_properties(project_id,node,properties):
         print("Couldn't drop properties from {}:\n\t{}".format(node,e))
     return df
 
-def change_enum(project_id,node,property,enums):
+def change_enum(project_id,node,prop,enums):
     """
     Changes an enumeration value in the data.
     Args:
         project_id(str): The project_id of the data.
         node(str): The node TSV to change enumeration values in.
-        property(str): The property (an enum) to change values for.
-        enums(dict): A dict containing the mappingn of {'old':'new'} enum values.
+        prop(str): The property (an enum) to change values for.
+        enums(dict): A dict containing the mapping of {'old':'new'} enum values.
+    Example:
+        This changes all 'Percent' to 'Pct' in property 'test_units' of node 'lab_test'
+        change_enum(project_id=project_id,node='lab_test',property='test_units',enums={'Percent':'Pct'})
+    """
+    filename = "temp_{}_{}.tsv".format(project_id,node)
+    try:
+        df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+        success = True
+        for key in list(enums.keys()):
+            value = enums[key]
+            total = len(df.loc[df[prop]==key])
+            if value == 'null':
+                try:
+                    df.loc[df[prop]==key]=np.nan
+                    print("Changed {} enum values from '{}' to '{}' for property '{}'".format(total,key,value,prop))
+                except Exception as e:
+                    print("Couldn't change enum value '{}' to '{}' for property '{}'".format(key,value,prop))
+                    success = False
+            else:
+                try:
+                    df.loc[df[prop]==key]=value
+                    print("Changed {} enum values from '{}' to '{}' for property '{}'".format(total,key,value,prop))
+                except Exception as e:
+                    print("Couldn't change enum value '{}' to '{}' for property '{}'".format(key,value,prop))
+                    success = False
+        if success:
+            df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
+            print("Enum values changed in '{}' node and TSV written to file: \n\t{}".format(node,filename))
+        else:
+            print("Some enum values couldn't be changed in '{}' node. No TSVs changed.".format(node))
+        return df
+    except FileNotFoundError as e:
+        print("No TSV found for node {}.".format(node))
+
+def change_boolean_to_enum(project_id,node,prop):
+    """
+    Changes a boolean property with 'True/False' values to enumeration with 'Yes/No' values.
+    Args:
+        project_id(str): The project_id of the data.
+        node(str): The node TSV to change data in.
+        prop(str): The property (an enum) to change values for.
+        mapping(dict): A dict containing the mapping of {'old':'new'} enum values.
     Example:
         This changes all 'Percent' to 'Pct' in property 'test_units' of node 'lab_test'
         change_enum(project_id=project_id,node='lab_test',property='test_units',enums={'Percent':'Pct'})
     """
     filename = "temp_{}_{}.tsv".format(project_id,node)
     df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
-    try:
-        
-        df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
-        print("Properties dropped from {} and TSV written to file: \n\t{}".format(node,filename))
-    except Exception as e:
-        print("Couldn't drop properties from {}:\n\t{}".format(node,e))
-    return df
+
+
 
 
 def drop_links(project_id,node,links):
