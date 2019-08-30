@@ -78,12 +78,11 @@ def add_missing_links(project_id,node,link):
         return df_final
     else:
         print("No records are missing links to {} in the {} TSV.".format(link,node))
-        return df
+        return
 
 def create_missing_links(project_id,node,link,old_parent,properties):
     """
     This fxn creates links TSV for links in a node that don't exist.
-
     Args:
         node(str): This is the node TSV in which to look for links that don't exist.
         link(str): This is the node to create the link records in.
@@ -110,7 +109,6 @@ def create_missing_links(project_id,node,link,old_parent,properties):
             print("Creating {} records in {} node for missing {} links.".format(len(missing),link,node))
         else:
             print("All {} records in {} node have existing links to {} in {}. No new records added.".format(len(df),node,link,link_file))
-            print("Returning {} records that are {} links.".format(link,node))
             return link_df.loc[link_df['submitter_id'].isin(link_names)]
     except FileNotFoundError as e:
         link_df = pd.DataFrame()
