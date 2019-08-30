@@ -220,7 +220,7 @@ def drop_properties(project_id,node,properties):
     try:
         df = df.drop(columns=properties)
         df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
-        print("Properties dropped and TSV written to file: \n\t{}".format(filename))
+        print("Properties dropped from {} and TSV written to file: \n\t{}".format(node,filename))
     except Exception as e:
         print("Couldn't drop properties from {}:\n\t{}".format(node,e))
     return df
