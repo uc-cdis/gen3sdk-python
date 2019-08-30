@@ -1,4 +1,4 @@
-import os, os.path, sys, subprocess, glob, json, re
+import os, os.path, sys, subprocess, glob, json, re, operator
 from shutil import copyfile
 import pandas as pd
 import numpy as np
@@ -7,22 +7,6 @@ from expansion import Gen3Expansion
 
 # turn off pandas chained assignment warning
 pd.options.mode.chained_assignment = None
-
-####################################################################################
-####################################################################################
-####################################################################################
-####################################################################################
-def get_submission_order(project_id,prefix='temp',suffix='tsv'):
-    dd = sub.get_dictionary_all()
-    pattern = "{}*{}".format(prefix,suffix)
-    file_names = glob.glob(pattern)
-    for file_name in file_names:
-        regex = "{}_{}_(.+).{}".format(prefix,project_id,suffix)
-        #match = re.search('AAA(.+)ZZZ', text)
-        match = re.search(regex, file_name)
-        if match:
-            node = match.group(1)
-            print(node)
 
 def make_temp_files(prefix,suffix,name='temp'):
     """
@@ -282,3 +266,47 @@ def merge_links(project_id,node,link,links_to_merge):
     df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
     print("Links merged to {} and TSV written to file: \n\t{}".format(link,filename))
     return df
+
+def get_submission_order(dd,project_id,prefix='temp',suffix='tsv'):
+    pattern = "{}*{}".format(prefix,suffix)
+    file_names = glob.glob(pattern)
+    all_nodes = []
+    suborder = {}
+    for file_name in file_names:
+        regex = "{}_{}_(.+).{}".format(prefix,project_id,suffix)
+        #match = re.search('AAA(.+)ZZZ', text)
+        match = re.search(regex, file_name)
+        if match:
+            node = match.group(1)
+            if node in list(dd):
+                all_nodes.append(node)
+            else:
+                print("The node '{}' is not in the data dictionary! Skipping...".format(node))
+    while len(all_nodes) > 0:
+        node = all_nodes.pop(0)
+        #print("Finding order for node {}".format(node))
+        node_links = dd[node]['links']
+        for link in node_links:
+            if 'subgroup' in list(link):
+                for sub in link['subgroup']:
+                    if sub['target_type'] == 'project':
+                        suborder[node]=1
+                    elif sub['target_type'] in list(suborder.keys()):
+                        suborder[node]=suborder[sub['target_type']]+1
+                    elif sub['target_type'] == 'core_metadata_collection':
+                        pass
+                    else:
+                        all_nodes.append(node)
+                        #print("Skipping {} for now.".format(node))
+            elif 'target_type' in list(link):
+                if link['target_type'] == 'project':
+                    suborder[node]=1
+                elif link['target_type'] in list(suborder.keys()):
+                    suborder[node]=suborder[link['target_type']]+1
+                else: #skip it for now
+                    all_nodes.append(node)
+                    #print("Skipping {} for now.".format(node))
+            else:
+                print("No link target_type found for node '{}'".format(node))
+    suborder = sorted(suborder.items(), key=operator.itemgetter(1))
+    return suborder
