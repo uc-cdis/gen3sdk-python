@@ -1,7 +1,7 @@
-import os, os.path, sys, subprocess, glob
+import os, os.path, sys, subprocess, glob, json, re
 from shutil import copyfile
 import pandas as pd
-
+import numpy as np
 sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/expansion')
 from expansion import Gen3Expansion
 
@@ -12,6 +12,17 @@ pd.options.mode.chained_assignment = None
 ####################################################################################
 ####################################################################################
 ####################################################################################
+def get_submission_order(project_id,prefix='temp',suffix='tsv'):
+    dd = sub.get_dictionary_all()
+    pattern = "{}*{}".format(prefix,suffix)
+    file_names = glob.glob(pattern)
+    for file_name in file_names:
+        regex = "{}_{}_(.+).{}".format(prefix,project_id,suffix)
+        #match = re.search('AAA(.+)ZZZ', text)
+        match = re.search(regex, file_name)
+        if match:
+            node = match.group(1)
+            print(node)
 
 def make_temp_files(prefix,suffix,name='temp'):
     """
@@ -185,14 +196,15 @@ def change_property_names(project_id,node,properties):
         change_property_names(node='surgery',properties={'time_of_surgery','hour_of_surgery'})
     """
     filename = "temp_{}_{}.tsv".format(project_id,node)
-    df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
     try:
+        df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
         df.rename(columns=properties,inplace = True)
         df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
         print("Properties names changed and TSV written to file: \n\t{}".format(filename))
+        return df
     except Exception as e:
         print("Couldn't change property names: {}".format(e))
-    return df
+
 
 def drop_properties(project_id,node,properties):
     """
@@ -212,4 +224,61 @@ def drop_properties(project_id,node,properties):
         print("Properties dropped and TSV written to file: \n\t{}".format(filename))
     except Exception as e:
         print("Couldn't drop properties from {}:\n\t{}".format(node,e))
+    return df
+
+def drop_links(project_id,node,links):
+    """
+    Function drops the list of nodes in 'links' from column headers of a node TSV, including the 'id' and 'submitter_id' for the link.
+    Args:
+        project_id(str): The project_id of the TSV.
+        node(str): The node TSV to drop link headers from.
+        links(list): List of node link headers to drop from the TSV.
+    Example:
+        This will drop the links to 'cases' node from the 'demographic' node.
+        drop_links(project_id=project_id,node='demographic',links=['cases'])
+    """
+    filename = "temp_{}_{}.tsv".format(project_id,node)
+    df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+    for link in links:
+        sid = "{}.submitter_id".format(link)
+        uuid = "{}.id".format(link)
+        if sid in df.columns and uuid in df.columns:
+            df = df.drop(columns=[sid,uuid])
+        else:
+            count=1
+            sid = "{}.submitter_id#{}".format(link,count)
+            uuid = "{}.id#{}".format(link,count)
+            while sid in df.columns and uuid in df.columns:
+                df.drop(columns=[sid,uuid])
+                count+=1
+                sid = "{}.submitter_id#{}".format(link,count)
+                uuid = "{}.id#{}".format(link,count)
+    df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
+    print("Links dropped and TSV written to file: \n\t{}".format(filename))
+    return df
+
+def merge_links(project_id,node,link,links_to_merge):
+    """
+    Function merges links in 'links_to_merge' into a single 'link' in a 'node' TSV.
+    This would be used on a child node after the merge_nodes function was used on a list of its parent nodes.
+    Args:
+        project_id(str): The project_id of the TSV.
+        link(str): The master link to merge links to.
+        links_to_merge(list): List of links to merge into link.
+    Example:
+        This will merge 'imaging_mri_exams' and 'imaging_fmri_exams' into one 'imaging_exams' column.
+        merge_links(project_id=project_id,node='imaging_file',link='imaging_exams',links_to_merge=['imaging_mri_exams','imaging_fmri_exams'])
+    """
+    # This fxn is mostly for merging the 7 imaging_exam subtypes into one imaging_exams link for imaging_file node. Not sure what other use cases there may be.
+    # links_to_merge=['imaging_fmri_exams','imaging_mri_exams','imaging_spect_exams','imaging_ultrasonography_exams','imaging_xray_exams','imaging_ct_exams','imaging_pet_exams']
+    filename = "temp_{}_{}.tsv".format(project_id,node)
+    df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+    link_name = "{}.submitter_id".format(link)
+    df[link_name] = np.nan
+    for sublink in links_to_merge:
+        sid = "{}.submitter_id".format(sublink)
+        df.loc[df[link_name].isnull(), link_name] = df[sid]
+        #df[link_name] = df[link_name].fillna(df[sid])
+    df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
+    print("Links merged to {} and TSV written to file: \n\t{}".format(link,filename))
     return df
