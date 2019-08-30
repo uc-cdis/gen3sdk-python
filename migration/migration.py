@@ -42,7 +42,7 @@ def merge_nodes(project_id,in_nodes,out_node):
         except IOError as e:
             print("Can't read file {}".format(filename))
             pass
-    df = pd.concat(dfs, ignore_index=True)
+    df = pd.concat(dfs,ignore_index=True,sort=False)
     df['type'] = out_node
     outname = "temp_{}_{}.tsv".format(project_id, out_node)
     df.to_csv(outname, sep='\t', index=False, encoding='utf-8')
@@ -60,7 +60,11 @@ def add_missing_links(project_id,node,link):
         add_missing_links(node='imaging_exam',link='visit')
     """
     filename = "temp_{}_{}.tsv".format(project_id, node)
-    df = pd.read_csv(filename,sep='\t', header=0, dtype=str)
+    try:
+        df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+    except FileNotFoundError as e:
+        print("No existing {} TSV found. Skipping...".format(node))
+        return
     link_name = "{}s.submitter_id".format(link)
     df_no_link = df.loc[df[link_name].isnull()] # imaging_exams with no visit
     if len(df_no_link) > 0:
@@ -90,7 +94,11 @@ def create_missing_links(project_id,node,link,old_parent,properties):
         create_missing_links(node='imaging_exam',link='visit',old_parent='case',properties={'visit_label':'Imaging','visit_method':'In-person Visit'})
     """
     filename = "temp_{}_{}.tsv".format(project_id,node)
-    df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+    try:
+        df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+    except FileNotFoundError as e:
+        print("No existing {} TSV found. Skipping..".format(node))
+        return
     link_name = "{}s.submitter_id".format(link)
     link_names = list(df[link_name])
     link_file = "temp_{}_{}.tsv".format(project_id,link)
@@ -114,7 +122,7 @@ def create_missing_links(project_id,node,link,old_parent,properties):
     new_links['type'] = link
     for prop in properties:
         new_links[prop] = properties[prop]
-    all_links = pd.concat([link_df,new_links],ignore_index=True)
+    all_links = pd.concat([link_df,new_links],ignore_index=True,sort=False)
     all_links.to_csv(link_file,sep='\t',index=False,encoding='utf-8')
     print("{} new missing {} records saved into TSV file: {}".format(str(len(new_links)),link,link_file))
     return all_links
@@ -133,7 +141,11 @@ def move_properties(project_id,from_node,to_node,properties,parent_node=None):
         move_properties(from_node='demographic',to_node='military_history',properties=['military_status'],parent_node='case')
     """
     from_name = "temp_{}_{}.tsv".format(project_id,from_node) #from imaging_exam
-    df_from = pd.read_csv(from_name,sep='\t',header=0,dtype=str)
+    try:
+        df_from = pd.read_csv(from_name,sep='\t',header=0,dtype=str)
+    except FileNotFoundError as e:
+        print("No existing {} TSV found. Creating new TSV for data to be moved.".format(from_node))
+        return
     to_name = "temp_{}_{}.tsv".format(project_id,to_node) #to reproductive_health
     try:
         df_to = pd.read_csv(to_name,sep='\t',header=0,dtype=str)
@@ -203,6 +215,7 @@ def change_property_names(project_id,node,properties):
         return df
     except Exception as e:
         print("Couldn't change property names: {}".format(e))
+        return
 
 def drop_properties(project_id,node,properties):
     """
@@ -215,14 +228,19 @@ def drop_properties(project_id,node,properties):
         drop_properties(node='demographic',properties=['military_status'])
     """
     filename = "temp_{}_{}.tsv".format(project_id,node)
-    df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+    try:
+        df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+    except FileNotFoundError as e:
+        print("No existing {} TSV found. Skipping..".format(node))
+        return
     try:
         df = df.drop(columns=properties)
         df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
         print("Properties dropped from {} and TSV written to file: \n\t{}".format(node,filename))
+        return df
     except Exception as e:
         print("Couldn't drop properties from {}:\n\t{}".format(node,e))
-    return df
+        return
 
 def change_enum(project_id,node,prop,enums):
     """
@@ -282,7 +300,11 @@ def drop_links(project_id,node,links):
         drop_links(project_id=project_id,node='demographic',links=['cases'])
     """
     filename = "temp_{}_{}.tsv".format(project_id,node)
-    df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+    try:
+        df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+    except FileNotFoundError as e:
+        print("No existing {} TSV found. Skipping..".format(node))
+        return
     for link in links:
         sid = "{}.submitter_id".format(link)
         uuid = "{}.id".format(link)
@@ -316,7 +338,11 @@ def merge_links(project_id,node,link,links_to_merge):
     # This fxn is mostly for merging the 7 imaging_exam subtypes into one imaging_exams link for imaging_file node. Not sure what other use cases there may be.
     # links_to_merge=['imaging_fmri_exams','imaging_mri_exams','imaging_spect_exams','imaging_ultrasonography_exams','imaging_xray_exams','imaging_ct_exams','imaging_pet_exams']
     filename = "temp_{}_{}.tsv".format(project_id,node)
-    df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+    try:
+        df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+    except FileNotFoundError as e:
+        print("No existing {} TSV found. Skipping..".format(node))
+        return
     link_name = "{}.submitter_id".format(link)
     df[link_name] = np.nan
     for sublink in links_to_merge:
