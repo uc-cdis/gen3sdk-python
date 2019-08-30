@@ -239,29 +239,33 @@ def change_enum(project_id,node,prop,enums):
     filename = "temp_{}_{}.tsv".format(project_id,node)
     try:
         df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
-        success = True
+        success = 0
         for key in list(enums.keys()):
             value = enums[key]
             total = len(df.loc[df[prop]==key])
+            if total == 0:
+                print("No records found with property '{}' equal to '{}'. Values in TSV include:".format(prop,value))
+                print(set(list(df[prop])))
+                continue
             if value == 'null':
                 try:
                     df.at[df[prop]==key,prop] = np.nan
+                    success += 1
                     print("Changed {} enum values from '{}' to 'NaN' for property '{}'".format(total,key,prop))
                 except Exception as e:
                     print("Couldn't change enum value from '{}' to 'NaN' for property '{}'".format(key,prop))
-                    success = False
             else:
                 try:
                     df.at[df[prop]==key,prop] = value
+                    success += 1
                     print("Changed {} enum values from '{}' to '{}' for property '{}'".format(total,key,value,prop))
                 except Exception as e:
                     print("Couldn't change enum value '{}' to '{}' for property '{}'".format(key,value,prop))
-                    success = False
-        if success:
+        if success > 0:
             df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
             print("Enum values changed in '{}' node and TSV written to file: \n\t{}".format(node,filename))
         else:
-            print("Some enum values couldn't be changed in '{}' node. No TSVs changed.".format(node))
+            print("No enum values were changed in '{}' node. No TSVs changed.".format(node))
         return df
     except FileNotFoundError as e:
         print("No TSV found for node {}.".format(node))
