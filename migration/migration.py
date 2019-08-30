@@ -244,7 +244,7 @@ def change_enum(project_id,node,prop,enums):
             value = enums[key]
             total = len(df.loc[df[prop]==key])
             if total == 0:
-                print("No records found with property '{}' equal to '{}'. Values in TSV include:".format(prop,value))
+                print("No records found with property '{}' equal to '{}'. Values in TSV include:".format(prop,key))
                 print(set(list(df[prop])))
                 continue
             if value == 'null':
