@@ -204,7 +204,6 @@ def change_property_names(project_id,node,properties):
     except Exception as e:
         print("Couldn't change property names: {}".format(e))
 
-
 def drop_properties(project_id,node,properties):
     """
     Function drops the list of properties from column headers of a node TSV.
@@ -224,6 +223,29 @@ def drop_properties(project_id,node,properties):
     except Exception as e:
         print("Couldn't drop properties from {}:\n\t{}".format(node,e))
     return df
+
+def change_enum(project_id,node,property,enums):
+    """
+    Changes an enumeration value in the data.
+    Args:
+        project_id(str): The project_id of the data.
+        node(str): The node TSV to change enumeration values in.
+        property(str): The property (an enum) to change values for.
+        enums(dict): A dict containing the mappingn of {'old':'new'} enum values.
+    Example:
+        This changes all 'Percent' to 'Pct' in property 'test_units' of node 'lab_test'
+        change_enum(project_id=project_id,node='lab_test',property='test_units',enums={'Percent':'Pct'})
+    """
+    filename = "temp_{}_{}.tsv".format(project_id,node)
+    df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+    try:
+        
+        df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
+        print("Properties dropped from {} and TSV written to file: \n\t{}".format(node,filename))
+    except Exception as e:
+        print("Couldn't drop properties from {}:\n\t{}".format(node,e))
+    return df
+
 
 def drop_links(project_id,node,links):
     """
