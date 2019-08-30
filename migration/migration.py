@@ -18,6 +18,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
+# turn off pandas chained assignment warning
+pd.options.mode.chained_assignment = None
+
 class Gen3Error(Exception):
     pass
 
@@ -269,10 +272,11 @@ def add_missing_links(node,link):
         df_link = df.loc[df[link_name].notnull()]
         df_final = pd.concat([df_link,df_no_link],ignore_index=True,sort=False)
         df_final.to_csv(filename, sep='\t', index=False, encoding='utf-8')
-        print("{} links to node {} added to for {} in TSV file: {}".format(str(len(df_no_link)),link,node,filename))
+        print("{} links to node {} added for {} in TSV file: {}".format(str(len(df_no_link)),link,node,filename))
+        return df_final
     else:
         print("No records are missing links to {} in the {} TSV.".format(link,node))
-    return df_final
+        return df
 
 
 node = 'imaging_exam'
@@ -304,8 +308,9 @@ def create_missing_links(node,link,old_parent,properties):
         if len(missing) > 0:
             print("Creating {} records in {} node for missing {} links.".format(len(missing),link,node))
         else:
-            print("All {} records in {} node have a link to {}. No new records added.".format(len(existing),node,link))
-            return link_df
+            print("All {} records in {} node have existing links to {} in {}. No new records added.".format(len(df),node,link,link_file))
+            print("Returning {} records that are {} links.".format(link,node))
+            return link_df.loc[link_df['submitter_id'].isin(link_names)]
     except FileNotFoundError as e:
         link_df = pd.DataFrame()
         print("No existing {} TSV found. Creating new TSV for links.".format(link))
@@ -321,11 +326,17 @@ def create_missing_links(node,link,old_parent,properties):
     print("{} new missing {} records saved into TSV file: {}".format(str(len(new_links)),link,link_file))
     return all_links
 
+node = 'imaging_exam'
+link = 'visit'
+old_parent = 'case'
+properties = {'visit_label':'Imaging','visit_method':'In-person Visit'}
 create_missing_links(node,link,old_parent,properties)
 
+create_missing_links(node='test',link='visit',old_parent='case',properties = {'visit_label':'Imaging','visit_method':'In-person Visit'})
 
 
-properties = ['days_to_preg_serum','days_to_urine_dip','preg_not_required','preg_test_performed','serum_pregnancy_test_performed','serum_pregnancy_test_result','preg_serum_time','urine_pregnancy_dip_performed','urine_pregnancy_dip_result','urine_dip_time']
+
+properties_to_move = ['days_to_preg_serum','days_to_urine_dip','preg_not_required','preg_test_performed','serum_pregnancy_test_performed','serum_pregnancy_test_result','preg_serum_time','urine_pregnancy_dip_performed','urine_pregnancy_dip_result','urine_dip_time']
 to_node = 'reproductive_health'
 from_node = 'imaging_exam'
 parent_node = 'visit'
@@ -337,13 +348,14 @@ def move_properties(from_node,to_node,properties,parent_node='visit'):
     """
     # Warn if there are from_node records with no links to parent_node,
     # e.g., imaging_exam records with no links to visit.
-    from_name = "temp_{}_{}.tsv".format(project_id,from_node)
+    from_name = "temp_{}_{}.tsv".format(project_id,from_node) #from imaging_exam
     df_from = pd.read_csv(from_name,sep='\t',header=0,dtype=str)
-    to_name = "temp_{}_{}.tsv".format(project_id,to_node)
+    to_name = "temp_{}_{}.tsv".format(project_id,to_node) #to reproductive_health
     try:
         df_to = pd.read_csv(to_name,sep='\t',header=0,dtype=str)
+
     except FileNotFoundError as e:
-        df_to = pd.DataFrame()
+        df_to = pd.DataFrame(columns=['submitter_id'])
         print("No existing {} TSV found. Creating new TSV for data to be moved.".format(to_node))
 
     parent_link = "{}s.submitter_id".format(parent_node)
@@ -365,22 +377,26 @@ def move_properties(from_node,to_node,properties,parent_node='visit'):
             new_to['type'] = to_node
             new_to['project_id'] = project_id
             new_to['submitter_id'] = df_from['submitter_id'] + "_reproductive_health"
-
-            # Write reproductive_health records:
-            # Check if to_name already exists
-            all_to = pd.concat([df_to,new_to],ignore_index=True)
+            #only write new_to records if submitter_ids don't already exist in df_to:
+            add_to = new_to.loc[~new_to['submitter_id'].isin(list(df_to.submitter_id))]
+            all_to = pd.concat([df_to,add_to],ignore_index=True,sort=False)
             all_to.to_csv(to_name,sep='\t',index=False,encoding='utf-8')
-
-            print("{} new {} records created from data moved from {} written to file:\n\t{}".format(len(all_to),to_node,from_node,to_name))
+            print("{} new {} records created from data moved from {} written to file:\n\t{}".format(len(add_to),to_node,from_node,to_name))
             return all_to
         else:
-            print("No non-null {} data found in {} records. No reproductive health TSV written.".format(to_node,from_node))
-            print("Returning original data.")
+            print("No non-null {} data found in {} records. No TSVs changed.".format(to_node,from_node))
+            print("Returning original {} data.".format(from_node))
             return df_from
 
-move_properties(from_node,to_node,properties,parent_node='visit')
 
-properties = {'days_to_preg_serum':'days_to_serum_pregnancy_test',
+move_properties(from_node='imaging_exam',to_node='reproductive_health',properties=properties_to_move,parent_node='visit')
+
+test=add_missing_links(node='test',link='visit')
+test=create_missing_links(node='test',link='visit',old_parent='case',properties = {'visit_label':'Imaging','visit_method':'In-person Visit'})
+test=move_properties(from_node='test',to_node='reproductive_health',properties=properties_to_move,parent_node='visit')
+
+node = 'reproductive_health'
+properties_to_change = {'days_to_preg_serum':'days_to_serum_pregnancy_test',
     'days_to_urine_dip':'days_to_urine_pregnancy_dip',
     'preg_not_required':'pregnancy_test_not_required',
     'preg_test_performed':'pregnancy_test_performed',
@@ -394,26 +410,30 @@ def change_property_names(node,properties):
         node(str): The name of the node TSV to change column names in.
         properties(dict): A dict with keys of old prop names to change with values as new names.
     """
-            # change some column names to new prop name
-            new_to.rename(columns = properties,
-                inplace = True)
-
-        # drop migrated properties from imaging_exam and
-        try:
-            df = df.drop(columns=['days_to_preg_serum','days_to_urine_dip',
-                'preg_not_required','preg_test_performed',
-                'serum_pregnancy_test_performed','serum_pregnancy_test_result',
-                'preg_serum_time','urine_pregnancy_dip_performed',
-                'urine_pregnancy_dip_result','urine_dip_time'])
-            df = drop_links(df,links=['cases','diagnoses','followups'])
-            print("Deprecated links removed from imaging_exams df.")
-            outname = write_node_df(project_id=project_id, node='imaging_exam', df=df)
-            print("Writing migrated imaging_exam data to: {}".format(outname))
-        except Exception as e:
-            print("Couldn't drop links from imaging exams: {}".format(e))
+    filename = "temp_{}_{}.tsv".format(project_id,node)
+    df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+    try:
+        df.rename(columns=properties,inplace = True)
+        df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
+        print("Properties names changed and TSV written to file: \n\t{}".format(filename))
+    except Exception as e:
+        print("Couldn't change property names: {}".format(e))
     return df
 
-move_properties(to_node,from_node,properties)
+test=change_property_names(node='reproductive_health',properties=properties_to_change)
+
+def drop_properties(node,properties):
+    filename = "temp_{}_{}.tsv".format(project_id,node)
+    df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+    try:
+        df = df.drop(columns=properties)
+        df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
+        print("Properties dropped and TSV written to file: \n\t{}".format(filename))
+    except Exception as e:
+        print("Couldn't drop properties from {}:\n\t{}".format(node,e))
+    return df
+
+test = drop_properties(node='imaging_exam',properties=properties_to_move)
 
 
 
