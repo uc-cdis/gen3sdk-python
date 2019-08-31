@@ -63,7 +63,7 @@ def add_missing_links(project_id,node,link):
     try:
         df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
     except FileNotFoundError as e:
-        print("No existing {} TSV found. Skipping...".format(node))
+        print("No existing '{}' TSV found. Skipping...".format(node))
         return
     link_name = "{}s.submitter_id".format(link)
     df_no_link = df.loc[df[link_name].isnull()] # imaging_exams with no visit
@@ -74,10 +74,10 @@ def add_missing_links(project_id,node,link):
         df_link = df.loc[df[link_name].notnull()]
         df_final = pd.concat([df_link,df_no_link],ignore_index=True,sort=False)
         df_final.to_csv(filename, sep='\t', index=False, encoding='utf-8')
-        print("{} links to node {} added for {} in TSV file: {}".format(str(len(df_no_link)),link,node,filename))
+        print("{} links to '{}' added for '{}' in TSV file: {}".format(str(len(df_no_link)),link,node,filename))
         return df_final
     else:
-        print("No records are missing links to {} in the {} TSV.".format(link,node))
+        print("No records are missing links to '{}' in the '{}' TSV.".format(link,node))
         return
 
 def create_missing_links(project_id,node,link,old_parent,properties):
@@ -108,11 +108,11 @@ def create_missing_links(project_id,node,link,old_parent,properties):
         if len(missing) > 0:
             print("Creating {} records in {} node for missing {} links.".format(len(missing),link,node))
         else:
-            print("All {} records in {} node have existing links to {} in {}. No new records added.".format(len(df),node,link,link_file))
+            print("All {} records in '{}' node have existing links to '{}'. No new records added.".format(len(df),node,link))
             return link_df.loc[link_df['submitter_id'].isin(link_names)]
     except FileNotFoundError as e:
         link_df = pd.DataFrame()
-        print("No existing {} TSV found. Creating new TSV for links.".format(link))
+        print("No '{}' TSV found. Creating new TSV for links.".format(link))
         missing = link_names
     parent_link = "{}s.submitter_id".format(old_parent)
     new_links = df.loc[df[link_name].isin(missing)][[link_name,parent_link]]
@@ -122,7 +122,7 @@ def create_missing_links(project_id,node,link,old_parent,properties):
         new_links[prop] = properties[prop]
     all_links = pd.concat([link_df,new_links],ignore_index=True,sort=False)
     all_links.to_csv(link_file,sep='\t',index=False,encoding='utf-8')
-    print("{} new missing {} records saved into TSV file: {}".format(str(len(new_links)),link,link_file))
+    print("{} new missing '{}' records saved into TSV file:\n\t{}".format(str(len(new_links)),link,link_file))
     return all_links
 
 def batch_add_visits(project_id,dd,links):
@@ -154,7 +154,7 @@ def batch_add_visits(project_id,dd,links):
             if df is not None:
                 df = create_missing_links(project_id=project_id,node=node,link='visit',old_parent='case',properties=required_props)
         else:
-            print("No link to the case node found in the '{}' TSV.".format(node))
+            print("No links to 'case' found in the '{}' TSV.".format(node))
 
 def move_properties(project_id,from_node,to_node,properties,parent_node=None):
     """
@@ -173,14 +173,14 @@ def move_properties(project_id,from_node,to_node,properties,parent_node=None):
     try:
         df_from = pd.read_csv(from_name,sep='\t',header=0,dtype=str)
     except FileNotFoundError as e:
-        print("No existing {} TSV found. Creating new TSV for data to be moved.".format(from_node))
+        print("No '{}' TSV found. Creating new TSV for data to be moved.".format(from_node))
         return
     to_name = "temp_{}_{}.tsv".format(project_id,to_node) #to reproductive_health
     try:
         df_to = pd.read_csv(to_name,sep='\t',header=0,dtype=str)
     except FileNotFoundError as e:
         df_to = pd.DataFrame(columns=['submitter_id'])
-        print("No existing {} TSV found. Creating new TSV for data to be moved.".format(to_node))
+        print("No '{}' TSV found. Creating new TSV for data to be moved.".format(to_node))
 
     # Check that the data to move is not entirely null. If it is, then give warning and quit.
     proceed = False
@@ -191,21 +191,18 @@ def move_properties(project_id,from_node,to_node,properties,parent_node=None):
         if prop in list(df_to.columns):
             exists = True
     if not proceed:
-        print("No non-null {} data found in {} records. No TSVs changed.".format(to_node,from_node))
-        print("Returning original {} data.".format(from_node))
-        return df_from
+        print("No non-null '{}' data found in '{}' records. No TSVs changed.".format(to_node,from_node))
+        return
     if exists:
-        print("Properties already exist in '{}' node.".format(to_node))
-        print("Returning original '{}' data.".format(from_node))
-        return df_from
+        print("Properties {} already exist in '{}' node.".format(properties,to_node))
+        return
 
     if parent_node is not None:
         parent_link = "{}s.submitter_id".format(parent_node)
         from_no_link = df_from.loc[df_from[parent_link].isnull()] # from_node records with no link to parent_node
         if not from_no_link.empty: # if there are records with no links to parent node
             print("Warning: there are {} '{}' records with no links to parent '{}' node!".format(len(from_no_link),from_node,parent_node))
-            print("Returning original data.")
-            return df_from
+            return
     else:
         parent_link = "{}s.submitter_id".format(to_node)
 
@@ -229,6 +226,7 @@ def change_property_names(project_id,node,properties):
     """
     Changes the names of columns in a TSV.
     Args:
+        project_id(str): The project_id of the TSVs.
         node(str): The name of the node TSV to change column names in.
         properties(dict): A dict with keys of old prop names to change with values as new names.
     Example:
@@ -260,15 +258,15 @@ def drop_properties(project_id,node,properties):
     try:
         df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
     except FileNotFoundError as e:
-        print("No existing {} TSV found. Skipping..".format(node))
+        print("No '{}' TSV found. Skipping...".format(node))
         return
     try:
         df = df.drop(columns=properties)
         df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
-        print("Properties dropped from {} and TSV written to file: \n\t{}".format(node,filename))
+        print("Properties {} dropped from '{}' and data written to TSV:\n\t{}".format(properties,node,filename))
         return df
     except Exception as e:
-        print("Couldn't drop properties from {}:\n\t{}".format(node,e))
+        print("Couldn't drop properties from '{}':\n\t{}".format(node,e))
         return
 
 def change_enum(project_id,node,prop,enums):
@@ -291,8 +289,7 @@ def change_enum(project_id,node,prop,enums):
             value = enums[key]
             total = len(df.loc[df[prop]==key])
             if total == 0:
-                print("No records found with property '{}' equal to '{}'. Values in TSV include:".format(prop,key))
-                print(set(list(df[prop])))
+                print("No records found with property '{}' equal to '{}'. Values in TSV include:\n\t{}".format(prop,key,set(list(df[prop]))))
                 continue
             if value == 'null':
                 try:
@@ -360,7 +357,7 @@ def drop_links(project_id,node,links):
             uuid = "{}.submitter_id#{}".format(link,count)
     if dropped > 0:
         df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
-        print("Links {} dropped from {} and TSV written to file: \n\t{}".format(links,node,filename))
+        print("Links {} dropped from '{}' and TSV written to file: \n\t{}".format(links,node,filename))
     else:
         print("None of {} links found in '{}' TSV.".format(links,node))
     return df
@@ -397,7 +394,7 @@ def merge_links(project_id,node,link,links_to_merge):
     try:
         df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
     except FileNotFoundError as e:
-        print("No existing {} TSV found. Skipping..".format(node))
+        print("No '{}' TSV found. Skipping...".format(node))
         return
     link_name = "{}.submitter_id".format(link)
     df[link_name] = np.nan
@@ -406,7 +403,7 @@ def merge_links(project_id,node,link,links_to_merge):
         df.loc[df[link_name].isnull(), link_name] = df[sid]
         #df[link_name] = df[link_name].fillna(df[sid])
     df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
-    print("Links merged to {} and TSV written to file: \n\t{}".format(link,filename))
+    print("Links merged to '{}' and data written to TSV file: \n\t{}".format(link,filename))
     return df
 
 def get_submission_order(dd,project_id,prefix='temp',suffix='tsv'):
