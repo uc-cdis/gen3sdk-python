@@ -125,6 +125,37 @@ def create_missing_links(project_id,node,link,old_parent,properties):
     print("{} new missing {} records saved into TSV file: {}".format(str(len(new_links)),link,link_file))
     return all_links
 
+def batch_add_visits(project_id,dd,links):
+    """
+    Adds 'Unknown' dummy visits to records in nodes that link to the 'case' node and have no link to the 'visit' node.
+    Args:
+        project_id(str): The project_id of the TSVs.
+        dd(dict): The data dictionary. Get it with `dd=sub.get_dictionary_all()`.
+        links(dict): A dict of nodes with links to remove, e.g., {'node':['link1','link2']}.
+    Example:
+        This adds 'visits.submitter_id' links to the 'allergy' node, and it then adds those new visits to the 'visit' TSV, lining the new visit records to the same 'case' records the 'allergy' records are linked to.
+        batch_add_visits(project_id=project_id,links={'allergy': ['cases', 'treatments', 'medications']}
+    """
+    required_props={'visit_label':'Unknown','visit_method':'Unknown'}
+    for node in list(links.keys()):
+        # if the node has (only) a link to visit in new dd:
+        targets = []
+        node_links = dd[node]['links']
+        for link in node_links:
+            if 'subgroup' in list(link):
+                for sub in link['subgroup']:
+                    targets.append(sub['target_type'])
+            elif 'target_type' in list(link):
+                targets.append(link['target_type'])
+        links_to_drop = links[node]
+        print("{}: links {}, dropping {}".format(node,targets,links_to_drop))
+        if 'cases' in links_to_drop or 'visit' in targets and len(targets) == 1:
+            df = add_missing_links(project_id=project_id,node=node,link='visit')
+            if df is not None:
+                df = create_missing_links(project_id=project_id,node=node,link='visit',old_parent='case',properties=required_props)
+        else:
+            print("No link to the case node found in the '{}' TSV.".format(node))
+
 def move_properties(project_id,from_node,to_node,properties,parent_node=None):
     """
     This function takes a node with properties to be moved (from_node) and moves those properties/data to a new node (to_node).
@@ -301,25 +332,52 @@ def drop_links(project_id,node,links):
     try:
         df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
     except FileNotFoundError as e:
-        print("No existing {} TSV found. Skipping..".format(node))
+        print("No '{}' TSV found. Skipping...".format(node))
         return
+    dropped = 0
     for link in links:
         sid = "{}.submitter_id".format(link)
         uuid = "{}.id".format(link)
-        if sid in df.columns and uuid in df.columns:
-            df = df.drop(columns=[sid,uuid])
-        else:
-            count=1
+        if sid in df.columns:
+            df = df.drop(columns=[sid])
+            dropped += 1
+        if uuid in df.columns:
+            df = df.drop(columns=[uuid])
+            dropped += 1
+        count = 1
+        sid = "{}.submitter_id#{}".format(link,count)
+        while sid in df.columns:
+            df = df.drop(columns=[sid])
+            dropped += 1
+            count += 1
             sid = "{}.submitter_id#{}".format(link,count)
-            uuid = "{}.id#{}".format(link,count)
-            while sid in df.columns and uuid in df.columns:
-                df.drop(columns=[sid,uuid])
-                count+=1
-                sid = "{}.submitter_id#{}".format(link,count)
-                uuid = "{}.id#{}".format(link,count)
-    df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
-    print("Links dropped and TSV written to file: \n\t{}".format(filename))
+        count = 1
+        uuid = "{}.id#{}".format(link,count)
+        while uuid in df.columns:
+            df = df.drop(columns=[uuid])
+            dropped += 1
+            count += 1
+            uuid = "{}.submitter_id#{}".format(link,count)
+    if dropped > 0:
+        df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
+        print("Links {} dropped from {} and TSV written to file: \n\t{}".format(links,node,filename))
+    else:
+        print("None of {} links found in '{}' TSV.".format(links,node))
     return df
+
+def batch_drop_links(project_id,links):
+    """
+    Takes a dictionary of nodes and links to drop and drops links from each node's TSV headers. Do after, e.g., batch_add_visits().
+    Args:
+        project_id(str): The project_id of the TSVs.
+        links(dict): A dict of nodes with links to remove, e.g., {'node':['link1','link2']}.
+    Example:
+        This drops the columns 'cases.submitter_id' and 'cases.id' (and treatments/medications submitter_id and id) from the 'allergy' node TSV and saves it.
+        batch_drop_links(project_id=project_id,links={'allergy': ['cases', 'treatments', 'medications']}
+    """
+    for node in list(links.keys()):
+        links_to_drop = links[node]
+        df = drop_links(project_id=project_id,node=node,links=links_to_drop)
 
 def merge_links(project_id,node,link,links_to_merge):
     """
