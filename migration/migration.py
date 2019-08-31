@@ -457,7 +457,19 @@ def get_submission_order(dd,project_id,prefix='temp',suffix='tsv'):
     suborder = sorted(suborder.items(), key=operator.itemgetter(1))
     return suborder
 
+def drop_ids(project_id,suborder):
+    """
+    Drops the 'id' column from all the TSVs in 'suborder' dictionary obtained by running, e.g.:
+    suborder = get_submission_order(dd,project_id,prefix='temp',suffix='tsv')
+    """
+    for node in suborder:
+        drop_properties(project_id=project_id,node=node[0],properties=['id'])
+
 def submit_tsvs(project_id,suborder):
+    """
+    Submits all the TSVs in 'suborder' dictionary obtained by running, e.g.:
+    suborder = get_submission_order(dd,project_id,prefix='temp',suffix='tsv')
+    """
     logname = "submission_logfile.txt"
     with open(logname, 'w') as logfile:
         for node in suborder:
