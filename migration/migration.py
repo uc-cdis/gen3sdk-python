@@ -408,22 +408,25 @@ def merge_links(project_id,node,link,links_to_merge):
 
 def get_submission_order(dd,project_id,prefix='temp',suffix='tsv'):
     pattern = "{}*{}".format(prefix,suffix)
-    file_names = glob.glob(pattern)
+    filenames = glob.glob(pattern)
     all_nodes = []
     suborder = {}
-    for file_name in file_names:
+    for filename in filenames:
+        #print("Found {}".format(filename))
         regex = "{}_{}_(.+).{}".format(prefix,project_id,suffix)
         #match = re.search('AAA(.+)ZZZ', text)
-        match = re.search(regex, file_name)
+        match = re.search(regex, filename)
         if match:
             node = match.group(1)
             if node in list(dd):
                 all_nodes.append(node)
             else:
                 print("The node '{}' is not in the data dictionary! Skipping...".format(node))
+    print("Found the following nodes:\n{}".format(all_nodes))
+    checked = []
     while len(all_nodes) > 0:
         node = all_nodes.pop(0)
-        #print("Finding order for node {}".format(node))
+        print("Determining order for node {}".format(node))
         node_links = dd[node]['links']
         for link in node_links:
             if 'subgroup' in list(link):
@@ -433,10 +436,15 @@ def get_submission_order(dd,project_id,prefix='temp',suffix='tsv'):
                     elif subgroup['target_type'] in list(suborder.keys()):
                         suborder[node]=suborder[subgroup['target_type']]+1
                     elif subgroup['target_type'] == 'core_metadata_collection':
-                        pass
-                    else:
-                        all_nodes.append(node)
-                        #print("Skipping {} for now.".format(node))
+                        if node in checked:
+                            print("Node {} has been checked before.".format(node))
+                            suborder[node] = 2
+                        else:
+                            checked.append(node)
+                if node in list(suborder.keys()):
+                    continue
+                else:
+                    all_nodes.append(node)
             elif 'target_type' in list(link):
                 if link['target_type'] == 'project':
                     suborder[node]=1
@@ -444,7 +452,6 @@ def get_submission_order(dd,project_id,prefix='temp',suffix='tsv'):
                     suborder[node]=suborder[link['target_type']]+1
                 else: #skip it for now
                     all_nodes.append(node)
-                    #print("Skipping {} for now.".format(node))
             else:
                 print("No link target_type found for node '{}'".format(node))
     suborder = sorted(suborder.items(), key=operator.itemgetter(1))
