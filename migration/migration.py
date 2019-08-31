@@ -12,9 +12,9 @@ def make_temp_files(prefix,suffix,name='temp'):
     """
     Make copies of all files matching a pattern with "temp_" prefix added.
     Args:
-        prefix(str): A sub-string at the beginning of file names.
-        suffix(str): A sub-string at the end of file names.
-        name(str): The sub-string to add at the beginning of copies.
+        prefix(str): A substring at the beginning of file names.
+        suffix(str): A substring at the end of file names.
+        name(str): The substring to add at the beginning of copies.
     Example:
         This makes a copy of every TSV file beginning with "DEV" (that is, files matching DEV*tsv) and names the copies temp_DEV*tsv.
         make_temp_files(prefix='DEV',suffix='tsv')
@@ -143,8 +143,8 @@ def batch_add_visits(project_id,dd,links):
         node_links = dd[node]['links']
         for link in node_links:
             if 'subgroup' in list(link):
-                for sub in link['subgroup']:
-                    targets.append(sub['target_type'])
+                for subgroup in link['subgroup']:
+                    targets.append(subgroup['target_type'])
             elif 'target_type' in list(link):
                 targets.append(link['target_type'])
         links_to_drop = links[node]
@@ -430,12 +430,12 @@ def get_submission_order(dd,project_id,prefix='temp',suffix='tsv'):
         node_links = dd[node]['links']
         for link in node_links:
             if 'subgroup' in list(link):
-                for sub in link['subgroup']:
-                    if sub['target_type'] == 'project':
+                for subgroup in link['subgroup']:
+                    if subgroup['target_type'] == 'project':
                         suborder[node]=1
-                    elif sub['target_type'] in list(suborder.keys()):
-                        suborder[node]=suborder[sub['target_type']]+1
-                    elif sub['target_type'] == 'core_metadata_collection':
+                    elif subgroup['target_type'] in list(suborder.keys()):
+                        suborder[node]=suborder[subgroup['target_type']]+1
+                    elif subgroup['target_type'] == 'core_metadata_collection':
                         pass
                     else:
                         all_nodes.append(node)
