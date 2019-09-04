@@ -346,6 +346,7 @@ class Gen3Migration:
             This changes all 'Percent' to 'Pct' in property 'test_units' of node 'lab_test'
             change_enum(project_id=project_id,node='lab_test',property='test_units',enums={'Percent':'Pct'})
         """
+        print("{}:\n\tChanging values for property '{}'".format(node,prop))
         filename = "temp_{}_{}.tsv".format(project_id,node)
         try:
             df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
@@ -354,30 +355,30 @@ class Gen3Migration:
                 value = enums[key]
                 total = len(df.loc[df[prop]==key])
                 if total == 0:
-                    print("No records found with property '{}' equal to '{}'. Values in TSV include:\n\t{}".format(prop,key,set(list(df[prop]))))
+                    print("\tNo records found with property '{}' equal to '{}'. Values in TSV include:\n\t\t{}".format(prop,key,set(list(df[prop]))))
                     continue
                 if value == 'null':
                     try:
                         df.at[df[prop]==key,prop] = np.nan
                         success += 1
-                        print("Changed {} enum values from '{}' to 'NaN' for property '{}'".format(total,key,prop))
+                        print("\tChanged {} enum values from '{}' to 'NaN' for property '{}'".format(total,key,prop))
                     except Exception as e:
-                        print("Couldn't change enum value from '{}' to 'NaN' for property '{}'".format(key,prop))
+                        print("\tCouldn't change enum value from '{}' to 'NaN' for property '{}'".format(key,prop))
                 else:
                     try:
                         df.at[df[prop]==key,prop] = value
                         success += 1
-                        print("Changed {} enum values from '{}' to '{}' for property '{}'".format(total,key,value,prop))
+                        print("\tChanged {} enum values from '{}' to '{}' for property '{}'".format(total,key,value,prop))
                     except Exception as e:
-                        print("Couldn't change enum value '{}' to '{}' for property '{}'".format(key,value,prop))
+                        print("\tCouldn't change enum value '{}' to '{}' for property '{}'".format(key,value,prop))
             if success > 0:
                 df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
-                print("Enum values changed in '{}' node and TSV written to file: \n\t{}".format(node,filename))
+                print("\tEnum values changed in '{}' node and TSV written to file: \n\t{}".format(node,filename))
             else:
-                print("No enum values were changed in '{}' node. No TSVs changed.".format(node))
+                print("\tNo enum values were changed in '{}' node. No TSVs changed.".format(node))
             return df
         except FileNotFoundError as e:
-            print("No TSV found for node {}.".format(node))
+            print("\tNo TSV found for node '{}'.".format(node))
 
     def drop_links(self,project_id,node,links):
         """
