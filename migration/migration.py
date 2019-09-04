@@ -54,10 +54,11 @@ class Gen3Migration:
             make_temp_files(prefix='DEV',suffix='tsv')
         """
         pattern = "{}*{}".format(prefix,suffix)
-        file_names = glob.glob(pattern)
-        for file_name in file_names:
-            temp_name = "temp_{}".format(file_name)
-            copyfile(file_name, temp_name)
+        filenames = glob.glob(pattern)
+        for filename in filenames:
+            temp_name = "temp_{}".format(filename)
+            print("Copying file {} to:\n\t{}".format(filename,temp_name))
+            copyfile(filename,temp_name)
 
     def merge_nodes(self,project_id,in_nodes,out_node):
         """
@@ -187,10 +188,14 @@ class Gen3Migration:
                     targets.append(link['target_type'])
             links_to_drop = links[node]
             print("{}: links {}, dropping {}".format(node,targets,links_to_drop))
-            if 'cases' in links_to_drop or 'visit' in targets and len(targets) == 1:
+            if 'cases' in links_to_drop and 'visit' in targets and len(targets) == 1:
                 df = self.add_missing_links(project_id=project_id,node=node,link='visit')
                 if df is not None:
                     df = self.create_missing_links(project_id=project_id,node=node,link='visit',old_parent='case',properties=required_props)
+            elif 'cases' not in links_to_drop and len(links_to_drop) == 1 and 'visit' in targets and len(targets) == 1:
+                df = self.add_missing_links(project_id=project_id,node=node,link='visit')
+                if df is not None:
+                    df = self.create_missing_links(project_id=project_id,node=node,link='visit',old_parent=links_to_drop[0],properties=required_props)
             else:
                 print("\tNo links to 'case' found in the '{}' TSV.".format(node))
 
