@@ -318,13 +318,20 @@ class Gen3Migration:
         except FileNotFoundError as e:
             print("\tNo '{}' TSV found. Skipping...".format(node))
             return
-        try:
-            df = df.drop(columns=properties)
+        dropped = []
+        for prop in properties:
+            try:
+                df = df.drop(columns=[prop])
+                dropped.append(prop)
+            except Exception as e:
+                print("\tCouldn't drop property '{}' from '{}':\n\t{}".format(prop,node,e))
+                continue
+        if len(dropped) > 0:
             df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
-            print("\tProperties {} dropped from '{}' and data written to TSV:\n\t{}".format(properties,node,filename))
+            print("\tProperties {} dropped from '{}' and data written to TSV:\n\t{}".format(dropped,node,filename))
             return df
-        except Exception as e:
-            print("\tCouldn't drop properties from '{}':\n\t{}".format(node,e))
+        else:
+            print("\tNo properties dropped from '{}' No TSV written.".format(node))
             return
 
     def change_enum(self,project_id,node,prop,enums):
