@@ -654,7 +654,7 @@ class Gen3Migration:
                 chunk = chunk.loc[df["submitter_id"].isin(valid_but_failed)]  # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
                 print("Retrying submission of valid entities from failed chunk: {} valid entities.".format(str(len(chunk))))
             elif (len(valid_but_failed) > 0 and len(invalid) == 0):  # if all entities are valid but submission still failed, probably due to duplicate submitter_ids. Can remove this section once the API response is fixed: https://ctds-planx.atlassian.net/browse/PXP-3065
-                raise Gen3Error("Please check your data for correct file encoding, special characters, or duplicate submitter_ids or ids.")
+                raise Gen3Error("Please check your data for correct file encoding or special characters.")
             elif timeout is False:  # get new chunk if didn't timeout
                 start += chunk_size
                 end = start + chunk_size
@@ -706,7 +706,7 @@ class Gen3Migration:
                 filename="temp_{}_{}.tsv".format(project_id,node)
                 try:
                     data = self.sub.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
-                    print(data)
+                    print("data: {}".format(data))
                     logfile.write(json.dumps(data)) #put in log file
                 except Exception as e:
                     print(e)
