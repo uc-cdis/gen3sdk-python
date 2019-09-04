@@ -534,7 +534,7 @@ class Gen3Migration:
                 node = node_order[0]
                 filename="temp_{}_{}.tsv".format(project_id,node)
                 try:
-                    data = self.sub.submit_file(api=self._endpoint,auth=self._auth_provider,project_id=project_id,filename=filename,chunk_size=1000)
+                    data = self.sub.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
                     if len(data['invalid']) > 0:
                         print(data['invalid'])
                         break
@@ -568,7 +568,8 @@ class Gen3Migration:
             raise Gen3UserError("Please upload a file in CSV, TSV, or XLSX format.")
         df.rename(columns={c: c.lstrip("*") for c in df.columns}, inplace=True)
         if len(list(df.submitter_id)) != len(list(df.submitter_id.unique())):
-            raise Gen3Error("Warning: file contains duplicate submitter_ids. \nNote: submitter_ids must be unique within a node!")
+            raise Gen3Error("Warning: File contains duplicate submitter_ids.\n\t{}\n\tNote: submitter_ids must be unique within a node!".format(filename))
+            return
         print("\nSubmitting {} with {} records.".format(filename, str(len(df))))
         program, project = project_id.split("-", 1)
         api_url = "{}/api/v0/submission/{}/{}".format(api,program,project)
@@ -585,7 +586,7 @@ class Gen3Migration:
             count += 1
             print("Chunk {} (chunk size: {}, submitted: {} of {})".format(str(count),str(chunk_size),str(len(results["succeeded"]) + len(results["invalid"])),str(len(df)),))
             try:
-                response = requests.put(api_url,auth=auth,data=chunk.to_csv(sep="\t", index=False),headers=headers,).text
+                response = requests.put(self._endpoint,auth=self._auth_provider,data=chunk.to_csv(sep="\t", index=False),headers=headers,).text
             except requests.exceptions.ConnectionError as e:
                 results["details"].append(e.message)
             if ("Request Timeout" in response or "413 Request Entity Too Large" in response or "Connection aborted." in response or "service failure - try again later" in response):  # time-out, response is not valid JSON at the moment
@@ -653,3 +654,24 @@ class Gen3Migration:
         print("Successful records: {}".format(str(len(set(results["succeeded"])))))
         print("Failed invalid records: {}".format(str(len(results["invalid"]))))
         return results
+
+    def create_project(self,program,project):
+        # Create the program/project:
+        project_id = "{}-{}".format(program, project)
+        prog_txt = """{{
+          "type": "program",
+          "dbgap_accession_number": "{}",
+          "name": "{}"
+        }}""".format(program,program)
+        prog_json = json.loads(prog_txt)
+        data = self.sub.create_program(json=prog_json)
+        print(data)
+        proj_txt = """{{
+          "type": "project",
+          "code": "{}",
+          "dbgap_accession_number": "{}",
+          "name": "{}"
+        }}""".format(project,project,project)
+        proj_json = json.loads(proj_txt)
+        data = self.sub.create_project(program=program,json=proj_json)
+        print(data)
