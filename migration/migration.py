@@ -249,25 +249,25 @@ class Gen3Migration:
         new_to = df_from[all_props] #demo_case = demo[['cases.submitter_id']+static_case]
 
         if to_node is 'case':
+            new_to.rename(columns={parent_link:'submitter_id'},inplace=True)
             headers = list(new_to)
-            all_case_data = pd.DataFrame(columns=headers)
-            case_ids = list(new_to.submitter_id.unique())
-            all_case_data['submitter_id'] = case_ids
+            case_data = pd.DataFrame(columns=headers)
+            case_ids = list(new_to['submitter_id'].unique())
+            case_data['submitter_id'] = case_ids
+            count = 1
             for case_id in case_ids:
+                print("\tGathering unique data for case '{}' ({}/{})".format(case_id,count,len(case_ids)))
                 df1 = new_to.loc[new_to['submitter_id']==case_id]
                 #case_data = pd.DataFrame(columns=headers)
                 for header in headers:
                     vals = list(df1.loc[df1[header].notnull()][header].unique())
                     if len(vals) == 1:
                         #case_data[header] = vals
-                        all_case_data.loc[all_case_data['submitter_id']==case_id,header] = vals
+                        case_data.loc[case_data['submitter_id']==case_id,header] = vals
                     elif len(vals) > 1:
                         print(vals)
-
-
-        if parent_node is None:
-            new_to.rename(columns={parent_link:'submitter_id'},inplace=True) #demo_case.rename(columns={'cases.submitter_id':'submitter_id'},inplace=True)
-            all_to = pd.merge(df_to,new_to,on='submitter_id', how='left') # May need to get unique values per cases.submitter_id from demo1 for some projects
+                count += 1
+            all_to = pd.merge(df_to,case_data,on='submitter_id', how='left')
         else:
             new_to['type'] = to_node
             new_to['project_id'] = project_id
