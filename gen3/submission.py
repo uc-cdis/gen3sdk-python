@@ -389,7 +389,7 @@ class Gen3Submission:
             else:
                 try:
                     json_res = json.loads(response)
-                except JSONDecodeError as e:
+                except ValueError as e:
                     print(response)
                     print(str(e))
                     raise Gen3Error("Unable to parse API response as JSON!")

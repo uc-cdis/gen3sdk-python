@@ -162,7 +162,11 @@ class Gen3Migration:
             print("\tNo '{}' TSV found. Creating new TSV for links.".format(link))
             missing = link_names
         parent_link = "{}.submitter_id".format(old_parent)
-        new_links = df.loc[df[link_name].isin(missing)][[link_name,parent_link]]
+        if parent_link in list(df):
+            new_links = df.loc[df[link_name].isin(missing)][[link_name,parent_link]]
+        else:
+            parent_link = "{}.submitter_id#1".format(old_parent)
+            new_links = df.loc[df[link_name].isin(missing)][[link_name,parent_link]]
         new_links = new_links.rename(columns={link_name:'submitter_id'})
         new_links['type'] = link
         for prop in properties:
@@ -636,8 +640,8 @@ class Gen3Migration:
             print("\tNo '{}' TSV found. Skipping...".format(node))
             return
         df_txt = df.to_csv(sep='\t',index=False)
-        if 'Â' in df_txt:
-            substring = 'Parkinson.*Disease'
+        if 'Â' in df_txt or 'Ã' in df_txt:
+            substring = 'Parkinson.*isease'
             df_txt = re.sub(substring,"Parkinson's Disease",df_txt)
             df = pd.read_csv(StringIO(df_txt),sep='\t',dtype=str) # this converts int to float (adds .0 to int)
             df.to_csv(filename,sep='\t',index=False, encoding='utf-8')
