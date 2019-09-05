@@ -18,7 +18,10 @@ else:
 import gen3
 from gen3.auth import Gen3Auth
 from gen3.submission import Gen3Submission
-from gen3.file import Gen3File
+
+sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/gen3')
+from submission import Gen3Submission
+
 sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/expansion')
 from expansion import Gen3Expansion
 
