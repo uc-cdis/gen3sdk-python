@@ -9,6 +9,12 @@ from pandas.io.json import json_normalize
 # turn off pandas chained assignment warning
 pd.options.mode.chained_assignment = None
 
+import sys
+if sys.version_info[0] < 3:
+    from StringIO import StringIO
+else:
+    from io import StringIO
+
 import gen3
 from gen3.auth import Gen3Auth
 from gen3.submission import Gen3Submission
@@ -560,122 +566,6 @@ class Gen3Migration:
                 print("{}:".format(node))
                 print("\tNo UUID headers found in the TSV.".format(node))
 
-    def submit_file(self,project_id,filename,chunk_size=30,row_offset=0):
-        """Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.
-        Args:
-            project_id (str): The project_id to submit to.
-            filename (str): The file containing data to submit. The format can be TSV, CSV or XLSX (first worksheet only for now).
-            chunk_size (integer): The number of rows of data to submit for each request to the API.
-            row_offset (integer): The number of rows of data to skip; '0' starts submission from the first row and submits all data.
-        Examples:
-            This submits a spreadsheet file containing multiple records in rows to the CCLE project in the sandbox commons.
-            >>> Gen3Submission.submit_file(api=api,project_id="DCF-CCLE",filename="data_spreadsheet.tsv")
-        """
-        f = os.path.basename(filename)
-        if f.lower().endswith(".csv"):
-            df = pd.read_csv(filename, header=0, sep=",", dtype=str).fillna("")
-        elif f.lower().endswith(".xlsx"):
-            xl = pd.ExcelFile(filename, dtype=str)  # load excel file
-            sheet = xl.sheet_names[0]  # sheetname
-            df = xl.parse(sheet)  # save sheet as dataframe
-            converters = {col: str for col in list(df)}
-            df = pd.read_excel(filename, converters=converters).fillna("")  # remove nan
-        elif filename.lower().endswith((".tsv", ".txt")):
-            df = pd.read_csv(filename, header=0, sep="\t", dtype=str).fillna("")
-            #df = pd.read_csv(filename, header=0, sep="\t", dtype=str, encoding='latin1').fillna("")
-        else:
-            raise Gen3UserError("Please upload a file in CSV, TSV, or XLSX format.")
-        df.rename(columns={c: c.lstrip("*") for c in df.columns}, inplace=True)
-        if len(list(df.submitter_id)) != len(list(df.submitter_id.unique())):
-            raise Gen3Error("Warning: File contains duplicate submitter_ids.\n\t{}\n\tNote: submitter_ids must be unique within a node!".format(filename))
-            return
-        print("\nSubmitting {} with {} records.".format(filename, str(len(df))))
-        program, project = project_id.split("-", 1)
-        api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint,program,project)
-        #api_url = "{}/api/v0/submission/{}/{}".format(api,program,project)
-        headers = {"content-type": "text/tab-separated-values"}
-        start = row_offset
-        end = row_offset + chunk_size
-        chunk = df[start:end]
-        count = 0
-        results = {"invalid": {},"other": [],"details": [],"succeeded": [],"responses": []}
-        while (start + len(chunk)) <= len(df):
-            timeout = False
-            valid_but_failed = []
-            invalid = []
-            count += 1
-            print("Chunk {} (chunk size: {}, submitted: {} of {})".format(str(count),str(chunk_size),str(len(results["succeeded"]) + len(results["invalid"])),str(len(df)),))
-            try:
-                #response = requests.put(api,auth=auth,data=chunk_data,headers=headers).text
-                response = requests.put(url=self._endpoint,auth=self._auth_provider,data=chunk.to_csv(sep="\t", index=False),headers=headers,).text
-            except requests.exceptions.ConnectionError as e:
-                results["details"].append(e.message)
-            if ("Request Timeout" in response or "413 Request Entity Too Large" in response or "Connection aborted." in response or "service failure - try again later" in response):  # time-out, response is not valid JSON at the moment
-                print("\t Reducing Chunk Size: {}".format(response))
-                results["responses"].append("Reducing Chunk Size: {}".format(response))
-                timeout = True
-            else:
-                try:
-                    json_res = json.loads(response)
-                except Exception as e:
-                    print("json.loads error: {}".format(response))
-                    print(str(e))
-                    raise Gen3Error("Unable to parse API response as JSON!")
-                if "message" in json_res and "code" not in json_res:
-                    print(json_res)  # trouble-shooting
-                    print("\t No code in the API response for Chunk {}: {}".format(str(count), json_res.get("message")))
-                    print("\t {}".format(str(json_res.get("transactional_errors"))))
-                    results["responses"].append("Error Chunk {}: {}".format(str(count), json_res.get("message")))
-                    results["other"].append(json_res.get("message"))
-                elif "code" not in json_res:
-                    print("\t Unhandled API-response: {}".format(response))
-                    results["responses"].append("Unhandled API response: {}".format(response))
-                elif json_res["code"] == 200:  # success
-                    entities = json_res.get("entities", [])
-                    print("\t Succeeded: {} entities.".format(str(len(entities))))
-                    results["responses"].append("Chunk {} Succeeded: {} entities.".format(str(count), str(len(entities))))
-                    for entity in entities:
-                        sid = entity["unique_keys"][0]["submitter_id"]
-                        results["succeeded"].append(sid)
-                elif (json_res["code"] == 400 or json_res["code"] == 403 or json_res["code"] == 404):  # failure
-                    entities = json_res.get("entities", [])
-                    print("\tChunk Failed: {} entities.".format(str(len(entities))))
-                    results["responses"].append("Chunk {} Failed: {} entities.".format(str(count), str(len(entities))))
-                    for entity in entities:
-                        sid = entity["unique_keys"][0]["submitter_id"]
-                        if entity["valid"]:  # valid but failed
-                            valid_but_failed.append(sid)
-                        else:  # invalid and failed
-                            message = str(entity["errors"])
-                            results["invalid"][sid] = message
-                            invalid.append(sid)
-                    print("\tInvalid records in this chunk: {}".format(str(len(invalid))))
-                elif json_res["code"] == 500:  # internal server error
-                    print("\t Internal Server Error: {}".format(response))
-                    results["responses"].append("Internal Server Error: {}".format(response))
-            if (len(valid_but_failed) > 0 and len(invalid) > 0):  # if valid entities failed bc grouped with invalid, retry submission
-                chunk = chunk.loc[df["submitter_id"].isin(valid_but_failed)]  # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
-                print("Retrying submission of valid entities from failed chunk: {} valid entities.".format(str(len(chunk))))
-            elif (len(valid_but_failed) > 0 and len(invalid) == 0):  # if all entities are valid but submission still failed, probably due to duplicate submitter_ids. Can remove this section once the API response is fixed: https://ctds-planx.atlassian.net/browse/PXP-3065
-                raise Gen3Error("Please check your data for correct file encoding or special characters.")
-            elif timeout is False:  # get new chunk if didn't timeout
-                start += chunk_size
-                end = start + chunk_size
-                chunk = df[start:end]
-            else:  # if timeout, reduce chunk size and retry smaller chunk
-                if chunk_size >= 2:
-                    chunk_size = int(chunk_size / 2)
-                    end = start + chunk_size
-                    chunk = df[start:end]
-                    print("Retrying Chunk with reduced chunk_size: {}".format(str(chunk_size)))
-                    timeout = False
-                else:
-                    raise Gen3SubmissionError("Submission is timing out. Please contact the Helpdesk.")
-        print("Finished data submission.")
-        print("Successful records: {}".format(str(len(set(results["succeeded"])))))
-        print("Failed invalid records: {}".format(str(len(results["invalid"]))))
-        return results
-
     def create_project(self,program,project):
         # Create the program/project:
         project_id = "{}-{}".format(program, project)
@@ -708,23 +598,38 @@ class Gen3Migration:
                 node = node_order[0]
                 filename="temp_{}_{}.tsv".format(project_id,node)
                 try:
-                    data = self.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
-                    print("data: {}".format(data))
-                    logfile.write(json.dumps(data)) #put in log file
+                    data = self.sub.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
+                    #print("data: {}".format(data)) #for trouble-shooting
+                    logfile.write(json.dumps(data)+'\n') #put in log file
                 except Exception as e:
                     print(e)
 
     def remove_special_chars(self,project_id,node):
         filename = "temp_{}_{}.tsv".format(project_id,node)
         try:
-            df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+            df = pd.read_csv(filename,sep='\t',header=0,dtype=str,encoding='latin1')
         except FileNotFoundError as e:
             print("\tNo '{}' TSV found. Skipping...".format(node))
             return
         df_txt = df.to_csv(sep='\t',index=False)
         if 'Â' in df_txt:
-            substring = 'Â\x92'
-            df_txt = re.sub(substring,"'",df_txt)
-            df.to_csv(filename,sep='\t',index=False, encoding='utf-8')
+            substring = 'Parkinson.*Disease'
+            df_txt = re.sub(substring,"Parkinson's Disease",df_txt)
+            df = pd.read_csv(StringIO(df_txt), sep='\t')
+            df.to_csv(filename,sep='\t',index=False, encoding='utf-8', float_format='%.f')
+            print("Special chars removed from: {}".format(filename))
         else:
             print("No special chars found in {}".format(filename))
+        return df
+
+    def floats_to_integers(self,project_id,node,prop):
+        filename = "temp_{}_{}.tsv".format(project_id,node)
+        try:
+            df = pd.read_csv(filename, header=0, sep="\t", dtype=str).fillna("")
+        except FileNotFoundError as e:
+            print("\tNo '{}' TSV found. Skipping...".format(node))
+            return
+        df[prop] = df[prop].str.extract(r'^(\d+).0$', expand=True)
+        df.to_csv(filename,sep='\t',index=False, encoding='utf-8')
+        print("Trailing '.0' decimals removed from: {}".format(filename))
+        return df
