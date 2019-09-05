@@ -582,6 +582,7 @@ class Gen3Migration:
             df = pd.read_excel(filename, converters=converters).fillna("")  # remove nan
         elif filename.lower().endswith((".tsv", ".txt")):
             df = pd.read_csv(filename, header=0, sep="\t", dtype=str).fillna("")
+            #df = pd.read_csv(filename, header=0, sep="\t", dtype=str, encoding='latin1').fillna("")
         else:
             raise Gen3UserError("Please upload a file in CSV, TSV, or XLSX format.")
         df.rename(columns={c: c.lstrip("*") for c in df.columns}, inplace=True)
@@ -590,7 +591,8 @@ class Gen3Migration:
             return
         print("\nSubmitting {} with {} records.".format(filename, str(len(df))))
         program, project = project_id.split("-", 1)
-        api_url = "{}/api/v0/submission/{}/{}".format(api,program,project)
+        api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint,program,project)
+        #api_url = "{}/api/v0/submission/{}/{}".format(api,program,project)
         headers = {"content-type": "text/tab-separated-values"}
         start = row_offset
         end = row_offset + chunk_size
@@ -604,7 +606,8 @@ class Gen3Migration:
             count += 1
             print("Chunk {} (chunk size: {}, submitted: {} of {})".format(str(count),str(chunk_size),str(len(results["succeeded"]) + len(results["invalid"])),str(len(df)),))
             try:
-                response = requests.put(self._endpoint,auth=self._auth_provider,data=chunk.to_csv(sep="\t", index=False),headers=headers,).text
+                #response = requests.put(api,auth=auth,data=chunk_data,headers=headers).text
+                response = requests.put(url=self._endpoint,auth=self._auth_provider,data=chunk.to_csv(sep="\t", index=False),headers=headers,).text
             except requests.exceptions.ConnectionError as e:
                 results["details"].append(e.message)
             if ("Request Timeout" in response or "413 Request Entity Too Large" in response or "Connection aborted." in response or "service failure - try again later" in response):  # time-out, response is not valid JSON at the moment
@@ -614,8 +617,8 @@ class Gen3Migration:
             else:
                 try:
                     json_res = json.loads(response)
-                except JSONDecodeError as e:
-                    print(response)
+                except Exception as e:
+                    print("json.loads error: {}".format(response))
                     print(str(e))
                     raise Gen3Error("Unable to parse API response as JSON!")
                 if "message" in json_res and "code" not in json_res:
@@ -705,8 +708,23 @@ class Gen3Migration:
                 node = node_order[0]
                 filename="temp_{}_{}.tsv".format(project_id,node)
                 try:
-                    data = self.sub.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
+                    data = self.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
                     print("data: {}".format(data))
                     logfile.write(json.dumps(data)) #put in log file
                 except Exception as e:
                     print(e)
+
+    def remove_special_chars(self,project_id,node):
+        filename = "temp_{}_{}.tsv".format(project_id,node)
+        try:
+            df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+        except FileNotFoundError as e:
+            print("\tNo '{}' TSV found. Skipping...".format(node))
+            return
+        df_txt = df.to_csv(sep='\t',index=False)
+        if 'Â' in df_txt:
+            substring = 'Â\x92'
+            df_txt = re.sub(substring,"'",df_txt)
+            df.to_csv(filename,sep='\t',index=False, encoding='utf-8')
+        else:
+            print("No special chars found in {}".format(filename))
