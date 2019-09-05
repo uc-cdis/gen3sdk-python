@@ -95,7 +95,7 @@ class Gen3Migration:
             print("\tTotal of {} records written to node {} in file {}.".format(len(df),out_node,outname))
             return df
 
-    def add_missing_links(self,project_id,node,link):
+    def add_missing_links(self,project_id,node,link,old_parent=None):
         """
         This function adds missing links to a node's TSV when the parent node changes.
         Args:
@@ -112,13 +112,12 @@ class Gen3Migration:
             print("\tNo existing '{}' TSV found. Skipping...".format(node))
             return
         link_name = "{}s.submitter_id".format(link)
-        df_no_link = df.loc[df[link_name].isnull()] # imaging_exams with no visit
+        #if old_parent is None:
+        df_no_link = df.loc[df[link_name].isnull()] # records with no visits.submitter_id
         if len(df_no_link) > 0:
             df_no_link[link_name] = df_no_link['submitter_id'] + "_{}".format(link) # visit submitter_id is "<ESID>_visit"
-            #df_no_link = df_no_link.drop(columns=['visits.id'])
-            # Merge dummy visits back into original df
             df_link = df.loc[df[link_name].notnull()]
-            df_final = pd.concat([df_link,df_no_link],ignore_index=True,sort=False)
+            df_final = pd.concat([df_link,df_no_link],ignore_index=True,sort=False) # Merge dummy visits back into original df
             df_final.to_csv(filename, sep='\t', index=False, encoding='utf-8')
             print("\t{} links to '{}' added for '{}' in TSV file: {}".format(str(len(df_no_link)),link,node,filename))
             return df_final
@@ -126,18 +125,19 @@ class Gen3Migration:
             print("\tNo records are missing links to '{}' in the '{}' TSV.".format(link,node))
             return
 
-    def create_missing_links(self,project_id,node,link,old_parent,properties):
+    def create_missing_links(self,project_id,node,link,old_parent,properties,new_dd,old_dd):
         """
         This fxn creates links TSV for links in a node that don't exist.
         Args:
             node(str): This is the node TSV in which to look for links that don't exist.
             link(str): This is the node to create the link records in.
-            old_parent(str): This is the parent node of 'node' prior to the dictionary change.
+            old_parent(str): This is the backref of the parent node of 'node' prior to the dictionary change.
             properties(dict): Dict of required properties/values to add to new link records.
         Example:
             This will create visit records that don't exist in the visit TSV but are in the imaging_exam TSV.
-            create_missing_links(node='imaging_exam',link='visit',old_parent='case',properties={'visit_label':'Imaging','visit_method':'In-person Visit'})
+            create_missing_links(node='imaging_exam',link='visit',old_parent='cases',properties={'visit_label':'Imaging','visit_method':'In-person Visit'})
         """
+        # df = self.create_missing_links(project_id=project_id,node=node,link='visit',old_parent=links_to_drop[0],properties=required_props)
         print("Creating missing '{}' records with links to '{}' for '{}'.".format(link,old_parent,node))
         filename = "temp_{}_{}.tsv".format(project_id,node)
         try:
@@ -149,11 +149,11 @@ class Gen3Migration:
         link_names = list(df[link_name])
         link_file = "temp_{}_{}.tsv".format(project_id,link)
         try:
-            link_df = pd.read_csv(link_file,sep='\t',header=0,dtype=str)
-            existing = list(link_df['submitter_id'])
-            missing = set(link_names).difference(existing) #lists items in link_names missing from existing
+            link_df = pd.read_csv(link_file,sep='\t',header=0,dtype=str) #open visit TSV
+            existing = list(link_df['submitter_id']) # existing visits
+            missing = set(link_names).difference(existing) # visit links in df missing in visit TSV: lists items in link_names missing from existing
             if len(missing) > 0:
-                print("\tCreating {} records in '{}' with links to '{}' for missing '{}' links.".format(len(missing),link,old_parent,node))
+                print("\tCreating {} records in '{}' with links to same cases as '{}' for missing '{}' links.".format(len(missing),link,old_parent,node))
             else:
                 print("\tAll {} records in '{}' node have existing links to '{}'. No new records added.".format(len(df),node,link))
                 return link_df.loc[link_df['submitter_id'].isin(link_names)]
@@ -167,17 +167,35 @@ class Gen3Migration:
         new_links['type'] = link
         for prop in properties:
             new_links[prop] = properties[prop]
+        if old_parent is not 'cases':
+            old_links = old_dd[node]['links']
+            for old_link in old_links:
+                if old_link['name'] == old_parent:
+                    old_node = old_link['target_type']
+            old_name = "temp_{}_{}.tsv".format(project_id,old_node)
+            try:
+                odf = pd.read_csv(old_name,sep='\t',header=0,dtype=str)
+            except FileNotFoundError as e:
+                print("\tNo existing '{}' TSV found. Skipping...".format(node))
+                return
+            # df1 = df_no_link.loc[df_no_link[old_link].notnull()]
+            # if len(df1) > 0:
+            case_links = odf[['cases.submitter_id','submitter_id']]
+            case_links.rename(columns={'submitter_id':parent_link}, inplace=True)
+            new_links = pd.merge(new_links,case_links,on=parent_link, how='left')
+            new_links.drop(columns=[parent_link],inplace=True)
         all_links = pd.concat([link_df,new_links],ignore_index=True,sort=False)
         all_links.to_csv(link_file,sep='\t',index=False,encoding='utf-8')
         print("\t{} new missing '{}' records saved into TSV file:\n\t{}".format(str(len(new_links)),link,link_file))
         return new_links
 
-    def batch_add_visits(self,project_id,dd,links):
+    def batch_add_visits(self,project_id,new_dd,old_dd,links):
         """
         Adds 'Unknown' dummy visits to records in nodes that link to the 'case' node and have no link to the 'visit' node.
         Args:
             project_id(str): The project_id of the TSVs.
-            dd(dict): The data dictionary. Get it with `dd=sub.get_dictionary_all()`.
+            new_dd(dict): The new data dictionary. Get it with `dd=sub.get_dictionary_all()`.
+            old_dd(dict): The old data dictionary (e.g., in production). Get it with `dd=prod_sub.get_dictionary_all()`.
             links(dict): A dict of nodes with links to remove, e.g., {'node':['link1','link2']}.
         Example:
             This adds 'visits.submitter_id' links to the 'allergy' node, and it then adds those new visits to the 'visit' TSV, lining the new visit records to the same 'case' records the 'allergy' records are linked to.
@@ -185,10 +203,11 @@ class Gen3Migration:
         """
         required_props={'visit_label':'Unknown','visit_method':'Unknown'}
         total = 0
+        dfs = []
         for node in list(links.keys()):
             # if the node has (only) a link to visit in new dd:
             targets = []
-            node_links = dd[node]['links']
+            node_links = new_dd[node]['links']
             for link in node_links:
                 if 'subgroup' in list(link):
                     for subgroup in link['subgroup']:
@@ -200,16 +219,21 @@ class Gen3Migration:
             if 'cases' not in links_to_drop and len(links_to_drop) == 1 and 'visit' in targets and len(targets) == 1:
                 df = self.add_missing_links(project_id=project_id,node=node,link='visit')
                 if df is not None:
-                    df = self.create_missing_links(project_id=project_id,node=node,link='visit',old_parent=links_to_drop[0],properties=required_props)
+                    df = self.create_missing_links(project_id=project_id,node=node,link='visit',old_parent=links_to_drop[0],properties=required_props,new_dd=new_dd,old_dd=old_dd)
+                    dfs.append(df)
                     total += len(df)
             elif 'cases' in links_to_drop and 'visit' in targets and len(targets) == 1:
                 df = self.add_missing_links(project_id=project_id,node=node,link='visit')
                 if df is not None:
-                    df = self.create_missing_links(project_id=project_id,node=node,link='visit',old_parent='cases',properties=required_props)
+                    df = self.create_missing_links(project_id=project_id,node=node,link='visit',old_parent='cases',properties=required_props,new_dd=new_dd,old_dd=old_dd)
+                    dfs.append(df)
                     total += len(df)
             else:
                 print("\tNo links to 'case' found in the '{}' TSV.".format(node))
+        if len(dfs) > 0:
+                df = pd.concat(dfs,ignore_index=True,sort=False)
         print("Total of {} missing visit links created for this batch.".format(total))
+        return df
 
     def move_properties(self,project_id,from_node,to_node,properties,parent_node=None):
         """
@@ -600,7 +624,7 @@ class Gen3Migration:
                 try:
                     data = self.sub.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
                     #print("data: {}".format(data)) #for trouble-shooting
-                    logfile.write(json.dumps(data)+'\n') #put in log file
+                    logfile.write(filename + '\n' + json.dumps(data)+'\n\n') #put in log file
                 except Exception as e:
                     print(e)
 
@@ -615,8 +639,8 @@ class Gen3Migration:
         if 'Â' in df_txt:
             substring = 'Parkinson.*Disease'
             df_txt = re.sub(substring,"Parkinson's Disease",df_txt)
-            df = pd.read_csv(StringIO(df_txt), sep='\t')
-            df.to_csv(filename,sep='\t',index=False, encoding='utf-8', float_format='%.f')
+            df = pd.read_csv(StringIO(df_txt),sep='\t',dtype=str) # this converts int to float (adds .0 to int)
+            df.to_csv(filename,sep='\t',index=False, encoding='utf-8')
             print("Special chars removed from: {}".format(filename))
         else:
             print("No special chars found in {}".format(filename))
