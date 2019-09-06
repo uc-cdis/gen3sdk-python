@@ -684,6 +684,7 @@ class Gen3Migration:
         suborder = get_submission_order(dd,project_id,prefix='temp',suffix='tsv')
         """
         logname = "submission_{}_logfile.txt".format(project_id)
+        !mkdir -p done
         with open(logname, 'w') as logfile:
             for node_order in suborder:
                 node = node_order[0]
@@ -692,5 +693,7 @@ class Gen3Migration:
                     data = self.sub.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
                     #print("data: {}".format(data)) #for trouble-shooting
                     logfile.write(filename + '\n' + json.dumps(data)+'\n\n') #put in log file
+                    if len(data['invalid']) == 0:
+                        !mv $filename done
                 except Exception as e:
                     print(e)
