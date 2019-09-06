@@ -98,7 +98,7 @@ class Gen3Migration:
             print("\tTotal of {} records written to node {} in file {}.".format(len(df),out_node,outname))
             return df
 
-    def add_missing_links(self,project_id,node,link,old_parent=None):
+    def add_missing_links(self,project_id,node,link,old_parent=None,links=None):
         """
         This function adds missing links to a node's TSV when the parent node changes.
         Args:
@@ -115,6 +115,8 @@ class Gen3Migration:
             print("\tNo existing '{}' TSV found. Skipping...".format(node))
             return
         link_name = "{}s.submitter_id".format(link)
+        if link_name not in list(df):
+            df[link_name] = np.nan
         #if old_parent is None:
         df_no_link = df.loc[df[link_name].isnull()] # records with no visits.submitter_id
         if len(df_no_link) > 0:
@@ -128,7 +130,7 @@ class Gen3Migration:
             print("\tNo records are missing links to '{}' in the '{}' TSV.".format(link,node))
             return
 
-    def create_missing_links(self,project_id,node,link,old_parent,properties,new_dd,old_dd):
+    def create_missing_links(self,project_id,node,link,old_parent,properties,new_dd,old_dd,links=None):
         """
         This fxn creates links TSV for links in a node that don't exist.
         Args:
@@ -187,13 +189,37 @@ class Gen3Migration:
                 return
             # df1 = df_no_link.loc[df_no_link[old_link].notnull()]
             # if len(df1) > 0:
-            case_links = odf[['cases.submitter_id','submitter_id']]
-            case_links.rename(columns={'submitter_id':parent_link}, inplace=True)
-            new_links = pd.merge(new_links,case_links,on=parent_link, how='left')
-            new_links.drop(columns=[parent_link],inplace=True)
+            if 'cases.submitter_id' in list(odf):
+                case_links = odf[['cases.submitter_id','submitter_id']]
+                case_links.rename(columns={'submitter_id':parent_link}, inplace=True)
+                new_links = pd.merge(new_links,case_links,on=parent_link, how='left')
+                new_links.drop(columns=[parent_link],inplace=True)
+            else:
+                old_backref = links[old_node][0]
+                old_links2 = old_dd[old_node]['links']
+                for old_link2 in old_links2:
+                    if old_link2['name'] == old_backref:
+                        old_node2 = old_link2['target_type']
+                old_name2 = "temp_{}_{}.tsv".format(project_id,old_node2)
+                try:
+                    odf1 = pd.read_csv(old_name2,sep='\t',header=0,dtype=str)
+                except FileNotFoundError as e:
+                    print("\tNo existing '{}' TSV found. Skipping...".format(node))
+                    return
+                odf[parent_link] = odf.submitter_id
+                old_parent_link = "{}.submitter_id".format(old_backref)
+                if old_parent_link in list(odf):
+                    odf.submitter_id = odf[old_parent_link]
+                else:
+                    old_parent_link = "{}.submitter_id#1".format(old_backref)
+                    odf.submitter_id = odf[old_parent_link]
+                odf2 = pd.merge(odf,odf1,on='submitter_id', how='left')
+                case_links = odf2[['cases.submitter_id',parent_link]]
+                new_links = pd.merge(new_links,case_links,on=parent_link, how='left')
+                new_links.drop(columns=[parent_link],inplace=True)
         all_links = pd.concat([link_df,new_links],ignore_index=True,sort=False)
         all_links.to_csv(link_file,sep='\t',index=False,encoding='utf-8')
-        print("\t{} new missing '{}' records saved into TSV file:\n\t{}".format(str(len(new_links)),link,link_file))
+        print("\t{} new missing '{}' records saved into TSV file:\n\t\t{}".format(str(len(new_links)),link,link_file))
         return new_links
 
     def batch_add_visits(self,project_id,new_dd,old_dd,links):
@@ -226,13 +252,13 @@ class Gen3Migration:
             if 'cases' not in links_to_drop and len(links_to_drop) == 1 and 'visit' in targets and len(targets) == 1:
                 df = self.add_missing_links(project_id=project_id,node=node,link='visit')
                 if df is not None:
-                    df = self.create_missing_links(project_id=project_id,node=node,link='visit',old_parent=links_to_drop[0],properties=required_props,new_dd=new_dd,old_dd=old_dd)
+                    df = self.create_missing_links(project_id=project_id,node=node,link='visit',old_parent=links_to_drop[0],properties=required_props,new_dd=new_dd,old_dd=old_dd,links=links)
                     dfs.append(df)
                     total += len(df)
             elif 'cases' in links_to_drop and 'visit' in targets and len(targets) == 1:
                 df = self.add_missing_links(project_id=project_id,node=node,link='visit')
                 if df is not None:
-                    df = self.create_missing_links(project_id=project_id,node=node,link='visit',old_parent='cases',properties=required_props,new_dd=new_dd,old_dd=old_dd)
+                    df = self.create_missing_links(project_id=project_id,node=node,link='visit',old_parent='cases',properties=required_props,new_dd=new_dd,old_dd=old_dd,links=links)
                     dfs.append(df)
                     total += len(df)
             else:
@@ -313,7 +339,7 @@ class Gen3Migration:
                         #case_data[header] = vals
                         case_data.loc[case_data['submitter_id']==case_id,header] = vals
                     elif len(vals) > 1:
-                        print(vals)
+                        print("{}: {}".format(header,vals))
                 count += 1
             all_to = pd.merge(df_to,case_data,on='submitter_id', how='left')
         else:
@@ -341,6 +367,10 @@ class Gen3Migration:
         filename = "temp_{}_{}.tsv".format(project_id,node)
         try:
             df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+        except FileNotFoundError as e:
+            print("\tNo '{}' TSV found. Skipping...".format(node))
+            return
+        try:
             df.rename(columns=properties,inplace = True)
             df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
             print("Properties names changed and TSV written to file: \n\t{}".format(filename))
@@ -618,23 +648,6 @@ class Gen3Migration:
         data = self.sub.create_project(program=program,json=proj_json)
         print(data)
 
-    def submit_tsvs(self,project_id,suborder):
-        """
-        Submits all the TSVs in 'suborder' dictionary obtained by running, e.g.:
-        suborder = get_submission_order(dd,project_id,prefix='temp',suffix='tsv')
-        """
-        logname = "submission_{}_logfile.txt".format(project_id)
-        with open(logname, 'w') as logfile:
-            for node_order in suborder:
-                node = node_order[0]
-                filename="temp_{}_{}.tsv".format(project_id,node)
-                try:
-                    data = self.sub.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
-                    #print("data: {}".format(data)) #for trouble-shooting
-                    logfile.write(filename + '\n' + json.dumps(data)+'\n\n') #put in log file
-                except Exception as e:
-                    print(e)
-
     def remove_special_chars(self,project_id,node):
         filename = "temp_{}_{}.tsv".format(project_id,node)
         try:
@@ -664,3 +677,20 @@ class Gen3Migration:
         df.to_csv(filename,sep='\t',index=False, encoding='utf-8')
         print("Trailing '.0' decimals removed from: {}".format(filename))
         return df
+
+    def submit_tsvs(self,project_id,suborder):
+        """
+        Submits all the TSVs in 'suborder' dictionary obtained by running, e.g.:
+        suborder = get_submission_order(dd,project_id,prefix='temp',suffix='tsv')
+        """
+        logname = "submission_{}_logfile.txt".format(project_id)
+        with open(logname, 'w') as logfile:
+            for node_order in suborder:
+                node = node_order[0]
+                filename="temp_{}_{}.tsv".format(project_id,node)
+                try:
+                    data = self.sub.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
+                    #print("data: {}".format(data)) #for trouble-shooting
+                    logfile.write(filename + '\n' + json.dumps(data)+'\n\n') #put in log file
+                except Exception as e:
+                    print(e)
