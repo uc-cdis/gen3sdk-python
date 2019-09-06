@@ -17,7 +17,7 @@ else:
 
 import gen3
 from gen3.auth import Gen3Auth
-from gen3.submission import Gen3Submission
+#from gen3.submission import Gen3Submission
 
 sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/gen3')
 from submission import Gen3Submission
@@ -623,7 +623,7 @@ class Gen3Migration:
         Submits all the TSVs in 'suborder' dictionary obtained by running, e.g.:
         suborder = get_submission_order(dd,project_id,prefix='temp',suffix='tsv')
         """
-        logname = "submission_logfile.txt"
+        logname = "submission_{}_logfile.txt".format(project_id)
         with open(logname, 'w') as logfile:
             for node_order in suborder:
                 node = node_order[0]
