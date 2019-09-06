@@ -3,8 +3,18 @@ import requests
 import pandas as pd
 import os
 
-class Gen3SubmissionQueryError(Exception):
+
+class Gen3Error(Exception):
     pass
+
+
+class Gen3SubmissionQueryError(Gen3Error):
+    pass
+
+
+class Gen3UserError(Gen3Error):
+    pass
+
 
 
 class Gen3Submission:

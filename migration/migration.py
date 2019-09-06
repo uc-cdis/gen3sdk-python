@@ -6,8 +6,7 @@ from collections import Counter
 from statistics import mean
 import pandas as pd
 from pandas.io.json import json_normalize
-# turn off pandas chained assignment warning
-pd.options.mode.chained_assignment = None
+pd.options.mode.chained_assignment = None # turn off pandas chained assignment warning
 
 import sys
 if sys.version_info[0] < 3:
@@ -15,11 +14,12 @@ if sys.version_info[0] < 3:
 else:
     from io import StringIO
 
-import gen3
-from gen3.auth import Gen3Auth
+# import gen3
+# from gen3.auth import Gen3Auth
 #from gen3.submission import Gen3Submission
 
 sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/gen3')
+from auth import Gen3Auth
 from submission import Gen3Submission
 
 sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/expansion')
