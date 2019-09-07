@@ -684,7 +684,12 @@ class Gen3Migration:
         suborder = get_submission_order(dd,project_id,prefix='temp',suffix='tsv')
         """
         logname = "submission_{}_logfile.txt".format(project_id)
-        !mkdir -p done
+        cmd = ['mkdir','-p','done']
+        try:
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+        except Exception as e:
+            output = e.output.decode('UTF-8')
+            print("ERROR:" + output)
         with open(logname, 'w') as logfile:
             for node_order in suborder:
                 node = node_order[0]
@@ -693,7 +698,15 @@ class Gen3Migration:
                     data = self.sub.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
                     #print("data: {}".format(data)) #for trouble-shooting
                     logfile.write(filename + '\n' + json.dumps(data)+'\n\n') #put in log file
-                    if len(data['invalid']) == 0:
-                        !mv $filename done
+                    if len(data['invalid']) == 0 and len(data['succeeded']) > 0:
+                        cmd = ['mv',filename,'done']
+                        try:
+                            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+                            print("Submission successful. Moving file to done:\n\t{}".format(filename))
+                        except Exception as e:
+                            output = e.output.decode('UTF-8')
+                            print("ERROR:" + output)
+                    else:
+                        print("Need to fix errors in {}".format(filename))
                 except Exception as e:
                     print(e)
