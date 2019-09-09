@@ -268,6 +268,15 @@ class Gen3Migration:
         print("Total of {} missing visit links created for this batch.".format(total))
         return df
 
+
+
+from_node='demographic'
+to_node='diagnosis'
+properties=static_diag
+parent_node='case'
+
+
+
     def move_properties(self,project_id,from_node,to_node,properties,parent_node=None):
         """
         This function takes a node with properties to be moved (from_node) and moves those properties/data to a new node (to_node).
@@ -319,8 +328,10 @@ class Gen3Migration:
         else:
             parent_link = "{}s.submitter_id".format(to_node)
 
+        # keep records only if they have some non-null value in "properties"
         all_props = [parent_link] + properties
         new_to = df_from[all_props] #demo_case = demo[['cases.submitter_id']+static_case]
+        new_to = new_to[all_props].dropna(thresh=2) # drops any rows where there aren't at least 2 non-null values (1 of them is submitter_id)
 
         if to_node is 'case':
             new_to.rename(columns={parent_link:'submitter_id'},inplace=True)
@@ -332,20 +343,28 @@ class Gen3Migration:
             for case_id in case_ids:
                 print("\tGathering unique data for case '{}' ({}/{})".format(case_id,count,len(case_ids)))
                 df1 = new_to.loc[new_to['submitter_id']==case_id]
-                #case_data = pd.DataFrame(columns=headers)
                 for header in headers:
                     vals = list(df1.loc[df1[header].notnull()][header].unique())
                     if len(vals) == 1:
-                        #case_data[header] = vals
                         case_data.loc[case_data['submitter_id']==case_id,header] = vals
                     elif len(vals) > 1:
                         print("{}: {}".format(header,vals))
+                        if header == 'age_at_enrollment':
+                            lowest_val = vals.sort()[0]
                 count += 1
             all_to = pd.merge(df_to,case_data,on='submitter_id', how='left')
         else:
             new_to['type'] = to_node
             new_to['project_id'] = project_id
             new_to['submitter_id'] = df_from['submitter_id'] + "_{}".format(to_node)
+            # add any missing required properties to new DF
+        to_required = list(set(list(dd[to_node]['required'])).difference(list(new_to)))
+        for link in list(dd[to_node]['links']):
+            if link['name'] in to_required:
+                to_required.remove(link['name'])
+        for prop in to_required:
+            new_to[prop] = np.nan
+            print("Missing required property '{}' added to new '{}' TSV with all null values.".format(prop,to_node))
             #only write new_to records if submitter_ids don't already exist in df_to:
             add_to = new_to.loc[~new_to['submitter_id'].isin(list(df_to.submitter_id))]
             all_to = pd.concat([df_to,add_to],ignore_index=True,sort=False)
