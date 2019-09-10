@@ -4,6 +4,7 @@ from shutil import copyfile
 import numpy as np
 from collections import Counter
 from statistics import mean
+from pathlib import Path
 import pandas as pd
 from pandas.io.json import json_normalize
 pd.options.mode.chained_assignment = None # turn off pandas chained assignment warning
@@ -50,6 +51,24 @@ class Gen3Migration:
         # self.sub.submit_file()
         # api = self._endpoint
         # auth = self._auth_provider
+
+    def read_tsv(self,project_id,node):
+        filename = "temp_{}_{}.tsv".format(project_id,node)
+        try:
+            df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+        except FileNotFoundError as e:
+            print("\tNo '{}' TSV found.".format(node))
+            return
+        return df
+
+    def write_tsv(self,df,project_id,node):
+        outname = "temp_{}_{}.tsv".format(project_id,node)
+        try:
+            df.to_csv(outname, sep='\t', index=False, encoding='utf-8')
+            print("\tTotal of {} records written to node {} in file {}.".format(len(df),node,outname))
+        except Exception as e:
+            print("Error writing TSV file: {}".format(e))
+        return df
 
     def make_temp_files(self,prefix,suffix,name='temp'):
         """
@@ -117,7 +136,6 @@ class Gen3Migration:
         link_name = "{}s.submitter_id".format(link)
         if link_name not in list(df):
             df[link_name] = np.nan
-        #if old_parent is None:
         df_no_link = df.loc[df[link_name].isnull()] # records with no visits.submitter_id
         if len(df_no_link) > 0:
             df_no_link[link_name] = df_no_link['submitter_id'] + "_{}".format(link) # visit submitter_id is "<ESID>_visit"
@@ -140,9 +158,9 @@ class Gen3Migration:
             properties(dict): Dict of required properties/values to add to new link records.
         Example:
             This will create visit records that don't exist in the visit TSV but are in the imaging_exam TSV.
-            create_missing_links(node='imaging_exam',link='visit',old_parent='cases',properties={'visit_label':'Imaging','visit_method':'In-person Visit'})
+            create_missing_links(node='imaging_exam',link='visit',old_parent='cases',properties={'visit_label':'Imaging','visit_method':'In-person Visit'},new_dd=dd,old_dd=prod_dd,links=None)
+            create_missing_links(node='diagnosis',link='visit',old_parent='cases',properties={'visit_label':'Unknown','visit_method':'Unknown'},new_dd=dd,old_dd=prod_dd)
         """
-        # df = self.create_missing_links(project_id=project_id,node=node,link='visit',old_parent=links_to_drop[0],properties=required_props)
         print("Creating missing '{}' records with links to '{}' for '{}'.".format(link,old_parent,node))
         filename = "temp_{}_{}.tsv".format(project_id,node)
         try:
@@ -150,8 +168,11 @@ class Gen3Migration:
         except FileNotFoundError as e:
             print("\tNo existing {} TSV found. Skipping..".format(node))
             return
-        link_name = "{}s.submitter_id".format(link)
-        link_names = list(df[link_name])
+        link_name = "{}s.submitter_id".format(link) # visits.submitter_id
+        if link_name in list(df):
+            link_names = list(df[link_name])
+        else:
+            link_names = []
         link_file = "temp_{}_{}.tsv".format(project_id,link)
         try:
             link_df = pd.read_csv(link_file,sep='\t',header=0,dtype=str) #open visit TSV
@@ -268,7 +289,7 @@ class Gen3Migration:
         print("Total of {} missing visit links created for this batch.".format(total))
         return df
 
-    def move_properties(self,project_id,from_node,to_node,properties,dd,parent_node=None):
+    def move_properties(self,project_id,from_node,to_node,properties,dd,parent_node=None,required_props=None):
         """
         This function takes a node with properties to be moved (from_node) and moves those properties/data to a new node (to_node).
         Fxn also checks whether the data for properties to be moved actually has non-null data. If all data are null, no new records are created.
@@ -277,6 +298,7 @@ class Gen3Migration:
             to_node(str): Node TSV to add copied data to.
             properties(list): List of column headers containing data to copy.
             parent_node(str): The parent node that links the from_node to the to_node, e.g., 'visit' or 'case'.
+            required_props(dict): If the to_node has additional required properties, enter the value all records should get for each key.
         Example:
             This moves the property 'military_status' from 'demographic' node to 'military_history' node, which should link to the same parent node 'case'.
             move_properties(from_node='demographic',to_node='military_history',properties=['military_status'],parent_node='case')
@@ -293,9 +315,11 @@ class Gen3Migration:
         to_name = "temp_{}_{}.tsv".format(project_id,to_node) #to reproductive_health
         try:
             df_to = pd.read_csv(to_name,sep='\t',header=0,dtype=str)
+            new_file = False
         except FileNotFoundError as e:
             df_to = pd.DataFrame(columns=['submitter_id'])
             print("\tNo '{}' TSV found. Creating new TSV for data to be moved.".format(to_node))
+            new_file = True
 
         # Check that the data to move is not entirely null. If it is, then give warning and quit.
         proceed = False
@@ -354,21 +378,32 @@ class Gen3Migration:
             new_to['type'] = to_node
             new_to['project_id'] = project_id
             new_to['submitter_id'] = df_from['submitter_id'] + "_{}".format(to_node)
+            #only write new_to records if submitter_ids don't already exist in df_to:
             add_to = new_to.loc[~new_to['submitter_id'].isin(list(df_to.submitter_id))]
             all_to = pd.concat([df_to,add_to],ignore_index=True,sort=False)
 
         # add any missing required properties to new DF
         to_required = list(set(list(dd[to_node]['required'])).difference(list(all_to)))
+        link_target = None
         for link in list(dd[to_node]['links']):
             if link['name'] in to_required:
+                link_target = link['target_type']
                 to_required.remove(link['name'])
         for prop in to_required:
-            all_to[prop] = np.nan
-            print("Missing required property '{}' added to new '{}' TSV with all null values.".format(prop,to_node))
-            #only write new_to records if submitter_ids don't already exist in df_to:
+            if prop in list(required_props.keys()):
+                all_to[prop] = required_props[prop]
+                print("Missing required property '{}' added to new '{}' TSV with all {} values.".format(prop,to_node,required_props[prop]))
+            else:
+                all_to[prop] = np.nan
+                print("Missing required property '{}' added to new '{}' TSV with all null values.".format(prop,to_node))
 
         all_to.to_csv(to_name,sep='\t',index=False,encoding='utf-8')
         print("\tProperties moved to '{}' node from '{}'. Data saved in file:\n\t{}".format(to_node,from_node,to_name))
+        # if new_file and isinstance(link_target,str):
+        #     df = self.read_tsv(project_id,link_target)
+        #     new_ids =
+        #     df1 = df.loc[df['submitter_id'].isin()]
+        #     print("Creating {} missing links for new TSV file.".format())
         return all_to
 
     def change_property_names(self,project_id,node,properties):
@@ -696,7 +731,7 @@ class Gen3Migration:
         print("Trailing '.0' decimals removed from: {}".format(filename))
         return df
 
-    def submit_tsvs(self,project_id,suborder):
+    def submit_tsvs(self,project_id,suborder,check_done=False):
         """
         Submits all the TSVs in 'suborder' dictionary obtained by running, e.g.:
         suborder = get_submission_order(dd,project_id,prefix='temp',suffix='tsv')
@@ -712,19 +747,23 @@ class Gen3Migration:
             for node_order in suborder:
                 node = node_order[0]
                 filename="temp_{}_{}.tsv".format(project_id,node)
-                try:
-                    data = self.sub.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
-                    #print("data: {}".format(data)) #for trouble-shooting
-                    logfile.write(filename + '\n' + json.dumps(data)+'\n\n') #put in log file
-                    if len(data['invalid']) == 0 and len(data['succeeded']) > 0:
-                        cmd = ['mv',filename,'done']
-                        try:
-                            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
-                            print("Submission successful. Moving file to done:\n\t{}".format(filename))
-                        except Exception as e:
-                            output = e.output.decode('UTF-8')
-                            print("ERROR:" + output)
-                    else:
-                        print("Need to fix errors in {}".format(filename))
-                except Exception as e:
-                    print(e)
+                done_file = Path("done/{}".format(filename))
+                if not done_file.is_file() or check_done is False:
+                    try:
+                        data = self.sub.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
+                        #print("data: {}".format(data)) #for trouble-shooting
+                        logfile.write(filename + '\n' + json.dumps(data)+'\n\n') #put in log file
+                        if len(data['invalid']) == 0 and len(data['succeeded']) > 0:
+                            cmd = ['mv',filename,'done']
+                            try:
+                                output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+                                print("Submission successful. Moving file to done:\n\t{}".format(filename))
+                            except Exception as e:
+                                output = e.output.decode('UTF-8')
+                                print("ERROR:" + output)
+                        else:
+                            print("Need to fix errors in {}".format(filename))
+                    except Exception as e:
+                        print(e)
+                else:
+                    print("Previously submitted file already exists in done directory:\n\t{}".format(done_file))
