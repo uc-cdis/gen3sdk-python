@@ -1,4 +1,4 @@
-import os, os.path, sys, subprocess, glob, json, re, operator, requests
+import os, os.path, sys, subprocess, glob, json, re, operator, requests, datetime
 import fnmatch, sys, ntpath, copy
 from shutil import copyfile
 import numpy as np
@@ -750,6 +750,7 @@ class Gen3Migration:
                 done_file = Path("done/{}".format(filename))
                 if not done_file.is_file() or check_done is False:
                     try:
+                        print(datetime.datetime.now())
                         data = self.sub.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
                         #print("data: {}".format(data)) #for trouble-shooting
                         logfile.write(filename + '\n' + json.dumps(data)+'\n\n') #put in log file
