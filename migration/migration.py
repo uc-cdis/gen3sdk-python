@@ -766,4 +766,4 @@ class Gen3Migration:
                     except Exception as e:
                         print(e)
                 else:
-                    print("Previously submitted file already exists in done directory:\n\t{}".format(done_file))
+                    print("\nPreviously submitted file already exists in done directory:\n\t{}".format(done_file))
