@@ -198,13 +198,14 @@ class Gen3Expansion:
         >>> df = get_node_tsvs('demographic')
 
         """
-        if not isinstance(node, str): # Create folder on VM for downloaded files
-            mydir = 'downloaded_tsvs'
-        else:
-            mydir = str(node+'_tsvs')
 
+        if not os.path.exists('node_tsvs'):
+            os.makedirs('node_tsvs')
+
+        mydir = str('node_tsvs/'+node+'_tsvs')
         if not os.path.exists(mydir):
             os.makedirs(mydir)
+
         if projects is None: #if no projects specified, get node for all projects
             projects = list(json_normalize(self.sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
         elif isinstance(projects, str):
