@@ -118,6 +118,13 @@ class Gen3Migration:
             return df
 
     def merge_properties(self,project_id,node,properties):
+        """
+        This function merges a list of properties into a single property and then drops the list of properties from the column headers.
+        Args:
+            project_id(str): The project_id of the data.
+            node(str): The node TSV to merge properties in.
+            properties(dict): A dictionary of "single_property_to_merge_into":["list","of","properties","to","merge","and","drop"]
+        """
         df = self.read_tsv(project_id,node)
         dropped = []
         for prop in list(properties.keys()):
