@@ -65,7 +65,7 @@ class Gen3Migration:
         outname = "temp_{}_{}.tsv".format(project_id,node)
         try:
             df.to_csv(outname, sep='\t', index=False, encoding='utf-8')
-            print("\tTotal of {} records written to node {} in file {}.".format(len(df),node,outname))
+            print("\tTotal of {} records written to node '{}' in file:\n\t\t{}.".format(len(df),node,outname))
         except Exception as e:
             print("Error writing TSV file: {}".format(e))
         return df
@@ -116,6 +116,32 @@ class Gen3Migration:
             df.to_csv(outname, sep='\t', index=False, encoding='utf-8')
             print("\tTotal of {} records written to node {} in file {}.".format(len(df),out_node,outname))
             return df
+
+    def merge_properties(self,project_id,node,properties):
+        df = self.read_tsv(project_id,node)
+        dropped = []
+        for prop in list(properties.keys()):
+            if prop not in list(df):
+                df[prop] = np.nan
+            old_props = properties[prop]
+            for old_prop in old_props:
+                if old_prop in list(df):
+                    df_old = df.loc[df[old_prop].notnull()]
+                    df_old[prop] = df_old[old_prop]
+                    df_rest = df.loc[df[old_prop].isnull()]
+                    df_merged = pd.concat([df_rest,df_old],ignore_index=True,sort=False)
+                    df = df_merged.drop(columns=[old_prop])
+                    dropped.append(old_prop)
+                    print("Property '{}' merged into '{}' and dropped from '{}' TSV.".format(old_prop,prop,node))
+                else:
+                    print("Property '{}' not found in '{}' TSV. Skipping...".format(old_prop,node))
+        if len(dropped) > 0:
+            print("Properties {} merged into {}.".format(dropped,list(properties.keys())))
+            df = self.write_tsv(df,project_id,node)
+            return df
+        else:
+            print("\tNo properties dropped from '{}'. No TSV written.".format(node))
+            return
 
     def add_missing_links(self,project_id,node,link,old_parent=None,links=None):
         """
