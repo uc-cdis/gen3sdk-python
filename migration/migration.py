@@ -783,7 +783,8 @@ class Gen3Migration:
                 done_file = Path("done/{}".format(filename))
                 if not done_file.is_file() or check_done is False:
                     try:
-                        print(datetime.datetime.now())
+                        print(str(datetime.datetime.now()))
+                        logfile.write(str(datetime.datetime.now())+'\n')
                         data = self.sub.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
                         #print("data: {}".format(data)) #for trouble-shooting
                         logfile.write(filename + '\n' + json.dumps(data)+'\n\n') #put in log file
@@ -796,6 +797,10 @@ class Gen3Migration:
                                 output = e.output.decode('UTF-8')
                                 print("ERROR:" + output)
                         else:
+                            if len(data['invalid'])>0:
+                                invalid_records = list(data['invalid'].keys())
+                                for i in invalid_records:
+                                    print(data['invalid'][i])
                             print("Need to fix errors in {}".format(filename))
                     except Exception as e:
                         print(e)
