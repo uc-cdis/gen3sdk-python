@@ -634,9 +634,7 @@ class Gen3Migration:
         all_nodes = []
         suborder = {}
         for filename in filenames:
-            #print("Found {}".format(filename))
             regex = "{}_{}_(.+).{}".format(prefix,project_id,suffix)
-            #match = re.search('AAA(.+)ZZZ', text)
             match = re.search(regex, filename)
             if match:
                 node = match.group(1)
