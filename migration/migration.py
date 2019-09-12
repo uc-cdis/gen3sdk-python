@@ -787,7 +787,7 @@ class Gen3Migration:
                             cmd = ['mv',filename,'done']
                             try:
                                 output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
-                                print("Submission successful. Moving file to done:\n\t{}".format(filename))
+                                print("Submission successful. Moving file to done:\n\t{}\n\n".format(filename))
                             except Exception as e:
                                 output = e.output.decode('UTF-8')
                                 print("ERROR:" + output)
