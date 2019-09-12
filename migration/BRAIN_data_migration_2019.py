@@ -67,9 +67,13 @@ mig = Gen3Migration(api,auth)
 #project_id = 'mjff-LRRK2C' # DONE
 #project_id = 'mjff-PPMI' # DONE
 
+# Download structured data from all projects as TSV files
+#d = exp.get_project_tsvs()
+
 #project_dir = "/Users/christopher/Documents/Notes/BHC/data_migration_2019/project_tsvs_migrated/{}_tsvs".format(project_id)
 #cd $project_dir
 #!echo $PWD
+
 
 ################################################################################
 # Create copies of the original TSVs to modify
