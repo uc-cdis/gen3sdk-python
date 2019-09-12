@@ -429,11 +429,6 @@ class Gen3Migration:
 
         all_to.to_csv(to_name,sep='\t',index=False,encoding='utf-8')
         print("\tProperties moved to '{}' node from '{}'. Data saved in file:\n\t{}".format(to_node,from_node,to_name))
-        # if new_file and isinstance(link_target,str):
-        #     df = self.read_tsv(project_id,link_target)
-        #     new_ids =
-        #     df1 = df.loc[df['submitter_id'].isin()]
-        #     print("Creating {} missing links for new TSV file.".format())
         return all_to
 
     def change_property_names(self,project_id,node,properties):
