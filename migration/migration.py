@@ -48,9 +48,6 @@ class Gen3Migration:
         self._endpoint = endpoint
         self.sub = Gen3Submission(endpoint, auth_provider)
         self.exp = Gen3Expansion(endpoint, auth_provider)
-        # self.sub.submit_file()
-        # api = self._endpoint
-        # auth = self._auth_provider
 
     def read_tsv(self,project_id,node):
         filename = "temp_{}_{}.tsv".format(project_id,node)
