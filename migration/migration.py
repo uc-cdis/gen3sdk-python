@@ -779,7 +779,7 @@ class Gen3Migration:
                 if not done_file.is_file() or check_done is False:
                     try:
                         print(str(datetime.datetime.now()))
-                        logfile.write(str(datetime.datetime.now())+'\n')
+                        logfile.write(str(datetime.datetime.now()))
                         data = self.sub.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
                         #print("data: {}".format(data)) #for trouble-shooting
                         logfile.write(filename + '\n' + json.dumps(data)+'\n\n') #put in log file
@@ -800,4 +800,4 @@ class Gen3Migration:
                     except Exception as e:
                         print(e)
                 else:
-                    print("\nPreviously submitted file already exists in done directory:\n\t{}".format(done_file))
+                    print("\nPreviously submitted file already exists in done directory:\n\t{}\n".format(done_file))
