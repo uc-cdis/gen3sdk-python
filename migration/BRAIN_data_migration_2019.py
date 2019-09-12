@@ -30,6 +30,7 @@ prod_profile = 'bc'
 prod_creds = '/Users/christopher/Downloads/bc-credentials.json'
 prod_auth = Gen3Auth(prod_api,refresh_file=prod_creds)
 prod_sub = Gen3Submission(prod_api,prod_auth)
+prod_exp = Gen3Expansion(prod_api, prod_auth)
 
 # get the old and new data dictionaries
 dd = sub.get_dictionary_all()
@@ -68,7 +69,7 @@ mig = Gen3Migration(api,auth)
 #project_id = 'mjff-PPMI' # DONE
 
 # Download structured data from all projects as TSV files
-#d = exp.get_project_tsvs()
+#d = prod_exp.get_project_tsvs()
 
 #project_dir = "/Users/christopher/Documents/Notes/BHC/data_migration_2019/project_tsvs_migrated/{}_tsvs".format(project_id)
 #cd $project_dir

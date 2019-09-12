@@ -122,7 +122,12 @@ class Gen3Migration:
             node(str): The node TSV to merge properties in.
             properties(dict): A dictionary of "single_property_to_merge_into":["list","of","properties","to","merge","and","drop"]
         """
-        df = self.read_tsv(project_id,node)
+        filename = "temp_{}_{}.tsv".format(project_id,node)
+        try:
+            df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+        except FileNotFoundError as e:
+            print("\tNo '{}' TSV found.".format(node))
+            return
         dropped = []
         for prop in list(properties.keys()):
             if prop not in list(df):
