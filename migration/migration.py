@@ -801,3 +801,37 @@ class Gen3Migration:
                         print(e)
                 else:
                     print("\nPreviously submitted file already exists in done directory:\n\t{}\n".format(done_file))
+
+    def check_migration_counts(self, projects=None, overwrite=False):
+        """
+        """
+        all_nodes = sorted(list(set(json_normalize(self.sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
+        remove_nodes = ['program','project','root','data_release'] #remove these nodes from list of nodes
+        for node in remove_nodes:
+            if node in all_nodes: all_nodes.remove(node)
+        if projects is None: #if no projects specified, get node for all projects
+            projects = list(json_normalize(self.sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+        elif isinstance(projects, str):
+            projects = [projects]
+        for project_id in projects:
+            mydir = str('project_tsvs/'+project_id+'_tsvs') #create the directory to store TSVs
+            if not os.path.exists(mydir):
+                os.makedirs(mydir)
+            for node in all_nodes:
+                query_txt = """{_%s_count (project_id:"%s")}""" % (node,project_id)
+                res = self.sub.query(query_txt)
+                count = res['data'][str('_'+node+'_count')]
+                print(str(count) + ' records found in node ' + node + ' in project ' + project_id)
+                if count > 0:
+                    filename = str(mydir+'/'+project_id+'_'+node+'.tsv')
+                    if (os.path.isfile(filename)) and (overwrite is False):
+                        print('Previously downloaded '+ filename )
+                    else:
+                        prog,proj = project_id.split('-',1)
+                        self.sub.export_node(prog,proj,node,'tsv',filename)
+        cmd = ['ls',mydir] #look in the download directory
+        try:
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+        except Exception as e:
+            output = 'ERROR:' + e.output.decode('UTF-8')
+        return output
