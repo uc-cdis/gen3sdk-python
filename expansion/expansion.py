@@ -242,7 +242,7 @@ class Gen3Expansion:
         print('Master node TSV with '+str(len(all_data))+' total records written to '+nodefile+'.')
         return all_data
 
-    def get_project_tsvs(self, projects=None, overwrite=False):
+    def get_project_tsvs(self, projects=None, outdir='project_tsvs', overwrite=False):
         """Function gets a TSV for every node in a specified project.
             Exports TSV files into a directory "project_tsvs/".
             Function returns a list of the contents of the directory.
@@ -266,7 +266,7 @@ class Gen3Expansion:
             projects = [projects]
 
         for project_id in projects:
-            mydir = str('project_tsvs/'+project_id+'_tsvs') #create the directory to store TSVs
+            mydir = "{}/{}_tsvs".format(outdir,project_id) #create the directory to store TSVs
 
             if not os.path.exists(mydir):
                 os.makedirs(mydir)
