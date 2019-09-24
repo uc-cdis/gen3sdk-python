@@ -49,17 +49,23 @@ class Gen3Migration:
         self.sub = Gen3Submission(endpoint, auth_provider)
         self.exp = Gen3Expansion(endpoint, auth_provider)
 
-    def read_tsv(self,project_id,node):
-        filename = "temp_{}_{}.tsv".format(project_id,node)
+    def read_tsv(self,project_id,node,name='temp'):
+        if name is not None:
+            filename = "{}_{}_{}.tsv".format(name,project_id,node)
+        else:
+            filename = "{}_{}.tsv".format(project_id,node)
         try:
             df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
         except FileNotFoundError as e:
-            print("\tNo '{}' TSV found.".format(node))
+            print("\tNo '{}' TSV found.".format(filename))
             return
         return df
 
-    def write_tsv(self,df,project_id,node):
-        outname = "temp_{}_{}.tsv".format(project_id,node)
+    def write_tsv(self,df,project_id,node,name='temp'):
+        if name is not None:
+            outname = "{}_{}_{}.tsv".format(name,project_id,node)
+        else:
+            outname = "{}_{}.tsv".format(project_id,node)
         try:
             df.to_csv(outname, sep='\t', index=False, encoding='utf-8')
             print("\tTotal of {} records written to node '{}' in file:\n\t\t{}.".format(len(df),node,outname))
