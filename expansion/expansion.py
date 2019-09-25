@@ -43,28 +43,20 @@ class Gen3Expansion:
         self._auth_provider = auth_provider
         self._endpoint = endpoint
         self.sub = Gen3Submission(endpoint, auth_provider)
-        #self.sub = Gen3Submission(api, auth)
-        # submission.py uses this:
-        #output = requests.post(api_url, auth=self._auth_provider, json=query).text
-        #self.sub = Gen3Submission(api, auth)
 
     def __export_file(self, filename, output):
         """Writes text, e.g., an API response, to a file.
-
         Args:
             filename (str): The name of the file to be created.
             output (str): The contents of the file to be created.
-
         Example:
         >>> output = requests.get(api_url, auth=self._auth_provider).text
         ... self.__export_file(filename, output)
-
         """
         outfile = open(filename, "w")
         outfile.write(output)
         outfile.close
         print("Output written to file: "+filename+"\n")
-
 
     ### AWS S3 Tools:
     def s3_ls(self, path, bucket, profile, pattern='*'):
@@ -142,11 +134,11 @@ class Gen3Expansion:
     # Functions for downloading metadata in TSVs
 
     def get_project_ids(self, node=None,name=None):
-        """Get a list of project_ids to have access to in data commons.
+        """Get a list of project_ids you have access to in a data commons.
 
             Args:
                 node(str): The node you want projects to have at least one record in.
-                name(str): The name of the programs to get projects in.
+                name(str): The name of the programs to get projects in, or the submitter_id of a particular record.
 
             Example:
                 get_project_ids()
@@ -305,7 +297,7 @@ class Gen3Expansion:
             project_id(str): The project_id to limit the query to. Default is None.
             props(list): A list of properties in the node to return.
             chunk_size(int): The number of records to return per query. Default is 10000.
-
+            args(str): Put graphQL arguments here. For example, 'with_path_to:{type:"case",submitter_id:"case-01"}', etc. Don't enclose in parentheses.
         Example:
             paginate_query('demographic')
         """
