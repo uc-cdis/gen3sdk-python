@@ -334,7 +334,7 @@ def compare_two_commons(report, outdir='reports',stats = ['total_records','null_
     i = 0
     for prop_id in prop_ids: # prop_id = prop_ids[0]
         i += 1
-        print("Comparing: {} ({} of {})".format(prop_id,i,total))
+        print("({} of {}) Comparing stats for '{}'".format(i,total,prop_id))
         df = report.loc[report['prop_id']==prop_id]
         df['stats'] = df[stats].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
         if len(list(set(df['stats']))) > 1: # if any of the stats for the prop_id is different, each record goes in different df
@@ -346,7 +346,7 @@ def compare_two_commons(report, outdir='reports',stats = ['total_records','null_
     if len(report) == len(identical) + len(different): #len(report) == len(comparison['identical']) + len(comparison['different'])
         print("Good")
     else:
-        print("Doh!"
+        print("Doh!")
 
 
     diff_name = 'different_'
