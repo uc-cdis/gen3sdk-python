@@ -317,14 +317,41 @@ report = write_commons_report(commons)
 
 
 
-def compare_two_commons(report):
-    """ Takes the df returned from 'write_commons_report'
-        where 2 data commons are summarized from 'summarize_data_commons'.
+def compare_two_commons(report, stats = ['total_records','null_count','N','bins','min','max','mean','median','stdev']):
+    """ Takes the pandas DataFrame returned from 'write_commons_report'
+        where at least 2 data commons are summarized from 'summarize_data_commons'.
+    """
+    # create prop_ids for comparing project data per property in each node from two data commons
+    report['prop_id'] = report['project'] + '_' + report['node'] + '_' + report['property']
+    prop_ids = list(set(report['prop_id']))
+
+    # initialize results dictionary
+    cols = list(report)
+    identical = pd.DataFrame(columns=cols)
+    different = pd.DataFrame(columns=cols)
+
+    for prop_id in prop_ids: # prop_id = prop_ids[0]
+        df = report.loc[report['prop_id']==prop_id]
+        df['stats'] = df[stats].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
+        if len(list(set(df['stats']))) > 1:
+            different = pd.concat([different,df],ignore_index=True, sort=False)
+        else:
+            identical = pd.concat([identical,df],ignore_index=True, sort=False)
+    comp = {"identical":identical,"different":different}
+    return comp
+
+
+comparison = compare_two_commons(report)
+
+###############################################################################
+###############################################################################
+# 6) Outlier analysis
+
+def find_outliers(report):
+    """ Finds outliers in the data.
     """
 
-###############################################################################
-###############################################################################
-
+    return outliers
 
 def get_nodes_props_from_dd(commons,time=False):
     dd_nodes = []
