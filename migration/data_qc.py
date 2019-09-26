@@ -324,20 +324,30 @@ def compare_two_commons(report, outdir='reports',stats = ['total_records','null_
     # create prop_ids for comparing project data per property in each node from two data commons
     report['prop_id'] = report['project'] + '_' + report['node'] + '_' + report['property']
     prop_ids = sorted(list(set(report['prop_id'])))
+    total = len(prop_ids)
 
     # initialize results dictionary
     cols = list(report)
     identical = pd.DataFrame(columns=cols)
     different = pd.DataFrame(columns=cols)
 
+    i = 0
     for prop_id in prop_ids: # prop_id = prop_ids[0]
-        print("Comparing: {}".format(prop_id))
+        i += 1
+        print("Comparing: {} ({} of {})".format(prop_id,i,total))
         df = report.loc[report['prop_id']==prop_id]
         df['stats'] = df[stats].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
-        if len(list(set(df['stats']))) > 1:
+        if len(list(set(df['stats']))) > 1: # if any of the stats for the prop_id is different, each record goes in different df
             different = pd.concat([different,df],ignore_index=True, sort=False)
         else:
             identical = pd.concat([identical,df],ignore_index=True, sort=False)
+
+    # check total
+    if len(report) == len(identical) + len(different): #len(report) == len(comparison['identical']) + len(comparison['different'])
+        print("Good")
+    else:
+        print("Doh!"
+
 
     diff_name = 'different_'
     for i in range(len(dcs)):
