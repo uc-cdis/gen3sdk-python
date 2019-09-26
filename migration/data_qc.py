@@ -1,5 +1,5 @@
 # BRAIN QC Checks:
-import os, os.path, sys, subprocess, glob, json, datetime
+import os, os.path, sys, subprocess, glob, json, datetime, collections
 import fnmatch, sys, ntpath, copy, re, operator, requests, statistics
 from shutil import copyfile
 from pathlib import Path
@@ -68,14 +68,20 @@ def summarize_data_commons(
     prefix='mjff',
     omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id']
     ):
+    """ Takes a dictionary with the following information about a data commons:
+        commons = {"name_of_commons":{"dir":dir_of_project_tsvs, "dd": data_dictionary_of_commons}}
+        Can have as many commons.keys() as you like for different directories of TSVs to summarize,
+        but best to just have two if you intend to compare data sets, e.g., between staging and production,
+        which is the primary use case for these scripts.
+    """
 
-    dcs = list(commons.keys())
+    dcs = list(commons.keys()) # get the names of the data commons, e.g., 'staging' and 'prod'
 
     for dc in dcs: #dc=dcs[0]
 
-        project_count = 0
-        node_count = 0
-        prop_count = 0
+        project_count = 0 # count the projects in each "commons_tsvs" directory, e.g., output of Gen3Expansion.get_project_tsvs()
+        node_count = 0 # count the nodes in each data set
+        prop_count = 0 # count the properties in each data set
 
         os.chdir(commons[dc]['dir'])
         print(os.getcwd())
@@ -141,7 +147,7 @@ def summarize_data_commons(
 
                     data[project_id][node]["properties"][prop] = {}
                     prop_count+=1
-                    print("\tcommons: '{}', node: '{}', prop: '{}'".format(dc,node,prop))
+                    print("'{}', '{}', '{}', '{}'".format(dc,project_id,node,prop))
 
                     null_count = len(df.loc[df[prop].isnull()])
 
@@ -201,11 +207,15 @@ In [982]: commons['staging']['prop_count']
 Out[982]: 14744
 In [981]: commons['prod']['prop_count']
 Out[981]: 12647
+In [31]: commons['prod']['prop_count'] + commons['staging']['prop_count']
+Out[31]: 27391
 
 In [983]: commons['staging']['node_count']
 Out[983]: 245
 In [984]: commons['prod']['node_count']
 Out[984]: 252
+In [32]: commons['prod']['node_count'] + commons['staging']['node_count']
+Out[32]: 497
 
 In [985]: commons['prod']['project_count']
 Out[985]: 12
@@ -215,13 +225,17 @@ Out[986]: 12
 In [770]: list(commons['staging']['data']['mjff-S4']['aliquot']['properties']['aliquot_volume']['stats'])
 Out[770]: ['N', 'min', 'max', 'mean', 'median', 'stdev']
 
-In [778]: list(commons[dcs[1]]['data']['mjff-S4']['visit']['properties']['visit_method']['stats'])
+# lots of bins:
+#commons: 'staging', project: 'mjff-BioFIND', node: 'medication', prop: 'who_drug_name'
+In [778]: list(commons[dcs[1]]['data']['mjff-BioFIND']['medication']['properties']['who_drug_name']['stats'])
 Out[778]: ['bins']
 
 os.chdir("/Users/christopher/Documents/Notes/BHC/data_qc/")
 
-def project_report(commons, outdir='reports',bin_limit=50):
-    """Write a Data QC Report TSV"""
+def write_commons_report(commons, outdir='reports',bin_limit=False):
+    """ Write a Data QC Report TSV
+        where 'commons' is the dictionary output of 'summarize_data_commons'.
+    """
     #outdir='reports'
     #bin_limit=25
     cmd = ['mkdir','-p',outdir]
@@ -239,18 +253,18 @@ def project_report(commons, outdir='reports',bin_limit=50):
 
     r = pd.DataFrame(index=range(0,total_props),
         columns=['commons','project','node','property','property_type',
-                'total_records','null_count','N','bins','unique_count',
+                'total_records','null_count','N','bin_number','bins',
                 'min','max','mean','median','stdev'])
 
     i = 0
-    for dc in dcs: #dc = list(commons.keys())[0]
-
+    for dc in dcs: #dc = dcs[0]
         projects = list(commons[dc]['data'].keys())
         for project in projects: #project=projects[0]
             nodes = list(commons[dc]['data'][project])
-            for node in nodes:
+            for node in nodes: #node=nodes[0]
                 props = list(commons[dc]['data'][project][node]['properties'])
                 for prop in props:
+                    print("Writing '{}' '{}' '{}' '{}' to report.".format(dc,project,node,prop))
                     data = commons[dc]['data'][project][node]['properties'][prop]
                     #df['column']['row'] = val
                     r['commons'][i] = dc
@@ -263,13 +277,19 @@ def project_report(commons, outdir='reports',bin_limit=50):
                     if 'stats' in data:
                         r['N'][i] = data['stats']['N']
                         if data['property_type'] in ['string','enum','boolean']:
-                            unique_count = len(data['stats']['bins'].keys())
-                            r['unique_count'][i] = unique_count
-                            if unique_count > bin_limit:
-                                r['bins'][i] = "Over bin limit ({}).".format(bin_limit)
+                            prop_bins = data['stats']['bins']
+                            bin_number = len(prop_bins.keys())
+                            r['bin_number'][i] = bin_number
+                            if not bin_limit is False and bin_number > bin_limit:
+                                #r['bins'][i] = "Over bin limit ({}).".format(bin_limit)
                                 #first_bins = {i: data['stats']['bins'][i] for i in list(data['stats']['bins'])[:2]}
+                                # prop_bins = commons[dcs[1]]['data']['mjff-BioFIND']['medication']['properties']['who_drug_name']['stats']
+                                # collections.Counter(prop_bins).most_common(10)
+                                prop_bins = dict(collections.Counter(prop_bins).most_common(bin_limit))
+                                #r['bins'][i] = "First {} bins: {}".format(bin_limit,str(prop_bins))
+                                r['bins'][i] = prop_bins
                             else:
-                                r['bins'][i] = data['stats']['bins']
+                                r['bins'][i] = prop_bins
                         elif data['property_type'] in ['integer','number']:
                             r['min'][i] = data['stats']['min']
                             r['max'][i] = data['stats']['max']
@@ -279,21 +299,28 @@ def project_report(commons, outdir='reports',bin_limit=50):
 
                     i += 1
 
-
     report_name = 'report_'
     for i in range(len(dcs)):
         report_name += dcs[i]
         if i != len(dcs)-1:
             report_name += '_'
     report_name += '.tsv'
+
     outname = "{}/{}".format(outdir,report_name)
     r.to_csv(outname, sep='\t', index=False, encoding='utf-8')
 
+    return r
+
+report = write_commons_report(commons)
 
 # 5) Compare prod/staging stats for each property in each project, considering breaking changes to data model. (e.g., properties that changed nodes/names, "age_at_enrollment" that changed distribution (took lowest value), etc.)
 
 
-r.loc[r['project']
+
+def compare_two_commons(report):
+    """ Takes the df returned from 'write_commons_report'
+        where 2 data commons are summarized from 'summarize_data_commons'.
+    """
 
 ###############################################################################
 ###############################################################################
