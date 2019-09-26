@@ -317,13 +317,13 @@ report = write_commons_report(commons)
 
 
 
-def compare_two_commons(report, stats = ['total_records','null_count','N','bins','min','max','mean','median','stdev']):
+def compare_two_commons(report, outdir='reports',stats = ['total_records','null_count','N','bins','min','max','mean','median','stdev']):
     """ Takes the pandas DataFrame returned from 'write_commons_report'
         where at least 2 data commons are summarized from 'summarize_data_commons'.
     """
     # create prop_ids for comparing project data per property in each node from two data commons
     report['prop_id'] = report['project'] + '_' + report['node'] + '_' + report['property']
-    prop_ids = list(set(report['prop_id']))
+    prop_ids = sorted(list(set(report['prop_id'])))
 
     # initialize results dictionary
     cols = list(report)
@@ -331,12 +331,32 @@ def compare_two_commons(report, stats = ['total_records','null_count','N','bins'
     different = pd.DataFrame(columns=cols)
 
     for prop_id in prop_ids: # prop_id = prop_ids[0]
+        print("Comparing: {}".format(prop_id))
         df = report.loc[report['prop_id']==prop_id]
         df['stats'] = df[stats].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
         if len(list(set(df['stats']))) > 1:
             different = pd.concat([different,df],ignore_index=True, sort=False)
         else:
             identical = pd.concat([identical,df],ignore_index=True, sort=False)
+
+    diff_name = 'different_'
+    for i in range(len(dcs)):
+        diff_name += dcs[i]
+        if i != len(dcs)-1:
+            diff_name += '_'
+    diff_name += '.tsv'
+    diff_outname = "{}/{}".format(outdir,diff_name)
+    different.to_csv(diff_outname, sep='\t', index=False, encoding='utf-8')
+
+    identical_name = 'identical_'
+    for i in range(len(dcs)):
+        identical_name += dcs[i]
+        if i != len(dcs)-1:
+            identical_name += '_'
+    identical_name += '.tsv'
+    identical_outname = "{}/{}".format(outdir,identical_name)
+    identical.to_csv(identical_outname, sep='\t', index=False, encoding='utf-8')
+
     comp = {"identical":identical,"different":different}
     return comp
 
