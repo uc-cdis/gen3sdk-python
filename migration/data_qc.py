@@ -1,4 +1,10 @@
-# BRAIN QC Checks:
+# QC Checks for Data Commons Data:
+# Useful for:
+# confirming fidelity of database migrations after data dictionary changes
+# identifying outliers
+# informing ETL mapping (which properties have the most non-null data, which ones have too many bins)
+
+
 import os, os.path, sys, subprocess, glob, json, datetime, collections
 import fnmatch, sys, ntpath, copy, re, operator, requests, statistics
 from shutil import copyfile
@@ -64,15 +70,173 @@ pdd = prod_sub.get_dictionary_all()
 
 commons = {"staging":{"dir":staging_dir,"dd":sdd},"prod":{"dir":prod_dir,"dd":pdd}} # for each commons, give directory containing the project_tsvs and the data dictionary.
 
+def get_output_name(name,commons=commons,outdir=outdir):
+    outname = "{}_".format(name)
+    for i in range(len(dcs)):
+        outname += dcs[i]
+        if i != len(dcs)-1:
+            outname += '_'
+    outname += '.tsv'
+    outname = "{}/{}".format(outdir,outname)#reports/summary_staging_prod.tsv
+    return outname
+
+def create_output_dir(outdir='reports'):
+    cmd = ['mkdir','-p',outdir]
+    try:
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+    except Exception as e:
+        output = e.output.decode('UTF-8')
+        print("ERROR:" + output)
+    return outdir
+
+def list_links(link_list,commons=commons):
+    """
+    Take node's 'links' definition (commons[dcs[0]]['dd'][shared_node]['links']), which is a list of dicts, and return a list of indiv link names.
+    """
+    link_names = []
+    for link in link_list:#link=link_list[0]
+        if 'subgroup' in link:
+            sublinks = list(link['subgroup'])
+            for sublink in sublinks:
+                link_names.append(sublink['name'])
+        else:
+            link_names.append(link['name'])
+    return link_names
+
+def get_prop_type(node,prop,dc,commons=commons):
+    prop_def = commons[dc]['dd'][node]['properties'][prop]
+    if 'type' in prop_def:
+        prop_type = prop_def['type']
+    elif 'enum' in prop_def:
+        prop_type = 'enum'
+    elif 'oneOf' in prop_def:
+        prop_type = prop_def['oneOf']
+    elif 'anyOf' in prop_def:
+        prop_type = prop_def['anyOf']
+    else:
+        print("Can't get the property type for {} in {}!".format(shared_prop,dc))
+    return prop_type
+
+# get_prop_type('aliquot','aliquot_volume','staging') #type
+# get_prop_type('sample','composition','staging') #enum
+# get_prop_type('unified_parkinsons_disease_rating','visits','staging') #anyOf
+# get_prop_type('unified_parkinsons_disease_rating','updated_datetime','staging') #oneOf
+
+def summarize_dd(commons=commons,props_to_remove=['case_submitter_id'],nodes_to_remove=['root','metaschema']):
+    dds = {}
+    nodes = []
+    node_regex = re.compile(r'^[^_][A-Za-z0-9_]+$')# don't match _terms,_settings,_definitions, etc.)
+
+    dcs = list(commons.keys())
+    for dc in dcs:
+        dd = commons[dc]['dd']
+        nodes = list(filter(node_regex.search, list(dd)))
+        dds[dc] = {}
+        for node in nodes:
+            dds[dc][node] = []
+            props = list(commons[dc]['dd'][node]['properties'])
+            for prop in props:
+                dds[dc][node].append(prop)
+
+    if len(commons) == 2:
+        nodes0 = list(dds[dcs[0]])
+        nodes1 = list(dds[dcs[1]])
+        diff1 = set(nodes0).difference(nodes1)
+        diff2 = set(nodes1).difference(nodes0)
+        msg1 = "{} nodes in '{}' missing from '{}'".format(len(diff1),dcs[0],dcs[1])
+        msg2 = "{} nodes in '{}' missing from '{}'".format(len(diff2),dcs[1],dcs[0])
+        dds['node_diffs'] = {msg1:diff1,msg2:diff2}
+        dds['node_diffs']
+
+        shared_nodes = list(set(nodes0).intersection(nodes1))
+        for shared_node in shared_nodes:
+            for node_to_remove in nodes_to_remove:
+                if node_to_remove in shared_nodes:
+                    shared_nodes.remove(node_to_remove)
+
+        dds['prop_diffs'] = {}
+        for shared_node in shared_nodes:
+
+            dds['prop_diffs'][shared_node] = {}
+
+            # LINK_DIFFS: get difference in shared node link lists; sample node in prod has both subgroup and indiv links (good for testing)
+            # this information is actually captured in 'missing_props' since link names are included in the list of properties.
+            link_list0 = commons[dcs[0]]['dd'][shared_node]['links']
+            link_list1 = commons[dcs[1]]['dd'][shared_node]['links']
+            links0 = list_links(link_list0)
+            links1 = list_links(link_list1)
+            diff1 = set(links0).difference(links1)
+            diff2 = set(links1).difference(links0)
+            if len(list(diff1)+list(diff2)) > 0:
+                dds['prop_diffs'][shared_node]['link_diffs'] = []
+                msg1 = "{} links in '{}' '{}' node missing from '{}'".format(len(diff1),dcs[0],shared_node,dcs[1])
+                msg2 = "{} links in '{}' '{}' node missing from '{}'".format(len(diff2),dcs[1],shared_node,dcs[0])
+                dds['prop_diffs'][shared_node]['link_diffs'].append([(msg1,diff1),(msg2,diff2)])
+
+            # PROP_DIFFS: get difference in shared node property lists
+            props0 = list(dds[dcs[0]][shared_node])
+            props1 = list(dds[dcs[1]][shared_node])
+            for prop_list in [props0,props1]:
+                for prop_to_remove in props_to_remove:
+                    if prop_to_remove in prop_list:
+                        prop_list.remove(prop_to_remove)
+            diff1 = set(props0).difference(props1)
+            diff2 = set(props1).difference(props0)
+            if len(list(diff1)+list(diff2)) > 0:
+                dds['prop_diffs'][shared_node]['missing_props'] = []
+                msg1 = "{} properties in '{}' '{}' node missing from '{}'".format(len(diff1),dcs[0],shared_node,dcs[1])
+                msg2 = "{} properties in '{}' '{}' node missing from '{}'".format(len(diff2),dcs[1],shared_node,dcs[0])
+                dds['prop_diffs'][shared_node]['missing_props'].append([(msg1,diff1),(msg2,diff2)])
+
+            # ENUM_DIFFS: get differences in shared node's properties' enumerations
+            # endpoint has several enum changes in prod vs staging
+            shared_props = list(set(props0).intersection(props1))
+            dds['prop_diffs'][shared_node]['type_changes'] = {}
+            dds['prop_diffs'][shared_node]['enum_diffs'] = {}
+            for shared_prop in shared_props: #shared_node='endpoint';shared_prop='pd_threat_to_balance'
+
+                prop_type0 = get_prop_type(shared_node,shared_prop,dcs[0],commons=commons)
+                prop_type1 = get_prop_type(shared_node,shared_prop,dcs[1],commons=commons)
+
+                if prop_type0 != prop_type1:
+                    dds['prop_diffs'][shared_node]['type_changes'][shared_prop] = [(dcs[0],prop_type0),(dcs[1],prop_type1)]
+
+                elif prop_type0 == 'enum':
+                    enums0 = list(commons[dcs[0]]['dd'][shared_node]['properties'][shared_prop]['enum'])
+                    enums1 = list(commons[dcs[1]]['dd'][shared_node]['properties'][shared_prop]['enum'])
+                    diff1 = set(enums0).difference(enums1)
+                    diff2 = set(enums1).difference(enums0)
+                    if len(list(diff1)+list(diff2)) > 0:
+                        dds['prop_diffs'][shared_node]['enum_diffs'][shared_prop] = []
+                        msg1 = "{} enums in '{}' '{}' node missing from '{}'".format(len(diff1),dcs[0],prop,dcs[1])
+                        msg2 = "{} enums in '{}' '{}' node missing from '{}'".format(len(diff2),dcs[1],prop,dcs[0])
+                        dds['prop_diffs'][shared_node]['enum_diffs'][shared_prop].append([(msg1,diff1),(msg2,diff2)])
+
+            # Remove empty records
+            if len(dds['prop_diffs'][shared_node]['type_changes']) == 0:
+                del dds['prop_diffs'][shared_node]['type_changes']
+            if len(dds['prop_diffs'][shared_node]['enum_diffs']) == 0:
+                del dds['prop_diffs'][shared_node]['enum_diffs']
+            if list(dds['prop_diffs'][shared_node]) == 0:
+                del dds['prop_diffs'][shared_node]
+            dds['prop_diffs']
+
+    return dds
+
+# dds = summarize_dd()
+
 def summarize_tsv_data(
-    commons,#a dictionary with nickname of each commons as keys, with each value a dictionary of project_tsvs directory ('dir') and the data dictionary ('dd')
-    prefix='',#prefix of the project_tsvs directories, which should be the program name of the projects in the commons. Use `prefix=''` to get all the TSVs regardless of program.
-    omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id']
-    ):#Properties to omit from being summarized. The results of props like object_id, md5sum, submitter_id are ~meaningless since all values are unique and would result in # bins=1 as N
+    commons,# a dictionary with nickname of each commons as keys, with each value a dictionary of project_tsvs directory ('dir') and the data dictionary ('dd')
+    prefix='',# prefix of the project_tsvs directories, which should be the program name of the projects in the commons. Use `prefix=''` to get all the TSVs regardless of program.
+    report=True,# whether to write the data processing results to a txt file.
+    outdir='reports',# a place to write the output files
+    omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id']# Properties to omit from being summarized. The results of props like object_id, md5sum, submitter_id are ~meaningless since all values are unique and would result in # bins=1 as N
+    ):
     """ Adds a summary of TSV data to a dictionary consisting of the following data commons info:
         commons = {"name_of_commons":{"dir":dir_of_project_tsvs, "dd": data_dictionary_of_commons}}
         Can have as many commons.keys() as you like for different directories of TSVs to summarize.
     """
+    summary = {}
 
     dcs = list(commons.keys()) # get the names of the data commons, e.g., 'staging' and 'prod'
 
@@ -181,13 +345,38 @@ def summarize_tsv_data(
                             print("\t\???? property type: {}".format(prop))
                             exit(1)
 
-        commons[dc]['data'] = data #save data to commons 'data' after looping through all the TSVs from a commons
-        commons[dc]['prop_count'] = prop_count
-        commons[dc]['node_count'] = node_count
-        commons[dc]['project_count'] = project_count
-    return commons
+        summary[dc]['data'] = data #save data to commons 'data' after looping through all the TSVs from a commons
+        summary[dc]['prop_count'] = prop_count
+        summary[dc]['node_count'] = node_count
+        summary[dc]['project_count'] = project_count
 
-commons = summarize_tsv_data(commons)
+    if report is True:
+        dds = summarize_dd(commons=commons)
+        create_output_dir()
+        out_name = get_output_name('summary',commons,outdir)#summary_staging_prod.tsv
+        with open(out_name,'w') as report_file:
+            for dc in dcs:
+                report_file.write(summary[dc]['dir'])
+                report_file.write(summary[dc]['dd']['_settings'])
+                report_file.write(summary[dc]['project_count'])
+                report_file.write(summary[dc]['node_count'])
+                report_file.write(summary[dc]['prop_count'])
+                report_file.write(dds)
+                report_file.write(summary[dc]['data'])
+
+    return summary
+
+c = summarize_tsv_data(commons)
+
+
+
+
+
+
+
+
+
+
 ################################################################################
 ################################################################################
 ################################################################################
@@ -220,26 +409,23 @@ Out[778]: ['bins']
 
 os.chdir("/Users/christopher/Documents/Notes/BHC/data_qc/")
 
-def write_commons_report(commons, outdir='reports',bin_limit=False):
+def write_commons_report(
+    commons,
+    outdir='reports',
+    bin_limit=False,# whether to limit the number of bins to summarize for enums, strings, and booleans. If bin_limit=3, only the top 3 bins by their value will be reported.
+    create_report=True,# whether to write a TSV report to the outdir
+    outdir='reports'# the directory name to place output files in
+    ):
     """ Write a Data QC Report TSV
         where 'commons' is the dictionary output of 'summarize_data_commons'.
     """
-    #outdir='reports'
-    #bin_limit=25
-    cmd = ['mkdir','-p',outdir]
-    try:
-        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
-    except Exception as e:
-        output = e.output.decode('UTF-8')
-        print("ERROR:" + output)
-
     dcs = list(commons.keys())
 
     total_props = 0
     for dc in dcs:
         total_props += commons[dc]['prop_count']
 
-    r = pd.DataFrame(index=range(0,total_props),
+    report = pd.DataFrame(index=range(0,total_props),
         columns=['commons','project','node','property','property_type',
                 'total_records','null_count','N','bin_number','bins',
                 'min','max','mean','median','stdev'])
@@ -255,19 +441,19 @@ def write_commons_report(commons, outdir='reports',bin_limit=False):
                     print("Writing '{}' '{}' '{}' '{}' to report.".format(dc,project,node,prop))
                     data = commons[dc]['data'][project][node]['properties'][prop]
                     #df['column']['row'] = val
-                    r['commons'][i] = dc
-                    r['project'][i] = project
-                    r['node'][i] = node
-                    r['property'][i] = prop
-                    r['total_records'][i] = data['total_records']
-                    r['null_count'][i] = data['null_count']
-                    r['property_type'][i] = data['property_type']
+                    report['commons'][i] = dc
+                    report['project'][i] = project
+                    report['node'][i] = node
+                    report['property'][i] = prop
+                    report['total_records'][i] = data['total_records']
+                    report['null_count'][i] = data['null_count']
+                    report['property_type'][i] = data['property_type']
                     if 'stats' in data:
-                        r['N'][i] = data['stats']['N']
+                        report['N'][i] = data['stats']['N']
                         if data['property_type'] in ['string','enum','boolean']:
                             prop_bins = data['stats']['bins']
                             bin_number = len(prop_bins.keys())
-                            r['bin_number'][i] = bin_number
+                            report['bin_number'][i] = bin_number
                             if not bin_limit is False and bin_number > bin_limit:
                                 #r['bins'][i] = "Over bin limit ({}).".format(bin_limit)
                                 #first_bins = {i: data['stats']['bins'][i] for i in list(data['stats']['bins'])[:2]}
@@ -275,37 +461,34 @@ def write_commons_report(commons, outdir='reports',bin_limit=False):
                                 # collections.Counter(prop_bins).most_common(10)
                                 prop_bins = dict(collections.Counter(prop_bins).most_common(bin_limit))
                                 #r['bins'][i] = "First {} bins: {}".format(bin_limit,str(prop_bins))
-                                r['bins'][i] = prop_bins
+                                report['bins'][i] = prop_bins
                             else:
-                                r['bins'][i] = prop_bins
+                                report['bins'][i] = prop_bins
                         elif data['property_type'] in ['integer','number']:
-                            r['min'][i] = data['stats']['min']
-                            r['max'][i] = data['stats']['max']
-                            r['mean'][i] = data['stats']['mean']
-                            r['median'][i] = data['stats']['median']
-                            r['stdev'][i] = data['stats']['stdev']
-
+                            report['min'][i] = data['stats']['min']
+                            report['max'][i] = data['stats']['max']
+                            report['mean'][i] = data['stats']['mean']
+                            report['median'][i] = data['stats']['median']
+                            report['stdev'][i] = data['stats']['stdev']
                     i += 1
+    if create_report is True:
+        create_output_dir()
+        outname = get_output_name('report',commons,outdir)
+        report.to_csv(outname, sep='\t', index=False, encoding='utf-8')
 
-    report_name = 'report_'
-    for i in range(len(dcs)):
-        report_name += dcs[i]
-        if i != len(dcs)-1:
-            report_name += '_'
-    report_name += '.tsv'
+    return report
 
-    outname = "{}/{}".format(outdir,report_name)
-    r.to_csv(outname, sep='\t', index=False, encoding='utf-8')
-
-    return r
-
-report = write_commons_report(commons)
+r = write_commons_report(c)
 
 # 5) Compare prod/staging stats for each property in each project, considering breaking changes to data model. (e.g., properties that changed nodes/names, "age_at_enrollment" that changed distribution (took lowest value), etc.)
 
 
 
-def compare_two_commons(report, outdir='reports',stats = ['total_records','null_count','N','bins','min','max','mean','median','stdev']):
+def compare_commons(
+    report,#The DataFrame of summary statistics for all the properties per node per project per commons
+    outdir='reports',#The directory to write the results DataFrame TSV to
+    stats = ['total_records','null_count','N','bins','min','max','mean','median','stdev']#the stats to use for the comparison
+    ):
     """ Takes the pandas DataFrame returned from 'write_commons_report'
         where at least 2 data commons are summarized from 'summarize_data_commons'.
     """
@@ -318,6 +501,7 @@ def compare_two_commons(report, outdir='reports',stats = ['total_records','null_
     cols = list(report)
     identical = pd.DataFrame(columns=cols)
     different = pd.DataFrame(columns=cols)
+    unique = pd.DataFrame(columns=cols)
 
     i = 0
     for prop_id in prop_ids: # prop_id = prop_ids[0]
@@ -336,30 +520,40 @@ def compare_two_commons(report, outdir='reports',stats = ['total_records','null_
     else:
         print("Doh!")
 
+    if not outdir is False: #if you pass outdir=False as an arg, won't write the TSVs
 
-    diff_name = 'different_'
-    for i in range(len(dcs)):
-        diff_name += dcs[i]
-        if i != len(dcs)-1:
-            diff_name += '_'
-    diff_name += '.tsv'
-    diff_outname = "{}/{}".format(outdir,diff_name)
-    different.to_csv(diff_outname, sep='\t', index=False, encoding='utf-8')
+        diff_name = 'different_'
+        for i in range(len(dcs)):
+            diff_name += dcs[i]
+            if i != len(dcs)-1:
+                diff_name += '_'
+        diff_name += '.tsv'
+        diff_outname = "{}/{}".format(outdir,diff_name)
+        different.to_csv(diff_outname, sep='\t', index=False, encoding='utf-8')
 
-    identical_name = 'identical_'
-    for i in range(len(dcs)):
-        identical_name += dcs[i]
-        if i != len(dcs)-1:
-            identical_name += '_'
-    identical_name += '.tsv'
-    identical_outname = "{}/{}".format(outdir,identical_name)
-    identical.to_csv(identical_outname, sep='\t', index=False, encoding='utf-8')
+        identical_name = 'identical_'
+        for i in range(len(dcs)):
+            identical_name += dcs[i]
+            if i != len(dcs)-1:
+                identical_name += '_'
+        identical_name += '.tsv'
+        identical_outname = "{}/{}".format(outdir,identical_name)
+        identical.to_csv(identical_outname, sep='\t', index=False, encoding='utf-8')
 
-    comp = {"identical":identical,"different":different}
-    return comp
+        unique_name = 'unique_'
+        for i in range(len(dcs)):
+            unique_name += dcs[i]
+            if i != len(dcs)-1:
+                unique_name += '_'
+        unique_name += '.tsv'
+        unique_outname = "{}/{}".format(outdir,unique_name)
+        unique.to_csv(unique_outname, sep='\t', index=False, encoding='utf-8')
+
+    comparison = {"identical":identical,"different":different}
+    return comparison
 
 
-comparison = compare_two_commons(report)
+comp = compare_two_commons(r)
 
 ###############################################################################
 ###############################################################################
@@ -370,22 +564,3 @@ def find_outliers(report):
     """
 
     return outliers
-
-def get_nodes_props_from_dd(commons,time=False):
-    dd_nodes = []
-    uprops = []
-    dprops = []
-    node_regex = re.compile(r'^[a-zA-Z][A-Za-z0-9_]+$')
-    for dd in [commons[dcs[0]]['dd'],commons[dcs[1]]['dd']]:
-        dd_nodes = dd_nodes + list(dd)
-        uprops = uprops + list(dd['_definitions']['ubiquitous_properties'].keys())
-        dprops = dprops + list(dd['_definitions']['data_file_properties'].keys())
-    dd_nodes = sorted(list(set(dd_nodes)))
-    dd_nodes = list(filter(node_regex.search, dd_nodes))
-    if not time: #remove time_of_ type nodes because usually have too many bins (unique strings)
-        time_regex = re.compile(r'^time_[A-Za-z0-9_]+$')
-        dd_nodes = [i for i in dd_nodes if not regex.match(i)]
-    uprops = sorted(list(set(uprops)))
-    dprops = sorted(list(set(dprops)))
-    data = {"nodes":dd_nodes,"ubiquitous_properties":uprops,"data_file_properties":dprops}
-    return data
