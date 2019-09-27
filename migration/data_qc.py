@@ -5,6 +5,7 @@ from shutil import copyfile
 from pathlib import Path
 from collections import Counter
 from statistics import mean
+from operator import itemgetter
 import numpy as np
 from scipy import stats
 import pandas as pd
@@ -61,18 +62,16 @@ sdd = sub.get_dictionary_all()
 prod_dir = "/Users/christopher/Documents/Notes/BHC/data_qc/prod_tsvs/"
 pdd = prod_sub.get_dictionary_all()
 
-commons = {"staging":{"dir":staging_dir,"dd":sdd},"prod":{"dir":prod_dir,"dd":pdd}}
+commons = {"staging":{"dir":staging_dir,"dd":sdd},"prod":{"dir":prod_dir,"dd":pdd}} # for each commons, give directory containing the project_tsvs and the data dictionary.
 
-def summarize_data_commons(
-    commons,
-    prefix='mjff',
+def summarize_tsv_data(
+    commons,#a dictionary with nickname of each commons as keys, with each value a dictionary of project_tsvs directory ('dir') and the data dictionary ('dd')
+    prefix='',#prefix of the project_tsvs directories, which should be the program name of the projects in the commons. Use `prefix=''` to get all the TSVs regardless of program.
     omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id']
-    ):
-    """ Takes a dictionary with the following information about a data commons:
+    ):#Properties to omit from being summarized. The results of props like object_id, md5sum, submitter_id are ~meaningless since all values are unique and would result in # bins=1 as N
+    """ Adds a summary of TSV data to a dictionary consisting of the following data commons info:
         commons = {"name_of_commons":{"dir":dir_of_project_tsvs, "dd": data_dictionary_of_commons}}
-        Can have as many commons.keys() as you like for different directories of TSVs to summarize,
-        but best to just have two if you intend to compare data sets, e.g., between staging and production,
-        which is the primary use case for these scripts.
+        Can have as many commons.keys() as you like for different directories of TSVs to summarize.
     """
 
     dcs = list(commons.keys()) # get the names of the data commons, e.g., 'staging' and 'prod'
@@ -105,7 +104,6 @@ def summarize_data_commons(
             fnames = glob.glob(fpattern)
             print("Found the following {} TSV templates in project {}:\n\n\t{}\n\n".format(len(fnames),project_id,fnames))
 
-     # all the data for a project in a commons
             for fname in fnames: # fname=fnames[0]
 
                 node_regex = r"^" + re.escape(project_id) + r"_([a-zA-Z0-9_]+)\.tsv$" #node = re.search(r'^([a-zA-Z0-9_]+)-([a-zA-Z0-9]+)_([a-zA-Z0-9_]+)\.tsv$',fname).group(3)
@@ -124,24 +122,15 @@ def summarize_data_commons(
                 regex = re.compile(r'^[A-Za-z0-9_]*[^.]$') #drop the links
                 props = list(filter(regex.match, list(df)))
 
-                # filter properties (headers) in TSV to remove props we don't want to summarize
-                for prop in omit_props:
+                for prop in omit_props: # filter properties (headers) in TSV to remove props we don't want to summarize
                     try:
                         props.remove(prop)
                     except Exception as e:
                         pass #not all nodes will have some props, like md5sum or file_name
 
                 print("Total of {} records in TSV with {} properties.".format(total_records,len(props)))
-                #
-                # if len(dcs) > 1 and node in list(commons[dcs[0]]['dd']) and node in list(commons[dcs[1]]['dd']):
-                #     ns = list(commons[dcs[0]]['dd'][node]['properties'])
-                #     np = list(commons[dcs[1]]['dd'][node]['properties'])
-                #     props_added = list(set(ns).difference(np)) # these are props in staging not in production
-                #     props_removed = list(set(np).difference(ns)) # these are props in production not in staging
-                #     data[project_id][node]["props_added"] = props_added
-                #     data[project_id][node]["props_removed"] = props_removed
 
-                data[project_id][node]["properties"] = {}
+                data[project_id][node]["properties"] = {} # all the property data stats in a node
 
                 for prop in props: #prop=props[0]
 
@@ -151,13 +140,15 @@ def summarize_data_commons(
 
                     null_count = len(df.loc[df[prop].isnull()])
 
-                    #get the property type, ie, string, enum, integer, number, boolean, array, etc.
-                    if prop in list(commons[dc]['dd'][node]['properties']):
+                    if prop in list(commons[dc]['dd'][node]['properties']): #get the property type, ie, string, enum, integer, number, boolean, array, etc.
                         prop_def = commons[dc]['dd'][node]['properties'][prop]
                         if 'enum' in list(prop_def.keys()):
                             ptype = 'enum'
                         elif 'type' in list(prop_def.keys()):
                             ptype = prop_def['type']
+                    else:
+                        print("'{}' data dictionary version is mismatched with the TSV data in:\n\t{}\n\nProperty {} not in the data dictionary!".format(dc,dc['dir'],prop))
+                        exit(1)
 
                     data[project_id][node]["properties"][prop]["total_records"] = total_records
                     data[project_id][node]["properties"][prop]["null_count"] = null_count
@@ -171,16 +162,12 @@ def summarize_data_commons(
                         if ptype in ['string','enum','boolean']:
                             counts = Counter(df[df[prop].notnull()][prop])
                             df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
-                            df1 = df1.rename(columns={'index':prop, 0:'count'}).sort_values(by='count', ascending=False)
-                            strings = list(df1[prop])
-                            string_counts = {}
-                            for string in strings: #string=strings[0]
-                                string_counts[string] = list(df1.loc[df1[prop]==string]['count'])[0]
-                            data[project_id][node]["properties"][prop]["stats"]["bins"] = string_counts
-                            print("\t\t{}".format(data[project_id][node]["properties"][prop]["stats"]))
+                            bins = [tuple(x) for x in df1.values]
+                            bins.sort(key=itemgetter(1),reverse=True)
+                            data[project_id][node]["properties"][prop]["stats"]["bins"] = bins
+                            print("\t\tTop 3 bins of {}: {}".format(bins[:3]))
                         elif ptype in ['number','integer']: #prop='concentration'
                             d = list(df[df[prop].notnull()][prop].astype(float))
-                            desc = stats.describe(d)
                             data[project_id][node]["properties"][prop]["stats"]["min"] = min(d)
                             data[project_id][node]["properties"][prop]["stats"]["max"] = max(d)
                             data[project_id][node]["properties"][prop]["stats"]["mean"] = statistics.mean(d)
@@ -200,6 +187,7 @@ def summarize_data_commons(
         commons[dc]['project_count'] = project_count
     return commons
 
+commons = summarize_tsv_data(commons)
 ################################################################################
 ################################################################################
 ################################################################################
