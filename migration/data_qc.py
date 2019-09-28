@@ -379,10 +379,9 @@ def summarize_tsv_data(
 
     return summary
 
-s = summarize_tsv_data(commons,prefix='',report=True,outdir='reports',omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id'],home='/Users/christopher/Documents/Notes/BHC/data_qc/')
+s = summarize_tsv_data(commons,prefix='',report=True,outdir='reports',omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id'],home_dir='/Users/christopher/Documents/Notes/BHC/data_qc/')
 ################################################################################
-################################################################################
-################################################################################
+
 
 
 
