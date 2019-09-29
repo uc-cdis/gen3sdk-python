@@ -1,10 +1,3 @@
-# QC Checks for Data Commons Data:
-# Useful for:
-# confirming fidelity of database migrations after data dictionary changes
-# identifying outliers
-# informing ETL mapping (which properties have the most non-null data, which ones have too many bins)
-
-
 import os, os.path, sys, subprocess, glob, json, datetime, collections
 import fnmatch, sys, ntpath, copy, re, operator, requests, statistics
 from shutil import copyfile
@@ -23,16 +16,36 @@ if sys.version_info[0] < 3:
 else:
     from io import StringIO
 
+"""
+In an interactive python environment
+
+# Using Pip:
 #import gen3
 #from gen3.auth import Gen3Auth
 #from gen3.submission import Gen3Submission
+
+#
+# Download gen3sdk scripts from GitHub
+# !wget https://raw.githubusercontent.com/uc-cdis/gen3sdk-python/master/gen3/submission.py
+# %run ./submission.py
+# sub = Gen3Submission(api, auth)
+#
 sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/gen3')
 from submission import Gen3Submission
 from auth import Gen3Auth
+
+
+#
+# Download additional scripts from GitHub:
+# !wget https://raw.githubusercontent.com/cgmeyer/gen3sdk-python/master/expansion/expansion.py
+# %run ./expansion.py
+# exp = Gen3Expansion(api, auth)
+#
 sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/expansion')
 from expansion import Gen3Expansion
 
-#BRAIN Data Staging
+# Create instances of the sdk classes for each Data Commons environment (for example Staging, QA and Production)
+# BRAIN Commons Data Staging
 api = 'https://data-staging.braincommons.org/'
 profile = 'brain-staging'
 creds = '/Users/christopher/Downloads/brain-staging-credentials.json'
@@ -40,6 +53,7 @@ auth = Gen3Auth(api,refresh_file=creds)
 sub = Gen3Submission(api,auth)
 exp = Gen3Expansion(api, auth)
 
+# BRAIN Commons Production
 prod_api = 'https://data.braincommons.org/'
 prod_profile = 'bc'
 prod_creds = '/Users/christopher/Downloads/bc-credentials.json'
@@ -47,21 +61,15 @@ prod_auth = Gen3Auth(prod_api,refresh_file=prod_creds)
 prod_sub = Gen3Submission(prod_api,prod_auth)
 prod_exp = Gen3Expansion(prod_api, prod_auth)
 
-# %run /Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/migration/migration.py
-# mig = Gen3Migration(api,auth)
 
-# get the data dictionary
+1) Download the data from a commons using the Gen3sdk
 
-###############################################################
-# 1) Download all the data in prod/staging
-os.chdir("/Users/christopher/Documents/Notes/BHC/data_qc/")
+home_dir = "/Users/christopher/Documents/Notes/BHC/data_qc/"
+os.chdir(home_dir)
 
-# Get the TSV data
-# project_ids = exp.get_project_ids()
-# exp.get_project_tsvs(projects=project_ids,outdir='staging_tsvs_2',overwrite=False)
-# prod_exp.get_project_tsvs(projects=project_ids,outdir='prod_tsvs_2',overwrite=False)
+exp.get_project_tsvs(projects=project_ids,outdir='staging_tsvs',overwrite=False)
+prod_exp.get_project_tsvs(projects=project_ids,outdir='prod_tsvs',overwrite=False)
 
-# 2) Create dictionary of stats for each property in each project TSV in both prod/staging.
 staging_dir = "/Users/christopher/Documents/Notes/BHC/data_qc/staging_tsvs/"
 sdd = sub.get_dictionary_all()
 
@@ -70,9 +78,15 @@ pdd = prod_sub.get_dictionary_all()
 
 commons = {"staging":{"dir":staging_dir,"dd":sdd},"prod":{"dir":prod_dir,"dd":pdd}} # for each commons, give directory containing the project_tsvs and the data dictionary.
 
-def tl(var): #debugging fxn
-    print(type(var))
-    print(list(var))
+"""
+
+def t(var):
+    vtype = type(var)
+    print(vtype)
+    if vtype in [dict,list]:
+        print("{}".format(list(var)))
+    if vtype in [str,int,float]:
+        print("{}".format(var))
 
 def get_output_name(name,extension,commons,outdir='reports'):
     outname = "{}_".format(name)
@@ -121,16 +135,24 @@ def get_prop_type(node,prop,dc,commons):
         print("Can't get the property type for {} in {}!".format(shared_prop,dc))
     return prop_type
 
-# get_prop_type('aliquot','aliquot_volume','staging') #type
-# get_prop_type('sample','composition','staging') #enum
-# get_prop_type('unified_parkinsons_disease_rating','visits','staging') #anyOf
-# get_prop_type('unified_parkinsons_disease_rating','updated_datetime','staging') #oneOf
 
 def summarize_dd(commons,props_to_remove=['case_submitter_id'],nodes_to_remove=['root','metaschema']):
+    """
+    Calculates summary statistics for TSVs downloaded from a data commons using the SDK function Gen3Expansion.get_project_tsvs()
+    Args:
+        commons(dict): Dict of data commons, has keys 'dir', directory of TSVs, and 'dd', the data dictionary obtained via gen3sdk function dd = Gen3Submission.get_dictionary_all()
+        props_to_remove(list): Properties to exclude from the summary.
+        nodes_to_remove(list): Items in data dictionary to exclude from summary, e.g., root and metaschema.
+        outdir(str):
+        home_dir(str):
+    Examples:
+
+    """
     dds = {}
     nodes = []
     node_regex = re.compile(r'^[^_][A-Za-z0-9_]+$')# don't match _terms,_settings,_definitions, etc.)
 
+    # Get lists of nodes for each commons using their data dict
     dcs = list(commons.keys())
     for dc in dcs:
         dd = commons[dc]['dd']
@@ -142,7 +164,8 @@ def summarize_dd(commons,props_to_remove=['case_submitter_id'],nodes_to_remove=[
             for prop in props:
                 dds[dc][node].append(prop)
 
-    if len(commons) == 2:
+    # Compare the data dictionaries of two data commons in list of commons.keys()
+    if len(commons) > 1:
         nodes0 = list(dds[dcs[0]])
         nodes1 = list(dds[dcs[1]])
         diff1 = set(nodes0).difference(nodes1)
@@ -193,11 +216,10 @@ def summarize_dd(commons,props_to_remove=['case_submitter_id'],nodes_to_remove=[
                 dds['prop_diffs'][shared_node]['missing_props'].append([(msg1,diff1),(msg2,diff2)])
 
             # ENUM_DIFFS: get differences in shared node's properties' enumerations
-            # endpoint has several enum changes in prod vs staging
             shared_props = list(set(props0).intersection(props1))
             dds['prop_diffs'][shared_node]['type_changes'] = {}
             dds['prop_diffs'][shared_node]['enum_diffs'] = {}
-            for shared_prop in shared_props: #shared_node='endpoint';shared_prop='pd_threat_to_balance'
+            for shared_prop in shared_props:
 
                 prop_type0 = get_prop_type(shared_node,shared_prop,dcs[0],commons=commons)
                 prop_type1 = get_prop_type(shared_node,shared_prop,dcs[1],commons=commons)
@@ -227,19 +249,124 @@ def summarize_dd(commons,props_to_remove=['case_submitter_id'],nodes_to_remove=[
 
     return dds
 
-# dds = summarize_dd()
+def compare_data_dictionaries(commons,outdir='reports',home_dir='.'):
+    """
+    Writes the summary of commons data dictionary to a file.
+    Args:
+        commons(dict):
+        outdir(str):
+        home_dir(str):
+    Examples:
+
+    """
+    dds = summarize_dd(commons=commons)
+    dcs = list(commons.keys())
+
+    os.chdir(home_dir)
+    create_output_dir()
+    out_name = get_output_name('DD_comparision','txt',commons,outdir)#summary_staging_prod.tsv
+
+    with open(out_name,'w') as report_file:
+
+        for dc in dcs:
+            report_file.write("1.0 Dictionary Stats by Data Commons".format())
+            report_file.write("\n{} total nodes: {}".format(dc,len(dds[dc].keys())))
+
+
+        report_file.write("DATA DICTIONARY SUMMARY: {}".format(dcs))
+
+        # Write the node_diffs
+        report_file.write("\n\n'{}' Node Differences:\n".format(dc))
+        for diff in dds['node_diffs']:
+            report_file.write("{}\n".format(diff))
+
+        # Write the prop_diffs
+        report_file.write("\n\n'{}' Property Differences:\n".format(dc))
+        for node in list(dds['prop_diffs']):
+            report_file.write("{}\n\n".format(node))
+            for diff in list(dds['prop_diffs'][node]):
+                report_file.write("\n\t{}".format(diff))
+                report_file.write("\n\t{}".format(dds['prop_diffs'][node][diff]))
+
+
+
+
+
+def write_summary_report(summary,commons,outdir='reports',home_dir='.'):
+    """
+    Writes the summary of a commons to a file.
+    Args:
+        summary(dict):
+        commons(dict):
+        outdir(str):
+        home_dir(str):
+    Examples:
+
+    """
+    dds = summarize_dd(commons=commons)
+    dcs = list(commons.keys())
+
+    os.chdir(home_dir)
+    create_output_dir()
+    out_name = get_output_name('summary','txt',commons,outdir)#summary_staging_prod.tsv
+
+    x = 1
+    for dc in dcs:
+
+        # Write the Data Dictionary summary
+        y = 1
+        report_file.write("{}.{} '{}' DATA DIRECTORY (location of project TSVs summarized in this section of the report):\n{}".format(x,y,dc,commons[dc]['dir']))
+        report_file.write("\n\n{}.{} '{}' DATA DICTIONARY SETTINGS (data dictionary version used for the analysis):\n{}".format(x,y,dc,commons[dc]['dd']['_settings']))
+
+        # Write the project_count, tsv_count, node_count, and prop_count data
+        report_file.write("\n\n{}.{} '{}' PROJECT COUNT (the projects with TSV data): {}\n{}\n\n".format(x,y,dc,len(summary[dc]['project_count']),summary[dc]['project_count']))
+        y+=1
+        report_file.write("\n\n{}.{} '{}' TSV COUNT (the TSV files that were summarized): {}\n{}\n\n".format(x,y,dc,len(summary[dc]['tsv_count']),summary[dc]['tsv_count']))
+        y+=1
+        report_file.write("\n\n{}.{} '{}' NODE COUNT (nodes in the data model with TSV data): {}\n{}\n".format(x,y,dc,len(summary[dc]['node_count']),summary[dc]['node_count']))
+        y+=1
+        report_file.write("\n\n{}.{} '{}' PROPERTY COUNT (properties in the data model with TSV data): {}\n{}\n".format(x,y,dc,len(summary[dc]['prop_count']),summary[dc]['prop_count']))
+        y+=1
+
+        # Write the Data Summary per Project
+        report_file.write("\n\n{}.{} '{}' Data Summary:\n".format(x,y,dc))
+
+        projects = list(summary[dc]['data'].keys())
+        for project in projects:
+            nodes = list(summary[dc]['data'][project])
+            for node in nodes:
+                report_file.write("{}".format(node))
+
+    print("Report written to file:\n\t{}\n".format(out_name))
+
 
 def summarize_tsv_data(
-    commons,# a dictionary with nickname of each commons as keys, with each value a dictionary of project_tsvs directory ('dir') and the data dictionary ('dd')
-    prefix='',# prefix of the project_tsvs directories, which should be the program name of the projects in the commons. Use `prefix=''` to get all the TSVs regardless of program.
+    commons={"staging":{"dir":staging_dir,"dd":sdd},"prod":{"dir":prod_dir,"dd":pdd}},# a dictionary with nickname of each commons as keys, with each value a dictionary of project_tsvs directory ('dir') and the data dictionary ('dd')
+    prefix='',# Default gets TSVs from all directories ending in "_tsvs". "prefix" of the project_tsvs directories (e.g., program name of the projects, e.g., "Program_1-Project_2_tsvs"). Result of running the Gen3Expansion.get_project_tsvs() function.
     report=True,# whether to write the data processing results to a txt file.
-    outdir='reports',# a place to write the output files
+    outdir='reports',# directory for the output files
     omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id'],# Properties to omit from being summarized.
-    home_dir="."
+    home_dir="."# where to create 'outdir' output files directory
     ):
     """ Adds a summary of TSV data to a dictionary consisting of the following data commons info:
         commons = {"name_of_commons":{"dir":dir_of_project_tsvs, "dd": data_dictionary_of_commons}}
         Can have as many commons.keys() as you like for different directories of TSVs to summarize.
+        Args:
+            commons(dict):
+            prefix(str):
+            report(boolean):
+            outdir(str):
+            omit_props(list):
+            home_dir(str):
+        Examples:
+
+        s = summarize_tsv_data(
+            commons={"staging":{"dir":staging_dir,"dd":sdd},"prod":{"dir":prod_dir,"dd":pdd}},
+            prefix='',
+            report=True,
+            outdir='reports',
+            omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id'],
+            home_dir='/Users/christopher/Documents/Notes/BHC/data_qc/')
     """
     summary = {}
     dcs = list(commons.keys()) # get the names of the data commons, e.g., 'staging' and 'prod'
@@ -248,9 +375,11 @@ def summarize_tsv_data(
 
     for dc in dcs: #dc=dcs[0]
 
-        project_count = 0 # count the projects in each "commons_tsvs" directory, e.g., output of Gen3Expansion.get_project_tsvs()
-        node_count = 0 # count the nodes in each data set
-        prop_count = 0 # count the properties in each data set
+        project_count = [] # list of projects in each commons 'dir' directory. Works with output of Gen3Expansion.get_project_tsvs() script.
+        tsv_count = [] # list of TSV files across projects in the commons data 'dir'. TSV templates are result of Gen3Submission.export_node() script.
+        node_count = [] # list of nodes in the commons data model with non-null data across all projects.
+        prop_count = [] # list of properties with non-null data in all nodes across all projects
+        data_count = 0 # total count of properties summarized
 
         os.chdir(commons[dc]['dir'])
         print(os.getcwd())
@@ -258,14 +387,14 @@ def summarize_tsv_data(
         project_dirs = glob.glob(dir_pattern)
 
         data = {} # all the data for a commons
-        for project_dir in project_dirs: # project_dir=project_dirs[0]
 
+        for project_dir in project_dirs: # project_dir=project_dirs[0]
             try:
                 project_id = re.search(r'^(.+)_tsvs$', project_dir).group(1)
             except:
                 print("Couldn't extract the project_id from {}!".format(project_dir))
             data[project_id] = {}
-            project_count+=1
+            project_count.append(project_id)
 
             os.chdir("{}{}".format(commons[dc]['dir'],project_dir))
             print("Changed working directory to:\n\t{}".format(os.getcwd()))
@@ -274,23 +403,22 @@ def summarize_tsv_data(
             fnames = glob.glob(fpattern)
             print("Found the following {} TSV templates in project {}:\n\n\t{}\n\n".format(len(fnames),project_id,fnames))
 
-            for fname in fnames: # fname=fnames[0]
-
+            for fname in fnames: # Each node with data in the project is in one TSV file so len(fnames) is the number of nodes in the project with data.
+                tsv_count.append(fname)
                 node_regex = r"^" + re.escape(project_id) + r"_([a-zA-Z0-9_]+)\.tsv$" #node = re.search(r'^([a-zA-Z0-9_]+)-([a-zA-Z0-9]+)_([a-zA-Z0-9_]+)\.tsv$',fname).group(3)
                 try:
                     node = re.search(node_regex, fname, re.IGNORECASE).group(1)
                     print("Extracting data from the '{}' node TSV.".format(node))
                     df = pd.read_csv(fname,sep='\t',header=0,dtype=str)
+                    node_count.append(node)
                 except Exception as e:
                     print("\nCouldn't get node data for file:\n\t'{}'\n".format(fname))
 
                 data[project_id][node] = {}
-                node_count+=1
-
                 total_records = len(df)
 
                 regex = re.compile(r'^[A-Za-z0-9_]*[^.]$') #drop the links
-                props = list(filter(regex.match, list(df)))
+                props = list(filter(regex.match, list(df))) #properties in this TSV to summarize
 
                 for prop in omit_props: # filter properties (headers) in TSV to remove props we don't want to summarize
                     try:
@@ -303,9 +431,8 @@ def summarize_tsv_data(
                 data[project_id][node]["properties"] = {} # all the property data stats in a node
 
                 for prop in props: #prop=props[0]
-
+                    data_count+=1
                     data[project_id][node]["properties"][prop] = {}
-                    prop_count+=1
                     print("'{}', '{}', '{}', '{}'".format(dc,project_id,node,prop))
 
                     null_count = len(df.loc[df[prop].isnull()])
@@ -327,8 +454,14 @@ def summarize_tsv_data(
                     if total_records == null_count:
                         print("\t\tSkipping: all null data.".format(prop))
                     else:
-                        #print("\t\tCalculating stats for property: {}".format(prop))
+                        #print("\t\t'{}'".format(prop))
+                        prop_name = "{}.{}".format(node,prop)
+                        if not prop_name in prop_count:
+                            prop_count.append(prop_name)
+
                         data[project_id][node]["properties"][prop]["stats"] = {"N":len(df[df[prop].notnull()])}
+
+                        # Get stats for strings
                         if ptype in ['string','enum','boolean']:
                             counts = Counter(df[df[prop].notnull()][prop])
                             df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
@@ -336,107 +469,65 @@ def summarize_tsv_data(
                             bins.sort(key=itemgetter(1),reverse=True)
                             data[project_id][node]["properties"][prop]["stats"]["bins"] = bins
                             print("\t\tTop 3 bins of {}: {}".format(prop,bins[:3]))
+
+                        # Get stats for numbers
                         elif ptype in ['number','integer']: #prop='concentration'
                             d = list(df[df[prop].notnull()][prop].astype(float))
                             data[project_id][node]["properties"][prop]["stats"]["min"] = min(d)
                             data[project_id][node]["properties"][prop]["stats"]["max"] = max(d)
                             data[project_id][node]["properties"][prop]["stats"]["mean"] = statistics.mean(d)
                             data[project_id][node]["properties"][prop]["stats"]["median"] = statistics.median(d)
-                            if len(d) == 1:
+
+                            if len(d) == 1: # If there is only one data point, stdev will error
                                 data[project_id][node]["properties"][prop]["stats"]["stdev"] = "NA"
                             else:
                                 data[project_id][node]["properties"][prop]["stats"]["stdev"] = statistics.stdev(d)
+
                             print("\t\t{}".format(data[project_id][node]["properties"][prop]["stats"]))
-                        else:
+
+                        else: # If its not in the list of ptypes, exit. Need to add array handling.
                             print("\t\tUnhandled property type {}".format(prop))
                             exit(1)
 
         summary[dc]['data'] = data #save data to commons 'data' after looping through all the TSVs from a commons
-        summary[dc]['prop_count'] = prop_count
-        summary[dc]['node_count'] = node_count
+        summary[dc]['data_count'] = data_count
         summary[dc]['project_count'] = project_count
+        summary[dc]['tsv_count'] = tsv_count
+        summary[dc]['node_count'] = node_count
+        summary[dc]['prop_count'] = prop_count
 
     if report is True:
-        os.chdir(home_dir)
-        dds = summarize_dd(commons=commons)
-        create_output_dir()
-        out_name = get_output_name('summary','txt',commons,outdir)#summary_staging_prod.tsv
-        with open(out_name,'w') as report_file:
-            for dc in dcs:
-                report_file.write("Data Directory:\n{}".format(commons[dc]['dir']))
-                report_file.write("\n\nData Dictionary Settings:\n{}".format(commons[dc]['dd']['_settings']))
-                report_file.write("\n\nProject Count: {}".format(summary[dc]['project_count']))
-                report_file.write("\n\nNode Count: {}".format(summary[dc]['node_count']))
-                report_file.write("\n\nProperty Count: {}".format(summary[dc]['prop_count']))
-                report_file.write("\n\nNode Differences:\n{}".format(dds['node_diffs']))
-                report_file.write("\n\nProperty Differences:\n")
-                for node in list(dds['prop_diffs']):
-                    report_file.write("{}\n".format(node))
-                    for diff in list(dds['prop_diffs'][node]):
-                        report_file.write("\n\n{}".format(diff))
-                        report_file.write("\n{}".format(dds['prop_diffs'][node][diff]))
-                report_file.write("\n\nData Summary:\n{}".format(summary[dc]['data']))
+        write_summary_report(summary,commons,outdir,homedir)
 
+    os.chdir(home_dir)
     return summary
 
-s = summarize_tsv_data(commons,prefix='',report=True,outdir='reports',omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id'],home_dir='/Users/christopher/Documents/Notes/BHC/data_qc/')
-################################################################################
-
-
-
-
-
-
-
-
 
 ################################################################################
-################################################################################
-################################################################################
-# In [982]: commons['staging']['prop_count']
-# Out[982]: 14744
-# In [981]: commons['prod']['prop_count']
-# Out[981]: 12647
-# In [31]: commons['prod']['prop_count'] + commons['staging']['prop_count']
-# Out[31]: 27391
-#
-# In [983]: commons['staging']['node_count']
-# Out[983]: 245
-# In [984]: commons['prod']['node_count']
-# Out[984]: 252
-# In [32]: commons['prod']['node_count'] + commons['staging']['node_count']
-# Out[32]: 497
-#
-# In [985]: commons['prod']['project_count']
-# Out[985]: 12
-# In [986]: commons['staging']['project_count']
-# Out[986]: 12
-#
-# In [770]: list(commons['staging']['data']['mjff-S4']['aliquot']['properties']['aliquot_volume']['stats'])
-# Out[770]: ['N', 'min', 'max', 'mean', 'median', 'stdev']
-#
-# # lots of bins:
-# #commons: 'staging', project: 'mjff-BioFIND', node: 'medication', prop: 'who_drug_name'
-# In [778]: list(commons[dcs[1]]['data']['mjff-BioFIND']['medication']['properties']['who_drug_name']['stats'])
-# Out[778]: ['bins']
-
-os.chdir("/Users/christopher/Documents/Notes/BHC/data_qc/")
 
 def write_commons_report(
-    commons,
+    summary,#the result of running the 'summarize_tsv_data()' script
     outdir='reports',
     bin_limit=False,# whether to limit the number of bins to summarize for enums, strings, and booleans. If bin_limit=3, only the top 3 bins by their value will be reported.
     create_report=True,# whether to write a TSV report to the outdir
-    outdir='reports'# the directory name to place output files in
+    outdir='reports',
+    home_dir="."# the directory name to place output files in
     ):
     """ Write a Data QC Report TSV
-        where 'commons' is the dictionary output of 'summarize_data_commons'.
+    Args:
+        summary(dict):
+        outdir(str):
+        bin_limit(int):
+        create_report(bool):
+        outdir(str):
+        home_dir(str):
     """
     dcs = list(commons.keys())
 
-    total_props = 0
+    total_props = []
     for dc in dcs:
-        total_props += commons[dc]['prop_count']
+        total_props += summary[dc]['data_count']
+    total_props =
 
     report = pd.DataFrame(index=range(0,total_props),
         columns=['commons','project','node','property','property_type',
@@ -485,13 +576,14 @@ def write_commons_report(
                             report['stdev'][i] = data['stats']['stdev']
                     i += 1
     if create_report is True:
+        os.chdir(home_dir)
         create_output_dir()
         outname = get_output_name('report','tsv',commons,outdir)
         report.to_csv(outname, sep='\t', index=False, encoding='utf-8')
 
     return report
 
-r = write_commons_report(c)
+# r = write_commons_report(s)
 
 # 5) Compare prod/staging stats for each property in each project, considering breaking changes to data model. (e.g., properties that changed nodes/names, "age_at_enrollment" that changed distribution (took lowest value), etc.)
 
@@ -565,8 +657,6 @@ def compare_commons(
     comparison = {"identical":identical,"different":different}
     return comparison
 
-
-comp = compare_two_commons(r)
 
 ###############################################################################
 ###############################################################################
