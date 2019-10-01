@@ -691,10 +691,11 @@ class Gen3Migration:
     def drop_ids(self,project_id,suborder):
         """
         Drops the 'id' column from all the TSVs in 'suborder' dictionary obtained by running, e.g.:
-        suborder = get_submission_order(dd,project_id,prefix='temp',suffix='tsv')
+        suborder(list of tuples) = get_submission_order(dd,project_id,prefix='temp',suffix='tsv')
         """
         for node_order in suborder:
             node = node_order[0]
+            print(node)
             filename = "temp_{}_{}.tsv".format(project_id,node)
             try:
                 df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
@@ -744,9 +745,9 @@ class Gen3Migration:
             return
         df_txt = df.to_csv(sep='\t',index=False)
         if 'Â' in df_txt or 'Ã' in df_txt:
-            substring = 'Parkinson.*isease'
-            df_txt = re.sub(substring,"Parkinson's Disease",df_txt)
-            df = pd.read_csv(StringIO(df_txt),sep='\t',dtype=str) # this converts int to float (adds .0 to int)
+            substring = 'Parkins.+?isease'
+            df_txt2 = re.sub(substring,"Parkinson's Disease",df_txt)
+            df = pd.read_csv(StringIO(df_txt2),sep='\t',dtype=str) # this converts int to float (adds .0 to int)
             df.to_csv(filename,sep='\t',index=False, encoding='utf-8')
             print("Special chars removed from: {}".format(filename))
         else:
