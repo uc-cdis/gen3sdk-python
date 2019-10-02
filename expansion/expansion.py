@@ -237,20 +237,25 @@ class Gen3Expansion:
         print('Master node TSV with '+str(len(all_data))+' total records written to '+nodefile+'.')
         return all_data
 
-    def get_project_tsvs(self, projects=None, outdir='project_tsvs', overwrite=False, save_empty=False):
+    def get_project_tsvs(self, projects=None, nodes=None, outdir='project_tsvs', overwrite=False, save_empty=False,remove_nodes = ['program','project','root','data_release']):
         """Function gets a TSV for every node in a specified project.
             Exports TSV files into a directory "project_tsvs/".
             Function returns a list of the contents of the directory.
         Args:
             projects (str/list): The project_id(s) of the project(s) to download. Can be a single project_id or a list of project_ids.
+            nodes(str/list): The nodes to download from each project. If None, will try to download all nodes in the data model.
             overwrite (boolean): If False, the TSV file is not downloaded if there is an existing file with the same name.
             save_empty(boolean): If True, TSVs with no records, i.e., downloads an empty TSV template, will be downloaded.
+            remove_nodes(list): A list of nodes in the data model that should not be downloaded per project.
         Example:
         >>> get_project_tsvs(projects = ['internal-test'])
 
         """
-        all_nodes = sorted(list(set(json_normalize(self.sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
-        remove_nodes = ['program','project','root','data_release'] #remove these nodes from list of nodes
+        if nodes is None:
+            all_nodes = sorted(list(set(json_normalize(self.sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
+        elif isinstance(nodes,str):
+            nodes = [nodes]
+
         for node in remove_nodes:
             if node in all_nodes: all_nodes.remove(node)
 

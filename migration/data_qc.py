@@ -90,6 +90,7 @@ def t(var):
         print("{}".format(var))
 
 def get_output_name(name,extension,commons,outdir='reports'):
+    dcs = list(commons.keys())
     outname = "{}_".format(name)
     for i in range(len(dcs)):
         outname += dcs[i]
@@ -384,13 +385,14 @@ def write_summary_report(summary,commons,outdir='reports',home_dir='.',outliers=
 ########################################################################################################################
 ########################################################################################################################
 
-def summarize_tsv_data(commons,prefix='',report=True,outdir='reports',omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id'],home_dir=".",outlier_threshold=3):
+def summarize_tsv_data(commons,prefix='',report=True,outdir='reports',omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id','sample_id','specimen_number'],home_dir=".",outlier_threshold=3):
     """
     Returns a nested dictionary of summarized TSV data per commons, project, node, and property.
     For each property, the total number of records in the project with and without data is returned.
     Bins and the number of unique bins are returned for string, enumeration and boolean properties.
     The mean, median, min, max, and stdev are returned for integers and numbers.
-    Outliers in numeric data are identified using two different cut-offs: 1) the interquartile range and 2) "+/- stdev * 3".
+    Outliers in numeric data are identified using two different cut-offs: 1) the interquartile range and 2) "+/- stdev".
+    The cut-off for outlier identification can be changed by raising or lowering the outlier_threshold (default=3).
     Args:
         commons(dict): keys are abbreviated data commons names(str), with each value a dict with project_tsvs directory ('dir') the corresponding data dictionary ('dd')
         prefix(str): Default gets TSVs from all directories ending in "_tsvs". "prefix" of the project_tsvs directories (e.g., program name of the projects: "Program_1-Project_2_tsvs"). Result of running the Gen3Expansion.get_project_tsvs() function.
@@ -398,7 +400,7 @@ def summarize_tsv_data(commons,prefix='',report=True,outdir='reports',omit_props
         outdir(str): A directory for the output files.
         omit_props(list): Properties to omit from being summarized. It doesn't make sense to summarize certain properties, e.g., those with all unique values.
         home_dir(str):where to create 'outdir' output files directory
-        outlier_threshold(number): For identifying outliers in numeric data, the upper/lower threshold is the standard deviation multiplied by this number.
+        outlier_threshold(number): The upper/lower threshold for identifying outliers in numeric data is the standard deviation or interquartile range multiplied by this number.
     Examples:
         s = summarize_tsv_data(
             commons={"staging":{"dir":staging_dir,"dd":sdd},"prod":{"dir":prod_dir,"dd":pdd}},
@@ -406,7 +408,8 @@ def summarize_tsv_data(commons,prefix='',report=True,outdir='reports',omit_props
             report=True,
             outdir='reports',
             omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id'],
-            home_dir='/Users/christopher/Documents/Notes/BHC/data_qc/')
+            home_dir='/Users/christopher/Documents/Notes/BHC/data_qc/',
+            outlier_threshold=3)
     """
     summary = {}
     dcs = list(commons.keys()) # get the names of the data commons, e.g., 'staging' and 'prod'
@@ -526,14 +529,14 @@ def summarize_tsv_data(commons,prefix='',report=True,outdir='reports',omit_props
                                     # Get "stdev_outliers" by mean +/- outlier_threshold * stdev
                                     cutoff = std * outlier_threshold # three times the standard deviation is default
                                     lower, upper = mn - cutoff, mn + cutoff # cut-offs for outliers is 3 times the stdev below and above the mean
-                                    stdev_outliers = sorted([x for x in d if x < lower or x > upper])
+                                    stdev_outliers = sorted(list(set([x for x in d if x < lower or x > upper])))
                                     data[project_id][node]["properties"][prop]["stats"]["stdev_outliers"] = stdev_outliers
                                     # Get "iqr_outliers" by the inter-quartile range
-                                    q75, q25 = percentile(d,75), percentile(d,25)
+                                    q25, q75 = percentile(d,25), percentile(d,75)
                                     iqr = q75 - q25
-                                    cutoff = iqr * (outlier_threshold/2) # default outlier_threshold is 3, so iqr * 1.5
-                                    upper, lower = q75 + cutoff, q25 - cutoff
-                                    iqr_outliers = sorted([x for x in d if x > upper or x < lower])
+                                    cutoff = iqr * outlier_threshold # default outlier_threshold is 3
+                                    lower, upper = q25 - cutoff, q75 + cutoff
+                                    iqr_outliers = sorted(list(set([x for x in d if x < lower or x > upper])))
                                     data[project_id][node]["properties"][prop]["stats"]["iqr_outliers"] = iqr_outliers
 
                                 print("\t\t{}".format(data[project_id][node]["properties"][prop]["stats"]))
@@ -563,7 +566,7 @@ def summarize_tsv_data(commons,prefix='',report=True,outdir='reports',omit_props
 ########################################################################################################################
 ########################################################################################################################
 
-def write_commons_report(summary,bin_limit=False,create_report=True,outdir='reports',home_dir="."):
+def write_commons_report(summary,commons,bin_limit=False,create_report=True,outdir='reports',home_dir="."):
     """ Write a Data QC Report TSV
     Args:
         summary(dict):#the result of running the 'summarize_tsv_data()' script
@@ -625,7 +628,7 @@ def write_commons_report(summary,bin_limit=False,create_report=True,outdir='repo
     if create_report is True:
         os.chdir(home_dir)
         create_output_dir()
-        outname = get_output_name('report','tsv',commons,outdir)
+        outname = get_output_name('report','tsv',summary,outdir)
         report.to_csv(outname, sep='\t', index=False, encoding='utf-8')
         print("\nReport written to file:\n\t{}".format(outname))
 
@@ -639,20 +642,16 @@ def write_commons_report(summary,bin_limit=False,create_report=True,outdir='repo
 ########################################################################################################################
 ########################################################################################################################
 
-def compare_commons_reports(
-    report,#The DataFrame of summary statistics for all the properties per node per project per commons
-    stats = ['total_records','null_count','N','min','max','mean','median','stdev','bin_number','bins'],#the stats to use for the comparison
-    outdir='reports',#The directory to write the results DataFrame TSV to
-    home_dir='.',
-    create_report=True
-    ):
+def compare_commons(report,commons,stats = ['total_records','null_count','N','min','max','mean','median','stdev','bin_number','bins'],outdir='reports',home_dir='.',create_report=True):
     """ Takes the pandas DataFrame returned from 'write_commons_report'
         where at least 2 data commons are summarized from 'summarize_data_commons'.
     Args:
         report(dataframe): a pandas dataframe generated from a summary of TSV data; obtained by running write_summary_report() on the result of summarize_tsv_data()
+        commons(dict): The data commons to summarize. Keys should be the names of the data commons.
         stats(list): the list of statistics to compare between data commons for each node/property combination
         outdir(str): directory within home_dir to save output files to.
         home_dir(str): directory within which to create the outdir directory for reports.
+        create_report(boolean): If True, reports are written to files in the outdir.
     """
     # This script only compares the first two data commons in a report
     dcs = list(set(list(report['commons'])))[:2]
