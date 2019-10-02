@@ -449,98 +449,103 @@ def summarize_tsv_data(
             for fname in fnames: # Each node with data in the project is in one TSV file so len(fnames) is the number of nodes in the project with data.
                 tsv_count.append(fname)
                 node_regex = r"^" + re.escape(project_id) + r"_([a-zA-Z0-9_]+)\.tsv$" #node = re.search(r'^([a-zA-Z0-9_]+)-([a-zA-Z0-9]+)_([a-zA-Z0-9_]+)\.tsv$',fname).group(3)
-                try:
+                try: # extract the node name from the filename
                     node = re.search(node_regex, fname, re.IGNORECASE).group(1)
-                    print("Extracting data from the '{}' node TSV.".format(node))
                     df = pd.read_csv(fname,sep='\t',header=0,dtype=str)
-                    node_count.append(node)
                 except Exception as e:
-                    print("\nCouldn't get node data for file:\n\t'{}'\n".format(fname))
+                    print("\nCouldn't find a '{}' TSV file:\n\t'{}'\n".format(node,e))
 
-                data[project_id][node] = {}
                 total_records = len(df)
+                if total_records > 0:
+                    node_count.append(node)
+                    print("\tExtracting '{}' TSV data.".format(node))
+                    data[project_id][node] = {}
 
-                regex = re.compile(r'^[A-Za-z0-9_]*[^.]$') #drop the links
-                props = list(filter(regex.match, list(df))) #properties in this TSV to summarize
 
-                for prop in omit_props: # filter properties (headers) in TSV to remove props we don't want to summarize
-                    try:
-                        props.remove(prop)
-                    except Exception as e:
-                        pass #not all nodes will have some props, like md5sum or file_name
+                    regex = re.compile(r'^[A-Za-z0-9_]*[^.]$') #drop the links
+                    props = list(filter(regex.match, list(df))) #properties in this TSV to summarize
 
-                print("Total of {} records in TSV with {} properties.".format(total_records,len(props)))
+                    for prop in omit_props: # filter properties (headers) in TSV to remove props we don't want to summarize
+                        try:
+                            props.remove(prop)
+                        except Exception as e:
+                            pass #not all nodes will have some props, like md5sum or file_name
 
-                data[project_id][node]["properties"] = {} # all the property data stats in a node
+                    print("Total of {} records in TSV with {} properties.".format(total_records,len(props)))
 
-                for prop in props: #prop=props[0]
-                    data_count+=1
-                    data[project_id][node]["properties"][prop] = {}
-                    print("'{}', '{}', '{}', '{}'".format(dc,project_id,node,prop))
+                    data[project_id][node]["properties"] = {} # all the property data stats in a node
 
-                    null_count = len(df.loc[df[prop].isnull()])
+                    for prop in props: #prop=props[0]
+                        data_count+=1
+                        data[project_id][node]["properties"][prop] = {}
+                        print("'{}', '{}', '{}', '{}'".format(dc,project_id,node,prop))
 
-                    ptype = get_prop_type(node,prop,dc,commons)
-                    data[project_id][node]["properties"][prop]["total_records"] = total_records
-                    data[project_id][node]["properties"][prop]["null_count"] = null_count
-                    data[project_id][node]["properties"][prop]["property_type"] = ptype
+                        null_count = len(df.loc[df[prop].isnull()])
 
-                    if total_records == null_count:
-                        print("\t\tAll null data for '{}' in this TSV.".format(prop))
-                    else:
-                        #print("\t\t'{}'".format(prop))
-                        prop_name = "{}.{}".format(node,prop)
-                        if not prop_name in prop_count:
-                            prop_count.append(prop_name)
+                        ptype = get_prop_type(node,prop,dc,commons)
+                        data[project_id][node]["properties"][prop]["total_records"] = total_records
+                        data[project_id][node]["properties"][prop]["null_count"] = null_count
+                        data[project_id][node]["properties"][prop]["property_type"] = ptype
 
-                        data[project_id][node]["properties"][prop]["stats"] = {"N":len(df[df[prop].notnull()])}
+                        if total_records == null_count:
+                            print("\t\tAll null data for '{}' in this TSV.".format(prop))
+                        else:
+                            #print("\t\t'{}'".format(prop))
+                            prop_name = "{}.{}".format(node,prop)
+                            if not prop_name in prop_count:
+                                prop_count.append(prop_name)
 
-                        # Get stats for strings
-                        if ptype in ['string','enum','boolean','date']:
-                            counts = Counter(df[df[prop].notnull()][prop])
-                            df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
-                            bins = [tuple(x) for x in df1.values]
-                            bins.sort(key=itemgetter(1),reverse=True) #sorts the bins by descending value
-                            data[project_id][node]["properties"][prop]["stats"]["bins"] = bins
-                            print("\t\tTop 3 bins of {}: {}".format(prop,bins[:3]))
+                            data[project_id][node]["properties"][prop]["stats"] = {"N":len(df[df[prop].notnull()])}
 
-                        # Get stats for numbers
-                        elif ptype in ['number','integer']: #prop='concentration'
-                            d = list(df[df[prop].notnull()][prop].astype(float))
-                            mn = statistics.mean(d)
-                            data[project_id][node]["properties"][prop]["stats"]["mean"] = mn
-                            md = statistics.median(d)
-                            data[project_id][node]["properties"][prop]["stats"]["median"] = md
-                            data[project_id][node]["properties"][prop]["stats"]["min"] = min(d)
-                            data[project_id][node]["properties"][prop]["stats"]["max"] = max(d)
-                            # Outlier analysis for numeric data:
-                            # Flag properties where there are values outside:
-                            # 1) two stdev of the mean (sd2)
-                            # 2) outside interquartile range (IQR)
-                            if len(d) == 1: # If there is only one data point, stdev will error
-                                data[project_id][node]["properties"][prop]["stats"]["stdev"] = "NA"
-                                data[project_id][node]["properties"][prop]["stats"]["stdev_outliers"] = []
-                                data[project_id][node]["properties"][prop]["stats"]["iqr_outliers"] = []
-                            else:
-                                std = statistics.stdev(d)
-                                data[project_id][node]["properties"][prop]["stats"]["stdev"] = std
-                                # Get "stdev_outliers" by mean +/- outlier_threshold * stdev
-                                cutoff = std * outlier_threshold # three times the standard deviation is default
-                                lower, upper = mn - cutoff, mn + cutoff # cut-offs for outliers is 3 times the stdev below and above the mean
-                                stdev_outliers = sorted([x for x in d if x < lower or x > upper])
-                                data[project_id][node]["properties"][prop]["stats"]["stdev_outliers"] = stdev_outliers
-                                # Get "iqr_outliers" by the inter-quartile range
-                                q25, q75 = percentile(d, 25), percentile(d, 75)
-                                cutoff = iqr * 1.5
-                                lower, upper = q25 - cutoff, q75 + cutoff
-                                iqr_outliers = sorted([x for x in d if x < lower or x > upper])
-                                data[project_id][node]["properties"][prop]["stats"]["iqr_outliers"] = iqr_outliers
+                            # Get stats for strings
+                            if ptype in ['string','enum','boolean','date']:
+                                counts = Counter(df[df[prop].notnull()][prop])
+                                df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
+                                bins = [tuple(x) for x in df1.values]
+                                bins.sort(key=itemgetter(1),reverse=True) #sorts the bins by descending value
+                                data[project_id][node]["properties"][prop]["stats"]["bins"] = bins
+                                print("\t\tTop 3 bins of {}: {}".format(prop,bins[:3]))
 
-                            print("\t\t{}".format(data[project_id][node]["properties"][prop]["stats"]))
+                            # Get stats for numbers
+                            elif ptype in ['number','integer']: #prop='concentration'
+                                d = list(df[df[prop].notnull()][prop].astype(float))
+                                mn = statistics.mean(d)
+                                data[project_id][node]["properties"][prop]["stats"]["mean"] = mn
+                                md = statistics.median(d)
+                                data[project_id][node]["properties"][prop]["stats"]["median"] = md
+                                data[project_id][node]["properties"][prop]["stats"]["min"] = min(d)
+                                data[project_id][node]["properties"][prop]["stats"]["max"] = max(d)
+                                # Outlier analysis for numeric data:
+                                # Flag properties where there are values outside:
+                                # 1) two stdev of the mean (sd2)
+                                # 2) outside interquartile range (IQR)
+                                if len(d) == 1: # If there is only one data point, stdev will error
+                                    data[project_id][node]["properties"][prop]["stats"]["stdev"] = "NA"
+                                    data[project_id][node]["properties"][prop]["stats"]["stdev_outliers"] = []
+                                    data[project_id][node]["properties"][prop]["stats"]["iqr_outliers"] = []
+                                else:
+                                    std = statistics.stdev(d)
+                                    data[project_id][node]["properties"][prop]["stats"]["stdev"] = std
+                                    # Get "stdev_outliers" by mean +/- outlier_threshold * stdev
+                                    cutoff = std * outlier_threshold # three times the standard deviation is default
+                                    lower, upper = mn - cutoff, mn + cutoff # cut-offs for outliers is 3 times the stdev below and above the mean
+                                    stdev_outliers = sorted([x for x in d if x < lower or x > upper])
+                                    data[project_id][node]["properties"][prop]["stats"]["stdev_outliers"] = stdev_outliers
+                                    # Get "iqr_outliers" by the inter-quartile range
+                                    q25, q75 = percentile(d, 25), percentile(d, 75)
+                                    cutoff = iqr * 1.5
+                                    lower, upper = q25 - cutoff, q75 + cutoff
+                                    iqr_outliers = sorted([x for x in d if x < lower or x > upper])
+                                    data[project_id][node]["properties"][prop]["stats"]["iqr_outliers"] = iqr_outliers
 
-                        else: # If its not in the list of ptypes, exit. Need to add array handling.
-                            print("\t\tUnhandled property type {}".format(prop))
-                            exit(1)
+                                print("\t\t{}".format(data[project_id][node]["properties"][prop]["stats"]))
+
+                            else: # If its not in the list of ptypes, exit. Need to add array handling.
+                                print("\t\tUnhandled property type {}".format(prop))
+                                exit(1)
+                else:
+                    print("\t{} records in '{}' TSV. No data to summarize.".format(total_records,node))
+
 
         summary[dc]['data'] = data #save data to commons 'data' after looping through all the TSVs from a commons
         summary[dc]['data_count'] = data_count

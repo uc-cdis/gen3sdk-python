@@ -237,7 +237,7 @@ class Gen3Expansion:
         print('Master node TSV with '+str(len(all_data))+' total records written to '+nodefile+'.')
         return all_data
 
-    def get_project_tsvs(self, projects=None, outdir='project_tsvs', overwrite=False):
+    def get_project_tsvs(self, projects=None, outdir='project_tsvs', overwrite=False, save_empty=False):
         """Function gets a TSV for every node in a specified project.
             Exports TSV files into a directory "project_tsvs/".
             Function returns a list of the contents of the directory.
@@ -245,7 +245,7 @@ class Gen3Expansion:
         Args:
             projects (str/list): The project_id(s) of the project(s) to download. Can be a single project_id or a list of project_ids.
             overwrite (boolean): If False, the TSV file is not downloaded if there is an existing file with the same name.
-
+            save_empty(boolean): If True, TSVs with no records, i.e., downloads an empty TSV template, will be downloaded.
         Example:
         >>> get_project_tsvs(projects = ['internal-test'])
 
@@ -274,8 +274,8 @@ class Gen3Expansion:
                     query_txt = """{_%s_count (project_id:"%s")}""" % (node,project_id)
                     res = self.sub.query(query_txt) #  {'data': {'_acknowledgement_count': 0}}
                     count = res['data'][str('_'+node+'_count')] # count=int(0)
-                    if count > 0:
-                        print("\tDownloading {} records in node '{}' of project '{}'.".format(count,node,project_id))
+                    if count > 0 or  save_empty is True:
+                        print("\nDownloading {} records in node '{}' of project '{}'.".format(count,node,project_id))
                         prog,proj = project_id.split('-',1)
                         self.sub.export_node(prog,proj,node,'tsv',filename)
                     else:
