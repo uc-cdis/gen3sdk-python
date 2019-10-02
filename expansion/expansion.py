@@ -252,12 +252,12 @@ class Gen3Expansion:
 
         """
         if nodes is None:
-            all_nodes = sorted(list(set(json_normalize(self.sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
+            nodes = sorted(list(set(json_normalize(self.sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
         elif isinstance(nodes,str):
             nodes = [nodes]
 
         for node in remove_nodes:
-            if node in all_nodes: all_nodes.remove(node)
+            if node in nodes: nodes.remove(node)
 
         if projects is None: #if no projects specified, get node for all projects
             projects = list(json_normalize(self.sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
@@ -270,7 +270,7 @@ class Gen3Expansion:
             if not os.path.exists(mydir):
                 os.makedirs(mydir)
 
-            for node in all_nodes:
+            for node in nodes:
                 filename = str(mydir+'/'+project_id+'_'+node+'.tsv')
                 if (os.path.isfile(filename)) and (overwrite is False):
                     print("\tPreviously downloaded: '{}'".format(filename))
@@ -869,11 +869,10 @@ class Gen3Expansion:
 
         # if no nodes specified, get all nodes in data commons
         if nodes is None:
-            all_nodes = sorted(list(set(json_normalize(self.sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
+            nodes = sorted(list(set(json_normalize(self.sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
             remove_nodes = ['program','project','root','data_release'] #remove these nodes from list of nodes
             for node in remove_nodes:
-                if node in all_nodes: all_nodes.remove(node)
-            nodes = all_nodes
+                if node in nodes: nodes.remove(node)
         elif isinstance(nodes, str):
             nodes = [nodes]
 
