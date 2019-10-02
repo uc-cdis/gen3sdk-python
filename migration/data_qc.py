@@ -261,6 +261,7 @@ def summarize_dd(commons,props_to_remove=['case_submitter_id'],nodes_to_remove=[
     return dds
 
 ########################################################################################################################
+#dds=summarize_dd(commons,props_to_remove=['case_submitter_id'],nodes_to_remove=['root','metaschema'])
 ########################################################################################################################
 ########################################################################################################################
 
@@ -376,33 +377,29 @@ def write_summary_report(summary,commons,outdir='reports',home_dir='.',outliers=
         print("Report written to file:\n\t{}\n".format(out_name))
 
 
+########################################################################################################################
 # write_summary_report(summary,commons,outdir='reports',home_dir='/Users/christopher/Documents/Notes/BHC/data_qc/')
 
-########################################################################################################################
+
 ########################################################################################################################
 ########################################################################################################################
 
-def summarize_tsv_data(
-    commons={"staging":{"dir":staging_dir,"dd":sdd},"prod":{"dir":prod_dir,"dd":pdd}},# a dictionary with nickname of each commons as keys, with each value a dictionary of project_tsvs directory ('dir') and the data dictionary ('dd')
-    prefix='',# Default gets TSVs from all directories ending in "_tsvs". "prefix" of the project_tsvs directories (e.g., program name of the projects, e.g., "Program_1-Project_2_tsvs"). Result of running the Gen3Expansion.get_project_tsvs() function.
-    report=True,# whether to write the data processing results to a txt file.
-    outdir='reports',# directory for the output files
-    omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id'],# Properties to omit from being summarized.
-    home_dir=".",# where to create 'outdir' output files directory
-    outlier_threshold=3# for identifying outliers in numeric data, the upper/lower threshold is outlier_threshold times the standard deviation
-    ):
-    """ Adds a summary of TSV data to a dictionary consisting of the following data commons info:
-        commons = {"name_of_commons":{"dir":dir_of_project_tsvs, "dd": data_dictionary_of_commons}}
-        Can have as many commons.keys() as you like for different directories of TSVs to summarize.
-        Args:
-            commons(dict):
-            prefix(str):
-            report(boolean):
-            outdir(str):
-            omit_props(list):
-            home_dir(str):
-        Examples:
-
+def summarize_tsv_data(commons,prefix='',report=True,outdir='reports',omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id'],home_dir=".",outlier_threshold=3):
+    """
+    Returns a nested dictionary of summarized TSV data per commons, project, node, and property.
+    For each property, the total number of records in the project with and without data is returned.
+    Bins and the number of unique bins are returned for string, enumeration and boolean properties.
+    The mean, median, min, max, and stdev are returned for integers and numbers.
+    Outliers in numeric data are identified using two different cut-offs: 1) the interquartile range and 2) "+/- stdev * 3".
+    Args:
+        commons(dict): keys are abbreviated data commons names(str), with each value a dict with project_tsvs directory ('dir') the corresponding data dictionary ('dd')
+        prefix(str): Default gets TSVs from all directories ending in "_tsvs". "prefix" of the project_tsvs directories (e.g., program name of the projects: "Program_1-Project_2_tsvs"). Result of running the Gen3Expansion.get_project_tsvs() function.
+        report(boolean): Whether to write the data processing results to a txt file.
+        outdir(str): A directory for the output files.
+        omit_props(list): Properties to omit from being summarized. It doesn't make sense to summarize certain properties, e.g., those with all unique values.
+        home_dir(str):where to create 'outdir' output files directory
+        outlier_threshold(number): For identifying outliers in numeric data, the upper/lower threshold is the standard deviation multiplied by this number.
+    Examples:
         s = summarize_tsv_data(
             commons={"staging":{"dir":staging_dir,"dd":sdd},"prod":{"dir":prod_dir,"dd":pdd}},
             prefix='',
@@ -532,10 +529,11 @@ def summarize_tsv_data(
                                     stdev_outliers = sorted([x for x in d if x < lower or x > upper])
                                     data[project_id][node]["properties"][prop]["stats"]["stdev_outliers"] = stdev_outliers
                                     # Get "iqr_outliers" by the inter-quartile range
-                                    q25, q75 = percentile(d, 25), percentile(d, 75)
-                                    cutoff = iqr * 1.5
-                                    lower, upper = q25 - cutoff, q75 + cutoff
-                                    iqr_outliers = sorted([x for x in d if x < lower or x > upper])
+                                    q75, q25 = percentile(d,75), percentile(d,25)
+                                    iqr = q75 - q25
+                                    cutoff = iqr * (outlier_threshold/2) # default outlier_threshold is 3, so iqr * 1.5
+                                    upper, lower = q75 + cutoff, q25 - cutoff
+                                    iqr_outliers = sorted([x for x in d if x > upper or x < lower])
                                     data[project_id][node]["properties"][prop]["stats"]["iqr_outliers"] = iqr_outliers
 
                                 print("\t\t{}".format(data[project_id][node]["properties"][prop]["stats"]))
@@ -545,7 +543,6 @@ def summarize_tsv_data(
                                 exit(1)
                 else:
                     print("\t{} records in '{}' TSV. No data to summarize.".format(total_records,node))
-
 
         summary[dc]['data'] = data #save data to commons 'data' after looping through all the TSVs from a commons
         summary[dc]['data_count'] = data_count
@@ -560,27 +557,21 @@ def summarize_tsv_data(
     os.chdir(home_dir)
     return summary
 
+########################################################################################################################
 # summary = summarize_tsv_data(commons={"staging":{"dir":staging_dir,"dd":sdd},"prod":{"dir":prod_dir,"dd":pdd}},prefix='',report=True,outdir='reports',omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id'],home_dir='/Users/christopher/Documents/Notes/BHC/data_qc/',outlier_threshold=3)
 
 ########################################################################################################################
 ########################################################################################################################
-########################################################################################################################
 
-def write_commons_report(
-    summary,#the result of running the 'summarize_tsv_data()' script
-    bin_limit=False,# whether to limit the number of bins to summarize for enums, strings, and booleans. If bin_limit=3, only the top 3 bins by their value will be reported.
-    create_report=True,# whether to write a TSV report to the outdir
-    outdir='reports',
-    home_dir="."# the directory name to place output files in
-    ):
+def write_commons_report(summary,bin_limit=False,create_report=True,outdir='reports',home_dir="."):
     """ Write a Data QC Report TSV
     Args:
-        summary(dict):
+        summary(dict):#the result of running the 'summarize_tsv_data()' script
         outdir(str):
-        bin_limit(int):
-        create_report(bool):
+        bin_limit(int):# whether to limit the number of bins to summarize for enums, strings, and booleans. If bin_limit=3, only the top 3 bins by their value will be reported.
+        create_report(bool):# whether to write a TSV report to the outdir
         outdir(str):
-        home_dir(str):
+        home_dir(str):# the directory name to place output files in
     """
     dcs = list(summary.keys())
 
@@ -640,9 +631,11 @@ def write_commons_report(
 
     return report
 
-# report = write_commons_report(summary,bin_limit=False,create_report=True,outdir='reports',home_dir='/Users/christopher/Documents/Notes/BHC/data_qc/')
 
 ########################################################################################################################
+# report = write_commons_report(summary,bin_limit=False,create_report=True,outdir='reports',home_dir='/Users/christopher/Documents/Notes/BHC/data_qc/')
+
+
 ########################################################################################################################
 ########################################################################################################################
 
@@ -761,4 +754,8 @@ def compare_commons_reports(
 
     return dfs
 
+########################################################################################################################
+########################################################################################################################
 #c = compare_commons_reports(report,stats = ['total_records','null_count','N','min','max','mean','median','stdev','bin_number','bins'],outdir='reports',home_dir='/Users/christopher/Documents/Notes/BHC/data_qc/',create_report=True)
+
+########################################################################################################################
