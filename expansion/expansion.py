@@ -175,7 +175,10 @@ class Gen3Expansion:
                 res = self.sub.query(query)
                 df = json_normalize(res['data']['project'])
                 project_ids = project_ids + list(set(df['project_id']))
-        return sorted(project_ids,key=str.lower)
+        my_ids = sorted(project_ids,key=str.lower)
+        print(my_ids)
+        return my_ids
+
 
     def get_node_tsvs(self, node, projects=None, overwrite=False, remove_empty=True):
         """Gets a TSV of the structuerd data from particular node for each project specified.
