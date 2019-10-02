@@ -274,7 +274,7 @@ class Gen3Expansion:
                     query_txt = """{_%s_count (project_id:"%s")}""" % (node,project_id)
                     res = self.sub.query(query_txt) #  {'data': {'_acknowledgement_count': 0}}
                     count = res['data'][str('_'+node+'_count')] # count=int(0)
-                    if count > 0 or  save_empty is True:
+                    if count > 0 or save_empty is True:
                         print("\nDownloading {} records in node '{}' of project '{}'.".format(count,node,project_id))
                         prog,proj = project_id.split('-',1)
                         self.sub.export_node(prog,proj,node,'tsv',filename)
