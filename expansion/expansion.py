@@ -269,14 +269,17 @@ class Gen3Expansion:
             for node in all_nodes:
                 filename = str(mydir+'/'+project_id+'_'+node+'.tsv')
                 if (os.path.isfile(filename)) and (overwrite is False):
-                    print("Previously downloaded: '{}'".format(filename))
+                    print("\tPreviously downloaded: '{}'".format(filename))
                 else:
                     query_txt = """{_%s_count (project_id:"%s")}""" % (node,project_id)
-                    res = self.sub.query(query_txt)
-                    count = res['data'][str('_'+node+'_count')]
-                    print(str(count) + ' records found in node ' + node + ' in project ' + project_id)
-                    prog,proj = project_id.split('-',1)
-                    self.sub.export_node(prog,proj,node,'tsv',filename)
+                    res = self.sub.query(query_txt) #  {'data': {'_acknowledgement_count': 0}}
+                    count = res['data'][str('_'+node+'_count')] # count=int(0)
+                    if count > 0:
+                        print("\tDownloading {} records in node '{}' of project '{}'.".format(count,node,project_id))
+                        prog,proj = project_id.split('-',1)
+                        self.sub.export_node(prog,proj,node,'tsv',filename)
+                    else:
+                        print("\t{} records in node '{}' of project '{}'.".format(count,node,project_id))
 
         cmd = ['ls',mydir] #look in the download directory
         try:
