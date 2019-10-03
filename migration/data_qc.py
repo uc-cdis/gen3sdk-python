@@ -304,17 +304,21 @@ def compare_data_dictionaries(commons,outdir='reports',home_dir='.'):
             for diff in list(dds['prop_diffs'][node]):
                 report_file.write("\n\t{}".format(diff))
                 report_file.write("\n\t{}".format(dds['prop_diffs'][node][diff]))
+    # unfinished
+    return out_name
 
 ########################################################################################################################
 ########################################################################################################################
 ########################################################################################################################
 
-def write_summary_report(summary,commons,outdir='reports',home_dir='.',outliers=True):
+def write_summary_report(summary,commons,omit_props,outlier_threshold,outdir='reports',home_dir='.'):
     """
     Writes the summary of a commons to a file.
     Args:
         summary(dict):
         commons(dict):
+        omit_props(list):
+        outlier_threshold(number):
         outdir(str):
         home_dir(str):
     Examples:
@@ -327,31 +331,31 @@ def write_summary_report(summary,commons,outdir='reports',home_dir='.',outliers=
     create_output_dir()
     out_name = get_output_name('summary','txt',commons,outdir)#summary_staging_prod.tsv
     with open(out_name,'w') as report_file:
+        x = 0
+        y = 0
+        report_file.write("Section {}.{} QC Pipeline Settings".format(x,y))
+        report_file.write("\n\tDate: {}".format(datetime.datetime.now()))
+        report_file.write("\n\tProperties omitted from this summary: {}".format(omit_props))
+        report_file.write("\n\tThreshold for identifying outliers: mean +/- {} * stdev".format(outlier_threshold))
 
-        x = 1
         for dc in dcs:
-
-            # Write the Data Dictionary summary
-            y = 1
-            report_file.write("Section {}.{} '{}' DATA DIRECTORY (location of project TSVs summarized in this section of the report):\n{}".format(x,y,dc,commons[dc]['dir']))
-            y+=1
+            x+=1
+            y = 1 # Write the Data Dictionary summary
+            report_file.write("\n\nSection {}.{} '{}' DATA DIRECTORY (location of project TSVs summarized in this section of the report):\n{}".format(x,y,dc,commons[dc]['dir']))
+            y+=1 # DD Settings
             report_file.write("\n\nSection {}.{} '{}' DATA DICTIONARY SETTINGS (data dictionary version used for the analysis):\n{}".format(x,y,dc,commons[dc]['dd']['_settings']))
 
-            # Write the project_count, tsv_count, node_count, and prop_count data
-            y+=1
+            y+=1 # Write the project_count, tsv_count, node_count, and prop_count data
             report_file.write("\n\nSection {}.{} '{}' PROJECT COUNT (the projects with TSV data): {}\n{}\n".format(x,y,dc,len(summary[dc]['project_count']),summary[dc]['project_count']))
-            y+=1
+            y+=1 # TSV COUNT
             report_file.write("\n\nSection {}.{} '{}' TSV COUNT (the TSV files that were summarized): {}\n{}\n".format(x,y,dc,len(summary[dc]['tsv_count']),summary[dc]['tsv_count']))
-            y+=1
+            y+=1 # NODE COUNT
             report_file.write("\n\nSection {}.{} '{}' NODE COUNT (nodes in the data model with TSV data): {}\n{}\n".format(x,y,dc,len(summary[dc]['node_count']),summary[dc]['node_count']))
-            y+=1
+            y+=1 # PROPERTY COUNT
             report_file.write("\n\nSection {}.{} '{}' PROPERTY COUNT (properties in the data model with TSV data): {}\n{}\n".format(x,y,dc,len(summary[dc]['prop_count']),summary[dc]['prop_count']))
 
-
-            # Write the Data Summary per Project
-            y+=1
+            y+=1# Write the data summary for each project
             report_file.write("\n\nSection {}.{} '{}' Data Summary:\n".format(x,y,dc))
-
             projects = list(summary[dc]['data'].keys())
             for project in projects:
                 nodes = list(summary[dc]['data'][project])
@@ -374,33 +378,31 @@ def write_summary_report(summary,commons,outdir='reports',home_dir='.',outliers=
                                 report_file.write(", {}: {}".format(stat,stat_data))
                     if len(null_props) > 0:
                         report_file.write("\n['{}','{}','{}']: {} properties in TSV with all null data: {}\n".format(dc, project, node, len(null_props), null_props))
-            x+=1
-        print("Report written to file:\n\t{}\n".format(out_name))
+    print("Report written to file:\n\t{}\n".format(out_name))
+    return out_name
+
+########################################################################################################################
+# write_summary_report(summary,commons,omit_props,outlier_threshold,outdir='reports',home_dir='/Users/christopher/Documents/Notes/BHC/data_qc/')
 
 
 ########################################################################################################################
-# write_summary_report(summary,commons,outdir='reports',home_dir='/Users/christopher/Documents/Notes/BHC/data_qc/')
-
-
-########################################################################################################################
 ########################################################################################################################
 
-def summarize_tsv_data(commons,prefix='',report=True,outdir='reports',omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id','sample_id','specimen_number'],home_dir=".",outlier_threshold=3):
+def summarize_tsvs(commons,prefix='',report=True,outlier_threshold=3,omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id'],home_dir=".",outdir='reports'):
     """
     Returns a nested dictionary of summarized TSV data per commons, project, node, and property.
     For each property, the total number of records in the project with and without data is returned.
     Bins and the number of unique bins are returned for string, enumeration and boolean properties.
     The mean, median, min, max, and stdev are returned for integers and numbers.
-    Outliers in numeric data are identified using two different cut-offs: 1) the interquartile range and 2) "+/- stdev".
-    The cut-off for outlier identification can be changed by raising or lowering the outlier_threshold (default=3).
+    Outliers in numeric data are identified using "+/- stdev". The cut-off for outlier identification can be changed by raising or lowering the outlier_threshold (default=3).
     Args:
         commons(dict): keys are abbreviated data commons names(str), with each value a dict with project_tsvs directory ('dir') the corresponding data dictionary ('dd')
         prefix(str): Default gets TSVs from all directories ending in "_tsvs". "prefix" of the project_tsvs directories (e.g., program name of the projects: "Program_1-Project_2_tsvs"). Result of running the Gen3Expansion.get_project_tsvs() function.
         report(boolean): Whether to write the data processing results to a txt file.
-        outdir(str): A directory for the output files.
-        omit_props(list): Properties to omit from being summarized. It doesn't make sense to summarize certain properties, e.g., those with all unique values.
+        outlier_threshold(number): The upper/lower threshold for identifying outliers in numeric data is the standard deviation multiplied by this number.
+        omit_props(list): Properties to omit from being summarized. It doesn't make sense to summarize certain properties, e.g., those with all unique values. May want to omit: ['sample_id','specimen_number','current_medical_condition_name','medical_condition_name','imaging_results','medication_name'].
         home_dir(str):where to create 'outdir' output files directory
-        outlier_threshold(number): The upper/lower threshold for identifying outliers in numeric data is the standard deviation or interquartile range multiplied by this number.
+        outdir(str): A directory for the output files.
     Examples:
         s = summarize_tsv_data(
             commons={"staging":{"dir":staging_dir,"dd":sdd},"prod":{"dir":prod_dir,"dd":pdd}},
@@ -461,7 +463,6 @@ def summarize_tsv_data(commons,prefix='',report=True,outdir='reports',omit_props
                     print("\tExtracting '{}' TSV data.".format(node))
                     data[project_id][node] = {}
 
-
                     regex = re.compile(r'^[A-Za-z0-9_]*[^.]$') #drop the links
                     props = list(filter(regex.match, list(df))) #properties in this TSV to summarize
 
@@ -502,9 +503,15 @@ def summarize_tsv_data(commons,prefix='',report=True,outdir='reports',omit_props
                                 counts = Counter(df[df[prop].notnull()][prop])
                                 df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
                                 bins = [tuple(x) for x in df1.values]
-                                bins.sort(key=itemgetter(1),reverse=True) #sorts the bins by descending value
+                                # bins = [('a',10),('b',10),('c',5),('d',5),('e',1),('f',1)]
+                                # bins2 = [('e',10),('f',10),('d',5),('c',5),('b',1),('a',1)]
+                                # sorted(bins,key=lambda x: (x[0])) #sort bins by name
+                                # sorted(bins,key=lambda x: (x[1]),reverse=True) # sort bins by value
+                                # bins = sorted(bins,key=lambda x: (x[1], x[0]),reverse=True) # this sorts both value and name in reverse.
+                                bins = sorted(sorted(bins,key=lambda x: (x[0])),key=lambda x: (x[1]),reverse=True) # sort first by name, then by value. This way, names with same value are in same order.
                                 data[project_id][node]["properties"][prop]["stats"]["bins"] = bins
-                                print("\t\tTop 3 bins of {}: {}".format(prop,bins[:3]))
+                                data[project_id][node]["properties"][prop]["stats"]["bin_number"] = len(bins)
+                                print("\t\tTop 3 bins out of {} for {}: {}".format(len(bins),prop,bins[:3]))
 
                             # Get stats for numbers
                             elif ptype in ['number','integer']: #prop='concentration'
@@ -515,29 +522,17 @@ def summarize_tsv_data(commons,prefix='',report=True,outdir='reports',omit_props
                                 data[project_id][node]["properties"][prop]["stats"]["median"] = md
                                 data[project_id][node]["properties"][prop]["stats"]["min"] = min(d)
                                 data[project_id][node]["properties"][prop]["stats"]["max"] = max(d)
-                                # Outlier analysis for numeric data:
-                                # Flag properties where there are values outside:
-                                # 1) two stdev of the mean (sd2)
-                                # 2) outside interquartile range (IQR)
                                 if len(d) == 1: # If there is only one data point, stdev will error
                                     data[project_id][node]["properties"][prop]["stats"]["stdev"] = "NA"
-                                    data[project_id][node]["properties"][prop]["stats"]["stdev_outliers"] = []
-                                    data[project_id][node]["properties"][prop]["stats"]["iqr_outliers"] = []
+                                    data[project_id][node]["properties"][prop]["stats"]["outliers"] = []
                                 else:
                                     std = statistics.stdev(d)
                                     data[project_id][node]["properties"][prop]["stats"]["stdev"] = std
-                                    # Get "stdev_outliers" by mean +/- outlier_threshold * stdev
+                                    # Get outliers by mean +/- outlier_threshold * stdev
                                     cutoff = std * outlier_threshold # three times the standard deviation is default
                                     lower, upper = mn - cutoff, mn + cutoff # cut-offs for outliers is 3 times the stdev below and above the mean
-                                    stdev_outliers = sorted(list(set([x for x in d if x < lower or x > upper])))
-                                    data[project_id][node]["properties"][prop]["stats"]["stdev_outliers"] = stdev_outliers
-                                    # Get "iqr_outliers" by the inter-quartile range
-                                    q25, q75 = percentile(d,25), percentile(d,75)
-                                    iqr = q75 - q25
-                                    cutoff = iqr * outlier_threshold # default outlier_threshold is 3
-                                    lower, upper = q25 - cutoff, q75 + cutoff
-                                    iqr_outliers = sorted(list(set([x for x in d if x < lower or x > upper])))
-                                    data[project_id][node]["properties"][prop]["stats"]["iqr_outliers"] = iqr_outliers
+                                    outliers = sorted(list(set([x for x in d if x < lower or x > upper])))
+                                    data[project_id][node]["properties"][prop]["stats"]["outliers"] = outliers
 
                                 print("\t\t{}".format(data[project_id][node]["properties"][prop]["stats"]))
 
@@ -555,26 +550,27 @@ def summarize_tsv_data(commons,prefix='',report=True,outdir='reports',omit_props
         summary[dc]['prop_count'] = prop_count
 
     if report is True:
-        write_summary_report(summary,commons,outdir,home_dir)
+        write_summary_report(summary,commons,omit_props,outlier_threshold,outdir,home_dir)
 
     os.chdir(home_dir)
     return summary
 
 ########################################################################################################################
-# summary = summarize_tsv_data(commons={"staging":{"dir":staging_dir,"dd":sdd},"prod":{"dir":prod_dir,"dd":pdd}},prefix='',report=True,outdir='reports',omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id'],home_dir='/Users/christopher/Documents/Notes/BHC/data_qc/',outlier_threshold=3)
+# summary = summarize_tsvs(commons={"staging":{"dir":staging_dir,"dd":sdd},"prod":{"dir":prod_dir,"dd":pdd}},prefix='',report=True,outdir='reports',omit_props=['project_id','type','id','submitter_id','case_submitter_id','md5sum','file_name','object_id'],home_dir='/Users/christopher/Documents/Notes/BHC/data_qc/',outlier_threshold=3)
 
 ########################################################################################################################
 ########################################################################################################################
 
-def write_commons_report(summary,commons,bin_limit=False,create_report=True,outdir='reports',home_dir="."):
-    """ Write a Data QC Report TSV
+def write_commons_report(summary,commons,bin_limit=False,create_report=True,report_null=True,outdir='reports',home_dir="."):
+    """ Converts the summarize_tsvs() dictionary into a pandas DataFrame and writes it to a file.
     Args:
-        summary(dict):#the result of running the 'summarize_tsv_data()' script
-        outdir(str):
-        bin_limit(int):# whether to limit the number of bins to summarize for enums, strings, and booleans. If bin_limit=3, only the top 3 bins by their value will be reported.
-        create_report(bool):# whether to write a TSV report to the outdir
-        outdir(str):
-        home_dir(str):# the directory name to place output files in
+        summary(dict): the dict returned from running 'summarize_tsvs()' script.
+        commons(dict): the dictionary containing the data commons TSV dirs and data dictionaries.
+        bin_limit(int): limits the number of bins written to the report for enums, strings, and booleans. If bin_limit=3, only the largest 3 bins will be reported.
+        create_report(bool): whether to write a TSV report to the outdir
+        report_null(bool): if False, properties in TSVs with entirely null data will be excluded from the report.
+        outdir(str): Directory to write the report file to.
+        home_dir(str): the directory where project TSV folders and 'outdir' are.
     """
     dcs = list(summary.keys())
 
@@ -584,8 +580,8 @@ def write_commons_report(summary,commons,bin_limit=False,create_report=True,outd
 
     report = pd.DataFrame(index=range(0,total_props),
         columns=['commons','project','node','property','property_type',
-                'total_records','null_count','N','min','max','mean','median',
-                'stdev','stdev_outliers','iqr_outliers',
+                'total_records','null_count','all_null',
+                'N','min','max','median','mean','stdev','outliers',
                 'bin_number','bins'])
 
     i = 0
@@ -598,33 +594,39 @@ def write_commons_report(summary,commons,bin_limit=False,create_report=True,outd
                 for prop in props:
                     print("Writing '{}' '{}' '{}' '{}' to report.".format(dc,project,node,prop))
                     data = summary[dc]['data'][project][node]['properties'][prop]
-                    report['commons'][i] = dc
-                    report['project'][i] = project
-                    report['node'][i] = node
-                    report['property'][i] = prop
-                    report['total_records'][i] = data['total_records']
-                    report['null_count'][i] = data['null_count']
-                    report['property_type'][i] = data['property_type']
-                    if 'stats' in data:
-                        report['N'][i] = data['stats']['N']
-                        if data['property_type'] in ['string','enum','boolean']:
-                            prop_bins = data['stats']['bins']
-                            bin_number = len(prop_bins)
-                            report['bin_number'][i] = bin_number
-                            if not bin_limit is False and bin_number > bin_limit:
-                                prop_bins = dict(collections.Counter(prop_bins).most_common(bin_limit))
-                                report['bins'][i] = sorted(prop_bins)
-                            else:
-                                report['bins'][i] = sorted(prop_bins)
-                        elif data['property_type'] in ['integer','number']:
-                            report['min'][i] = data['stats']['min']
-                            report['max'][i] = data['stats']['max']
-                            report['mean'][i] = data['stats']['mean']
-                            report['median'][i] = data['stats']['median']
-                            report['stdev'][i] = data['stats']['stdev']
-                            report['stdev_outliers'][i] = data['stats']['stdev_outliers']
-                            report['iqr_outliers'][i] = data['stats']['iqr_outliers']
-                    i += 1
+                    total_records = data['total_records']
+                    null_count = data['null_count']
+
+                    if total_records > null_count or report_null is True:
+                        report['total_records'][i] = total_records
+                        report['null_count'][i] = null_count
+                        report['commons'][i] = dc
+                        report['project'][i] = project
+                        report['node'][i] = node
+                        report['property'][i] = prop
+                        report['property_type'][i] = data['property_type']
+                        if 'stats' in data:
+                            report['N'][i] = data['stats']['N']
+                            if data['property_type'] in ['string','enum','boolean']:
+                                prop_bins = data['stats']['bins']
+                                bin_number = len(prop_bins)
+                                report['bin_number'][i] = bin_number
+                                if not bin_limit is False and bin_number > bin_limit:
+                                    report['bins'][i] = prop_bins[:bin_limit]
+                                else:
+                                    report['bins'][i] = prop_bins
+                            elif data['property_type'] in ['integer','number']:
+                                report['min'][i] = data['stats']['min']
+                                report['max'][i] = data['stats']['max']
+                                report['mean'][i] = data['stats']['mean']
+                                report['median'][i] = data['stats']['median']
+                                report['stdev'][i] = data['stats']['stdev']
+                                report['outliers'][i] = data['stats']['outliers']
+                        if total_records == null_count:
+                            report['all_null'][i] = True
+                        else:
+                            report['all_null'][i] = False
+                        i += 1
     if create_report is True:
         os.chdir(home_dir)
         create_output_dir()
@@ -642,7 +644,7 @@ def write_commons_report(summary,commons,bin_limit=False,create_report=True,outd
 ########################################################################################################################
 ########################################################################################################################
 
-def compare_commons(report,commons,stats = ['total_records','null_count','N','min','max','mean','median','stdev','bin_number','bins'],outdir='reports',home_dir='.',create_report=True):
+def compare_commons(report,commons,stats = ['total_records','null_count','N','min','max','mean','median','stdev','bin_number','bins'],create_report=True,home_dir='.',outdir='reports'):
     """ Takes the pandas DataFrame returned from 'write_commons_report'
         where at least 2 data commons are summarized from 'summarize_data_commons'.
     Args:
@@ -680,7 +682,7 @@ def compare_commons(report,commons,stats = ['total_records','null_count','N','mi
     i = 1 # to track the progress of the script in print statement below
     for prop_id in prop_ids: # prop_id = prop_ids[0]
 
-        print("({} of {}) Comparing stats for '{}'".format(i,total,prop_id))
+        print("({} of {} prop_ids) Comparing stats for '{}'".format(i,total,prop_id))
         i += 1
 
         project_id,node,prop = prop_id.split('.')
@@ -695,23 +697,24 @@ def compare_commons(report,commons,stats = ['total_records','null_count','N','mi
             unique = pd.concat([unique,df],ignore_index=True, sort=False)
             #print("\tUnique".format(prop_id))
 
-        elif len(df) == 2:
+        elif len(df) == 2: # do the comparison and save results to comparison, then also to different or identical
             same = []
-            for stat in stats:
-                if df[stat][0] != df[stat][1]:# Note: if both values are "NaN" this is True; because NaN != NaN
+            for stat in stats: # first, check whether any of the stats are different bw commons
+                if df[stat][0] != df[stat][1]: # Note: if both values are "NaN" this is True; because NaN != NaN
                     if list(df[stat].isna())[0] is True and list(df[stat].isna())[1] is True:# if stats are both "NaN", data are identical
                         same.append(True)
                     else: # if stats are different AND both values aren't "NaN", data are different
                         same.append(False)
-                        col0 = dcs[0]+'_'+stat
-                        col1 = dcs[1]+'_'+stat
-                        comparison[col0][prop_id] = df[stat][0]
-                        comparison[col1][prop_id] = df[stat][1]
                 else: # if stat0 is stat1, data are identical
                     same.append(True)
 
-            if False in same:
+            if False in same: # if any of the stats are different bw commons, add to different df and comparison df
                 different = pd.concat([different,df],ignore_index=True, sort=False)
+                for stat in stats:
+                    col0 = dcs[0]+'_'+stat
+                    col1 = dcs[1]+'_'+stat
+                    comparison[col0][prop_id] = df[stat][0]
+                    comparison[col1][prop_id] = df[stat][1]
             else:
                 identical = pd.concat([identical,df],ignore_index=True, sort=False)
 
@@ -724,7 +727,7 @@ def compare_commons(report,commons,stats = ['total_records','null_count','N','mi
 
     # check total
     if len(report) == len(identical) + len(different) + len(unique): #len(report) == len(comparison['identical']) + len(comparison['different'])
-        print("All {} properties classified as having unique, identical or different data between data commons: {}.".format(len(report),dcs))
+        print("All {} properties in the report (instances of {} unique prop_ids) were classified as having unique, identical or different data between data commons: {}.".format(len(report),total,dcs))
     else:
         print("Some properties in the report were not classified!")
 
@@ -747,9 +750,9 @@ def compare_commons(report,commons,stats = ['total_records','null_count','N','mi
 
     dfs = {"comparison":comparison,
         "different":different,
-        "unique":unique,
         "identical":identical,
-        "unclassified":unclassified}
+        "unclassified":unclassified,
+        "unique":unique}
 
     return dfs
 
