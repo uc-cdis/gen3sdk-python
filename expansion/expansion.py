@@ -488,7 +488,7 @@ class Gen3Expansion:
             raise Gen3Error("Failed to get UUIDs in the node '"+node+"' of project '"+project_id+"'.")
 
         if len(uuids) != 0:
-            print("\nAttemping to delete "+str(len(uuids))+" records in the node '"+node+"' of project '"+project_id+"'.")
+            print("Attemping to delete "+str(len(uuids))+" records in the node '"+node+"' of project '"+project_id+"'.")
 
             try:
                 results = self.delete_records(uuids, project_id, chunk_size)
@@ -536,6 +536,7 @@ class Gen3Expansion:
         delete_order = sorted(submission_order, key=lambda x: x[1], reverse=True)
         nodes = [i[0] for i in delete_order]
         for node in nodes:
+            print("\nDeleting node '{}' from project '{}'.".format(node,project_id))
             data = self.delete_node(node=node,project_id=project_id,chunk_size=chunk_size)
 
 # Analysis Functions
