@@ -487,16 +487,17 @@ class Gen3Expansion:
         except:
             raise Gen3Error("Failed to get UUIDs in the node '"+node+"' of project '"+project_id+"'.")
 
-        print("\nAttemping to delete "+str(len(uuids))+" records in the node '"+node+"' of project '"+project_id+"'.")
+        if len(uuids) != 0:
+            print("\nAttemping to delete "+str(len(uuids))+" records in the node '"+node+"' of project '"+project_id+"'.")
 
-        try:
-            results = self.delete_records(uuids, project_id, chunk_size)
-            print("Successfully deleted "+str(len(results['success']))+" records in the node '"+node+"' of project '"+project_id+"'.")
-            print("Failed to delete "+str(len(results['failure']))+" records. See results['errors'] for the error messages.")
-        except:
-            raise Gen3Error("Failed to delete UUIDs in the node '"+node+"' of project '"+project_id+"'.")
+            try:
+                results = self.delete_records(uuids, project_id, chunk_size)
+                print("Successfully deleted "+str(len(results['success']))+" records in the node '"+node+"' of project '"+project_id+"'.")
+                print("Failed to delete "+str(len(results['failure']))+" records. See results['errors'] for the error messages.")
+            except:
+                raise Gen3Error("Failed to delete UUIDs in the node '"+node+"' of project '"+project_id+"'.")
 
-        return results
+            return results
 
     def get_submission_order(self,root_node='project',excluded_schemas=['_definitions','_settings','_terms','program','project','root','data_release','metaschema']):
         """
