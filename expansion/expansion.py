@@ -534,10 +534,19 @@ class Gen3Expansion:
     def delete_project(self,project_id,root_node='project',chunk_size=200):
         submission_order = self.get_submission_order(root_node=root_node)
         delete_order = sorted(submission_order, key=lambda x: x[1], reverse=True)
+        try:
+            nodes.remove('project')
+        except:
+            print("No 'project' node in list of nodes.")
         nodes = [i[0] for i in delete_order]
         for node in nodes:
             print("\nDeleting node '{}' from project '{}'.".format(node,project_id))
             data = self.delete_node(node=node,project_id=project_id,chunk_size=chunk_size)
+        prog,proj = project_id.split('-',1)
+        try:
+            self.sub.delete_project(program=prog,project=proj)
+        except Exception as e:
+            print("Couldn't delete project '{}':\n\t{}".format(project_id,e))
 
 # Analysis Functions
     def property_counts_table(self, prop, df):
@@ -936,8 +945,6 @@ class Gen3Expansion:
                             uuids[sid] = list(df.loc[df['submitter_id']==sid]['id'])
                         pdups[project_id][node] = uuids
         return pdups
-
-
 
     def delete_duplicates(self, dups, project_id, api):
 
