@@ -425,7 +425,7 @@ class Gen3Expansion:
         total = 0
 
         while (len(success)+len(failure)) < len(uuids): #loop sorts all uuids into success or failure
-            connection_error = False
+
             if len(retry) > 0:
                 print("Retrying deletion of "+str(len(retry))+" valid uuids.")
                 list_ids = ",".join(retry)
@@ -440,14 +440,15 @@ class Gen3Expansion:
             try:
                 resp = requests.delete(rurl, auth=self._auth_provider)
             except Exception as e:
-                connection_error = True
-                print("Exception occurred during delete request:\n\t{}.\n\tReducing chunk_size to '{}'.".format(e,chunk_size))
-
-            if "The requested URL was not found on the server." in resp.text:
-                print('\n Finished delete workflow. \n') #debug
-            elif "414 Request-URI Too Large" in resp.text or "service failure" in resp.text or connection_error == True:
                 chunk_size = int(chunk_size/2)
-                print("Service Failure.\nThe chunk_size is too large. Reducing to "+str(chunk_size))
+                print("Exception occurred during delete request:\n\t{}.\n\tReducing chunk_size to '{}'.".format(e,chunk_size))
+                continue
+
+            if "414 Request-URI Too Large" in resp.text or "service failure" in resp.text:
+                chunk_size = int(chunk_size/2)
+                print("Service Failure. The chunk_size is too large. Reducing to '{}'".format(chunk_size))
+            elif "The requested URL was not found on the server." in resp.text:
+                print('\n Finished delete workflow. \n') #debug
             else:
                 #print(resp.text) #trouble-shooting
                 output = json.loads(resp.text)
