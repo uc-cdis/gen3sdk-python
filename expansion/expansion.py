@@ -534,11 +534,11 @@ class Gen3Expansion:
     def delete_project(self,project_id,root_node='project',chunk_size=200):
         submission_order = self.get_submission_order(root_node=root_node)
         delete_order = sorted(submission_order, key=lambda x: x[1], reverse=True)
+        nodes = [i[0] for i in delete_order]
         try:
             nodes.remove('project')
         except:
             print("No 'project' node in list of nodes.")
-        nodes = [i[0] for i in delete_order]
         for node in nodes:
             print("\nDeleting node '{}' from project '{}'.".format(node,project_id))
             data = self.delete_node(node=node,project_id=project_id,chunk_size=chunk_size)
