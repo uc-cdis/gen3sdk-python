@@ -546,6 +546,7 @@ class Gen3Expansion:
         prog,proj = project_id.split('-',1)
         try:
             self.sub.delete_project(program=prog,project=proj)
+            print("Successfully deleted project '{}'.".format(project_id))
         except Exception as e:
             print("Couldn't delete project '{}':\n\t{}".format(project_id,e))
 
