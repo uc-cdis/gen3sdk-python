@@ -530,7 +530,7 @@ class Gen3Expansion:
                         submission_order.append((node,max([item[1] for item in parents_order]) + 1))
         return submission_order
 
-    def delete_project(self,root_node='project'):
+    def delete_project(self,project_id,root_node='project'):
         submission_order = self.get_submission_order(root_node='project')
         delete_order = sorted(submission_order, key=lambda x: x[1], reverse=True)
         nodes = [i[0] for i in delete_order]
