@@ -498,6 +498,45 @@ class Gen3Expansion:
 
         return results
 
+    def get_submission_order(self,root_node='project',excluded_schemas=['_definitions','_settings','_terms','program','project','root','data_release','metaschema']):
+        """
+        This function gets a data dictionary, and then it determines the submission order of nodes by looking at the links.
+        The reverse of this is the deletion order for deleting projects. (Must delete child nodes before parents).
+        """
+        dd = self.sub.get_dictionary_all()
+        schemas = list(dd)
+        nodes = [k for k in schemas if k not in excluded_schemas]
+        submission_order = [(root_node,0)] # make a list of tuples with (node, order) where order is int
+        while len(submission_order) < len(nodes)+1: # "root_node" is not in "nodes", thus the +1
+            for node in nodes:
+                if len([item for item in submission_order if node in item]) == 0: #if the node is not in submission_order
+                    print("Node: {}".format(node))
+                    node_links = dd[node]['links']
+                    parents = []
+                    for link in node_links:
+                        if 'target_type' in link: #node = 'webster_step_second_test'
+                            parents.append(link['target_type'])
+                        elif 'subgroup' in link: # node = 'expression_array_result'
+                            sub_links = link.get('subgroup')
+                            if not isinstance(sub_links, list):
+                                sub_links = [sub_links]
+                            for sub_link in sub_links:
+                                if 'target_type' in sub_link:
+                                    parents.append(sub_link['target_type'])
+                    if False in [i in [i[0] for i in submission_order] for i in parents]:
+                        continue # if any parent is not already in submission_order, skip this node for now
+                    else: # submit this node after the last parent to submit
+                        parents_order = [item for item in submission_order if item[0] in parents]
+                        submission_order.append((node,max([item[1] for item in parents_order]) + 1))
+        return submission_order
+
+    def delete_project(self,root_node='project'):
+        submission_order = self.get_submission_order(root_node='project')
+        delete_order = sorted(submission_order, key=lambda x: x[1], reverse=True)
+        nodes = [i[0] for i in delete_order]
+        for node in nodes:
+            data = self.delete_node(self,node,project_id,chunk_size=200)
+
 # Analysis Functions
     def property_counts_table(self, prop, df):
         df = df[df[prop].notnull()]
