@@ -4,14 +4,14 @@ from pandas.io.json import json_normalize
 from collections import Counter
 from statistics import mean
 
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+
 import gen3
 from gen3.auth import Gen3Auth
 from gen3.submission import Gen3Submission
 from gen3.file import Gen3File
-
-import matplotlib.pyplot as plt
-import numpy as np
-import seaborn as sns
 
 class Gen3Error(Exception):
     pass

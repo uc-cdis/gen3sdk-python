@@ -463,7 +463,7 @@ def summarize_tsvs(commons,prefix='',report=True,outlier_threshold=3,omit_props=
                     print("\tExtracting '{}' TSV data.".format(node))
                     data[project_id][node] = {}
 
-                    regex = re.compile(r'^[A-Za-z0-9_]*[^.]$') #drop the links
+                    regex = re.compile(r'^[A-Za-z0-9_]*[^.]$') #drop the links, e.g., cases.submitter_id or diagnoses.id
                     props = list(filter(regex.match, list(df))) #properties in this TSV to summarize
 
                     for prop in omit_props: # filter properties (headers) in TSV to remove props we don't want to summarize
@@ -627,6 +627,8 @@ def write_commons_report(summary,commons,bin_limit=False,create_report=True,repo
                         else:
                             report['all_null'][i] = False
                         i += 1
+    report['prop_id'] = report['project'] + '.' + report['node'] + '.' + report['property']
+
     if create_report is True:
         os.chdir(home_dir)
         create_output_dir()
@@ -660,7 +662,6 @@ def compare_commons(report,commons,stats = ['total_records','null_count','N','mi
     report = report.loc[report['commons'].isin(dcs)]
 
     # create prop_ids for comparing project data per property in each node from two data commons
-    report['prop_id'] = report['project'] + '.' + report['node'] + '.' + report['property']
     prop_ids = sorted(list(set(report['prop_id'])))
     total = len(prop_ids)
 

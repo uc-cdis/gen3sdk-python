@@ -24,20 +24,22 @@ creds = '/home/jovyan/pd/my-credentials.json'
 auth = Gen3Auth(api, refresh_file=creds)
 # sub = Gen3Submission(api, auth)
 # file = Gen3File(api, auth)
+#
+# !wget https://raw.githubusercontent.com/uc-cdis/gen3sdk-python/master/gen3/submission.py
+# %run ./submission.py
+# sub = Gen3Submission(api, auth)
+#
+#
+# # Get the gen3sdk expansion functions
+# !rm -f -- expansion.py
+# !wget https://raw.githubusercontent.com/cgmeyer/gen3sdk-python/master/expansion/expansion.py
+# %run ./expansion.py
+# exp = Gen3Expansion(api, auth)
+#
 
-
-!wget https://raw.githubusercontent.com/uc-cdis/gen3sdk-python/master/gen3/submission.py
-%run ./submission.py
-sub = Gen3Submission(api, auth)
-
-
-# Get the gen3sdk expansion functions
-!rm -f -- expansion.py
-!wget https://raw.githubusercontent.com/cgmeyer/gen3sdk-python/master/expansion/expansion.py
-%run ./expansion.py
-exp = Gen3Expansion(api, auth)
-
-
+sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/')
+from expansion import Gen3Expansion
+from migration import Gen3Migration
 
 
 # Download and configure gen3-client in Jupyter Notebook
@@ -46,9 +48,16 @@ client = '/home/jovyan/.gen3/gen3-client'
 
 !curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*linux |  cut -d '"' -f 4 | wget -qi -
 !unzip dataclient_linux.zip
-!mkdir -p /home/jovyan/.gen3
-!mv gen3-client /home/jovyan/.gen3
+!mkdir -p /home/jovyan/pd/.gen3
+!mv gen3-client /home/jovyan/pd/.gen3
 !rm dataclient_linux.zip
+
+curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*linux |  cut -d '"' -f 4 | wget -qi -
+unzip dataclient_linux.zip
+mkdir -p /home/jovyan/pd/.gen3
+mv gen3-client /home/jovyan/pd/.gen3
+rm dataclient_linux.zip
+
 #!/home/jovyan/.gen3/gen3-client configure --profile=bpa --apiendpoint=https://data.bloodpac.org --cred=/home/jovyan/pd/bpa-credentials.json
 # Configure a profile
 cmd = client +' configure --profile='+profile+' --apiendpoint='+api+' --cred='+creds
@@ -113,7 +122,6 @@ api = 'https://qa-brain.planx-pla.net/'
 profile = 'qa-brain'
 creds = '/Users/christopher/Downloads/qa-credentials.json'
 
-client = 'gen3-client'
 
 auth = Gen3Auth(api, refresh_file=creds)
 
@@ -131,6 +139,7 @@ exp = Gen3Expansion(api, auth) # Initialize an instance, using it like exp.get_p
 !rm dataclient_osx.zip
 
 # Now configure your profile:
+client = 'gen3-client'
 cmd = "{} configure --profile={} --apiendpoint={} --cred={}".format(client, profile, api, creds)
 auth_cmd = "{} auth --profile={}".format(client, profile)
 try:
