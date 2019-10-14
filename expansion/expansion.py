@@ -467,13 +467,13 @@ class Gen3Expansion:
                         print("Error message for "+str(errors.count(error))+" records: " + str(error))
                     total += len(failure)
 
-            print("Progress: "+str(len(success)+len(failure))+"/"+str(len(uuids))+" (Success: "+str(len(success)) + ", Failure: "+str(len(failure))+").")
+            print("\tProgress: "+str(len(success)+len(failure))+"/"+str(len(uuids))+" (Success: "+str(len(success)) + ", Failure: "+str(len(failure))+").")
 
         results['failure'] = failure
         results['success'] = success
         results['responses'] = responses
         results['errors'] = errors
-        print("Finished deletion script.")
+        print("\tFinished deletion script.")
 
         return results
 
@@ -493,7 +493,8 @@ class Gen3Expansion:
             try:
                 results = self.delete_records(uuids, project_id, chunk_size)
                 print("Successfully deleted "+str(len(results['success']))+" records in the node '"+node+"' of project '"+project_id+"'.")
-                print("Failed to delete "+str(len(results['failure']))+" records. See results['errors'] for the error messages.")
+                if len(results['failure']) > 0:
+                    print("Failed to delete "+str(len(results['failure']))+" records. See results['errors'] for the error messages.")
             except:
                 raise Gen3Error("Failed to delete UUIDs in the node '"+node+"' of project '"+project_id+"'.")
 
