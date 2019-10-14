@@ -425,7 +425,7 @@ class Gen3Expansion:
         total = 0
 
         while (len(success)+len(failure)) < len(uuids): #loop sorts all uuids into success or failure
-
+            connection_error = False
             if len(retry) > 0:
                 print("Retrying deletion of "+str(len(retry))+" valid uuids.")
                 list_ids = ",".join(retry)
@@ -436,16 +436,16 @@ class Gen3Expansion:
             rurl = "{}/api/v0/submission/{}/{}/entities/{}".format(
                 self._endpoint,program,project,list_ids
             )
+
             try:
                 resp = requests.delete(rurl, auth=self._auth_provider)
-
-            except:
-                chunk_size = int(chunk_size/2)
-                raise Gen3Error("The chunk_size is too large. reducing to "+str(chunk_size))
+            except Exception as e:
+                connection_error = True
+                print("Exception occurred during delete request:\n\t{}.\n\tReducing chunk_size to '{}'.".format(e,chunk_size))
 
             if "The requested URL was not found on the server." in resp.text:
                 print('\n Finished delete workflow. \n') #debug
-            elif "414 Request-URI Too Large" in resp.text or "service failure" in resp.text:
+            elif "414 Request-URI Too Large" in resp.text or "service failure" in resp.text or connection_error == True:
                 chunk_size = int(chunk_size/2)
                 print("Service Failure.\nThe chunk_size is too large. Reducing to "+str(chunk_size))
             else:
@@ -512,7 +512,7 @@ class Gen3Expansion:
         while len(submission_order) < len(nodes)+1: # "root_node" is not in "nodes", thus the +1
             for node in nodes:
                 if len([item for item in submission_order if node in item]) == 0: #if the node is not in submission_order
-                    print("Node: {}".format(node))
+                    #print("Node: {}".format(node))
                     node_links = dd[node]['links']
                     parents = []
                     for link in node_links:
