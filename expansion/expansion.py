@@ -449,6 +449,7 @@ class Gen3Expansion:
                 print("Service Failure. The chunk_size is too large. Reducing to '{}'".format(chunk_size))
             elif "The requested URL was not found on the server." in resp.text:
                 print('\n Finished delete workflow. \n') #debug
+                break
             else:
                 #print(resp.text) #trouble-shooting
                 output = json.loads(resp.text)
