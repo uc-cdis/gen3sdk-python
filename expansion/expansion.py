@@ -490,7 +490,7 @@ class Gen3Expansion:
         print("\nAttemping to delete "+str(len(uuids))+" records in the node '"+node+"' of project '"+project_id+"'.")
 
         try:
-            results = self.delete_records(uuids, project_id, chunk_size=chunk_size)
+            results = self.delete_records(uuids, project_id, chunk_size)
             print("Successfully deleted "+str(len(results['success']))+" records in the node '"+node+"' of project '"+project_id+"'.")
             print("Failed to delete "+str(len(results['failure']))+" records. See results['errors'] for the error messages.")
         except:
@@ -530,12 +530,12 @@ class Gen3Expansion:
                         submission_order.append((node,max([item[1] for item in parents_order]) + 1))
         return submission_order
 
-    def delete_project(self,project_id,root_node='project'):
-        submission_order = self.get_submission_order(root_node='project')
+    def delete_project(self,project_id,root_node='project',chunk_size=200):
+        submission_order = self.get_submission_order(root_node=root_node)
         delete_order = sorted(submission_order, key=lambda x: x[1], reverse=True)
         nodes = [i[0] for i in delete_order]
         for node in nodes:
-            data = self.delete_node(self,node,project_id,chunk_size=200)
+            data = self.delete_node(node=node,project_id=project_id,chunk_size=chunk_size)
 
 # Analysis Functions
     def property_counts_table(self, prop, df):
