@@ -37,11 +37,6 @@ auth = Gen3Auth(api, refresh_file=creds)
 # exp = Gen3Expansion(api, auth)
 #
 
-sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/')
-from expansion import Gen3Expansion
-from migration import Gen3Migration
-
-
 # Download and configure gen3-client in Jupyter Notebook
 profile = 'prof'
 client = '/home/jovyan/.gen3/gen3-client'
@@ -123,11 +118,17 @@ profile = 'qa-brain'
 creds = '/Users/christopher/Downloads/qa-credentials.json'
 
 
+sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/')
+from expansion import Gen3Expansion
+from migration import Gen3Migration
+
+
 auth = Gen3Auth(api, refresh_file=creds)
 
 #!wget https://raw.githubusercontent.com/uc-cdis/gen3sdk-python/master/gen3/submission.py # get the latest beta version in GitHub
 #%run ./submission.py # run the latest version in GitHub
 sub = Gen3Submission(api, auth) # Initialize an instance this class, using your creds in 'auth'
+
 
 %run /Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/expansion/expansion.py # Download additional functions in Gen3Expansion class
 exp = Gen3Expansion(api, auth) # Initialize an instance, using it like exp.get_project_tsvs()
@@ -149,3 +150,39 @@ try:
 except Exception as e:
     output = e.output.decode('UTF-8')
     print("ERROR:" + output)
+
+
+
+############################################################################################
+############################################################################################
+# This version is for the Gen3 Workspace JupyterHub:
+
+# Get the gen3sdk and expansion functions
+import os
+
+home_dir = "/home/jovyan/pd/"
+gen3_dir = "{}.gen3".format(home_dir)
+!mkdir -p ${gen3_dir}
+os.chdir(gen3_dir)
+
+!wget https://raw.githubusercontent.com/uc-cdis/gen3sdk-python/master/gen3/submission.py
+!wget https://raw.githubusercontent.com/uc-cdis/gen3sdk-python/master/gen3/auth.py
+!wget https://raw.githubusercontent.com/cgmeyer/gen3sdk-python/master/expansion/expansion.py
+
+!curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*osx |  cut -d '"' -f 4 | wget -qi -
+!unzip dataclient_osx.zip
+!rm dataclient_osx.zip
+
+
+
+%run ./auth.py
+%run ./submission.py
+%run ./expansion.py
+
+api = 'https://nci-crdc-demo.datacommons.io/' # DCF  SAndbox Commons
+profile = 'dcf'
+creds = '/Users/christopher/Downloads/dcf-credentials.json'
+
+auth = Gen3Auth(api, refresh_file=creds)
+exp = Gen3Expansion(api, auth)
+sub = Gen3Submission(api, auth)

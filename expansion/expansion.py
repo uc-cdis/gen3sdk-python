@@ -475,7 +475,7 @@ class Gen3Expansion:
         results['success'] = success
         results['responses'] = responses
         results['errors'] = errors
-        print("\tFinished deletion script.")
+        print("\tFinished record deletion script.")
 
         return results
 
