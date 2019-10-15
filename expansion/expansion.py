@@ -547,10 +547,13 @@ class Gen3Expansion:
             data = self.delete_node(node=node,project_id=project_id,chunk_size=chunk_size)
         prog,proj = project_id.split('-',1)
         try:
-            self.sub.delete_project(program=prog,project=proj)
-            print("Successfully deleted project '{}'.".format(project_id))
+            data = self.sub.delete_project(program=prog,project=proj)
         except Exception as e:
             print("Couldn't delete project '{}':\n\t{}".format(project_id,e))
+        if "Can not delete the project." in data:
+            print("{}".format(data))
+        else:
+            print("Successfully deleted the project '{}'".format(project_id))
 
 # Analysis Functions
     def property_counts_table(self, prop, df):
