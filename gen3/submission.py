@@ -389,6 +389,7 @@ class Gen3Submission:
                 ).text
             except requests.exceptions.ConnectionError as e:
                 results["details"].append(e.message)
+                continue
 
             # Handle the API response
             if (
