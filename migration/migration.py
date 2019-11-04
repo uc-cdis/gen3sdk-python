@@ -388,6 +388,7 @@ class Gen3Migration:
                 return
         else:
             parent_link = "{}s.submitter_id".format(to_node)
+            # note this only works if the backref is not
         # keep records only if they have some non-null value in "properties"
         all_props = [parent_link] + properties
         new_to = df_from[all_props] #demo_case = demo[['cases.submitter_id']+static_case]
@@ -430,17 +431,37 @@ class Gen3Migration:
             if link['name'] in to_required:
                 link_target = link['target_type']
                 to_required.remove(link['name'])
-        for prop in to_required:
-            if prop in list(required_props.keys()):
-                all_to[prop] = required_props[prop]
-                print("Missing required property '{}' added to new '{}' TSV with all {} values.".format(prop,to_node,required_props[prop]))
-            else:
-                all_to[prop] = np.nan
-                print("Missing required property '{}' added to new '{}' TSV with all null values.".format(prop,to_node))
+
+        if required_props is not None:
+            for prop in to_required:
+                if prop in list(required_props.keys()):
+                    all_to[prop] = required_props[prop]
+                    print("Missing required property '{}' added to new '{}' TSV with all {} values.".format(prop,to_node,required_props[prop]))
+                else:
+                    all_to[prop] = np.nan
+                    print("Missing required property '{}' added to new '{}' TSV with all null values.".format(prop,to_node))
 
         all_to.to_csv(to_name,sep='\t',index=False,encoding='utf-8')
         print("\tProperties moved to '{}' node from '{}'. Data saved in file:\n\t{}".format(to_node,from_node,to_name))
         return all_to
+
+    def add_property(self,project_id,node,properties):
+        filename = "temp_{}_{}.tsv".format(project_id,node)
+        try:
+            df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+        except FileNotFoundError as e:
+            print("\tNo '{}' TSV found. Skipping...".format(node))
+            return
+
+        for prop in list(properties.keys()):
+            if prop not in list(df):
+                df[prop] = properties[prop]
+            else:
+                print("Property '{}' already in the TSV for node '{}'.".format(prop,node))
+
+        df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
+        return df
+
 
     def change_property_names(self,project_id,node,properties):
         """
@@ -688,7 +709,32 @@ class Gen3Migration:
         suborder = sorted(suborder.items(), key=operator.itemgetter(1))
         return suborder
 
-    def drop_ids(self,project_id,suborder):
+    def drop_ids(self,project_id,node):
+        """
+        Drops the 'id' column from node TSV.
+        """
+        filename = "temp_{}_{}.tsv".format(project_id,node)
+        try:
+            df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+        except FileNotFoundError as e:
+            print("\tNo existing {} TSV found. Skipping..".format(node))
+            return
+        dropped = False
+        if 'id' in df.columns:
+            self.drop_properties(project_id=project_id,node=node,properties=['id'])
+            dropped = True
+        r = re.compile(".*s\.id")
+        ids_to_drop = list(filter(r.match, df.columns))
+        if len(ids_to_drop) > 0:
+            self.drop_properties(project_id=project_id,node=node,properties=ids_to_drop)
+            dropped = True
+        if not dropped:
+            print("{}:".format(node))
+            print("\tNo UUID headers found in the TSV.".format(node))
+        else:
+            print("All ids dropped from {}".format(node))
+
+    def batch_drop_ids(self,project_id,suborder):
         """
         Drops the 'id' column from all the TSVs in 'suborder' dictionary obtained by running, e.g.:
         suborder(list of tuples) = get_submission_order(dd,project_id,prefix='temp',suffix='tsv')

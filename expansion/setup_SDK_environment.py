@@ -77,7 +77,8 @@ except Exception as e:
 ####################################################################################
 ### Run Locally in "ipython":
 ## Import some Python packages
-#!pip install --force --upgrade gen3 --ignore-installed certifi
+
+!pip install --force --upgrade gen3 --ignore-installed certifi
 
 import pandas as pd
 
@@ -87,9 +88,18 @@ from gen3.submission import Gen3Submission
 from gen3.file import Gen3File
 
 ## Set gen3-client profile name, api endpoint of the data commons, and path to credentials file
+api = 'https://gen3qa.braincommons.org/' # Gen3QA for BRAIN Commons
+creds = '/Users/christopher/Downloads/gen3qa-brain-credentials.json'
+
+
 profile = 'bc'
 api = 'https://data.braincommons.org/' # BRAIN Commons
 creds = '/Users/christopher/Downloads/bc-credentials.json'
+
+profile = 'staging'
+api = 'https://data-staging.braincommons.org/' # BRAIN Commons
+creds = '/Users/christopher/Downloads/brain-staging-credentials.json'
+
 
 profile = 'bpa'
 api = 'https://data.bloodpac.org/' # BloodPAC
