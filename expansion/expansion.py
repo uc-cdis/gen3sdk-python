@@ -1397,7 +1397,7 @@ class Gen3Expansion:
                 print(response.reason)
 
     def uploader_index(self, uploader='cgmeyer@uchicago.edu', acl=None, limit=1024, format='guids'):
-        """Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.
+        """Get records from indexd of the files uploaded by a particular user.
 
         Args:
             uploader (str): The uploader's data commons login email.
