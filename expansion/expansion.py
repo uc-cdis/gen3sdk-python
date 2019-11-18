@@ -1454,6 +1454,12 @@ class Gen3Expansion:
 
 
 ## To do
+#
+# filter indexd by project:
+# https://data.braincommons.org/index/index/?acl=Project1
+# https://data.braincommons.org/index/index/?acl=Program1
+# https://data.braincommons.org/index/index/?acl=Program1,Project1 #doesn't work for some reason
+
 # # find indexd records by upload date:
 # /index/index/?acl=null&uploader=cgmeyer@uchicago.edu
 #

@@ -39,18 +39,18 @@ auth = Gen3Auth(api, refresh_file=creds)
 
 # Download and configure gen3-client in Jupyter Notebook
 profile = 'prof'
-client = '/home/jovyan/.gen3/gen3-client'
+client = '/home/jovyan/gen3/gen3-client'
 
 !curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*linux |  cut -d '"' -f 4 | wget -qi -
 !unzip dataclient_linux.zip
-!mkdir -p /home/jovyan/pd/.gen3
-!mv gen3-client /home/jovyan/pd/.gen3
+!mkdir -p /home/jovyan/pd/gen3
+!mv gen3-client /home/jovyan/pd/gen3
 !rm dataclient_linux.zip
 
 curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*linux |  cut -d '"' -f 4 | wget -qi -
 unzip dataclient_linux.zip
-mkdir -p /home/jovyan/pd/.gen3
-mv gen3-client /home/jovyan/pd/.gen3
+mkdir -p /home/jovyan/pd/gen3
+mv gen3-client /home/jovyan/pd/gen3
 rm dataclient_linux.zip
 
 #!/home/jovyan/.gen3/gen3-client configure --profile=bpa --apiendpoint=https://data.bloodpac.org --cred=/home/jovyan/pd/bpa-credentials.json
