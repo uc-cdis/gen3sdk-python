@@ -74,7 +74,7 @@ def delete_uploaded_files(guids):
     for guid in guids:
         fence_url = "{}/user/data/".format(args.api)
         try:
-            response = requests.get(fence_url + guid,headers=headers)
+            response = requests.delete(fence_url + guid,headers=headers)
         except requests.exceptions.ConnectionError as e:
             raise Gen3Error(e)
 
