@@ -98,7 +98,7 @@ def delete_uploaded_files(guids):
             if args.dry_run:
                 response = requests.get(fence_url + guid,headers=headers)
             else:
-                response = requests.delete(fence_url + guid,headers=headers)
+                response = requests.get(fence_url + guid,headers=headers)
         except requests.exceptions.ConnectionError as e:
             raise Gen3Error(e)
 
