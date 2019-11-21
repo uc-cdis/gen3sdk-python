@@ -8,9 +8,9 @@ def get_rec(gen3_index, guid):
 
 
 def test_system(gen3_index):
-    """ 
-    
-    Test that gen3_index is healthy 
+    """
+
+    Test that gen3_index is healthy
 
     """
     assert gen3_index.is_healthy()
@@ -20,20 +20,20 @@ def test_system(gen3_index):
 
 
 def test_get_urls(gen3_index):
-    """ 
-    
+    """
+
     Test get_urls
 
     """
-    rec1 = gen3_index.add_record(
+    rec1 = gen3_index.create_record(
         hashes={"md5": "374c12456782738abcfe387492837483"}, size=0
     )
     # put a new record in the index
-    rec2 = gen3_index.add_record(
+    rec2 = gen3_index.create_record(
         hashes={"md5": "adbc12447582738abcfe387492837483"}, size=2
     )
     # put a new record in the index
-    rec3 = gen3_index.add_record(
+    rec3 = gen3_index.create_record(
         hashes={"md5": "adbc82746782738abcfe387492837483"}, size=1
     )
 
@@ -49,21 +49,21 @@ def test_get_urls(gen3_index):
 
 
 def test_bulk(gen3_index):
-    """ 
+    """
 
     Test get_records
 
     """
     # put a new record in the index
-    rec1 = gen3_index.add_record(
+    rec1 = gen3_index.create_record(
         hashes={"md5": "374c12456782738abcfe387492837483"}, size=0
     )
     # put a new record in the index
-    rec2 = gen3_index.add_record(
+    rec2 = gen3_index.create_record(
         hashes={"md5": "adbc12447582738abcfe387492837483"}, size=0
     )
     # put a new record in the index
-    rec3 = gen3_index.add_record(
+    rec3 = gen3_index.create_record(
         hashes={"md5": "adbc82746782738abcfe387492837483"}, size=0
     )
     recs = gen3_index.get_records([rec1["did"], rec2["did"], rec3["did"]])
@@ -84,17 +84,17 @@ def test_bulk(gen3_index):
 
 
 def test_get_with_params(gen3_index):
-    """ 
-    
+    """
+
     test get_with_params
 
     """
     # put a new record in the index
-    rec1 = gen3_index.add_record(
+    rec1 = gen3_index.create_record(
         hashes={"md5": "374c12456782738abcfe387492837483"}, size=1615680
     )
     # put a new record in the index
-    rec2 = gen3_index.add_record(
+    rec2 = gen3_index.create_record(
         hashes={"md5": "adbc82746782738abcfe387492837483"}, size=15945566
     )
     assert rec1
@@ -107,12 +107,12 @@ def test_get_with_params(gen3_index):
 
 
 def test_new_record(gen3_index):
-    """ 
-    
+    """
+
     Test the creation, update, and deletion a record
 
         index.py functions tested:
-            add_record 
+            create_record
             get
             get_record
             update_record
@@ -121,7 +121,7 @@ def test_new_record(gen3_index):
     """
 
     # put a new record in the index
-    newrec = gen3_index.add_record(
+    newrec = gen3_index.create_record(
         hashes={"md5": "adbc12456782738abcfe387492837483"}, size=0
     )
     # testing global get
@@ -149,19 +149,19 @@ def test_new_record(gen3_index):
 
 
 def test_versions(gen3_index):
-    """ 
-    
+    """
+
     Test creation of a record and a new version of it
 
     index.py functions tested:
-        add_record
+        create_record
         add_new_version
         get_versions
         get_latest_version
 
     """
     # put a new record in the index
-    newrec = gen3_index.add_record(
+    newrec = gen3_index.create_record(
         acl=["prog1", "proj1"],
         hashes={"md5": "437283456782738abcfe387492837483"},
         size=0,
@@ -169,7 +169,7 @@ def test_versions(gen3_index):
     )
 
     # update the record
-    newversion = gen3_index.add_new_version(
+    newversion = gen3_index.create_new_version(
         newrec["did"],
         acl=["prog1", "proj1"],
         hashes={"md5": "437283456782738abcfe387492837483"},
@@ -202,8 +202,8 @@ def test_versions(gen3_index):
 # the endpoint /blank is having some sort of authorization problem
 # it asks for username and password even when given auth file
 def test_blank(gen3_index):
-    """ 
-    
+    """
+
     Test create and update blank record
 
     """
