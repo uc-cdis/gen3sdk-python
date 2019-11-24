@@ -1,4 +1,4 @@
 requests
 pandas
 
--e git+https://github.com/uc-cdis/indexclient.git@1.6.0#egg=indexclient
+-e git+https://github.com/uc-cdis/indexclient.git@1.6.2#egg=indexclient

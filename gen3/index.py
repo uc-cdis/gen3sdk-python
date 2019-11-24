@@ -1,6 +1,8 @@
 import requests
 import indexclient.client as client
 
+import urllib.parse
+
 
 class Gen3Index:
     """
@@ -24,7 +26,7 @@ class Gen3Index:
     def __init__(self, endpoint, auth_provider=None, service_location="index"):
         endpoint = endpoint.strip("/")
         if not endpoint.endswith(service_location):
-            endpoint += '/' + service_location
+            endpoint += "/" + service_location
         endpoint += "/"
         self.client = client.IndexClient(endpoint, auth=auth_provider)
 
@@ -43,8 +45,8 @@ class Gen3Index:
         return response.text == "Healthy"
 
     def get_version(self):
-        """ 
-        
+        """
+
         Return the version of indexd
 
         """
@@ -53,8 +55,8 @@ class Gen3Index:
         return response.json()
 
     def get_stats(self):
-        """ 
-        
+        """
+
         Return basic info about the records in indexd
 
         """
@@ -62,19 +64,76 @@ class Gen3Index:
         response.raise_for_status()
         return response.json()
 
-    def get_all_records(self):
-        """ 
-        
+    def get_all_records(self, limit=None, paginate=False, start=None):
+        """
+
         Get a list of all records
 
         """
-        response = self.client._get("index/")
+        all_records = []
+        url = "index/"
+
+        if limit:
+            url += f"?limit={limit}"
+
+        response = self.client._get(url)
         response.raise_for_status()
-        return response.json()
+
+        records = response.json().get("records")
+        all_records.extend(records)
+
+        if paginate and records:
+            previous_did = None
+            start_did = records[-1].get("did")
+
+            while start_did != previous_did:
+                previous_did = start_did
+
+                params = {"start": f"{start_did}"}
+                url_parts = list(urllib.parse.urlparse(url))
+                query = dict(urllib.parse.parse_qsl(url_parts[4]))
+                query.update(params)
+
+                url_parts[4] = urllib.parse.urlencode(query)
+
+                url = urllib.parse.urlunparse(url_parts)
+                response = self.client._get(url)
+                response.raise_for_status()
+
+                records = response.json().get("records")
+                all_records.extend(records)
+
+                if records:
+                    start_did = response.json().get("records")[-1].get("did")
+
+        return all_records
+
+    def get_records_on_page(self, limit=None, page=None):
+        """
+
+        Get a list of all records given the page and page size limit
+
+        """
+        all_records = []
+        params = {}
+        url = "index/"
+
+        if limit is not None:
+            params["limit"] = limit
+
+        if page is not None:
+            params["page"] = page
+
+        query = urllib.parse.urlencode(params)
+
+        response = self.client._get(url + "?" + query)
+        response.raise_for_status()
+
+        return response.json().get("records")
 
     def get(self, guid, no_dist=False):
-        """ 
-        
+        """
+
         Get the metadata associated with the given id, alias, or
         distributed identifier
 
@@ -89,8 +148,8 @@ class Gen3Index:
         return rec.to_json()
 
     def get_urls(self, size=None, hashes=None, guids=None):
-        """ 
-        
+        """
+
         Get a list of urls that match query params
 
         Args:
@@ -109,8 +168,8 @@ class Gen3Index:
         return [url for _, url in urls.items()]
 
     def get_record(self, guid):
-        """ 
-        
+        """
+
         Get the metadata associated with a given id
 
         """
@@ -132,8 +191,8 @@ class Gen3Index:
         return rec.to_json()
 
     def get_latest_version(self, guid, has_version=False):
-        """ 
-        
+        """
+
         Get the metadata of the latest index record version associated
         with the given id
 
@@ -148,8 +207,8 @@ class Gen3Index:
         return rec.to_json()
 
     def get_versions(self, guid):
-        """ 
-        
+        """
+
         Get the metadata of index record version associated with the
         given id
 
@@ -180,8 +239,8 @@ class Gen3Index:
         version=None,
         authz=None,
     ):
-        """ 
-        
+        """
+
         Create a new record and add it to the index
 
         Args:
@@ -199,7 +258,7 @@ class Gen3Index:
             version (str): entry version string
         Returns:
             Document: json representation of an entry in indexd
-            
+
         """
         rec = self.client.create(
             hashes,
@@ -217,8 +276,8 @@ class Gen3Index:
         return rec.to_json()
 
     def create_blank(self, uploader, file_name=None):
-        """ 
-        
+        """
+
         Create a blank record
 
         Args:
@@ -255,8 +314,8 @@ class Gen3Index:
         version=None,
         authz=None,
     ):
-        """ 
-        
+        """
+
         Add new version for the document associated to the provided uuid
 
         - Since data content is immutable, when you want to change the
@@ -277,12 +336,12 @@ class Gen3Index:
             urls_metadata (dict): metadata attached to each url
             version (str): entry version string
             authz (str): RBAC string
-        
+
             body: json/dictionary format
                 - Metadata object that needs to be added to the store.
                   Providing size and at least one hash is necessary and
-                  sufficient. Note: it is a good idea to add a version 
-                  number 
+                  sufficient. Note: it is a good idea to add a version
+                  number
 
         """
         if urls is None:
@@ -316,8 +375,8 @@ class Gen3Index:
         return None
 
     def get_records(self, dids):
-        """ 
-        
+        """
+
         Get a list of documents given a list of dids
 
         Args:
@@ -343,8 +402,8 @@ class Gen3Index:
     ### Put Requests
 
     def update_blank(self, guid, rev, hashes, size):
-        """ 
-        
+        """
+
         Update only hashes and size for a blank index
 
         Args:
@@ -381,8 +440,8 @@ class Gen3Index:
         authz=None,
         urls_metadata=None,
     ):
-        """ 
-        
+        """
+
         Update an existing entry in the index
 
         Args:
@@ -390,8 +449,8 @@ class Gen3Index:
                  - record id
              body: json/dictionary format
                  - index record information that needs to be updated.
-                 - can not update size or hash, use new version for that 
-                 
+                 - can not update size or hash, use new version for that
+
         """
         updatable_attrs = {
             "file_name": file_name,
@@ -412,15 +471,15 @@ class Gen3Index:
     ### Delete Requests
 
     def delete_record(self, guid):
-        """ 
-        
+        """
+
         Delete an entry from the index
 
         Args:
             guid: string
                  - record id
 
-        Returns: Nothing 
+        Returns: Nothing
 
         """
         rec = self.client.get(guid)
