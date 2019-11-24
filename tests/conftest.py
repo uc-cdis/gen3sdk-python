@@ -17,7 +17,7 @@ def sub():
 # for unittest with mock server
 @pytest.fixture
 def index_client(indexd_server):
-    """ 
+    """
     Handles getting all the docs from an
     indexing endpoint. Currently this is changing from
     signpost to indexd, so we'll use just indexd_client now.
