@@ -129,9 +129,17 @@ def test_delete_record(sub):
         sub.delete_record("prog1", "proj1", "id")
 
 
+def test_query(sub):
+    with patch("gen3.submission.requests") as mock_request:
+        mock_request.status_code = 200
+        mock_request.post().text = '{ "key": "value" }'
+        res = sub.query("{ experiment { submitter_id } }")
+        assert res == {"key": "value"}
+
+
 """ Not tested:
 
-    - query : visual tests
+    - query : more tests
     - get_project_manifest: lack of swagger documentation. 
       error about not submitting ids
     - submit_file
