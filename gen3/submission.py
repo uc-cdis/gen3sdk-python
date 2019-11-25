@@ -313,7 +313,7 @@ class Gen3Submission:
 
         tries = 0
         while tries < max_tries:
-            output = requests.post(api_url, auth=self._auth_provider, json=query)
+            output = requests.post(api_url, auth=self._auth_provider, json=query).text
             data = json.loads(output)
 
             if "errors" in data:
