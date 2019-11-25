@@ -7,7 +7,7 @@ def get_version():
         tag = check_output(
             ["git", "describe", "--tags", "--abbrev=0", "--match=[0-9]*"]
         )
-        return tag.decode('utf-8').strip("\n")
+        return tag.decode("utf-8").strip("\n")
     except Exception:
         # if somehow you get the repo not from git,
         # hardcode default major version
@@ -33,7 +33,10 @@ setup(
     url="https://gen3.org/",
     version=get_version(),
     packages=find_packages(),
-    install_requires=["requests"],
+    install_requires=["requests", "indexclient"],
+    dependency_links=[
+        "git+https://github.com/uc-cdis/indexclient.git@1.6.2#egg=indexclient"
+    ],
     package_data={"": ["LICENSE"]},
     classifiers=[
         "Development Status :: 3 - Alpha",
