@@ -131,7 +131,7 @@ class Gen3Index:
 
         return response.json().get("records")
 
-    def get(self, guid, no_dist=False):
+    def get(self, guid, dist_resolution=True):
         """
 
         Get the metadata associated with the given id, alias, or
@@ -140,11 +140,15 @@ class Gen3Index:
         Args:
              guid: string
                  - record id
-             no_dist: boolean
-                - *optional* Specify if we want distributed search or not
+             dist_resolution: boolean
+                - *optional* Specify if we want distributed dist_resolution or not
 
         """
-        rec = self.client.global_get(guid, no_dist)
+        rec = self.client.global_get(guid, dist_resolution)
+
+        if not rec:
+            return rec
+
         return rec.to_json()
 
     def get_urls(self, size=None, hashes=None, guids=None):
@@ -174,6 +178,10 @@ class Gen3Index:
 
         """
         rec = self.client.get(guid)
+
+        if not rec:
+            return rec
+
         return rec.to_json()
 
     def get_with_params(self, params=None):
@@ -188,6 +196,10 @@ class Gen3Index:
 
         """
         rec = self.client.get_with_params(params)
+
+        if not rec:
+            return rec
+
         return rec.to_json()
 
     def get_latest_version(self, guid, has_version=False):
@@ -204,6 +216,10 @@ class Gen3Index:
 
         """
         rec = self.client.get_latest_version(guid, has_version)
+
+        if not rec:
+            return rec
+
         return rec.to_json()
 
     def get_versions(self, guid):

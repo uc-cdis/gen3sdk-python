@@ -1,13 +1,7 @@
 pytest>=3.2.3
 mock
 
-# these are for indexd
-authutils==3.1.0
-gen3rbac==0.1.2
-
 -e git+https://github.com/uc-cdis/cdisutils-test.git@1.0.0#egg=cdisutilstest
--e git+https://github.com/uc-cdis/indexd.git@2.0.0#egg=indexd
 -e git+https://github.com/uc-cdis/doiclient.git@1.0.0#egg=doiclient
 -e git+https://github.com/uc-cdis/dosclient.git@1.0.0#egg=dosclient
--e git+https://github.com/uc-cdis/cdislogging.git@0.0.2#egg=cdislogginge 
--e git+https://github.com/uc-cdis/cdis-python-utils.git@0.1.7#egg=cdispyutils
+-e git+https://github.com/uc-cdis/indexd.git@2.0.1#egg=indexd

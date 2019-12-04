@@ -154,7 +154,7 @@ def test_versions(gen3_index):
 
     index.py functions tested:
         create_record
-        add_new_version
+        create_new_version
         get_versions
         get_latest_version
 
