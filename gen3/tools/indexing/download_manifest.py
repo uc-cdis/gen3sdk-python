@@ -1,5 +1,6 @@
 """
-Module for indexing actions (typically against indexd's API). Supports
+Module for indexing actions for downloading a manifest of
+indexed file objects (against indexd's API). Supports
 multiple processes using Python's multiprocessing library.
 
 Attributes:
@@ -25,13 +26,13 @@ TMP_FOLDER = os.path.abspath("./tmp") + "/"
 
 
 def download_object_manifest(
-    commons, output_filename="object-manifest.tsv", num_processes=5
+    commons_url, output_filename="object-manifest.csv", num_processes=5
 ):
     """
-    Download all file object records into a manifest tsv
+    Download all file object records into a manifest csv
 
     Args:
-        commons (str): root domain for commons where indexd
+        commons_url (str): root domain for commons where indexd lives
         output_filename (str, optional): filename for output
         num_processes (int, optional): number of parallel python processes to use for
           hitting indexd api and processing
@@ -46,20 +47,20 @@ def download_object_manifest(
         if os.path.isfile(file_path):
             os.unlink(file_path)
 
-    _write_all_index_records_to_file(commons, output_filename, num_processes)
+    _write_all_index_records_to_file(commons_url, output_filename, num_processes)
 
     end_time = time.time()
     logging.info(f"end time: {end_time}")
     logging.info(f"run time: {end_time-start_time}")
 
 
-def _write_all_index_records_to_file(commons, output_filename, num_processes):
+def _write_all_index_records_to_file(commons_url, output_filename, num_processes):
     """
     Spins up number of processes provided to parse indexd records and eventually
     write to a single output file manfiest.
 
     Args:
-        commons (str): root domain for commons where indexd
+        commons_url (str): root domain for commons where indexd lives
         output_filename (str, optional): filename for output
         num_processes (int, optional): number of parallel python processes to use for
           hitting indexd api and processing
@@ -67,17 +68,17 @@ def _write_all_index_records_to_file(commons, output_filename, num_processes):
     Raises:
         IndexError: If script detects missing files in indexd after initial parsing
     """
-    index = Gen3Index(commons)
+    index = Gen3Index(commons_url)
     logging.debug(f"requesting indexd stats...")
     num_files = int(index.get_stats().get("fileCount"))
     # paging is 0-based, so subtract 1 from ceiling
     # note: float() is necessary to force Python 3 to not floor the result
     max_page = int(math.ceil(float(num_files) / INDEXD_RECORD_PAGE_SIZE)) - 1
 
-    queue = Queue(max_page + num_processes)
+    queue = Queue(max_page + num_processes + 1)
 
-    pages = [x for x in range(max_page)]
-    _add_pages_to_queue_and_process(pages, queue, commons, num_processes)
+    pages = [x for x in range(max_page + 1)]
+    _add_pages_to_queue_and_process(pages, queue, commons_url, num_processes)
 
     logging.info(f"checking if files were added since we started...")
     current_num_files = int(index.get_stats().get("fileCount"))
@@ -102,9 +103,9 @@ def _write_all_index_records_to_file(commons, output_filename, num_processes):
         # NOTE: start at previous max_page so we can pick up any addition files added to
         #       that page
         _add_pages_to_queue_and_process(
-            [x for x in range(max_page, max_page + new_pages_to_parse)],
+            [x for x in range(max_page, max_page + new_pages_to_parse + 1)],
             queue,
-            commons,
+            commons_url,
             num_processes,
         )
 
@@ -117,7 +118,7 @@ def _write_all_index_records_to_file(commons, output_filename, num_processes):
         os.unlink(output_filename)
 
     with open(output_filename, "wb") as outfile:
-        outfile.write("GUID, urls, authz, acl, md5, size\n".encode("utf8"))
+        outfile.write("guid, urls, authz, acl, md5, file_size\n".encode("utf8"))
         for filename in glob.glob(TMP_FOLDER + "*"):
             if output_filename == filename:
                 # don't want to copy the output into the output
@@ -129,7 +130,7 @@ def _write_all_index_records_to_file(commons, output_filename, num_processes):
     logging.info(f"done writing output to file {output_filename}")
 
 
-def _add_pages_to_queue_and_process(pages, queue, commons, num_processes):
+def _add_pages_to_queue_and_process(pages, queue, commons_url, num_processes):
     """
     Adds the given pages to the queue and starts the number of processes
     provided to consume the queue.
@@ -137,7 +138,7 @@ def _add_pages_to_queue_and_process(pages, queue, commons, num_processes):
     Args:
         pages (List[int]): list of page numbers to add to the queue
         queue (multiprocessing.Queue): thread-safe multi-producer/consumer queue
-        commons (str): root domain for commons where indexd
+        commons_url (str): root domain for commons where indexd lives
         num_processes (int, optional): number of parallel python processes to use for
           hitting indexd api and processing
     """
@@ -158,7 +159,9 @@ def _add_pages_to_queue_and_process(pages, queue, commons, num_processes):
 
     processes = []
     for x in range(num_processes):
-        p = Process(target=_get_page_and_write_records_to_file, args=(queue, commons))
+        p = Process(
+            target=_get_page_and_write_records_to_file, args=(queue, commons_url)
+        )
         p.start()
         processes.append(p)
 
@@ -168,18 +171,18 @@ def _add_pages_to_queue_and_process(pages, queue, commons, num_processes):
         process.join()
 
 
-def _get_page_and_write_records_to_file(queue, commons):
+def _get_page_and_write_records_to_file(queue, commons_url):
     """
     Pops off queue until it sees a "STOP".
     Sends a request to get all records on a given popped queue page, parses the records,
-    converts to manifest format, and writes to a tsv file in a tmp directory (all files
+    converts to manifest format, and writes to a csv file in a tmp directory (all files
     will be combined later)
 
     Args:
         queue (multiprocessing.Queue): thread-safe multi-producer/consumer queue
-        commons (str): root domain for commons where indexd
+        commons_url (str): root domain for commons where indexd lives
     """
-    index = Gen3Index(commons)
+    index = Gen3Index(commons_url)
     page = queue.get()
     process_name = multiprocessing.current_process().name
     while page != "STOP":
@@ -188,20 +191,20 @@ def _get_page_and_write_records_to_file(queue, commons):
         logging.info(f"{process_name}:Read page {page} with {len(records)} records")
 
         if records:
-            file_name = TMP_FOLDER + str(page) + ".tsv"
+            file_name = TMP_FOLDER + str(page) + ".csv"
             with open(file_name, "w+", encoding="utf8") as file:
                 logging.info(f"{process_name}:Write to {file_name}")
-                tsvwriter = csv.writer(file, delimiter="\t")
+                csvwriter = csv.writer(file)
                 for record in records:
                     manifest_row = [
                         record.get("did"),
-                        record.get("urls"),
-                        record.get("authz"),
-                        record.get("acl"),
-                        record.get("md5"),
+                        " ".join(record.get("urls")),
+                        " ".join(record.get("authz")),
+                        " ".join(record.get("acl")),
+                        record.get("hashes", {}).get("md5"),
                         record.get("size"),
                     ]
-                    tsvwriter.writerow(manifest_row)
+                    csvwriter.writerow(manifest_row)
         page = queue.get()
 
     logging.info(f"{process_name}:Stop")
