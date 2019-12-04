@@ -661,6 +661,7 @@ class Gen3Migration:
         return df
 
     def get_submission_order(self,dd,project_id,prefix='temp',suffix='tsv'):
+        """ Need to add a portion for getting submission order if no study or case nodes exist"""
         pattern = "{}*{}".format(prefix,suffix)
         filenames = glob.glob(pattern)
         all_nodes = []

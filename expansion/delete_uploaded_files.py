@@ -1,3 +1,15 @@
+"""
+This script can be used to delete files uploaded with the gen3-client that are not yet "mapped" to a node in a project (i.e., no records exist for the file yet in the Postgres database).
+When successful, the script deletes the indexd record for the files and also deletes the file from the cloud location using the "fence" service endpoint.
+
+Example:
+python delete_uploaded_files.py -a https://nci-crdc-demo.datacommons.io/ -u user@datacommons.org -c ~/Downloads/demo-credentials.json
+
+Arguments:
+    -a or --api: The URL for the data commons the file was uploaded to.
+    -u or --user: The uploader's login email (or user ID).
+    -c or --creds: The location of the credentials.json downloaded from the data commons portal (Windmill's "Profile" page).
+"""
 import json, requests, os, argparse
 
 def parse_args():
