@@ -4,13 +4,42 @@ expected indexed file objects. Supports
 multiple processes using Python's multiprocessing library.
 
 The default manifest format expected is a Comma-Separated Value file (csv)
-with rows for every record. A header row is required with field names. There
-is a default mapping provided but you can override it. Fields that expect
-lists (like acl, authz, and urls) by default assume these values are separated with spaces.
+with rows for every record. A header row is required with field names. The default
+expected header row is: guid,authz,acl,file_size,md5,urls
+
+There is a default mapping for those column names above but you can override it.
+Fields that expect lists (like acl, authz, and urls) by default assume these values are
+separated with spaces. If you need alternate behavior, you can simply override the
+`manifest_row_parsers` for specific fields and replace the default parsing function
+with a custom one. For example:
+
+```
+from gen3.tools import indexing
+from gen3.tools.indexing.verify_manifest import manifest_row_parsers
+
+def _get_authz_from_row(row):
+    return [row.get("authz").strip().strip("[").strip("]").strip("'")]
+
+# override default parsers
+manifest_row_parsers["authz"] = _get_authz_from_row
+
+indexing.verify_object_manifest(COMMONS)
+```
+
+The output from this verification is a file containing any errors in the following
+format:
+
+{guid}|{error_name}|expected {value_from_manifest}|actual {value_from_indexd}
+ex: 93d9af72-b0f1-450c-a5c6-7d3d8d2083b4|authz|expected ['']|actual ['/programs/DEV/projects/test']
 
 Attributes:
-    TMP_FOLDER (str): Folder directory for placing temporary files
     CURRENT_DIR (str): abs path of current directory where this file lives
+    manifest_row_parsers (TYPE): Description
+    TMP_FOLDER (str): Folder directory for placing temporary files
+        NOTE: We have to use a temporary folder b/c Python's file writing is not
+              thread-safe so we can't have all processes writing to the same file.
+              To workaround this, we have each process write to a file and concat
+              them all post-processing.
 """
 import csv
 import glob
@@ -32,16 +61,43 @@ CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
 def _get_guid_from_row(row):
+    """
+    Given a row from the manifest, return the field representing expected indexd guid.
+
+    Args:
+        row (dict): column_name:row_value
+
+    Returns:
+        str: guid
+    """
     guid = row.get("guid")
     if not guid:
         return row.get("GUID")
 
 
 def _get_md5_from_row(row):
+    """
+    Given a row from the manifest, return the field representing file's md5 sum.
+
+    Args:
+        row (dict): column_name:row_value
+
+    Returns:
+        str: md5 sum for file
+    """
     return row.get("md5")
 
 
 def _get_file_size_from_row(row):
+    """
+    Given a row from the manifest, return the field representing file's size in bytes.
+
+    Args:
+        row (dict): column_name:row_value
+
+    Returns:
+        int: integer representing file size in bytes
+    """
     try:
         return int(row.get("file_size"))
     except Exception:
@@ -50,14 +106,42 @@ def _get_file_size_from_row(row):
 
 
 def _get_acl_from_row(row):
+    """
+    Given a row from the manifest, return the field representing file's expected acls.
+
+    Args:
+        row (dict): column_name:row_value
+
+    Returns:
+        List[str]: acls for the indexd record
+    """
     return [item for item in row.get("acl", "").split(" ") if item]
 
 
 def _get_authz_from_row(row):
+    """
+    Given a row from the manifest, return the field representing file's expected authz
+    resources.
+
+    Args:
+        row (dict): column_name:row_value
+
+    Returns:
+        List[str]: authz resources for the indexd record
+    """
     return [item for item in row.get("authz", "").split(" ") if item]
 
 
 def _get_urls_from_row(row):
+    """
+    Given a row from the manifest, return the field representing file's expected urls.
+
+    Args:
+        row (dict): column_name:row_value
+
+    Returns:
+        List[str]: urls for indexd record file location(s)
+    """
     return [item for item in row.get("urls", "").split(" ") if item]
 
 
@@ -76,9 +160,20 @@ def verify_object_manifest(
     manifest_file,
     num_processes=20,
     manifest_row_parsers=manifest_row_parsers,
-    manifest_file_delimter=",",
+    manifest_file_delimiter=",",
     log_output_filename=f"verify-manifest-errors-{time.time()}.log",
 ):
+    """
+    Verify all the indexd records provided in the manifest file.
+
+    Args:
+        commons_url (str): host url for the commons where indexd lives
+        log_output_filename (str): filename for output logs
+        num_processes (int): number of parallel python processes to run
+        manifest_file (str): the file to verify against
+        manifest_row_parsers (Dict{indexd_field:func_to_parse_row}): Row parsers
+        manifest_file_delimiter (str): delimeter in manifest_file
+    """
     start_time = time.time()
     logging.info(f"start time: {start_time}")
 
@@ -95,7 +190,7 @@ def verify_object_manifest(
         num_processes,
         manifest_file,
         manifest_row_parsers,
-        manifest_file_delimter,
+        manifest_file_delimiter,
     )
 
     end_time = time.time()
@@ -109,8 +204,14 @@ def _verify_all_index_records_in_file(
     num_processes,
     manifest_file,
     manifest_row_parsers,
-    manifest_file_delimter,
+    manifest_file_delimiter,
 ):
+    """
+    Verify all the indexd records provided in the manifest file by creating a thread-safe
+    queue and dumping all the rows from the manifest into it. Then start up processes
+    to parallelly pop off the queue and verify the manifest row against indexd's API.
+    Then combine all the output logs into a single file.
+    """
     index = Gen3Index(commons_url)
 
     queue = Queue()
@@ -118,7 +219,7 @@ def _verify_all_index_records_in_file(
     logging.info(f"adding rows from {manifest_file} to queue...")
 
     with open(manifest_file, encoding="utf-8-sig") as csvfile:
-        manifest_reader = csv.DictReader(csvfile, delimiter=manifest_file_delimter)
+        manifest_reader = csv.DictReader(csvfile, delimiter=manifest_file_delimiter)
         for row in manifest_reader:
             row = {key.strip(" "): value.strip(" ") for key, value in row.items()}
             queue.put(row)
@@ -157,6 +258,9 @@ def _verify_all_index_records_in_file(
 def _start_processes_and_process_queue(
     queue, commons_url, num_processes, manifest_row_parsers
 ):
+    """
+    Startup num_processes and wait for them to finish processing the provided queue.
+    """
     logging.info(f"starting {num_processes} processes..")
 
     processes = []
@@ -175,6 +279,11 @@ def _start_processes_and_process_queue(
 
 
 def _verify_records_in_indexd(queue, commons_url, manifest_row_parsers):
+    """
+    Keep getting items from the queue and verifying that indexd contains the expected
+    fields from that row. If there are any issues, log errors into a file. Return
+    when nothing is left in the queue.
+    """
     index = Gen3Index(commons_url)
     row = queue.get()
     process_name = multiprocessing.current_process().name

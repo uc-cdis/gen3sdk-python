@@ -3,9 +3,19 @@ Module for indexing actions for downloading a manifest of
 indexed file objects (against indexd's API). Supports
 multiple processes using Python's multiprocessing library.
 
+The default manifest format created is a Comma-Separated Value file (csv)
+with rows for every record. A header row is created with field names:
+guid,authz,acl,file_size,md5,urls
+
+Fields that are lists (like acl, authz, and urls) separate the values with spaces.
+
 Attributes:
     INDEXD_RECORD_PAGE_SIZE (int): number of records to request per page
     TMP_FOLDER (str): Folder directory for placing temporary files
+        NOTE: We have to use a temporary folder b/c Python's file writing is not
+              thread-safe so we can't have all processes writing to the same file.
+              To workaround this, we have each process write to a file and concat
+              them all post-processing.
 """
 import csv
 import glob

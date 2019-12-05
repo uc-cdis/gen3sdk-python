@@ -98,7 +98,7 @@ if __name__ == "__main__":
 A more complex example is below. In this example:
 
 * The input file is a tab-separated value file (instead of default CSV)
-    * Note the `manifest_file_delimter` argument
+    * Note the `manifest_file_delimiter` argument
 * The arrays in the file are represented with Python-like list syntax
     * ex: `['DEV', 'test']` for the `acl` column
 * We are using more Python processes (20) to speed up the verify process
@@ -145,7 +145,7 @@ def main():
     indexing.verify_object_manifest(
         COMMONS,
         manifest_file="output-manifest.csv",
-        manifest_file_delimter="\t",
+        manifest_file_delimiter="\t",
         num_processes=20,
     )
 
