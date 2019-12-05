@@ -72,7 +72,8 @@ def _get_guid_from_row(row):
     """
     guid = row.get("guid")
     if not guid:
-        return row.get("GUID")
+        guid = row.get("GUID")
+    return guid
 
 
 def _get_md5_from_row(row):
