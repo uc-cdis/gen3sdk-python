@@ -63,12 +63,12 @@ def uploader_index():
         raise Gen3Error("Unable to parse indexd response as JSON!")
 
     records = data['records']
+    guids = []
 
     if records is None:
         print("No records in the index for uploader {}.".format(args.user))
 
     else:
-        guids = []
         for record in records:
             guids.append(record['did'])
         return guids
@@ -99,5 +99,8 @@ def delete_uploaded_files(guids):
 if __name__ == "__main__":
     args = parse_args()
     guids = uploader_index()
-    print("Found the following guids for uploader {}: {}".format(args.user,guids))
-    delete_uploaded_files(guids)
+    if len(guids)!=0:
+        print("Found the following guids for uploader {}: {}".format(args.user,guids))
+        delete_uploaded_files(guids)
+    else:
+        print("No GUIDs found in the indexd database for uploader: {}".format(args.user))
