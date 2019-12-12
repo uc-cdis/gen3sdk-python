@@ -2,20 +2,8 @@
 ####################################################################################
 ####################################################################################
 ### Run Locally in "ipython":
-## Import some Python packages
-
-!pip install --force --upgrade gen3 --ignore-installed certifi
-
-import pandas as pd
-import sys
-
-import gen3
-from gen3.auth import Gen3Auth
-from gen3.submission import Gen3Submission
-from gen3.file import Gen3File
 
 ## Set gen3-client profile name, api endpoint of the data commons, and path to credentials file
-
 profile = 'bc'
 api = 'https://data.braincommons.org/' # BRAIN Commons
 creds = '/Users/christopher/Downloads/bc-credentials.json'
@@ -54,8 +42,12 @@ creds = '/Users/christopher/Downloads/stage-credentials.json'
 
 # api = 'https://dcf-interop.kidsfirstdrc.org/' #Kids First
 
+
 # Import the Gen3 Python SDK from my local copy of it downloaded from GitHub
 # use this command to get the sdk: `git clone git@github.com:cgmeyer/gen3sdk-python.git`
+import pandas as pd
+import sys
+
 sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/')
 from expansion.expansion import Gen3Expansion
 from migration import Gen3Migration
