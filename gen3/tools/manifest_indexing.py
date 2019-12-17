@@ -1,4 +1,5 @@
 import csv
+from functools import partial
 import logging
 from multiprocessing.dummy import Pool as ThreadPool
 import indexclient.client as client
@@ -58,7 +59,7 @@ def _index_record(prefix, indexclient, replace_urls, fi):
         # Don't break for any reason
         logging.error(
             "Can not update/create an indexd record with uuid {}. Detail {}".format(
-                fi.get("GUID")
+                fi.get("GUID"), e
             )
         )
 
@@ -106,3 +107,6 @@ def manifest_indexing(manifest, common_url, thread_num, auth=None, prefix=None, 
     # close the pool and wait for the work to finish
     pool.close()
     pool.join()
+
+# if __name__ == "__main__":
+#     manifest_indexing("/Users/giangbui/Projects/indexd_utils/test.tsv", "https://giangb.planx-pla.net/index/index", 1, auth=None, prefix=None, replace_urls=False)
