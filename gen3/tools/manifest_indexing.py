@@ -5,19 +5,60 @@ from multiprocessing.dummy import Pool as ThreadPool
 import indexclient.client as client
 
 
-def _index_record(prefix, indexclient, replace_urls, fi):
-    try:
-        urls = fi.get("url").split(" ")
+def _validate_indexing_manifest(headers):
+    """
+    Validate if the manifest format is correct
+    """
 
-        if fi.get("acl").lower() in {"[u'open']", "['open']"}:
+    if "GUID" not in headers or "uuid" not in headers:
+        logging.error("Either GUID or uuid is required field")
+        return False
+    
+    if "file_name" not in headers or "filename" not in headers:
+        logging.error("Either filename or file_name is required field")
+        return False
+
+    if "size" not in headers or "file_size" not in header:
+        logging.error("Either size or file_size is required field")
+        return False
+
+    if "md5" not in header:
+        logging.error("md5 is required field")
+        return False
+    
+    if "acl" not in header:
+        logging.error("acl is required field")
+        return False
+
+    return True
+
+
+def _index_record(prefix, indexclient, replace_urls, fi):
+    """
+    Index single file
+
+    Args:
+        prefix(str): GUID prefix
+        indexclient(IndexClient): indexd client
+        replace_urls(bool): replace urls or not
+        fi(dict): file info 
+
+    Returns:
+        None
+
+    """
+    try:
+        urls = fi.get("url", "").strip().split(" ")
+
+        if fi.get("acl", "").strip().lower() in {"[u'open']", "['open']"}:
             acl = ["*"]
         else:
             acl = [
                 element.strip().replace("'", "")
-                for element in fi.get("acl")[1:-1].split(",")
+                for element in fi.get("acl", "").strip()[1:-1].split(",")
             ]
 
-        doc = indexclient.get(prefix + fi.get("GUID"))
+        doc = indexclient.get(prefix + fi.get("GUID", "").strip())
         if doc is not None:
             need_update = False
 
@@ -47,8 +88,8 @@ def _index_record(prefix, indexclient, replace_urls, fi):
                 doc.patch()
         else:
             doc = indexclient.create(
-                did=prefix + fi.get("GUID"),
-                hashes={"md5": fi.get("md5")},
+                did=prefix + fi.get("GUID", "").strip(),
+                hashes={"md5": fi.get("md5", "").strip()},
                 size=fi.get("size", 0),
                 acl=acl,
                 urls=urls,
@@ -67,12 +108,28 @@ def _index_record(prefix, indexclient, replace_urls, fi):
 def _get_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
     """
     get file info from tsv manifest
+
+    Args:
+        manifest_file(str): the path to the input manifest
+        dem(str): delimiter
+    
+    Returns:
+        list(dict): list of file info
+        [
+            {
+                "GUID": "guid_example",
+                "filename": "example",
+                "size": 100,
+                "acl": "['open']",
+                "md5": "md5_hash",
+            },
+        ]
     """
     files = []
     with open(manifest_file, "rt") as csvfile:
         csvReader = csv.DictReader(csvfile, delimiter=dem)
         for row in csvReader:
-            row["size"] = int(row["size"])
+            row["size"] = int(row["size"].strip())
             files.append(row)
 
     return files
@@ -82,6 +139,14 @@ def manifest_indexing(manifest, common_url, thread_num, auth=None, prefix=None, 
     """
     Loop through all the files in the manifest, update/create records in indexd
     update indexd if the url is not in the record url list or acl has changed
+
+    Args:
+        manifest(str): path to the manifest
+        common_url(str): common url
+        thread_num(int): number of threads for indexing
+        auth(Gen3Auth): Gen3 auth
+        prefix(str): GUID prefix
+
     """
     indexclient = client.IndexClient(
         common_url,
