@@ -486,10 +486,10 @@ class Gen3Migration:
             properties(dict): A dict with keys of old prop names to change with values as new names.
         Example:
             This changes the column header "time_of_surgery" to "hour_of_surgery" in the surgery TSV.
-            change_property_names(node='surgery',properties={'time_of_surgery','hour_of_surgery'})
+            change_property_names(project_id='P001',node='surgery',properties={'time_of_surgery','hour_of_surgery'})
         """
         df = self.read_tsv(project_id=project_id,node=node,name=name)
-        # filename = "{}_{}_{}.tsv".format(name,project_id,node)
+        filename = "{}_{}_{}.tsv".format(name,project_id,node)
         # try:
         #     df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
         # except FileNotFoundError as e:
