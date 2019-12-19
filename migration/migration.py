@@ -95,7 +95,11 @@ class Gen3Migration:
             filenames = []
             for node in nodes:
                 pattern = "{}*{}.{}".format(prefix,node,suffix)
-                filenames.append(glob.glob(pattern))
+                node_files = glob.glob(pattern)
+                if len(node_files) > 0:
+                    filenames.append(glob.glob(pattern)[0])
+                else:
+                    print("No '{}' node TSV found with prefix '{}'.".format(node,prefix))
 
         else:
             raise Gen3Error("Please provide 'nodes' argument as a string or list of node_ids:\n\t{}\n\tis not properly formatted.".format(nodes))
@@ -501,13 +505,9 @@ class Gen3Migration:
             This changes the column header "time_of_surgery" to "hour_of_surgery" in the surgery TSV.
             change_property_names(project_id='P001',node='surgery',properties={'time_of_surgery':'hour_of_surgery'})
         """
+        print("Changing property names in {} node:\n\t{}".format(node,properties))
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         filename = "{}_{}_{}.tsv".format(name,project_id,node)
-        # try:
-        #     df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
-        # except FileNotFoundError as e:
-        #     print("\tNo '{}' TSV found. Skipping...".format(node))
-        #     return
 
         try:
             df.rename(columns=properties,inplace = True)
