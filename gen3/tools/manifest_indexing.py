@@ -2,35 +2,64 @@ import csv
 from functools import partial
 import logging
 from multiprocessing.dummy import Pool as ThreadPool
+import uuid
+
 import indexclient.client as client
 
 
-def _validate_indexing_manifest(headers):
+# Pre-defined supported column names
+GUID = ["guid", "uuid"]
+FILENAME = ["filename", "file_name"]
+SIZE = ["size", "filesize", "file_size"]
+MD5 = ["md5", "md5_hash", "hash"]
+ACLS = ["acl", "acls"]
+URLS = ["url", "urls"]
+
+def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
     """
-    Validate if the manifest format is correct
+    get and verify file infos from tsv manifest
+
+    Args:
+        manifest_file(str): the path to the input manifest
+        dem(str): delimiter
+    
+    Returns:
+        list(dict): list of file info
+        [
+            {
+                "GUID": "guid_example",
+                "filename": "example",
+                "size": 100,
+                "acl": "['open']",
+                "md5": "md5_hash",
+            },
+        ]
     """
+    files = []
+    with open(manifest_file, "rt") as csvfile:
+        csvReader = csv.DictReader(csvfile, delimiter=dem)
+        for row in csvReader:
+            for key in row.keys():
+                standardized_key = None
+                if key in GUID:
+                    standardized_key = "GUID"
+                elif key in FILENAME:
+                    standardized_key = "filename"
+                elif key in MD5:
+                    standardized_key = "md5"
+                elif key in ACLS:
+                    standardized_key = "acl"
+                elif key in URLS:
+                    standardized_key = "url"
 
-    if "GUID" not in headers or "uuid" not in headers:
-        logging.error("Either GUID or uuid is required field")
-        return False
-    
-    if "file_name" not in headers or "filename" not in headers:
-        logging.error("Either filename or file_name is required field")
-        return False
+                if standardized_key:
+                    row[standardized_key] = row[key].strip())
+                elif key in SIZE:
+                    row["size"] = int(row["size"].strip())
 
-    if "size" not in headers or "file_size" not in header:
-        logging.error("Either size or file_size is required field")
-        return False
+            files.append(row)
 
-    if "md5" not in header:
-        logging.error("md5 is required field")
-        return False
-    
-    if "acl" not in header:
-        logging.error("acl is required field")
-        return False
-
-    return True
+    return files
 
 
 def _index_record(prefix, indexclient, replace_urls, fi):
@@ -58,9 +87,14 @@ def _index_record(prefix, indexclient, replace_urls, fi):
                 for element in fi.get("acl", "").strip()[1:-1].split(",")
             ]
 
-        doc = indexclient.get(prefix + fi.get("GUID", "").strip())
+        uuid = uuid.uuid4() if not fi.get("GUID") else fi.get("GUID")
+
+        doc = None
+        if  fi.get("GUID"):
+            doc = indexclient.get(prefix + uuid)
+    
         if doc is not None:
-            need_update = False
+            need_updat  e = False
 
             for url in urls:
                 if not replace_urls and url not in doc.urls:
@@ -105,36 +139,6 @@ def _index_record(prefix, indexclient, replace_urls, fi):
         )
 
 
-def _get_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
-    """
-    get file info from tsv manifest
-
-    Args:
-        manifest_file(str): the path to the input manifest
-        dem(str): delimiter
-    
-    Returns:
-        list(dict): list of file info
-        [
-            {
-                "GUID": "guid_example",
-                "filename": "example",
-                "size": 100,
-                "acl": "['open']",
-                "md5": "md5_hash",
-            },
-        ]
-    """
-    files = []
-    with open(manifest_file, "rt") as csvfile:
-        csvReader = csv.DictReader(csvfile, delimiter=dem)
-        for row in csvReader:
-            row["size"] = int(row["size"].strip())
-            files.append(row)
-
-    return files
-
-
 def manifest_indexing(manifest, common_url, thread_num, auth=None, prefix=None, replace_urls=False):
     """
     Loop through all the files in the manifest, update/create records in indexd
@@ -155,7 +159,7 @@ def manifest_indexing(manifest, common_url, thread_num, auth=None, prefix=None, 
     )
 
     try:
-        files = _get_fileinfos_from_tsv_manifest(manifest)
+        files = _get_and_verify_fileinfos_from_tsv_manifest(manifest)
     except Exception as e:
         logging.error("Can not read {}. Detail {}".format(manifest, e))
         return
