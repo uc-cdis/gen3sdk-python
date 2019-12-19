@@ -73,7 +73,7 @@ class Gen3Migration:
             print("Error writing TSV file: {}".format(e))
         return df
 
-    def make_temp_files(self,prefix,suffix,name='temp',overwrite=True):
+    def make_temp_files(self,prefix,suffix,name='temp',overwrite=True,nodes=['all']):
         """
         Make copies of all files matching a pattern with "temp_" prefix added.
         Args:
@@ -84,8 +84,21 @@ class Gen3Migration:
             This makes a copy of every TSV file beginning with "DEV" (that is, files matching DEV*tsv) and names the copies temp_DEV*tsv.
             make_temp_files(prefix='DEV',suffix='tsv')
         """
-        pattern = "{}*{}".format(prefix,suffix)
-        filenames = glob.glob(pattern)
+        if isinstance(nodes, str):
+            nodes = [nodes]
+
+        if nodes == ['all']:
+            pattern = "{}*{}".format(prefix,suffix)
+            filenames = glob.glob(pattern)
+
+        elif isinstance(nodes, list):
+            filenames = []
+            for node in nodes:
+                pattern = "{}*{}.{}".format(prefix,node,suffix)
+                filenames.append(glob.glob(pattern))
+
+        else:
+            raise Gen3Error("Please provide 'nodes' argument as a string or list of node_ids:\n\t{}\n\tis not properly formatted.".format(nodes))
 
         if overwrite is True:
             for filename in filenames:
