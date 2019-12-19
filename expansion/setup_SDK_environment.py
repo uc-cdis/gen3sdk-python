@@ -50,7 +50,9 @@ import sys
 
 sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/')
 from expansion.expansion import Gen3Expansion
-from migration import Gen3Migration
+from migration.migration import Gen3Migration
+from gen3.submission import Gen3Submission
+from gen3.auth import Gen3Auth
 auth = Gen3Auth(api, refresh_file=creds)
 sub = Gen3Submission(api, auth) # Initialize an instance this class, using your creds in 'auth'
 %run /Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/expansion/expansion.py # Some additional functions in Gen3Expansion class
