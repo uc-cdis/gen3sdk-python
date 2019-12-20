@@ -2,6 +2,7 @@ import csv
 from functools import partial
 import logging
 from multiprocessing.dummy import Pool as ThreadPool
+import re
 import uuid
 
 import indexclient.client as client
@@ -14,6 +15,17 @@ SIZE = ["size", "filesize", "file_size"]
 MD5 = ["md5", "md5_hash", "hash"]
 ACLS = ["acl", "acls"]
 URLS = ["url", "urls"]
+
+
+UUID_FORMAT = "^.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+MD5_FORMAT = "^[a-fA-F0-9]{32}$"
+
+def _verify_format(s, format):
+    r = re.compile(format)
+    if r.match(s) is not None:
+        return True
+    return False
+
 
 def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
     """
@@ -38,26 +50,38 @@ def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
     files = []
     with open(manifest_file, "rt") as csvfile:
         csvReader = csv.DictReader(csvfile, delimiter=dem)
+
+        pass_verification = True
         for row in csvReader:
             for key in row.keys():
                 standardized_key = None
                 if key in GUID:
                     standardized_key = "GUID"
+                    if not _verify_format(row[key], UUID_FORMAT):
+                        logging.error("ERROR: {} is not in uuid format", row[key])
+                        pass_verification = False
+
                 elif key in FILENAME:
                     standardized_key = "filename"
                 elif key in MD5:
                     standardized_key = "md5"
+                    if not _verify_format(row[key], MD5_FORMAT):
+                        logging.error("ERROR: {} is not in md5 format", row[key])
+                        pass_verification = False
                 elif key in ACLS:
                     standardized_key = "acl"
                 elif key in URLS:
                     standardized_key = "url"
 
                 if standardized_key:
-                    row[standardized_key] = row[key].strip())
+                    row[standardized_key] = row[key].strip()
                 elif key in SIZE:
                     row["size"] = int(row["size"].strip())
 
             files.append(row)
+    if not pass_verification:
+        logger.error("The manifest is not in the correct format!!!.")
+        return
 
     return files
 
@@ -94,7 +118,7 @@ def _index_record(prefix, indexclient, replace_urls, fi):
             doc = indexclient.get(prefix + uuid)
     
         if doc is not None:
-            need_updat  e = False
+            need_update = False
 
             for url in urls:
                 if not replace_urls and url not in doc.urls:
@@ -177,5 +201,5 @@ def manifest_indexing(manifest, common_url, thread_num, auth=None, prefix=None, 
     pool.close()
     pool.join()
 
-# if __name__ == "__main__":
-#     manifest_indexing("/Users/giangbui/Projects/indexd_utils/test.tsv", "https://giangb.planx-pla.net/index/index", 1, auth=None, prefix=None, replace_urls=False)
+if __name__ == "__main__":
+    manifest_indexing("/Users/giangbui/Projects/indexd_utils/test.tsv", "https://giangb.planx-pla.net/index/index", 1, auth=None, prefix=None, replace_urls=False)
