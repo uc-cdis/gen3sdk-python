@@ -20,13 +20,15 @@ else:
 # from gen3.auth import Gen3Auth
 #from gen3.submission import Gen3Submission
 
-sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/gen3')
-from auth import Gen3Auth
-from submission import Gen3Submission
+# sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/gen3')
+# from auth import Gen3Auth
+# from submission import Gen3Submission
+# from expansion.expansion import Gen3Expansion
 
-sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/expansion')
-from expansion.expansion import Gen3Expansion
-
+sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/')
+from gen3.submission import Gen3Submission
+from gen3.auth import Gen3Auth
+from expansion import Gen3Expansion
 
 class Gen3Error(Exception):
     pass
@@ -327,7 +329,7 @@ class Gen3Migration:
                 elif 'target_type' in list(link):
                     targets.append(link['target_type'])
             links_to_drop = links[node]
-            print("{}: links {}, dropping {}".format(node,targets,links_to_drop))
+            print("\t{}: links {}, dropping {}".format(node,targets,links_to_drop))
             if 'cases' not in links_to_drop and len(links_to_drop) == 1 and 'visit' in targets and len(targets) == 1:
                 df = self.add_missing_links(project_id=project_id,node=node,link='visit')
                 if df is not None:
@@ -517,7 +519,7 @@ class Gen3Migration:
             else:
                 print("\tPlease provide properties to drop as a list or string:\n\t{}".format(properties))
 
-        print("{}:\n\tDropping {}.".format(node,properties))
+        print("\t{}:\n\t\tDropping {}.".format(node,properties))
 
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         filename = "{}_{}_{}.tsv".format(name,project_id,node)
@@ -551,7 +553,7 @@ class Gen3Migration:
             This changes all 'Percent' to 'Pct' in property 'test_units' of node 'lab_test'
             change_enum(project_id=project_id,node='lab_test',prop='test_units',enums={'Percent':'Pct'})
         """
-        print("{}:\n\tChanging values for property '{}'".format(node,prop))
+        print("\t{}:\n\t\tChanging values for property '{}'".format(node,prop))
         filename = "{}_{}_{}.tsv".format(name,project_id,node)
         try:
             df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
@@ -597,7 +599,7 @@ class Gen3Migration:
             drop_links(project_id=project_id,node='demographic',links=['cases'])
         """
 
-        print("{}:\n\tDropping links to {}".format(node,links))
+        print("\t{}:\n\t\tDropping links to {}".format(node,links))
 
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         # filename = "{}_{}_{}.tsv".format(name,project_id,node)
@@ -691,10 +693,10 @@ class Gen3Migration:
             self.drop_properties(project_id=project_id,node=node,properties=ids_to_drop)
             dropped = True
         if not dropped:
-            print("{}:".format(node))
-            print("\tNo UUID headers found in the TSV.".format(node))
+            print("\t{}:".format(node))
+            print("\t\tNo UUID headers found in the TSV.".format(node))
         else:
-            print("\tAll ids dropped from {}".format(node))
+            print("\t\tAll ids dropped from {}".format(node))
 
     def batch_drop_ids(self,project_id,suborder,name='temp'):
         """
@@ -722,8 +724,8 @@ class Gen3Migration:
                 dropped = True
 
             if not dropped:
-                print("{}:".format(node))
-                print("\tNo UUID headers found in the TSV.".format(node))
+                print("\t{}:".format(node))
+                print("\t\tNo UUID headers found in the TSV.".format(node))
 
     def create_project(self,program,project):
         """ Create the program/project:
@@ -957,7 +959,7 @@ class Gen3Migration:
         """ Change null values for a required property to "Not Reported".
         """
 
-        print("{}:\n\tChanging values for property '{}'".format(node,prop))
+        print("\t{}:\n\t\tChanging values for property '{}'".format(node,prop))
         filename = "{}_{}_{}.tsv".format(name,project_id,node)
         df = self.read_tsv(project_id=project_id,node=node,name=name)
 
