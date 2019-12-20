@@ -23,7 +23,7 @@ else:
 sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/')
 from gen3.submission import Gen3Submission
 from gen3.auth import Gen3Auth
-from expansion import Gen3Expansion
+from expansion.expansion import Gen3Expansion
 
 class Gen3Error(Exception):
     pass
