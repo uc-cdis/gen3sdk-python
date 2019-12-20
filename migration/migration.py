@@ -3,6 +3,7 @@ import fnmatch, sys, ntpath, copy
 from shutil import copyfile
 import numpy as np
 from collections import Counter
+from collections import OrderedDict
 from statistics import mean
 from pathlib import Path
 import pandas as pd
@@ -99,7 +100,7 @@ class Gen3Migration:
                 if len(node_files) > 0:
                     filenames.append(glob.glob(pattern)[0])
                 else:
-                    print("No '{}' node TSV found with prefix '{}'.".format(node,prefix))
+                    print("\tNo '{}' node TSV found with prefix '{}'.".format(node,prefix))
 
         else:
             raise Gen3Error("Please provide 'nodes' argument as a string or list of node_ids:\n\t{}\n\tis not properly formatted.".format(nodes))
@@ -107,13 +108,13 @@ class Gen3Migration:
         if overwrite is True:
             for filename in filenames:
                 temp_name = "{}_{}".format(name,filename)
-                print("Copying file {} to:\n\t{}".format(filename,temp_name))
+                print("\tCopying file {} to:\n\t{}".format(filename,temp_name))
                 copyfile(filename,temp_name)
-            print("Total of {} '{}' files created.".format(len(filenames),name))
+            print("\tTotal of {} '{}' files created.".format(len(filenames),name))
 
         pattern = "{}*{}".format(name,suffix)
         tempfiles = glob.glob(pattern)
-        print("Returning list of {} '{}' files found in this directory.".format(len(tempfiles),name))
+        print("\tReturning list of {} '{}' files found in this directory.".format(len(tempfiles),name))
         return tempfiles
 
     def merge_nodes(self,project_id,in_nodes,out_node,name='temp'):
@@ -478,11 +479,6 @@ class Gen3Migration:
 
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         # filename = "{}_{}_{}.tsv".format(name,project_id,node)
-        # try:
-        #     df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
-        # except FileNotFoundError as e:
-        #     print("\tNo '{}' TSV found. Skipping...".format(node))
-        #     return
 
         for prop in list(properties.keys()):
             if prop not in list(df):
@@ -505,17 +501,17 @@ class Gen3Migration:
             This changes the column header "time_of_surgery" to "hour_of_surgery" in the surgery TSV.
             change_property_names(project_id='P001',node='surgery',properties={'time_of_surgery':'hour_of_surgery'})
         """
-        print("Changing property names in {} node:\n\t{}".format(node,properties))
+        print("\tChanging property names in {} node:\n\t\t{}".format(node,properties))
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         filename = "{}_{}_{}.tsv".format(name,project_id,node)
 
         try:
             df.rename(columns=properties,inplace = True)
             df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
-            print("Properties names changed and TSV written to file: \n\t{}".format(filename))
+            print("\tProperties names changed and TSV written to file: \n\t\t{}".format(filename))
             return df
         except Exception as e:
-            print("Couldn't change property names: {}".format(e))
+            print("\tCouldn't change property names: {}".format(e))
             return
 
     def drop_properties(self,project_id,node,properties,name='temp'):
@@ -532,11 +528,6 @@ class Gen3Migration:
 
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         # filename = "{}_{}_{}.tsv".format(name,project_id,node)
-        # try:
-        #     df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
-        # except FileNotFoundError as e:
-        #     print("\tNo '{}' TSV found. Skipping...".format(node))
-        #     return
 
         dropped = []
         for prop in properties:
@@ -593,7 +584,7 @@ class Gen3Migration:
                         print("\tCouldn't change enum value '{}' to '{}' for property '{}'".format(key,value,prop))
             if success > 0:
                 df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
-                print("\tEnum values changed in '{}' node and TSV written to file: \n\t{}".format(node,filename))
+                print("\tEnum values changed in '{}' node and TSV written to file: \n\t\t{}".format(node,filename))
             else:
                 print("\tNo enum values were changed in '{}' node. No TSVs changed.".format(node))
             return df
@@ -697,56 +688,6 @@ class Gen3Migration:
         print("Links merged to '{}' and data written to TSV file: \n\t{}".format(link,filename))
         return df
 
-    def get_submission_order(self,dd,project_id,name='temp',suffix='tsv'):
-        """ Need to add a portion for getting submission order if no study or case nodes exist"""
-        pattern = "{}*{}".format(name,suffix)
-        filenames = glob.glob(pattern)
-        all_nodes = []
-        suborder = {}
-        for filename in filenames:
-            regex = "{}_{}_(.+).{}".format(name,project_id,suffix)
-            match = re.search(regex, filename)
-            if match:
-                node = match.group(1)
-                if node in list(dd):
-                    all_nodes.append(node)
-                else:
-                    print("The node '{}' is not in the data dictionary! Skipping...".format(node))
-        print("Found the following nodes:\n{}".format(all_nodes))
-        checked = []
-        while len(all_nodes) > 0:
-            node = all_nodes.pop(0)
-            print("Determining order for node {}".format(node))
-            node_links = dd[node]['links']
-            for link in node_links:
-                if 'subgroup' in list(link):
-                    for subgroup in link['subgroup']:
-                        if subgroup['target_type'] == 'project':
-                            suborder[node]=1
-                        elif subgroup['target_type'] in list(suborder.keys()):
-                            suborder[node]=suborder[subgroup['target_type']]+1
-                        elif subgroup['target_type'] == 'core_metadata_collection':
-                            if node in checked:
-                                print("Node {} has been checked before.".format(node))
-                                suborder[node] = 2
-                            else:
-                                checked.append(node)
-                    if node in list(suborder.keys()):
-                        continue
-                    else:
-                        all_nodes.append(node)
-                elif 'target_type' in list(link):
-                    if link['target_type'] == 'project':
-                        suborder[node]=1
-                    elif link['target_type'] in list(suborder.keys()):
-                        suborder[node]=suborder[link['target_type']]+1
-                    else: #skip it for now
-                        all_nodes.append(node)
-                else:
-                    print("No link target_type found for node '{}'".format(node))
-        suborder = sorted(suborder.items(), key=operator.itemgetter(1))
-        return suborder
-
     def drop_ids(self,project_id,node,name='temp'):
         """
         Drops the 'id' column from node TSV.
@@ -754,11 +695,6 @@ class Gen3Migration:
 
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         # filename = "{}_{}_{}.tsv".format(name,project_id,node)
-        # try:
-        #     df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
-        # except FileNotFoundError as e:
-        #     print("\tNo existing {} TSV found. Skipping..".format(node))
-        #     return
 
         dropped = False
         if 'id' in df.columns:
@@ -773,7 +709,7 @@ class Gen3Migration:
             print("{}:".format(node))
             print("\tNo UUID headers found in the TSV.".format(node))
         else:
-            print("All ids dropped from {}".format(node))
+            print("\tAll ids dropped from {}".format(node))
 
     def batch_drop_ids(self,project_id,suborder,name='temp'):
         """
@@ -788,11 +724,6 @@ class Gen3Migration:
 
             df = self.read_tsv(project_id=project_id,node=node,name=name)
             # filename = "{}_{}_{}.tsv".format(name,project_id,node)
-            # try:
-            #     df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
-            # except FileNotFoundError as e:
-            #     print("\tNo existing {} TSV found. Skipping..".format(node))
-            #     return
 
             dropped = False
             if 'id' in df.columns:
@@ -810,7 +741,8 @@ class Gen3Migration:
                 print("\tNo UUID headers found in the TSV.".format(node))
 
     def create_project(self,program,project):
-        # Create the program/project:
+        """ Create the program/project:
+        """
         project_id = "{}-{}".format(program, project)
         prog_txt = """{{
           "type": "program",
@@ -831,15 +763,11 @@ class Gen3Migration:
         print(data)
 
     def remove_special_chars(self,project_id,node,name='temp'):
-        """ Replace a special character in 'Parkinson's Disease' """
+        """ Replace a special character in 'Parkinson's Disease'
+        """
 
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         # filename = "{}_{}_{}.tsv".format(name,project_id,node)
-        # try:
-        #     df = pd.read_csv(filename,sep='\t',header=0,dtype=str,encoding='latin1')
-        # except FileNotFoundError as e:
-        #     print("\tNo '{}' TSV found. Skipping...".format(node))
-        #     return
 
         df_txt = df.to_csv(sep='\t',index=False)
 
@@ -871,24 +799,96 @@ class Gen3Migration:
         print("Trailing '.0' decimals removed from: {}".format(filename))
         return df
 
+    def get_submission_order(self,dd,project_id,name='temp',suffix='tsv',missing_nodes=['project','study','case','visit']):
+        """
+        Gets the submission order for a directory full of TSV data templates.
+        Example:
+            suborder = stag_mig.get_submission_order(stag_dd,project_id,name='temp',suffix='tsv')
+        """
+
+        pattern = "{}*{}".format(name,suffix)
+        filenames = glob.glob(pattern)
+
+        all_nodes = []
+        suborder = {}
+        for filename in filenames:
+            regex = "{}_{}_(.+).{}".format(name,project_id,suffix)
+            match = re.search(regex, filename)
+            if match:
+                node = match.group(1)
+                if node in list(dd):
+                    all_nodes.append(node)
+                else:
+                    print("\tThe node '{}' is not in the data dictionary! Skipping...".format(node))
+
+        print("\tFound the following nodes:\n\t{}".format(all_nodes))
+
+        # Check for the common missing root nodes
+        for missing_node in missing_nodes:
+            if missing_node not in all_nodes:
+                suborder[missing_node]=0
+
+        checked = []
+        while len(all_nodes) > 0:
+
+            node = all_nodes.pop(0)
+            print("\tDetermining order for node '{}'.".format(node))
+
+            node_links = dd[node]['links']
+            for link in node_links:
+                if 'subgroup' in list(link):
+                    for subgroup in link['subgroup']:
+
+                        if subgroup['target_type'] == 'project':
+                            suborder[node]=1
+
+                        elif subgroup['target_type'] in list(suborder.keys()):
+                            suborder[node]=suborder[subgroup['target_type']]+1
+
+                        elif subgroup['target_type'] == 'core_metadata_collection':
+                            if node in checked:
+                                print("\tNode {} has been checked before.".format(node))
+                                suborder[node] = 2
+                            else:
+                                checked.append(node)
+                    if node in list(suborder.keys()):
+                        continue
+                    else:
+                        all_nodes.append(node)
+                elif 'target_type' in list(link):
+                    if link['target_type'] == 'project':
+                        suborder[node]=1
+                    elif link['target_type'] in list(suborder.keys()):
+                        suborder[node]=suborder[link['target_type']]+1
+                    else: #skip it for now
+                        all_nodes.append(node)
+                else:
+                    print("No link target_type found for node '{}'".format(node))
+        #suborder = sorted(suborder.items(), key=operator.itemgetter(1))
+        suborder = {key:val for key, val in suborder.items() if val > 0}
+        print("\tSubmission Order: \n\t\t{}".format(suborder))
+        return suborder
+
     def submit_tsvs(self,project_id,suborder,check_done=False,name='temp'):
         """
         Submits all the TSVs in 'suborder' dictionary obtained by running, e.g.:
-        suborder = get_submission_order(dd,project_id,prefix='temp',suffix='tsv')
+        suborder = stag_mig.get_submission_order(stag_dd,project_id,name='temp',suffix='tsv')
+        data = stag_mig.submit_tsvs(project_id,suborder,check_done=False,name='temp')
         """
 
         logname = "submission_{}_logfile.txt".format(project_id)
         cmd = ['mkdir','-p','done']
+        cmd = ['mkdir','-p','failed']
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
         except Exception as e:
             output = e.output.decode('UTF-8')
             print("ERROR:" + output)
         with open(logname, 'w') as logfile:
-            for node_order in suborder:
-                node = node_order[0]
+            for node in suborder:
                 filename="{}_{}_{}.tsv".format(name,project_id,node)
                 done_file = Path("done/{}".format(filename))
+                failed_file = Path("failed/{}".format(filename))
                 if not done_file.is_file() or check_done is False:
                     try:
                         print(str(datetime.datetime.now()))
@@ -906,10 +906,18 @@ class Gen3Migration:
                                 print("ERROR:" + output)
                         else:
                             if len(data['invalid'])>0:
-                                invalid_records = list(data['invalid'].keys())
+                                invalid_records = list(data['invalid'].keys())[0:10]
                                 for i in invalid_records:
                                     print(data['invalid'][i])
                             print("Need to fix errors in {}".format(filename))
+                            cmd = ['mv',filename,'failed']
+                            try:
+                                output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+                                print("Submission successful. Moving file to done:\n\t{}\n\n".format(filename))
+                            except Exception as e:
+                                output = e.output.decode('UTF-8')
+                                print("ERROR:" + output)
+
                     except Exception as e:
                         print(e)
                 else:
