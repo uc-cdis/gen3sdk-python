@@ -809,7 +809,7 @@ class Gen3Migration:
         while len(all_nodes) > 0:
 
             node = all_nodes.pop(0)
-            print("\tDetermining order for node '{}'.".format(node))
+            #print("\tDetermining order for node '{}'.".format(node)) # for trouble-shooting
 
             node_links = dd[node]['links']
             for link in node_links:
