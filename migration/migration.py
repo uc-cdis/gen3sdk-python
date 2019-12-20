@@ -20,11 +20,6 @@ else:
 # from gen3.auth import Gen3Auth
 #from gen3.submission import Gen3Submission
 
-# sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/gen3')
-# from auth import Gen3Auth
-# from submission import Gen3Submission
-# from expansion.expansion import Gen3Expansion
-
 sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/')
 from gen3.submission import Gen3Submission
 from gen3.auth import Gen3Auth
