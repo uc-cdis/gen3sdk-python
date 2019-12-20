@@ -511,10 +511,16 @@ class Gen3Migration:
             This will drop the 'military_status' property from the 'demographic' node.
             drop_properties(node='demographic',properties=['military_status'])
         """
+        if not isinstance(properties,list):
+            if isinstance(properties, str):
+                properties = [properties]
+            else:
+                print("\tPlease provide properties to drop as a list or string:\n\t{}".format(properties))
+
         print("{}:\n\tDropping {}.".format(node,properties))
 
         df = self.read_tsv(project_id=project_id,node=node,name=name)
-        # filename = "{}_{}_{}.tsv".format(name,project_id,node)
+        filename = "{}_{}_{}.tsv".format(name,project_id,node)
 
         dropped = []
         for prop in properties:
@@ -524,13 +530,14 @@ class Gen3Migration:
             except Exception as e:
                 print("\tCouldn't drop property '{}' from '{}':\n\t{}".format(prop,node,e))
                 continue
+
         if len(dropped) > 0:
-            df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
             print("\tProperties {} dropped from '{}' and data written to TSV:\n\t{}".format(dropped,node,filename))
+            df = self.write_tsv(df,project_id,node)
             return df
         else:
-            print("\tNo properties dropped from '{}' No TSV written.".format(node))
-            return
+            print("\tNo properties dropped from '{}'. No TSV written.".format(node))
+            return df
 
     def change_enum(self,project_id,node,prop,enums,name='temp'):
         """
@@ -945,3 +952,22 @@ class Gen3Migration:
             df = self.read_tsv(temp_file)
 
         return
+
+    def required_not_reported(self,project_id,node,prop,name='temp',replace_value='Not Reported'):
+        """ Change null values for a required property to "Not Reported".
+        """
+
+        print("{}:\n\tChanging values for property '{}'".format(node,prop))
+        filename = "{}_{}_{}.tsv".format(name,project_id,node)
+        df = self.read_tsv(project_id=project_id,node=node,name=name)
+
+        try:
+            original_count = len(df.loc[df[prop]==replace_value])
+            df[prop].fillna(replace_value, inplace=True)
+            new_count = len(df.loc[df[prop]==replace_value])
+            replace_count = new_count - original_count
+            df = self.write_tsv(df,project_id,node)
+            print("\t{} missing (NaN) value(s) for required property '{}' in '{}' node changed to '{}'.".format(replace_count,prop,node,replace_value))
+
+        except FileNotFoundError as e:
+            print("\tNo TSV found for node '{}'.".format(node))
