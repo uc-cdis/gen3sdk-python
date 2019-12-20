@@ -1,6 +1,5 @@
 language: python
 python:
-- 2.7
 - 3.6
 env:
 - REPOSITORY="uc-cdis/gen3sdk-python" PR_NUMBER="$TRAVIS_PULL_REQUEST"
