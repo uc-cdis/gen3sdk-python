@@ -192,11 +192,7 @@ class Gen3Migration:
         """
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         # filename = "{}_{}_{}.tsv".format(project_id, node)
-        # try:
-        #     df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
-        # except FileNotFoundError as e:
-        #     print("\tNo existing '{}' TSV found. Skipping...".format(node))
-        #     return
+
         link_name = "{}s.submitter_id".format(link)
         if link_name not in list(df):
             df[link_name] = np.nan
@@ -229,11 +225,6 @@ class Gen3Migration:
 
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         # filename = "{}_{}_{}.tsv".format(name,project_id,node)
-        # try:
-        #     df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
-        # except FileNotFoundError as e:
-        #     print("\tNo existing {} TSV found. Skipping..".format(node))
-        #     return
 
         link_name = "{}s.submitter_id".format(link) # visits.submitter_id
         if link_name in list(df):
@@ -603,11 +594,6 @@ class Gen3Migration:
 
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         # filename = "{}_{}_{}.tsv".format(name,project_id,node)
-        # try:
-        #     df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
-        # except FileNotFoundError as e:
-        #     print("\tNo '{}' TSV found. Skipping...".format(node))
-        #     return
 
         dropped = 0
         for link in links:
@@ -670,11 +656,7 @@ class Gen3Migration:
         """
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         # filename = "{}_{}_{}.tsv".format(name,project_id,node)
-        # try:
-        #     df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
-        # except FileNotFoundError as e:
-        #     print("No '{}' TSV found. Skipping...".format(node))
-        #     return
+
         link_name = "{}.submitter_id".format(link)
         df[link_name] = np.nan
         for sublink in links_to_merge:
@@ -784,11 +766,6 @@ class Gen3Migration:
 
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         # filename = "{}_{}_{}.tsv".format(name,project_id,node)
-        # try:
-        #     df = pd.read_csv(filename, header=0, sep="\t", dtype=str).fillna("")
-        # except FileNotFoundError as e:
-        #     print("\tNo '{}' TSV found. Skipping...".format(node))
-        #     return
 
         df[prop] = df[prop].str.extract(r'^(\d+).0$', expand=True)
         df.to_csv(filename,sep='\t',index=False, encoding='utf-8')
