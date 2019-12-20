@@ -24,7 +24,7 @@ sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/g
 from auth import Gen3Auth
 from submission import Gen3Submission
 
-sys.path.insert(1, '/Users/christopher/Documentsget/GitHub/cgmeyer/gen3sdk-python/expansion')
+sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/expansion')
 from expansion.expansion import Gen3Expansion
 
 
@@ -155,11 +155,7 @@ class Gen3Migration:
         """
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         # filename = "{}_{}_{}.tsv".format(name,project_id,node)
-        # try:
-        #     df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
-        # except FileNotFoundError as e:
-        #     print("\tNo '{}' TSV found.".format(node))
-        #     return
+
         dropped = []
         for prop in list(properties.keys()):
             if prop not in list(df):
