@@ -846,7 +846,7 @@ class Gen3Migration:
         print("\tSubmission Order: \n\t\t{}".format(suborder))
         return suborder
 
-    def submit_tsvs(self,project_id,suborder,check_done=False,name='temp'):
+    def submit_tsvs(self,project_id,suborder,check_done=False,rm_temp=False,name='temp'):
         """
         Submits all the TSVs in 'suborder' dictionary obtained by running, e.g.:
         suborder = stag_mig.get_submission_order(stag_dd,project_id,name='temp',suffix='tsv')
@@ -901,6 +901,15 @@ class Gen3Migration:
                         print("\t{}".format(e))
                 else:
                     print("\tPreviously submitted file already exists in done directory:\n\t\t{}\n".format(done_file))
+                    if rm_temp is True:
+                        rm_cmd = ['rm',filename]
+                        try:
+                            output = subprocess.check_output(rm_cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+                            print("\t\t'{}' file removed.\n\t\t\t{}".format(name,filename))
+                        except Exception as e:
+                            output = e.output.decode('UTF-8')
+                            print("ERROR:" + output)
+
 
     def check_migration_counts(self, projects=None, overwrite=False):
         """ Gets counts and downloads TSVs for all nodes for every project.
