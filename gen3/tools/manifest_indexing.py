@@ -201,5 +201,19 @@ def manifest_indexing(manifest, common_url, thread_num, auth=None, prefix=None, 
     pool.close()
     pool.join()
 
+
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(title="action", dest="action")
+
+    indexing_cmd = subparsers.add_parser("indexing")
+    indexing_cmd.add_argument("--common_url", required=True, help="Common link.")
+    indexing_cmd.add_argument("--manifest_path", required=True, help="The path to input manifest")
+    indexing_cmd.add_argument("--thread_num", required=False, help="Number of threads")
+    indexing_cmd.add_argument("--prefix", required=False, help="Prefix")
+    indexing_cmd.add_argument("--replace_urls", required=False, help="Replace urls or not")
+
+    return parser.parse_args()
+
 if __name__ == "__main__":
     manifest_indexing("/Users/giangbui/Projects/indexd_utils/test.tsv", "https://giangb.planx-pla.net/index/index", 1, auth=None, prefix=None, replace_urls=False)
