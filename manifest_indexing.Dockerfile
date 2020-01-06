@@ -11,3 +11,6 @@ RUN pip install -r requirements.txt \
 COPY . /gen3
 RUN cp -r src/indexclient/indexclient gen3/.
 RUN python setup.py install
+
+ENTRYPOINT [ "python" ]
+CMD [ "manifest_indexing_job.py" ]
