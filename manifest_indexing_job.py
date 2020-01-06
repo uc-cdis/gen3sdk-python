@@ -4,9 +4,13 @@ Module for indexing actions using sower job dispatcher
 Attributes:
 """
 
-from gen3.tools import manifest_indexing
+import os
+import requests
+import json
 
-def _download(url, filename):
+from gen3.tools.manifest_indexing import manifest_indexing
+
+def _download_file(url, filename):
     r = requests.get(url)
     with open(filename, 'wb') as f:
         f.write(r.content)
@@ -17,7 +21,7 @@ if __name__ == "__main__":
     
     input_data_json = json.loads(input_data)
     
-    with open("/indexd-creds.json") as indexing_creds_file:
+    with open("/manifest-indexing-creds.json") as indexing_creds_file:
         indexing_creds = json.load(indexing_creds_file)
     
     auth = (indexing_creds.get("indexd_user", "gdcapi"), indexing_creds["indexd_password"])
@@ -26,6 +30,10 @@ if __name__ == "__main__":
     _download_file(input_data_json["URL"], filepath)
 
     print("Start to index the manifest ...")
+  
+    host_url = input_data_json.get("host")
+    if not host_url:
+        host_url = "https://{}/index".format(hostname)
 
-    manifest_indexing(filepath, "{}/index/index".format(hostname), input_data_json.get("thread_nums", 1), input_data_json.get("prefix"), input_data_json.get("replace_urls"))
+    manifest_indexing(filepath, host_url, input_data_json.get("thread_nums", 1), auth, input_data_json.get("prefix"), input_data_json.get("replace_urls"))
 

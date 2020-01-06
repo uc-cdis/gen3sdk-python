@@ -4,6 +4,7 @@ import logging
 from multiprocessing.dummy import Pool as ThreadPool
 import re
 import uuid
+import argparse
 
 import indexclient.client as client
 
@@ -216,6 +217,5 @@ def parse_arguments():
     return parser.parse_args()
 
 if __name__ == "__main__":
-    #manifest_indexing("/Users/giangbui/Projects/indexd_utils/test.tsv", "https://giangb.planx-pla.net/index/index", 1, auth=None, prefix=None, replace_urls=False)
     args = parse_arguments()
     manifest_indexing(args.manifest, args.common_url, int(args.thread_num), args.auth, args.prefix, args.replace_urls)
