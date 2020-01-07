@@ -180,7 +180,7 @@ class Gen3Expansion:
         return my_ids
 
 
-    def get_node_tsvs(self, node, projects=None, overwrite=False, remove_empty=True):
+    def get_node_tsvs(self, node, projects=None, overwrite=False, remove_empty=True,outdir='node_tsvs'):
         """Gets a TSV of the structuerd data from particular node for each project specified.
            Also creates a master TSV of merged data from each project for the specified node.
            Returns a DataFrame containing the merged data for the specified node.
@@ -194,10 +194,9 @@ class Gen3Expansion:
 
         """
 
-        if not os.path.exists('node_tsvs'):
-            os.makedirs('node_tsvs')
-
-        mydir = str('node_tsvs/'+node+'_tsvs')
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
+        mydir = "{}/{}_tsvs".format(outdir,node)
         if not os.path.exists(mydir):
             os.makedirs(mydir)
 
@@ -1255,6 +1254,7 @@ class Gen3Expansion:
                         )
                     )
 
+                    message = ""
                     for entity in entities:
                         sid = entity["unique_keys"][0]["submitter_id"]
                         if entity["valid"]:  # valid but failed
@@ -1264,7 +1264,7 @@ class Gen3Expansion:
                             results["invalid"][sid] = message
                             invalid.append(sid)
                     print(
-                        "\tInvalid records in this chunk: {}".format(str(len(invalid)))
+                        "\tInvalid records in this chunk: {}, {}".format(str(len(invalid, message)))
                     )
 
                 elif json_res["code"] == 500:  # internal server error
