@@ -907,13 +907,16 @@ class Gen3Migration:
         """
 
         logname = "submission_{}_logfile.txt".format(project_id)
-        cmd = ['mkdir','-p','done']
-        cmd = ['mkdir','-p','failed']
+
+        done_cmd = ['mkdir','-p','done']
+        failed_cmd = ['mkdir','-p','failed']
         try:
-            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+            output = subprocess.check_output(done_cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+            output = subprocess.check_output(failed_cmd, stderr=subprocess.STDOUT).decode('UTF-8')
         except Exception as e:
             output = e.output.decode('UTF-8')
             print("ERROR:" + output)
+
         with open(logname, 'w') as logfile:
             for node in suborder:
                 filename="{}_{}_{}.tsv".format(name,project_id,node)
@@ -962,7 +965,6 @@ class Gen3Migration:
                         except Exception as e:
                             output = e.output.decode('UTF-8')
                             print("ERROR:" + output)
-
 
     def check_migration_counts(self, projects=None, overwrite=False):
         """ Gets counts and downloads TSVs for all nodes for every project.
