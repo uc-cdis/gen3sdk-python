@@ -1,7 +1,49 @@
+import aiohttp
+import backoff
 import requests
+import urllib.parse
+import logging
+import sys
+
 import indexclient.client as client
 
-import urllib.parse
+
+def __log_backoff_retry(details):
+    args_str = ", ".join(map(str, details["args"]))
+    kwargs_str = (
+        (", " + _print_kwargs(details["kwargs"])) if details.get("kwargs") else ""
+    )
+    func_call_log = "{}({}{})".format(
+        _print_func_name(details["target"]), args_str, kwargs_str
+    )
+    logging.warning(
+        "backoff: call {func_call} delay {wait:0.1f} seconds after {tries} tries".format(
+            func_call=func_call_log, **details
+        )
+    )
+
+
+def __log_backoff_giveup(details):
+    args_str = ", ".join(map(str, details["args"]))
+    kwargs_str = (
+        (", " + _print_kwargs(details["kwargs"])) if details.get("kwargs") else ""
+    )
+    func_call_log = "{}({}{})".format(
+        _print_func_name(details["target"]), args_str, kwargs_str
+    )
+    logging.error(
+        "backoff: gave up call {func_call} after {tries} tries; exception: {exc}".format(
+            func_call=func_call_log, exc=sys.exc_info(), **details
+        )
+    )
+
+
+# Default settings to control usage of backoff library.
+BACKOFF_SETTINGS = {
+    "on_backoff": __log_backoff_retry,
+    "on_giveup": __log_backoff_giveup,
+    "max_tries": 2,
+}
 
 
 class Gen3Index:
@@ -25,9 +67,14 @@ class Gen3Index:
 
     def __init__(self, endpoint, auth_provider=None, service_location="index"):
         endpoint = endpoint.strip("/")
+        # if running locally, indexd is deployed by itself without a location relative
+        # to the commons
+        if "http://localhost" in endpoint:
+            service_location = ""
+
         if not endpoint.endswith(service_location):
             endpoint += "/" + service_location
-        endpoint += "/"
+
         self.client = client.IndexClient(endpoint, auth=auth_provider)
 
     ### Get Requests
@@ -44,6 +91,7 @@ class Gen3Index:
             return False
         return response.text == "Healthy"
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_version(self):
         """
 
@@ -54,6 +102,7 @@ class Gen3Index:
         response.raise_for_status()
         return response.json()
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_stats(self):
         """
 
@@ -64,6 +113,7 @@ class Gen3Index:
         response.raise_for_status()
         return response.json()
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_all_records(self, limit=None, paginate=False, start=None):
         """
 
@@ -108,13 +158,13 @@ class Gen3Index:
 
         return all_records
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_records_on_page(self, limit=None, page=None):
         """
 
         Get a list of all records given the page and page size limit
 
         """
-        all_records = []
         params = {}
         url = "index/"
 
@@ -131,6 +181,36 @@ class Gen3Index:
 
         return response.json().get("records")
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    async def async_get_records_on_page(self, limit=None, page=None, _ssl=None):
+        """
+        Asynchronous function to request a page from indexd.
+
+        Args:
+            page (int/str): indexd page to request
+
+        Returns:
+            List[dict]: List of indexd records from the page
+        """
+        all_records = []
+        params = {}
+
+        if limit is not None:
+            params["limit"] = limit
+
+        if page is not None:
+            params["page"] = page
+
+        query = urllib.parse.urlencode(params)
+
+        url = f"{self.client.url}/index" + "?" + query
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, ssl=_ssl) as response:
+                response = await response.json()
+
+        return response.get("records")
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get(self, guid, dist_resolution=True):
         """
 
@@ -151,6 +231,7 @@ class Gen3Index:
 
         return rec.to_json()
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_urls(self, size=None, hashes=None, guids=None):
         """
 
@@ -171,6 +252,7 @@ class Gen3Index:
         urls = self.client._get("urls", params=p).json()
         return [url for _, url in urls.items()]
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_record(self, guid):
         """
 
@@ -184,6 +266,7 @@ class Gen3Index:
 
         return rec.to_json()
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_with_params(self, params=None):
         """
 
@@ -202,6 +285,7 @@ class Gen3Index:
 
         return rec.to_json()
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_latest_version(self, guid, has_version=False):
         """
 
@@ -222,6 +306,7 @@ class Gen3Index:
 
         return rec.to_json()
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_versions(self, guid):
         """
 
@@ -241,6 +326,7 @@ class Gen3Index:
 
     ### Post Requests
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def create_record(
         self,
         hashes,
@@ -291,6 +377,7 @@ class Gen3Index:
         )
         return rec.to_json()
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def create_blank(self, uploader, file_name=None):
         """
 
@@ -316,6 +403,7 @@ class Gen3Index:
 
         return self.get_record(rec["did"])
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def create_new_version(
         self,
         guid,
@@ -390,6 +478,7 @@ class Gen3Index:
             return self.get_record(rec["did"])
         return None
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_records(self, dids):
         """
 
@@ -417,6 +506,7 @@ class Gen3Index:
 
     ### Put Requests
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def update_blank(self, guid, rev, hashes, size):
         """
 
@@ -445,6 +535,7 @@ class Gen3Index:
 
         return self.get_record(rec["did"])
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def update_record(
         self,
         guid,
@@ -486,6 +577,7 @@ class Gen3Index:
 
     ### Delete Requests
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def delete_record(self, guid):
         """
 
@@ -501,3 +593,11 @@ class Gen3Index:
         rec = self.client.get(guid)
         rec.delete()
         return rec
+
+
+def _print_func_name(function):
+    return "{}.{}".format(function.__module__, function.__name__)
+
+
+def _print_kwargs(kwargs):
+    return ", ".join("{}={}".format(k, repr(v)) for k, v in list(kwargs.items()))

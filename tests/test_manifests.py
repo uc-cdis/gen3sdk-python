@@ -1,8 +1,16 @@
+import asyncio
+import os
+import glob
+import sys
+import shutil
+import logging
+from unittest.mock import MagicMock, patch
+
 from gen3.tools.indexing import verify_object_manifest
 from gen3.tools.indexing import download_manifest
-from gen3.tools.indexing import download_object_manifest
-import os
-from unittest.mock import MagicMock, patch
+from gen3.tools.indexing.download_manifest import _get_records_and_write_to_file
+from gen3.tools.indexing.download_manifest import TMP_FOLDER
+from gen3.tools.indexing import async_download_object_manifest
 
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -64,17 +72,46 @@ def test_verify_manifest(mock_index):
     assert "no_record" in logs["dg.TEST/9c205cd7-c399-4503-9f49-5647188bde66"]
 
 
-@patch("gen3.tools.indexing.download_manifest.Gen3Index")
-def test_download_manifest(mock_index, monkeypatch):
+def test_download_manifest(monkeypatch, gen3_index):
     """
     Test that dowload manifest generates a file with expected content.
     """
-    mock_index.return_value.get_stats.return_value = {"fileCount": 3}
-    mock_index.return_value.get_records_on_page.side_effect = _mock_get_records_on_page
+    rec1 = gen3_index.create_record(
+        did="dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b",
+        hashes={"md5": "a1234567891234567890123456789012"},
+        size=123,
+        acl=["DEV", "test"],
+        authz=["/programs/DEV/projects/test"],
+        urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
+    )
+    rec2 = gen3_index.create_record(
+        did="dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2",
+        hashes={"md5": "b1234567891234567890123456789012"},
+        size=234,
+        acl=["DEV", "test2"],
+        authz=["/programs/DEV/projects/test2", "/programs/DEV/projects/test2bak"],
+        urls=["gs://test/test.txt"],
+    )
+    rec3 = gen3_index.create_record(
+        did="dg.TEST/ed8f4658-6acd-4f96-9dd8-3709890c959e",
+        hashes={"md5": "e1234567891234567890123456789012"},
+        size=345,
+        acl=["DEV", "test3"],
+        authz=["/programs/DEV/projects/test3", "/programs/DEV/projects/test3bak"],
+        urls=["gs://test/test3.txt"],
+    )
+    # mock_index.return_value.get_stats.return_value = gen3_index.get("/_stats")
 
     monkeypatch.setattr(download_manifest, "INDEXD_RECORD_PAGE_SIZE", 2)
-    download_object_manifest(
-        "http://localhost", output_filename="object-manifest.csv", num_processes=3
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(
+        async_download_object_manifest(
+            "http://localhost:8001",
+            output_filename="object-manifest.csv",
+            num_processes=1,
+        )
     )
 
     records = {}
@@ -178,7 +215,7 @@ def _mock_get_guid(guid, **kwargs):
         return None
 
 
-def _mock_get_records_on_page(page, limit):
+def _mock_get_records_on_page(page, limit, **kwargs):
     # for testing, the limit is 2
     if page == 0:
         return [

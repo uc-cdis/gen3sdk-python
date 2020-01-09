@@ -1,7 +1,7 @@
 """
 Module for indexing actions for downloading a manifest of
 indexed file objects (against indexd's API). Supports
-multiple processes using Python's multiprocessing library.
+multiple processes and coroutines using Python's asyncio library.
 
 The default manifest format created is a Comma-Separated Value file (csv)
 with rows for every record. A header row is created with field names:
@@ -10,33 +10,40 @@ guid,authz,acl,file_size,md5,urls
 Fields that are lists (like acl, authz, and urls) separate the values with spaces.
 
 Attributes:
+    CURRENT_DIR (str): directory this file is in
     INDEXD_RECORD_PAGE_SIZE (int): number of records to request per page
+    MAX_CONCURRENT_REQUESTS (int): maximum number of desired concurrent requests across
+        processes/threads
     TMP_FOLDER (str): Folder directory for placing temporary files
         NOTE: We have to use a temporary folder b/c Python's file writing is not
               thread-safe so we can't have all processes writing to the same file.
               To workaround this, we have each process write to a file and concat
               them all post-processing.
 """
+import asyncio
+import click
+import time
 import csv
 import glob
 import logging
-from multiprocessing import Pool, Process, Manager, Queue
-import multiprocessing
 import os
 import sys
 import shutil
 import math
-import time
-import urllib.parse
 
 from gen3.index import Gen3Index
 
 INDEXD_RECORD_PAGE_SIZE = 1024
-TMP_FOLDER = os.path.abspath("./tmp") + "/"
+MAX_CONCURRENT_REQUESTS = 24
+CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+TMP_FOLDER = os.path.abspath(CURRENT_DIR + "/tmp") + "/"
 
 
-def download_object_manifest(
-    commons_url, output_filename="object-manifest.csv", num_processes=5
+async def async_download_object_manifest(
+    commons_url,
+    output_filename="object-manifest.csv",
+    num_processes=4,
+    max_concurrent_requests=MAX_CONCURRENT_REQUESTS,
 ):
     """
     Download all file object records into a manifest csv
@@ -46,8 +53,11 @@ def download_object_manifest(
         output_filename (str, optional): filename for output
         num_processes (int, optional): number of parallel python processes to use for
           hitting indexd api and processing
+        max_concurrent_requests (int): the maximum number of concurrent requests allowed
+            NOTE: This is the TOTAL number, not just for this process. Used to help
+            determine how many requests a process should be making at one time
     """
-    start_time = time.time()
+    start_time = time.perf_counter()
     logging.info(f"start time: {start_time}")
 
     # ensure tmp directory exists and is empty
@@ -57,71 +67,84 @@ def download_object_manifest(
         if os.path.isfile(file_path):
             os.unlink(file_path)
 
-    _write_all_index_records_to_file(commons_url, output_filename, num_processes)
+    result = await _write_all_index_records_to_file(
+        commons_url, output_filename, num_processes, max_concurrent_requests
+    )
 
-    end_time = time.time()
+    end_time = time.perf_counter()
     logging.info(f"end time: {end_time}")
     logging.info(f"run time: {end_time-start_time}")
 
 
-def _write_all_index_records_to_file(commons_url, output_filename, num_processes):
+async def _write_all_index_records_to_file(
+    commons_url, output_filename, num_processes, max_concurrent_requests
+):
     """
     Spins up number of processes provided to parse indexd records and eventually
-    write to a single output file manfiest.
+    write to a single output file manifest.
 
     Args:
         commons_url (str): root domain for commons where indexd lives
         output_filename (str, optional): filename for output
         num_processes (int, optional): number of parallel python processes to use for
           hitting indexd api and processing
+        max_concurrent_requests (int): the maximum number of concurrent requests allowed
+            NOTE: This is the TOTAL number, not just for this process. Used to help
+            determine how many requests a process should be making at one time
 
-    Raises:
+    No Longer Raises:
         IndexError: If script detects missing files in indexd after initial parsing
     """
     index = Gen3Index(commons_url)
     logging.debug(f"requesting indexd stats...")
     num_files = int(index.get_stats().get("fileCount"))
+    logging.debug(f"number files: {num_files}")
     # paging is 0-based, so subtract 1 from ceiling
     # note: float() is necessary to force Python 3 to not floor the result
     max_page = int(math.ceil(float(num_files) / INDEXD_RECORD_PAGE_SIZE)) - 1
-
-    queue = Queue(max_page + num_processes + 1)
+    logging.debug(f"max page: {max_page}")
+    logging.debug(f"num processes: {num_processes}")
 
     pages = [x for x in range(max_page + 1)]
-    _add_pages_to_queue_and_process(pages, queue, commons_url, num_processes)
 
-    logging.info(f"checking if files were added since we started...")
-    current_num_files = int(index.get_stats().get("fileCount"))
+    # batch pages into subprocesses
+    chunk_size = int(math.ceil(float(len(pages)) / num_processes))
+    logging.debug(f"page chunk size: {chunk_size}")
 
-    # don't handle if files are actively being deleted
-    if current_num_files < num_files:
-        raise IndexError("Files were removed during pagination.")
+    if not chunk_size:
+        page_chunks = []
+    else:
+        page_chunks = [
+            pages[i : i + chunk_size] for i in range(0, len(pages), chunk_size)
+        ]
 
-    # if files we added we can try to parse them
-    if current_num_files > num_files:
-        logging.warning(
-            f"current files {current_num_files} is not the same as when "
-            f"we started {num_files}! Will attempt to get the new files but if more "
-            "are ACTIVELY being added via the API this manifest WILL NOT BE COMPLETE."
+    processes = []
+    for x in range(len(page_chunks)):
+        pages = ",".join(map(str, page_chunks[x]))
+
+        # call the cli function below and pass in chunks of pages for each process
+        command = (
+            f"python {CURRENT_DIR}/download_manifest.py --commons_url "
+            f"{commons_url} --pages {pages} --num_processes {num_processes} "
+            f"--max_concurrent_requests {max_concurrent_requests}"
         )
+        logging.info(command)
 
-        new_extra_files = current_num_files - num_files
-        new_pages_to_parse = int(
-            math.ceil(float(new_extra_files) / INDEXD_RECORD_PAGE_SIZE)
-        )
+        process = await asyncio.create_subprocess_shell(command)
 
-        # NOTE: start at previous max_page so we can pick up any addition files added to
-        #       that page
-        _add_pages_to_queue_and_process(
-            [x for x in range(max_page, max_page + new_pages_to_parse + 1)],
-            queue,
-            commons_url,
-            num_processes,
-        )
+        logging.info(f"Process_{process.pid} - Started w/: {command}")
+        processes.append(process)
 
-    logging.info(
-        f"done processing queue, combining outputs to single file {output_filename}"
-    )
+    for process in processes:
+        # wait for the subprocesses to finish
+        stdout, stderr = await process.communicate()
+
+        if process.returncode == 0:
+            logging.info(f"Process_{process.pid} - Done")
+        else:
+            logging.info(f"Process_{process.pid} - FAILED")
+
+    logging.info(f"done processing, combining outputs to single file {output_filename}")
 
     # remove existing output if it exists
     if os.path.isfile(output_filename):
@@ -140,72 +163,135 @@ def _write_all_index_records_to_file(commons_url, output_filename, num_processes
     logging.info(f"done writing output to file {output_filename}")
 
 
-def _add_pages_to_queue_and_process(pages, queue, commons_url, num_processes):
+@click.command()
+@click.option(
+    "--commons_url", help="Root domain (url) for a commons containing indexd."
+)
+@click.option(
+    "--pages",
+    help='Comma-Separated string of integers representing pages. ex: "2,4,5,6"',
+)
+@click.option(
+    "--num_processes",
+    type=int,
+    help="number of processes you are running so we can make sure we don't open "
+    'too many http connections. ex: "4"',
+)
+@click.option(
+    "--max_concurrent_requests",
+    type=int,
+    help="number of processes you are running so we can make sure we don't open "
+    'too many http connections. ex: "4"',
+)
+def write_page_records_to_files(
+    commons_url, pages, num_processes, max_concurrent_requests
+):
     """
-    Adds the given pages to the queue and starts the number of processes
-    provided to consume the queue.
+    Command line interface function for requesting a number of pages of
+    records from indexd and writing to a file in that process. num_processes
+    is only used to calculate how many open connections this process should request.
 
     Args:
-        pages (List[int]): list of page numbers to add to the queue
-        queue (multiprocessing.Queue): thread-safe multi-producer/consumer queue
         commons_url (str): root domain for commons where indexd lives
-        num_processes (int, optional): number of parallel python processes to use for
-          hitting indexd api and processing
+        pages (List[int/str]): List of indexd pages to request
+        num_processes (int): number of concurrent processes being requested
+            (including this one)
+        max_concurrent_requests (int): the maximum number of concurrent requests allowed
+            NOTE: This is the TOTAL number, not just for this process. Used to help
+            determine how many requests a process should be making at one time
+
+    Raises:
+        AttributeError: No pages specified to get records from
     """
-    if pages:
-        logging.debug(f"addings pages to queue. start: {pages[0]}, end {pages[-1]}")
+    if not pages:
+        raise AttributeError("No pages specified to get records from.")
 
-    for page in pages:
-        queue.put(page)
-
-    logging.info(
-        f"done adding to queue, sending {num_processes} STOP messages b/c {num_processes} processes"
-    )
-
-    for x in range(num_processes):
-        queue.put("STOP")
-
-    logging.info(f"starting {num_processes} processes..")
-
-    processes = []
-    for x in range(num_processes):
-        p = Process(
-            target=_get_page_and_write_records_to_file, args=(queue, commons_url)
+    pages = pages.strip().split(",")
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(
+        _get_records_and_write_to_file(
+            commons_url, pages, num_processes, max_concurrent_requests
         )
-        p.start()
-        processes.append(p)
-
-    logging.info(f"waiting for processes to finish processing queue...")
-
-    for process in processes:
-        process.join()
+    )
+    return result
 
 
-def _get_page_and_write_records_to_file(queue, commons_url):
+async def _get_records_and_write_to_file(
+    commons_url, pages, num_processes, max_concurrent_requests
+):
     """
-    Pops off queue until it sees a "STOP".
-    Sends a request to get all records on a given popped queue page, parses the records,
-    converts to manifest format, and writes to a csv file in a tmp directory (all files
-    will be combined later)
+    Getting indexd records and writing to a file. This function
+    creates semaphores to limit the number of concurrent http connections that
+    get opened to send requests to indexd.
+
+    It then uses asyncio to start a number of coroutines. Steps:
+        1) requests to indexd to get records (writes resulting records to a queue)
+        2) puts a final "DONE" in the queue to stop coroutine that will read from queue
+        3) reading those records from the queue and writing to a file
 
     Args:
-        queue (multiprocessing.Queue): thread-safe multi-producer/consumer queue
         commons_url (str): root domain for commons where indexd lives
+        pages (List[int/str]): List of indexd pages to request
+        num_processes (int): number of concurrent processes being requested
+            (including this one)
+    """
+    max_requests = int(max_concurrent_requests / num_processes)
+    logging.debug(f"max concurrent requests per process: {max_requests}")
+    lock = asyncio.Semaphore(max_requests)
+    queue = asyncio.Queue()
+    write_to_file_task = asyncio.ensure_future(_parse_from_queue(queue))
+    await asyncio.gather(
+        *(
+            _put_records_from_page_in_queue(page, commons_url, lock, queue)
+            for page in pages
+        )
+    )
+    await queue.put("DONE")
+    await write_to_file_task
+
+
+async def _put_records_from_page_in_queue(page, commons_url, lock, queue):
+    """
+    Gets a semaphore then requests records for the given page and
+    puts them in a queue.
+
+    Args:
+        commons_url (str): root domain for commons where indexd lives
+        page (int/str): indexd page to request
+        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
+            connections
+        queue (asyncio.Queue): queue to put indexd records in
     """
     index = Gen3Index(commons_url)
-    page = queue.get()
-    process_name = multiprocessing.current_process().name
-    while page != "STOP":
-        records = index.get_records_on_page(page=page, limit=INDEXD_RECORD_PAGE_SIZE)
+    async with lock:
+        # default ssl handling unless it's explicitly http://
+        ssl = None
+        if "https" not in commons_url:
+            ssl = False
 
-        logging.info(f"{process_name}:Read page {page} with {len(records)} records")
+        records = await index.async_get_records_on_page(
+            page=page, limit=INDEXD_RECORD_PAGE_SIZE, _ssl=ssl
+        )
+        await queue.put(records)
 
-        if records:
-            file_name = TMP_FOLDER + str(page) + ".csv"
-            with open(file_name, "w+", encoding="utf8") as file:
-                logging.info(f"{process_name}:Write to {file_name}")
-                csvwriter = csv.writer(file)
-                for record in records:
+
+async def _parse_from_queue(queue):
+    """
+    Read from the queue and write to a file
+
+    Args:
+        queue (asyncio.Queue): queue to read indexd records from
+    """
+    loop = asyncio.get_event_loop()
+    file_name = TMP_FOLDER + f"{os.getpid()}.csv"
+    with open(file_name, "w+", encoding="utf8") as file:
+        logging.info(f"Write to {file_name}")
+        csv_writer = csv.writer(file)
+
+        records = await queue.get()
+        while records != "DONE":
+            if records:
+                for record in list(records):
                     manifest_row = [
                         record.get("did"),
                         " ".join(record.get("urls")),
@@ -214,7 +300,14 @@ def _get_page_and_write_records_to_file(queue, commons_url):
                         record.get("hashes", {}).get("md5"),
                         record.get("size"),
                     ]
-                    csvwriter.writerow(manifest_row)
-        page = queue.get()
+                    loop.run_in_executor(None, csv_writer.writerow, manifest_row)
 
-    logging.info(f"{process_name}:Stop")
+            records = await queue.get()
+
+        file.flush()
+
+
+if __name__ == "__main__":
+    logging.basicConfig(filename="output.log", level=logging.DEBUG)
+    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+    write_page_records_to_files()

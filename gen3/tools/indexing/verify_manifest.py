@@ -116,7 +116,7 @@ def _get_acl_from_row(row):
     Returns:
         List[str]: acls for the indexd record
     """
-    return [item for item in row.get("acl", "").split(" ") if item]
+    return [item for item in row.get("acl", "").strip().split(" ") if item]
 
 
 def _get_authz_from_row(row):
@@ -130,7 +130,7 @@ def _get_authz_from_row(row):
     Returns:
         List[str]: authz resources for the indexd record
     """
-    return [item for item in row.get("authz", "").split(" ") if item]
+    return [item for item in row.get("authz", "").strip().split(" ") if item]
 
 
 def _get_urls_from_row(row):
@@ -143,7 +143,7 @@ def _get_urls_from_row(row):
     Returns:
         List[str]: urls for indexd record file location(s)
     """
-    return [item for item in row.get("urls", "").split(" ") if item]
+    return [item for item in row.get("urls", "").strip().split(" ") if item]
 
 
 manifest_row_parsers = {
@@ -327,14 +327,36 @@ def _verify_records_in_indexd(queue, commons_url, manifest_row_parsers):
                 logging.error(output)
 
             if file_size != actual_record["size"]:
-                output = f"{guid}|file_size|expected {file_size}|actual {actual_record['size']}\n"
-                file.write(output)
-                logging.error(output)
+                if (
+                    not file_size
+                    and file_size != 0
+                    and not actual_record["size"]
+                    and actual_record["size"] != 0
+                ):
+                    # actual and expected are both either empty string or None
+                    # so even though they're not equal, they represent null value so
+                    # we don't need to consider this an error in validation
+                    pass
+                else:
+                    output = f"{guid}|file_size|expected {file_size}|actual {actual_record['size']}\n"
+                    file.write(output)
+                    logging.error(output)
 
             if md5 != actual_record["hashes"].get("md5"):
-                output = f"{guid}|md5|expected {md5}|actual {actual_record['hashes'].get('md5')}\n"
-                file.write(output)
-                logging.error(output)
+                if (
+                    not md5
+                    and md5 != 0
+                    and not actual_record["hashes"].get("md5")
+                    and actual_record["hashes"].get("md5") != 0
+                ):
+                    # actual and expected are both either empty string or None
+                    # so even though they're not equal, they represent null value so
+                    # we don't need to consider this an error in validation
+                    pass
+                else:
+                    output = f"{guid}|md5|expected {md5}|actual {actual_record['hashes'].get('md5')}\n"
+                    file.write(output)
+                    logging.error(output)
 
             if sorted(urls) != sorted(actual_record["urls"]):
                 output = f"{guid}|urls|expected {urls}|actual {actual_record['urls']}\n"

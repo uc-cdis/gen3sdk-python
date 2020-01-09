@@ -25,24 +25,34 @@ How to download a manifest `object-manifest.csv` of all file objects in indexd f
 ```
 import sys
 import logging
+import asyncio
 
 from gen3.index import Gen3Index
 from gen3.tools import indexing
 from gen3.tools.indexing.verify_manifest import manifest_row_parsers
 
-logging.basicConfig(filename="output.log", level=logging.INFO)
+logging.basicConfig(filename="output.log", level=logging.DEBUG)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 COMMONS = "https://{{insert-commons-here}}/"
 
-
 def main():
-    indexing.download_object_manifest(
-        COMMONS, output_filename="object-manifest.csv", num_processes=3
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(
+        indexing.async_download_object_manifest(
+            COMMONS,
+            output_filename="object-manifest.csv",
+            num_processes=8,
+            max_concurrent_requests=24,
+        )
     )
+
 
 if __name__ == "__main__":
     main()
+
 ```
 
 The output file will contain columns `guid, urls, authz, acl, md5, file_size` with info
