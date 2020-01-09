@@ -406,6 +406,8 @@ class Gen3Expansion:
             uuids(list): A list of the UUIDs to delete.
             project_id(str): The project to delete the IDs from.
             chunk_size(int): The number of records to delete in each API request.
+        Example:
+            delete_records(project_id=project_id,uuids=uuids,chunk_size=200)
         """
         program,project = project_id.split('-',1)
 
@@ -1032,7 +1034,7 @@ class Gen3Expansion:
                         message = entity['errors'][0]['message']
                         messages.append(message)
                         invalid.append(sid)
-                        print('Invalid record: '+sid+'\n\tmessage: '+message)
+                        print("Invalid record: {}\n\tmessage: {}".format(sid,message))
             elif 'code' not in d:
                 responses.append('Chunk ' + str(chunk_count) + ' Timed-Out: '+str(d))
             else:
@@ -1264,7 +1266,7 @@ class Gen3Expansion:
                             results["invalid"][sid] = message
                             invalid.append(sid)
                     print(
-                        "\tInvalid records in this chunk: {}, {}".format(str(len(invalid, message)))
+                        "\tInvalid records in this chunk: {}, {}".format(len(invalid), message)
                     )
 
                 elif json_res["code"] == 500:  # internal server error

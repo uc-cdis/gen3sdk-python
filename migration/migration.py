@@ -899,7 +899,7 @@ class Gen3Migration:
         print("\tSubmission Order: \n\t\t{}".format(suborder))
         return suborder
 
-    def submit_tsvs(self,project_id,suborder,check_done=False,rm_temp=False,name='temp'):
+    def submit_tsvs(self,project_id,suborder,check_done=False,rm_temp=False,drop_ids=False,name='temp'):
         """
         Submits all the TSVs in 'suborder' dictionary obtained by running, e.g.:
         suborder = stag_mig.get_submission_order(stag_dd,project_id,name='temp',suffix='tsv')
@@ -923,6 +923,8 @@ class Gen3Migration:
                 done_file = Path("done/{}".format(filename))
                 failed_file = Path("failed/{}".format(filename))
                 if not done_file.is_file() or check_done is False:
+                    if drop_ids is True:
+                        data = self.drop_ids(project_id=project_id,node=node)
                     try:
                         print(str(datetime.datetime.now()))
                         logfile.write(str(datetime.datetime.now()))
