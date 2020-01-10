@@ -22,6 +22,9 @@ UUID_FORMAT = "^.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a
 MD5_FORMAT = "^[a-fA-F0-9]{32}$"
 
 def _verify_format(s, format):
+    """
+    Make sure the input is in the right format
+    """
     r = re.compile(format)
     if r.match(s) is not None:
         return True
