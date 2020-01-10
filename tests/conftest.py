@@ -26,9 +26,14 @@ def index_client(indexd_server):
     https://docs.pytest.org/en/latest/fixture.html#parametrizing-fixtures
     """
     setup_database()
-    client = Gen3Index(
-        indexd_server.baseurl, create_user("admin", "admin"), service_location=""
-    )
+
+    try:
+        user = create_user("admin", "admin")
+    except Exception:
+        # assume user already exists, try using username and password for admin
+        user = ("admin", "admin")
+
+    client = Gen3Index(indexd_server.baseurl, user, service_location="")
     yield client
     clear_database()
 
