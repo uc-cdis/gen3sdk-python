@@ -711,11 +711,21 @@ def compare_commons(report,commons,stats = ['total_records','null_count','N','mi
 
             if False in same: # if any of the stats are different bw commons, add to different df and comparison df
                 different = pd.concat([different,df],ignore_index=True, sort=False)
-                for stat in stats:
-                    col0 = dcs[0]+'_'+stat
-                    col1 = dcs[1]+'_'+stat
-                    comparison[col0][prop_id] = df[stat][0]
-                    comparison[col1][prop_id] = df[stat][1]
+                for stat in stats: #stat=stats[0]
+
+                    col0 = dcs[0]+'_'+stat #column name for first commons
+                    col1 = dcs[1]+'_'+stat #column name for second commons
+                    #
+                    # print("original method")
+                    # comparison[col0][prop_id] = df[stat][0]
+                    # comparison[col1][prop_id] = df[stat][1]
+
+                    print("new method")
+                    # comparison[col0][prop_id] = df.loc[df['commons']==dcs[0]][stat]
+                    # comparison[col1][prop_id] = df.loc[df['commons']==dcs[1]][stat]
+                    comparison[col0][prop_id] = df.loc[df['commons']==dcs[0]].iloc[0][stat]
+                    comparison[col1][prop_id] = df.loc[df['commons']==dcs[1]].iloc[0][stat]
+
             else:
                 identical = pd.concat([identical,df],ignore_index=True, sort=False)
 
@@ -723,7 +733,7 @@ def compare_commons(report,commons,stats = ['total_records','null_count','N','mi
             print("\n\nThe number of instances of this project-node-property '{}' is not 1 or 2!\n{}\n\n".format(prop_id,df))
             unclassified = pd.concat([unclassified,df],ignore_index=True, sort=False)
 
-        # drop all prop_ids that don't have different data (comparison columns only get filled if stats are different)
+    # drop all prop_ids that don't have different data (comparison columns only get filled if stats are different)
     comparison = comparison[list(comparison)].dropna(thresh=5) # only the project,node,property, and prop_id columns have non-null values if stats aren't different, so thresh=5 gets rid of prop_ids with unique/identical data
 
     # check total
@@ -737,16 +747,16 @@ def compare_commons(report,commons,stats = ['total_records','null_count','N','mi
         os.chdir(home_dir)
         create_output_dir(outdir)
 
-        comp_name = get_output_name("comparison","tsv",commons,outdir='reports')
+        comp_name = get_output_name("comparison","tsv",commons,outdir=outdir)
         comparison.to_csv(comp_name, sep='\t', index=False, encoding='utf-8')
 
-        diff_name = get_output_name("different","tsv",commons,outdir='reports')
+        diff_name = get_output_name("different","tsv",commons,outdir=outdir)
         different.to_csv(diff_name, sep='\t', index=False, encoding='utf-8')
 
-        identical_name = get_output_name("identical","tsv",commons,outdir='reports')
+        identical_name = get_output_name("identical","tsv",commons,outdir=outdir)
         identical.to_csv(identical_name, sep='\t', index=False, encoding='utf-8')
 
-        unique_name = get_output_name("unique","tsv",commons,outdir='reports')
+        unique_name = get_output_name("unique","tsv",commons,outdir=outdir)
         unique.to_csv(unique_name, sep='\t', index=False, encoding='utf-8')
 
     dfs = {"comparison":comparison,
