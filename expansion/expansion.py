@@ -180,7 +180,7 @@ class Gen3Expansion:
         return my_ids
 
 
-    def get_node_tsvs(self, node, projects=None, overwrite=False, remove_empty=True):
+    def get_node_tsvs(self, node, projects=None, overwrite=False, remove_empty=True,outdir='node_tsvs'):
         """Gets a TSV of the structuerd data from particular node for each project specified.
            Also creates a master TSV of merged data from each project for the specified node.
            Returns a DataFrame containing the merged data for the specified node.
@@ -194,10 +194,9 @@ class Gen3Expansion:
 
         """
 
-        if not os.path.exists('node_tsvs'):
-            os.makedirs('node_tsvs')
-
-        mydir = str('node_tsvs/'+node+'_tsvs')
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
+        mydir = "{}/{}_tsvs".format(outdir,node)
         if not os.path.exists(mydir):
             os.makedirs(mydir)
 
@@ -407,6 +406,8 @@ class Gen3Expansion:
             uuids(list): A list of the UUIDs to delete.
             project_id(str): The project to delete the IDs from.
             chunk_size(int): The number of records to delete in each API request.
+        Example:
+            delete_records(project_id=project_id,uuids=uuids,chunk_size=200)
         """
         program,project = project_id.split('-',1)
 
@@ -1033,7 +1034,7 @@ class Gen3Expansion:
                         message = entity['errors'][0]['message']
                         messages.append(message)
                         invalid.append(sid)
-                        print('Invalid record: '+sid+'\n\tmessage: '+message)
+                        print("Invalid record: {}\n\tmessage: {}".format(sid,message))
             elif 'code' not in d:
                 responses.append('Chunk ' + str(chunk_count) + ' Timed-Out: '+str(d))
             else:
@@ -1255,6 +1256,7 @@ class Gen3Expansion:
                         )
                     )
 
+                    message = ""
                     for entity in entities:
                         sid = entity["unique_keys"][0]["submitter_id"]
                         if entity["valid"]:  # valid but failed
@@ -1264,7 +1266,7 @@ class Gen3Expansion:
                             results["invalid"][sid] = message
                             invalid.append(sid)
                     print(
-                        "\tInvalid records in this chunk: {}".format(str(len(invalid)))
+                        "\tInvalid records in this chunk: {}, {}".format(len(invalid), message)
                     )
 
                 elif json_res["code"] == 500:  # internal server error

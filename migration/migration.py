@@ -114,6 +114,40 @@ class Gen3Migration:
         print("\tReturning list of {} '{}' files found in this directory.".format(len(tempfiles),name))
         return tempfiles
 
+    def check_null(self,project_id,node,prop,name='temp'):
+        """
+        Checks if all data for a property in a TSV are null.
+        Returns the number of non-null records in the TSV.
+        If check_null(project,node,prop) == 0, all data are null.
+        """
+        print("\tChecking for non-null data in '{}' property of '{}' node in project '{}'.".format(prop,node,project_id))
+        df = self.read_tsv(project_id=project_id,node=node,name=name)
+        filename = "{}_{}_{}.tsv".format(name,project_id,node)
+        if prop in list(df):
+            nn = df.loc[df[prop].notnull()] #number of non-null records
+            print("\t\tNon-null values count: {}.".format(len(nn)))
+            return len(nn)
+        else:
+            print("No header '{}' in the TSV for node '{}' of project '{}'.".format(prop,node,project_id))
+            print(list(df))
+            return 0
+
+    def get_non_null(self,project_id,node,prop,name='temp'):
+        """
+        Returns list of non-null data for a property in a TSV.
+        """
+        print("\tChecking for non-null data in '{}' property of '{}' node in project '{}'.".format(prop,node,project_id))
+        df = self.read_tsv(project_id=project_id,node=node,name=name)
+        filename = "{}_{}_{}.tsv".format(name,project_id,node)
+        if prop in list(df):
+            nn = list(df.loc[df[prop].notnull()][prop]) #number of non-null records
+            print("\t\tNon-null values count: \n\t{}.".format(nn))
+            return nn
+        else:
+            print("No header '{}' in the TSV for node '{}' of project '{}'.".format(prop,node,project_id))
+            print(list(df))
+            return 0
+
     def merge_nodes(self,project_id,in_nodes,out_node,name='temp'):
         """
         Merges a list of node TSVs into a single TSV.
@@ -234,13 +268,13 @@ class Gen3Migration:
             existing = list(link_df['submitter_id']) # existing visits
             missing = set(link_names).difference(existing) # visit links in df missing in visit TSV: lists items in link_names missing from existing
             if len(missing) > 0:
-                print("\tCreating {} records in '{}' with links to same cases as '{}' for missing '{}' links.".format(len(missing),link,old_parent,node))
+                print("\t\tCreating {} records in '{}' with links to same cases as '{}' for missing '{}' links.".format(len(missing),link,old_parent,node))
             else:
-                print("\tAll {} records in '{}' node have existing links to '{}'. No new records added.".format(len(df),node,link))
+                print("\t\tAll {} records in '{}' node have existing links to '{}'. No new records added.".format(len(df),node,link))
                 return link_df.loc[link_df['submitter_id'].isin(link_names)]
         except FileNotFoundError as e:
             link_df = pd.DataFrame()
-            print("\tNo '{}' TSV found. Creating new TSV for links.".format(link))
+            print("\t\tNo '{}' TSV found. Creating new TSV for links.".format(link))
             missing = link_names
         parent_link = "{}.submitter_id".format(old_parent)
         if parent_link in list(df):
@@ -261,7 +295,7 @@ class Gen3Migration:
             try:
                 odf = pd.read_csv(old_name,sep='\t',header=0,dtype=str)
             except FileNotFoundError as e:
-                print("\tNo existing '{}' TSV found. Skipping...".format(node))
+                print("\t\tNo existing '{}' TSV found. Skipping...".format(node))
                 return
             # df1 = df_no_link.loc[df_no_link[old_link].notnull()]
             # if len(df1) > 0:
@@ -673,6 +707,8 @@ class Gen3Migration:
     def drop_ids(self,project_id,node,name='temp'):
         """
         Drops the 'id' column from node TSV.
+        Example:
+            drop_ids(project_id=project_id,node=node)
         """
 
         df = self.read_tsv(project_id=project_id,node=node,name=name)
@@ -721,6 +757,23 @@ class Gen3Migration:
             if not dropped:
                 print("\t{}:".format(node))
                 print("\t\tNo UUID headers found in the TSV.".format(node))
+
+    def drop_ids_from_temp(self,project_id,suffix='tsv',name='temp'):
+
+        pattern = "{}*{}".format(name,suffix)
+        filenames = glob.glob(pattern)
+
+        for filename in filenames:
+            regex = "{}_{}_(.+).{}".format(name,project_id,suffix)
+            match = re.search(regex, filename)
+            if match:
+                node = match.group(1)
+                print("\tDropping ids from '{}' node in file '{}'".format(node,filename))
+                data = self.drop_ids(project_id=project_id,node=node)
+            else:
+                print("\tNo node matched filename: '{}'".format(filename))
+
+        return filenames
 
     def create_project(self,program,project):
         """ Create the program/project:
@@ -846,7 +899,7 @@ class Gen3Migration:
         print("\tSubmission Order: \n\t\t{}".format(suborder))
         return suborder
 
-    def submit_tsvs(self,project_id,suborder,check_done=False,name='temp'):
+    def submit_tsvs(self,project_id,suborder,check_done=False,rm_temp=False,drop_ids=False,name='temp'):
         """
         Submits all the TSVs in 'suborder' dictionary obtained by running, e.g.:
         suborder = stag_mig.get_submission_order(stag_dd,project_id,name='temp',suffix='tsv')
@@ -854,23 +907,28 @@ class Gen3Migration:
         """
 
         logname = "submission_{}_logfile.txt".format(project_id)
-        cmd = ['mkdir','-p','done']
-        cmd = ['mkdir','-p','failed']
+
+        done_cmd = ['mkdir','-p','done']
+        failed_cmd = ['mkdir','-p','failed']
         try:
-            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+            output = subprocess.check_output(done_cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+            output = subprocess.check_output(failed_cmd, stderr=subprocess.STDOUT).decode('UTF-8')
         except Exception as e:
             output = e.output.decode('UTF-8')
             print("ERROR:" + output)
+
         with open(logname, 'w') as logfile:
             for node in suborder:
                 filename="{}_{}_{}.tsv".format(name,project_id,node)
                 done_file = Path("done/{}".format(filename))
                 failed_file = Path("failed/{}".format(filename))
                 if not done_file.is_file() or check_done is False:
+                    if drop_ids is True:
+                        data = self.drop_ids(project_id=project_id,node=node)
                     try:
                         print(str(datetime.datetime.now()))
                         logfile.write(str(datetime.datetime.now()))
-                        data = self.sub.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
+                        data = self.exp.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
                         #print("data: {}".format(data)) #for trouble-shooting
                         logfile.write(filename + '\n' + json.dumps(data)+'\n\n') #put in log file
 
@@ -901,6 +959,14 @@ class Gen3Migration:
                         print("\t{}".format(e))
                 else:
                     print("\tPreviously submitted file already exists in done directory:\n\t\t{}\n".format(done_file))
+                    if rm_temp is True:
+                        rm_cmd = ['rm',filename]
+                        try:
+                            output = subprocess.check_output(rm_cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+                            print("\t\t'{}' file removed.\n\t\t\t{}".format(name,filename))
+                        except Exception as e:
+                            output = e.output.decode('UTF-8')
+                            print("ERROR:" + output)
 
     def check_migration_counts(self, projects=None, overwrite=False):
         """ Gets counts and downloads TSVs for all nodes for every project.
