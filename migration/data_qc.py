@@ -721,8 +721,6 @@ def compare_commons(report,commons,stats = ['total_records','null_count','N','mi
                     # comparison[col1][prop_id] = df[stat][1]
 
                     # print("new method")
-                    # comparison[col0][prop_id] = df.loc[df['commons']==dcs[0]][stat]
-                    # comparison[col1][prop_id] = df.loc[df['commons']==dcs[1]][stat]
                     comparison[col0][prop_id] = df.loc[df['commons']==dcs[0]].iloc[0][stat]
                     comparison[col1][prop_id] = df.loc[df['commons']==dcs[1]].iloc[0][stat]
 
