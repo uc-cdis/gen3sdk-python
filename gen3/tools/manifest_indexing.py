@@ -2,9 +2,11 @@ import csv
 from functools import partial
 import logging
 from multiprocessing.dummy import Pool as ThreadPool
+import threading
 import re
 import uuid
 import argparse
+import copy
 
 import indexclient.client as client
 
@@ -17,9 +19,22 @@ MD5 = ["md5", "md5_hash", "hash"]
 ACLS = ["acl", "acls"]
 URLS = ["url", "urls"]
 
-
-UUID_FORMAT = "^.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+UUID_FORMAT = (
+    "^.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+)
 MD5_FORMAT = "^[a-fA-F0-9]{32}$"
+
+
+class ThreadControl(object):
+    """
+        Class for thread synchronization
+        """
+
+    def __init__(self, processed_files=0, num_total_files=0):
+        self.mutexLock = threading.Lock()
+        self.num_processed_files = processed_files
+        self.num_total_files = num_total_files
+
 
 def _verify_format(s, format):
     """
@@ -52,45 +67,47 @@ def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
         ]
     """
     files = []
-    with open(manifest_file, "rt") as csvfile:
+    with open(manifest_file, "r") as csvfile:
         csvReader = csv.DictReader(csvfile, delimiter=dem)
-
         pass_verification = True
         for row in csvReader:
+            standardized_dict = {}
             for key in row.keys():
                 standardized_key = None
-                if key in GUID:
+                if key.lower() in GUID:
                     standardized_key = "GUID"
                     if not _verify_format(row[key], UUID_FORMAT):
                         logging.error("ERROR: {} is not in uuid format", row[key])
                         pass_verification = False
 
-                elif key in FILENAME:
+                elif key.lower() in FILENAME:
                     standardized_key = "filename"
-                elif key in MD5:
+                elif key.lower() in MD5:
                     standardized_key = "md5"
                     if not _verify_format(row[key], MD5_FORMAT):
                         logging.error("ERROR: {} is not in md5 format", row[key])
                         pass_verification = False
-                elif key in ACLS:
+                elif key.lower() in ACLS:
                     standardized_key = "acl"
-                elif key in URLS:
+                elif key.lower() in URLS:
                     standardized_key = "url"
 
                 if standardized_key:
-                    row[standardized_key] = row[key].strip()
-                elif key in SIZE:
-                    row["size"] = int(row["size"].strip())
+                    standardized_dict[standardized_key] = row[key].strip()
 
-            files.append(row)
+                elif key in SIZE:
+                    standardized_dict["size"] = int(row["size"].strip())
+
+            files.append(standardized_dict)
+
     if not pass_verification:
-        logger.error("The manifest is not in the correct format!!!.")
-        return
+        logging.error("The manifest is not in the correct format!!!.")
+        return None
 
     return files
 
 
-def _index_record(prefix, indexclient, replace_urls, fi):
+def _index_record(prefix, indexclient, replace_urls, thread_control, fi):
     """
     Index single file
 
@@ -104,6 +121,7 @@ def _index_record(prefix, indexclient, replace_urls, fi):
         None
 
     """
+
     try:
         urls = fi.get("url", "").strip().split(" ")
 
@@ -118,9 +136,10 @@ def _index_record(prefix, indexclient, replace_urls, fi):
         uuid = uuid.uuid4() if not fi.get("GUID") else fi.get("GUID")
 
         doc = None
-        if  fi.get("GUID"):
+
+        if fi.get("GUID"):
             doc = indexclient.get(prefix + uuid)
-    
+
         if doc is not None:
             need_update = False
 
@@ -157,7 +176,6 @@ def _index_record(prefix, indexclient, replace_urls, fi):
                 urls=urls,
             )
 
-
     except Exception as e:
         # Don't break for any reason
         logging.error(
@@ -166,8 +184,28 @@ def _index_record(prefix, indexclient, replace_urls, fi):
             )
         )
 
+    thread_control.mutexLock.acquire()
+    thread_control.num_processed_files += 1
+    if (thread_control.num_processed_files * 10) % thread_control.num_total_files == 0:
+        logging.info(
+            "Progress: {}%".format(
+                thread_control.num_processed_files
+                * 100.0
+                / thread_control.num_total_files
+            )
+        )
+    thread_control.mutexLock.release()
 
-def manifest_indexing(manifest, common_url, thread_num, auth=None, prefix=None, replace_urls=False):
+
+def manifest_indexing(
+    manifest,
+    common_url,
+    thread_num,
+    auth=None,
+    prefix=None,
+    replace_urls=False,
+    dem="\t",
+):
     """
     Loop through all the files in the manifest, update/create records in indexd
     update indexd if the url is not in the record url list or acl has changed
@@ -178,16 +216,13 @@ def manifest_indexing(manifest, common_url, thread_num, auth=None, prefix=None, 
         thread_num(int): number of threads for indexing
         auth(Gen3Auth): Gen3 auth
         prefix(str): GUID prefix
+        dem(str): manifest's delimiter
 
     """
-    indexclient = client.IndexClient(
-        common_url,
-        "v0",
-        auth=auth,
-    )
+    indexclient = client.IndexClient(common_url, "v0", auth=auth)
 
     try:
-        files = _get_and_verify_fileinfos_from_tsv_manifest(manifest)
+        files = _get_and_verify_fileinfos_from_tsv_manifest(manifest, dem)
     except Exception as e:
         logging.error("Can not read {}. Detail {}".format(manifest, e))
         return
@@ -195,7 +230,11 @@ def manifest_indexing(manifest, common_url, thread_num, auth=None, prefix=None, 
     prefix = prefix + "/" if prefix else ""
     pool = ThreadPool(thread_num)
 
-    part_func = partial(_index_record, prefix, indexclient, replace_urls)
+    thread_control = ThreadControl(num_total_files=len(files))
+    part_func = partial(
+        _index_record, prefix, indexclient, replace_urls, thread_control
+    )
+
     try:
         pool.map_async(part_func, files).get(9999999)
     except KeyboardInterrupt:
@@ -212,13 +251,25 @@ def parse_arguments():
 
     indexing_cmd = subparsers.add_parser("indexing")
     indexing_cmd.add_argument("--common_url", required=True, help="Common link.")
-    indexing_cmd.add_argument("--manifest_path", required=True, help="The path to input manifest")
+    indexing_cmd.add_argument(
+        "--manifest_path", required=True, help="The path to input manifest"
+    )
     indexing_cmd.add_argument("--thread_num", required=False, help="Number of threads")
     indexing_cmd.add_argument("--prefix", required=False, help="Prefix")
-    indexing_cmd.add_argument("--replace_urls", required=False, help="Replace urls or not")
+    indexing_cmd.add_argument(
+        "--replace_urls", required=False, help="Replace urls or not"
+    )
 
     return parser.parse_args()
 
+
 if __name__ == "__main__":
     args = parse_arguments()
-    manifest_indexing(args.manifest, args.common_url, int(args.thread_num), args.auth, args.prefix, args.replace_urls)
+    manifest_indexing(
+        args.manifest,
+        args.common_url,
+        int(args.thread_num),
+        args.auth,
+        args.prefix,
+        args.replace_urls,
+    )

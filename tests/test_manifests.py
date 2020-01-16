@@ -8,9 +8,9 @@ from unittest.mock import MagicMock, patch
 
 from gen3.tools.indexing import verify_object_manifest
 from gen3.tools.indexing import download_manifest
-from gen3.tools.indexing.download_manifest import _get_records_and_write_to_file
 from gen3.tools.indexing.download_manifest import TMP_FOLDER
 from gen3.tools.indexing import async_download_object_manifest
+from gen3.tools.manifest_indexing import manifest_indexing
 
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -297,3 +297,48 @@ def _mock_get_records_on_page(page, limit, **kwargs):
         ]
     else:
         return []
+
+
+def test_index_manifest(gen3_index, indexd_server):
+    rec1 = gen3_index.create_record(
+        did="255e396f-f1f8-11e9-9a07-0a80fada099c",
+        hashes={"md5": "a1234567891234567890123456789012"},
+        acl=["DEV", "test"],
+        size=123,
+        urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
+    )
+
+    manifest_indexing("./test.tsv", indexd_server.baseurl, 1, ("admin", "admin"))
+    rec1 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada099c")
+    rec2 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada010c")
+
+    assert set(rec1["urls"]) == set(
+        [
+            "s3://testaws/aws/test.txt",
+            "gs://test/test.txt",
+            "s3://pdcdatastore/raw-files/94/38/NCI-11pex-18C-Phos-c05389.raw",
+        ]
+    )
+    assert rec2["hashes"]["md5"] == "473d83400bc1bc9dc635e334faddf33c"
+    assert rec2["size"] == 363_455_714
+    assert rec2["urls"] == [
+        "s3://pdcdatastore/raw-files/94/38/NCI-11pex-18C-Phos-c05389.raw"
+    ]
+
+
+def test_index_manifest_with_replace_urls(gen3_index, indexd_server):
+    rec1 = gen3_index.create_record(
+        did="255e396f-f1f8-11e9-9a07-0a80fada099c",
+        hashes={"md5": "a1234567891234567890123456789012"},
+        acl=["DEV", "test"],
+        size=123,
+        urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
+    )
+    manifest_indexing(
+        "./test.tsv", indexd_server.baseurl, 1, ("admin", "admin"), replace_urls=True
+    )
+    rec1 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada099c")
+
+    assert rec1["urls"] == [
+        "s3://pdcdatastore/raw-files/94/38/NCI-11pex-18C-Phos-c05389.raw"
+    ]
