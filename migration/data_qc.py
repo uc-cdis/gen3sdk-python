@@ -515,24 +515,39 @@ def summarize_tsvs(commons,prefix='',report=True,outlier_threshold=3,omit_props=
 
                             # Get stats for numbers
                             elif ptype in ['number','integer']: #prop='concentration'
+
+                                # make a list of the data values as floats (converted from strings)
                                 d = list(df[df[prop].notnull()][prop].astype(float))
-                                mn = statistics.mean(d)
-                                data[project_id][node]["properties"][prop]["stats"]["mean"] = mn
-                                md = statistics.median(d)
-                                data[project_id][node]["properties"][prop]["stats"]["median"] = md
-                                data[project_id][node]["properties"][prop]["stats"]["min"] = min(d)
-                                data[project_id][node]["properties"][prop]["stats"]["max"] = max(d)
-                                if len(d) == 1: # If there is only one data point, stdev will error
-                                    data[project_id][node]["properties"][prop]["stats"]["stdev"] = "NA"
-                                    data[project_id][node]["properties"][prop]["stats"]["outliers"] = []
+
+                                if len(d) == 1: # if only one value, no stdev and no outliers
+                                    std = "NA"
+                                    outliers = []
                                 else:
                                     std = statistics.stdev(d)
-                                    data[project_id][node]["properties"][prop]["stats"]["stdev"] = std
                                     # Get outliers by mean +/- outlier_threshold * stdev
                                     cutoff = std * outlier_threshold # three times the standard deviation is default
                                     lower, upper = mn - cutoff, mn + cutoff # cut-offs for outliers is 3 times the stdev below and above the mean
                                     outliers = sorted(list(set([x for x in d if x < lower or x > upper])))
-                                    data[project_id][node]["properties"][prop]["stats"]["outliers"] = outliers
+
+                                # calculate summary stats using the float list d
+                                mn = statistics.mean(d)
+                                md = statistics.median(d)
+                                minimum = min(d)
+                                maximum = max(d)
+
+                                # if property type is 'integer', change min, max, median to int type
+                                if ptype == 'integer':
+                                    md = int(md) # median
+                                    minimum = int(minimum) # min
+                                    maximum = int(maximum) # max
+                                    outliers = [int(i) for i in outliers] # convert outliers from float to int
+
+                                data[project_id][node]["properties"][prop]["stats"]["stdev"] = std
+                                data[project_id][node]["properties"][prop]["stats"]["mean"] = mn
+                                data[project_id][node]["properties"][prop]["stats"]["median"] = md
+                                data[project_id][node]["properties"][prop]["stats"]["min"] = minimum
+                                data[project_id][node]["properties"][prop]["stats"]["max"] = maximum
+                                data[project_id][node]["properties"][prop]["stats"]["outliers"] = outliers
 
                                 print("\t\t{}".format(data[project_id][node]["properties"][prop]["stats"]))
 
@@ -715,14 +730,6 @@ def compare_commons(report,commons,stats = ['total_records','null_count','N','mi
 
                     col0 = dcs[0]+'_'+stat #column name for first commons
                     col1 = dcs[1]+'_'+stat #column name for second commons
-                    #
-                    # print("original method")
-                    # comparison[col0][prop_id] = df[stat][0]
-                    # comparison[col1][prop_id] = df[stat][1]
-
-                    # print("new method")
-                    # comparison[col0][prop_id] = df.loc[df['commons']==dcs[0]][stat]
-                    # comparison[col1][prop_id] = df.loc[df['commons']==dcs[1]][stat]
                     comparison[col0][prop_id] = df.loc[df['commons']==dcs[0]].iloc[0][stat]
                     comparison[col1][prop_id] = df.loc[df['commons']==dcs[1]].iloc[0][stat]
 
