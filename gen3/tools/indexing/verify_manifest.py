@@ -86,7 +86,12 @@ def _get_md5_from_row(row):
     Returns:
         str: md5 sum for file
     """
-    return row.get("md5")
+    if "md5" in row:
+        return row["md5"]
+    elif "md5sum" in row:
+        return row["md5sum"]
+    else:
+        return None
 
 
 def _get_file_size_from_row(row):
@@ -100,7 +105,12 @@ def _get_file_size_from_row(row):
         int: integer representing file size in bytes
     """
     try:
-        return int(row.get("file_size"))
+        if "file_size" in row:
+            return int(row["file_size"])
+        elif "size" in row:
+            return int(row["size"])
+        else:
+            return None
     except Exception:
         logging.warning(f"could not convert this to an int: {row.get('file_size')}")
         return row.get("file_size")
@@ -143,7 +153,32 @@ def _get_urls_from_row(row):
     Returns:
         List[str]: urls for indexd record file location(s)
     """
-    return [item for item in row.get("urls", "").strip().split(" ") if item]
+    if "urls" in row:
+        return [item for item in row.get("urls", "").strip().split(" ") if item]
+    elif "url" in row:
+        return [item for item in row.get("urls", "").strip().split(" ") if item]
+    else:
+        return []
+
+
+def _get_file_name_from_row(row):
+    """
+    Given a row from the manifest, return the field representing file's expected file_name.
+
+    Args:
+        row (dict): column_name:row_value
+
+    Returns:
+        List[str]: file_name for indexd record file location(s)
+    """
+    if "file_name" in row:
+        return row["file_name"]
+    elif "filename" in row:
+        return row["filename"]
+    elif "name" in row:
+        return row["name"]
+    else:
+        return None
 
 
 manifest_row_parsers = {
@@ -153,6 +188,7 @@ manifest_row_parsers = {
     "acl": _get_acl_from_row,
     "authz": _get_authz_from_row,
     "urls": _get_urls_from_row,
+    "file_name": _get_file_name_from_row,
 }
 
 
@@ -222,7 +258,7 @@ def _verify_all_index_records_in_file(
     with open(manifest_file, encoding="utf-8-sig") as csvfile:
         manifest_reader = csv.DictReader(csvfile, delimiter=manifest_file_delimiter)
         for row in manifest_reader:
-            row = {key.strip(" "): value.strip(" ") for key, value in row.items()}
+            row = {key.strip(" "): value for key, value in row.items()}
             queue.put(row)
 
     logging.info(
@@ -298,6 +334,7 @@ def _verify_records_in_indexd(queue, commons_url, manifest_row_parsers):
             file_size = manifest_row_parsers["file_size"](row)
             md5 = manifest_row_parsers["md5"](row)
             urls = manifest_row_parsers["urls"](row)
+            file_name = manifest_row_parsers["file_name"](row)
 
             try:
                 actual_record = index.get_record(guid)
@@ -360,6 +397,13 @@ def _verify_records_in_indexd(queue, commons_url, manifest_row_parsers):
 
             if sorted(urls) != sorted(actual_record["urls"]):
                 output = f"{guid}|urls|expected {urls}|actual {actual_record['urls']}\n"
+                file.write(output)
+                logging.error(output)
+
+            if not actual_record["file_name"] and file_name:
+                # if the actual record name is "" or None but something was specified
+                # in the manifest, we have a problem
+                output = f"{guid}|file_name|expected {file_name}|actual {actual_record['file_name']}\n"
                 file.write(output)
                 logging.error(output)
 
