@@ -151,7 +151,9 @@ async def _write_all_index_records_to_file(
         os.unlink(output_filename)
 
     with open(output_filename, "wb") as outfile:
-        outfile.write("guid, urls, authz, acl, md5, file_size\n".encode("utf8"))
+        outfile.write(
+            "guid, urls, authz, acl, md5, file_size, file_name\n".encode("utf8")
+        )
         for filename in glob.glob(TMP_FOLDER + "*"):
             if output_filename == filename:
                 # don't want to copy the output into the output
@@ -299,6 +301,7 @@ async def _parse_from_queue(queue):
                         " ".join(record.get("acl")),
                         record.get("hashes", {}).get("md5"),
                         record.get("size"),
+                        record.get("file_name"),
                     ]
                     loop.run_in_executor(None, csv_writer.writerow, manifest_row)
 
