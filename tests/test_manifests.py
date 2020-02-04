@@ -91,6 +91,7 @@ def test_download_manifest(monkeypatch, gen3_index):
         acl=["DEV", "test2"],
         authz=["/programs/DEV/projects/test2", "/programs/DEV/projects/test2bak"],
         urls=["gs://test/test.txt"],
+        file_name="test.txt",
     )
     rec3 = gen3_index.create_record(
         did="dg.TEST/ed8f4658-6acd-4f96-9dd8-3709890c959e",
@@ -120,12 +121,13 @@ def test_download_manifest(monkeypatch, gen3_index):
             # skip header
             next(file)
             for line in file:
-                guid, urls, authz, acl, md5, file_size = line.split(",")
+                guid, urls, authz, acl, md5, file_size, file_name = line.split(",")
                 guid = guid.strip("\n")
                 urls = urls.split(" ")
                 authz = authz.split(" ")
                 acl = acl.split(" ")
                 file_size = file_size.strip("\n")
+                file_name = file_name.strip("\n")
 
                 records[guid] = {
                     "urls": urls,
@@ -133,6 +135,7 @@ def test_download_manifest(monkeypatch, gen3_index):
                     "acl": acl,
                     "md5": md5,
                     "file_size": file_size,
+                    "file_name": file_name,
                 }
     except Exception:
         # unexpected file format, fail test
@@ -160,10 +163,16 @@ def test_download_manifest(monkeypatch, gen3_index):
     assert "a1234567891234567890123456789012" in records.get(
         "dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}
     ).get("md5")
+    assert not records.get("dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}).get(
+        "file_name"
+    )
 
     # assert other 2 records exist
     assert "dg.TEST/ed8f4658-6acd-4f96-9dd8-3709890c959e" in records
     assert "dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2" in records
+    assert "test.txt" == records.get(
+        "dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2", {}
+    ).get("file_name")
 
 
 def _mock_get_guid(guid, **kwargs):
