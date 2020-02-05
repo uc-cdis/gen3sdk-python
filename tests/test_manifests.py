@@ -304,7 +304,7 @@ def test_read_manifest():
     assert headers.index("GUID") >= 0
     assert headers.index("md5") >= 0
     assert headers.index("url") >= 0
-
+    
     assert files[0]["url"] == "[s3://pdcdatastore/test1.raw]"
     assert files[1]["acl"] == "[Open]"
     assert files[1]["url"] == "[s3://pdcdatastore/test2.raw]"
@@ -314,9 +314,9 @@ def test_read_manifest():
 def test_index_manifest(gen3_index, indexd_server):
     rec1 = gen3_index.create_record(
         did="255e396f-f1f8-11e9-9a07-0a80fada099c",
-        hashes={"md5": "a1234567891234567890123456789012"},
+        hashes={"md5": "473d83400bc1bc9dc635e334faddf33c"},
         acl=["DEV", "test"],
-        size=123,
+        size=363455714,
         urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
     )
 
@@ -355,9 +355,9 @@ def test_index_manifest(gen3_index, indexd_server):
 def test_index_manifest_with_replace_urls(gen3_index, indexd_server):
     rec1 = gen3_index.create_record(
         did="255e396f-f1f8-11e9-9a07-0a80fada099c",
-        hashes={"md5": "a1234567891234567890123456789012"},
+        hashes={"md5": "473d83400bc1bc9dc635e334faddf33c"},
         acl=["DEV", "test"],
-        size=123,
+        size=363455714,
         urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
     )
     manifest_indexing(

@@ -211,32 +211,38 @@ def _index_record(prefix, indexclient, replace_urls, thread_control, fi):
             doc = indexclient.get(prefix + uuid)
 
         if doc is not None:
-            need_update = False
+            if doc.size != fi.get("size") or doc.hashes.get("md5") != fi.get("md5"):
+                logger.error(
+                    "The uuid {} with different size/hash already exist. Can not index it without getting a new GUID".format(
+                        fi.get("GUID")
+                    )
+                )
+            else:
+                need_update = False
+                for url in urls:
+                    if not replace_urls and url not in doc.urls:
+                        doc.urls.append(url)
+                        need_update = True
 
-            for url in urls:
-                if not replace_urls and url not in doc.urls:
-                    doc.urls.append(url)
+                if replace_urls and set(urls) != set(doc.urls):
+                    doc.urls = urls
                     need_update = True
 
-            if replace_urls and set(urls) != set(doc.urls):
-                doc.urls = urls
-                need_update = True
+                    # indexd doesn't like when records have metadata for non-existing
+                    # urls
+                    new_urls_metadata = copy.deepcopy(doc.urls_metadata)
+                    for url, metadata in doc.urls_metadata.items():
+                        if url not in urls:
+                            del new_urls_metadata[url]
 
-                # indexd doesn't like when records have metadata for non-existing
-                # urls
-                new_urls_metadata = copy.deepcopy(doc.urls_metadata)
-                for url, metadata in doc.urls_metadata.items():
-                    if url not in urls:
-                        del new_urls_metadata[url]
+                    doc.urls_metadata = new_urls_metadata
 
-                doc.urls_metadata = new_urls_metadata
+                if set(doc.acl) != set(acl):
+                    doc.acl = acl
+                    need_update = True
 
-            if set(doc.acl) != set(acl):
-                doc.acl = acl
-                need_update = True
-
-            if need_update:
-                doc.patch()
+                if need_update:
+                    doc.patch()
         else:
             doc = indexclient.create(
                 did=prefix + fi.get("GUID", "").strip(),
@@ -367,7 +373,6 @@ def parse_arguments():
 if __name__ == "__main__":
     args = parse_arguments()
     auth = tuple(args.auth.split(",")) if args.auth else None
-    import pdb; pdb.set_trace()
 
     manifest_indexing(
         args.manifest_path,
