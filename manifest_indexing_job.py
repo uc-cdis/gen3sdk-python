@@ -48,3 +48,5 @@ if __name__ == "__main__":
         input_data_json.get("prefix"),
         input_data_json.get("replace_urls"),
     )
+
+    print("[out] {}".format(filepath))

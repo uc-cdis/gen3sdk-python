@@ -15,7 +15,7 @@ import indexclient.client as client
 GUID = ["guid", "uuid"]
 FILENAME = ["filename", "file_name"]
 SIZE = ["size", "filesize", "file_size"]
-MD5 = ["md5", "md5_hash", "hash"]
+MD5 = ["md5", "md5_hash", "md5hash", "hash"]
 ACLS = ["acl", "acls"]
 URLS = ["url", "urls"]
 
