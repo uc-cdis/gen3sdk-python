@@ -24,6 +24,9 @@ Attributes:
     ACLS (list(string)): supported acl column names
     URLS (list(string)): supported url column names
 
+
+Usages:
+    python manifest_indexing.py indexing --common_url https://giangb.planx-pla.net/index/ --prefix DG.1046 --manifest_path path_to_manifest --auth "admin,admin" --replace_urls False --thread_num 10
 """
 import os
 import csv
@@ -363,11 +366,14 @@ def parse_arguments():
 
 if __name__ == "__main__":
     args = parse_arguments()
+    auth = tuple(args.auth.split(",")) if args.auth else None
+    import pdb; pdb.set_trace()
+
     manifest_indexing(
         args.manifest_path,
         args.common_url,
         int(args.thread_num),
-        args.auth,
+        auth,
         args.prefix,
         args.replace_urls,
     )
