@@ -25,10 +25,21 @@ UUID_FORMAT = (
 MD5_FORMAT = "^[a-fA-F0-9]{32}$"
 
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(message)s",
+    handlers=[
+        logging.FileHandler("./manifest_indexing.log"),
+        logging.StreamHandler()
+    ])
+
+logger = logging.getLogger()
+
+
 class ThreadControl(object):
     """
-        Class for thread synchronization
-        """
+    Class for thread synchronization
+    """
 
     def __init__(self, processed_files=0, num_total_files=0):
         self.mutexLock = threading.Lock()
@@ -77,7 +88,7 @@ def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
                 if key.lower() in GUID:
                     standardized_key = "GUID"
                     if not _verify_format(row[key], UUID_FORMAT):
-                        logging.error("ERROR: {} is not in uuid format", row[key])
+                        logger.error("ERROR: {} is not in uuid format", row[key])
                         pass_verification = False
 
                 elif key.lower() in FILENAME:
@@ -85,7 +96,7 @@ def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
                 elif key.lower() in MD5:
                     standardized_key = "md5"
                     if not _verify_format(row[key], MD5_FORMAT):
-                        logging.error("ERROR: {} is not in md5 format", row[key])
+                        logger.error("ERROR: {} is not in md5 format", row[key])
                         pass_verification = False
                 elif key.lower() in ACLS:
                     standardized_key = "acl"
@@ -101,7 +112,7 @@ def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
             files.append(standardized_dict)
 
     if not pass_verification:
-        logging.error("The manifest is not in the correct format!!!.")
+        logger.error("The manifest is not in the correct format!!!.")
         return None
 
     return files
@@ -178,7 +189,7 @@ def _index_record(prefix, indexclient, replace_urls, thread_control, fi):
 
     except Exception as e:
         # Don't break for any reason
-        logging.error(
+        logger.error(
             "Can not update/create an indexd record with uuid {}. Detail {}".format(
                 fi.get("GUID"), e
             )
@@ -187,7 +198,7 @@ def _index_record(prefix, indexclient, replace_urls, thread_control, fi):
     thread_control.mutexLock.acquire()
     thread_control.num_processed_files += 1
     if (thread_control.num_processed_files * 10) % thread_control.num_total_files == 0:
-        logging.info(
+        logger.info(
             "Progress: {}%".format(
                 thread_control.num_processed_files
                 * 100.0
@@ -219,12 +230,13 @@ def manifest_indexing(
         dem(str): manifest's delimiter
 
     """
+    logger.info("start the process")
     indexclient = client.IndexClient(common_url, "v0", auth=auth)
 
     try:
         files = _get_and_verify_fileinfos_from_tsv_manifest(manifest, dem)
     except Exception as e:
-        logging.error("Can not read {}. Detail {}".format(manifest, e))
+        logger.error("Can not read {}. Detail {}".format(manifest, e))
         return
 
     prefix = prefix + "/" if prefix else ""
@@ -254,8 +266,9 @@ def parse_arguments():
     indexing_cmd.add_argument(
         "--manifest_path", required=True, help="The path to input manifest"
     )
-    indexing_cmd.add_argument("--thread_num", required=False, help="Number of threads")
+    indexing_cmd.add_argument("--thread_num", required=False, default=1, help="Number of threads")
     indexing_cmd.add_argument("--prefix", required=False, help="Prefix")
+    indexing_cmd.add_argument("--auth", required=False, help="auth")
     indexing_cmd.add_argument(
         "--replace_urls", required=False, help="Replace urls or not"
     )
@@ -266,7 +279,7 @@ def parse_arguments():
 if __name__ == "__main__":
     args = parse_arguments()
     manifest_indexing(
-        args.manifest,
+        args.manifest_path,
         args.common_url,
         int(args.thread_num),
         args.auth,
