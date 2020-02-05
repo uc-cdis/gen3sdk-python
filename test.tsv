@@ -1,6 +1,6 @@
 uuid	md5	size	acl	url
-255e396f-f1f8-11e9-9a07-0a80fada099c	473d83400bc1bc9dc635e334faddf33c	363455714	['Open']	s3://pdcdatastore/raw-files/94/38/NCI-11pex-18C-Phos-c05389.raw
-255e396f-f1f8-11e9-9a07-0a80fada098c	473d83400bc1bc9dc635e334faddf33c	343434344	['Open']	s3://pdcdatastore/raw-files/94/38/NCI-11pex-18C-Phos-c05389.raw
-255e396f-f1f8-11e9-9a07-0a80fada097c	473d83400bc1bc9dc635e334faddf33c	543434443	['Open']	s3://pdcdatastore/raw-files/94/38/NCI-11pex-18C-Phos-c05389.raw
-255e396f-f1f8-11e9-9a07-0a80fada096c	473d83400bc1bc9dc635e334faddf33c	363455714	['Open']	s3://pdcdatastore/raw-files/94/38/NCI-11pex-18C-Phos-c05389.raw
-255e396f-f1f8-11e9-9a07-0a80fada010c	473d83400bc1bc9dc635e334faddf33c	363455714	['Open']	s3://pdcdatastore/raw-files/94/38/NCI-11pex-18C-Phos-c05389.raw
+255e396f-f1f8-11e9-9a07-0a80fada099c	473d83400bc1bc9dc635e334faddf33c	363455714	['Open']	[s3://pdcdatastore/test1.raw]
+255e396f-f1f8-11e9-9a07-0a80fada098c	473d83400bc1bc9dc635e334faddd33c	343434344	Open	s3://pdcdatastore/test2.raw
+255e396f-f1f8-11e9-9a07-0a80fada097c	473d83400bc1bc9dc635e334fadd433c	543434443	phs0001, phs0002	s3://pdcdatastore/test3.raw
+255e396f-f1f8-11e9-9a07-0a80fada096c	473d83400bc1bc9dc635e334fadd433c	363455714	['phs0001', 'phs0002']	['s3://pdcdatastore/test4.raw']
+255e396f-f1f8-11e9-9a07-0a80fada010c	473d83400bc1bc9dc635e334fadde33c	363455714	['Open']	s3://pdcdatastore/test5.raw

@@ -1,3 +1,31 @@
+"""
+Module for indexing object files in a manifest (against indexd's API). 
+
+The default manifest format created is a Tab-Separated Value file (tsv)
+with rows for every record.
+
+Fields that are lists (like acl, authz, and urls) separate the values with commas.
+See the Attributes session for supported column names. 
+
+All supported formats of acl and url fields are shown in the below example.
+
+uuid	md5	size	acl	url
+255e396f-f1f8-11e9-9a07-0a80fada099c	473d83400bc1bc9dc635e334faddf33c	363455714	['Open']	[s3://pdcdatastore/test1.raw]
+255e396f-f1f8-11e9-9a07-0a80fada098c	473d83400bc1bc9dc635e334faddd33c	343434344	Open	s3://pdcdatastore/test2.raw
+255e396f-f1f8-11e9-9a07-0a80fada097c	473d83400bc1bc9dc635e334fadd433c	543434443	phs0001, phs0002	s3://pdcdatastore/test3.raw
+255e396f-f1f8-11e9-9a07-0a80fada096c	473d83400bc1bc9dc635e334fadd433c	363455714	['phs0001', 'phs0002']	['s3://pdcdatastore/test4.raw']
+255e396f-f1f8-11e9-9a07-0a80fada010c	473d83400bc1bc9dc635e334fadde33c	363455714	['Open']	s3://pdcdatastore/test5.raw
+
+Attributes:
+    CURRENT_DIR (str): directory this file is in
+    GUID (list(string)): supported file id column names
+    SIZE (list(string)): supported file size column names
+    MD5 (list(string)): supported md5 hash column names
+    ACLS (list(string)): supported acl column names
+    URLS (list(string)): supported url column names
+
+"""
+import os
 import csv
 from functools import partial
 import logging
@@ -23,15 +51,17 @@ UUID_FORMAT = (
     "^.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
 )
 MD5_FORMAT = "^[a-fA-F0-9]{32}$"
+ACL_FORMAT = "^\[.*\]$"
+URL_FORMAT = "^\[.*\]$"
 
+CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+LOGGING_FILE = os.path.join(CURRENT_DIR, "manifest_indexing.log")
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(message)s",
-    handlers=[
-        logging.FileHandler("./manifest_indexing.log"),
-        logging.StreamHandler()
-    ])
+    handlers=[logging.FileHandler(LOGGING_FILE), logging.StreamHandler()],
+)
 
 logger = logging.getLogger()
 
@@ -80,28 +110,38 @@ def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
     files = []
     with open(manifest_file, "r") as csvfile:
         csvReader = csv.DictReader(csvfile, delimiter=dem)
+        fieldnames = csvReader.fieldnames
         pass_verification = True
         for row in csvReader:
             standardized_dict = {}
             for key in row.keys():
                 standardized_key = None
                 if key.lower() in GUID:
+                    fieldnames[fieldnames.index(key)] = "GUID"
                     standardized_key = "GUID"
                     if not _verify_format(row[key], UUID_FORMAT):
                         logger.error("ERROR: {} is not in uuid format", row[key])
                         pass_verification = False
 
                 elif key.lower() in FILENAME:
+                    fieldnames[fieldnames.index(key)] = "filename"
                     standardized_key = "filename"
                 elif key.lower() in MD5:
+                    fieldnames[fieldnames.index(key)] = "md5"
                     standardized_key = "md5"
                     if not _verify_format(row[key], MD5_FORMAT):
                         logger.error("ERROR: {} is not in md5 format", row[key])
                         pass_verification = False
                 elif key.lower() in ACLS:
+                    fieldnames[fieldnames.index(key)] = "acl"
                     standardized_key = "acl"
+                    if not _verify_format(row[key], ACL_FORMAT):
+                        row[key] = "[{}]".format(row[key])
                 elif key.lower() in URLS:
+                    fieldnames[fieldnames.index(key)] = "url"
                     standardized_key = "url"
+                    if not _verify_format(row[key], URL_FORMAT):
+                        row[key] = "[{}]".format(row[key])
 
                 if standardized_key:
                     standardized_dict[standardized_key] = row[key].strip()
@@ -113,9 +153,22 @@ def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
 
     if not pass_verification:
         logger.error("The manifest is not in the correct format!!!.")
-        return None
+        return None, None
 
-    return files
+    return files, fieldnames
+
+
+def _write_csv(filename, files, fieldnames=None):
+
+    if not files:
+        return
+    fieldnames = fieldnames or files[0].keys()
+    with open(filename, mode="w") as outfile:
+        writer = csv.DictWriter(outfile, delimiter="\t", fieldnames=fieldnames)
+        writer.writeheader()
+
+        for f in files:
+            writer.writerow(f)
 
 
 def _index_record(prefix, indexclient, replace_urls, thread_control, fi):
@@ -134,7 +187,10 @@ def _index_record(prefix, indexclient, replace_urls, thread_control, fi):
     """
 
     try:
-        urls = fi.get("url", "").strip().split(" ")
+        urls = [
+            element.strip().replace("'", "")
+            for element in fi.get("url", "").strip()[1:-1].split(",")
+        ]
 
         if fi.get("acl", "").strip().lower() in {"[u'open']", "['open']"}:
             acl = ["*"]
@@ -228,16 +284,33 @@ def manifest_indexing(
         auth(Gen3Auth): Gen3 auth
         prefix(str): GUID prefix
         dem(str): manifest's delimiter
+    
+    Returns:
+        logging_file(str): path to the logging file
+        output_manifest(str): path to output manifest. None if the output manifest 
+        and the input manifest are the same
 
     """
     logger.info("start the process")
     indexclient = client.IndexClient(common_url, "v0", auth=auth)
 
     try:
-        files = _get_and_verify_fileinfos_from_tsv_manifest(manifest, dem)
+        files, headers = _get_and_verify_fileinfos_from_tsv_manifest(manifest, dem)
     except Exception as e:
         logger.error("Can not read {}. Detail {}".format(manifest, e))
         return
+
+    # Generate uuid if missing
+    for fi in files:
+        if fi.get("GUID") is None:
+            fi["GUID"] = uuid.uuid4
+
+    do_gen_uuid = False
+    try:
+        headers.index("GUID")
+    except ValueError:
+        headers.append("GUID")
+        do_gen_uuid = True
 
     prefix = prefix + "/" if prefix else ""
     pool = ThreadPool(thread_num)
@@ -256,6 +329,16 @@ def manifest_indexing(
     pool.close()
     pool.join()
 
+    if do_gen_uuid:
+        return (
+            LOGGING_FILE,
+            _write_csv(
+                os.path.join(CURRENT_DIR, "output_manifest.tsv"), files, headers
+            ),
+        )
+    else:
+        LOGGING_FILE, None
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
@@ -266,7 +349,9 @@ def parse_arguments():
     indexing_cmd.add_argument(
         "--manifest_path", required=True, help="The path to input manifest"
     )
-    indexing_cmd.add_argument("--thread_num", required=False, default=1, help="Number of threads")
+    indexing_cmd.add_argument(
+        "--thread_num", required=False, default=1, help="Number of threads"
+    )
     indexing_cmd.add_argument("--prefix", required=False, help="Prefix")
     indexing_cmd.add_argument("--auth", required=False, help="auth")
     indexing_cmd.add_argument(
