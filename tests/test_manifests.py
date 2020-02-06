@@ -351,7 +351,6 @@ def test_index_manifest(gen3_index, indexd_server):
     assert rec5['acl'] == ['phs0001', 'phs0002']
     
 
-
 def test_index_manifest_with_replace_urls(gen3_index, indexd_server):
     rec1 = gen3_index.create_record(
         did="255e396f-f1f8-11e9-9a07-0a80fada099c",

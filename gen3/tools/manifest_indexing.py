@@ -164,7 +164,7 @@ def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
 def _write_csv(filename, files, fieldnames=None):
 
     if not files:
-        return
+        return None
     fieldnames = fieldnames or files[0].keys()
     with open(filename, mode="w") as outfile:
         writer = csv.DictWriter(outfile, delimiter="\t", fieldnames=fieldnames)
@@ -172,6 +172,8 @@ def _write_csv(filename, files, fieldnames=None):
 
         for f in files:
             writer.writerow(f)
+    
+    return filename
 
 
 def _index_record(prefix, indexclient, replace_urls, thread_control, fi):
@@ -300,7 +302,7 @@ def manifest_indexing(
         and the input manifest are the same
 
     """
-    logger.info("start the process")
+    logger.info("Start the process ...")
     indexclient = client.IndexClient(common_url, "v0", auth=auth)
 
     try:
@@ -338,6 +340,7 @@ def manifest_indexing(
     pool.close()
     pool.join()
 
+    logger.info("Done!!!")
     if do_gen_uuid:
         return (
             LOGGING_FILE,
@@ -346,7 +349,7 @@ def manifest_indexing(
             ),
         )
     else:
-        LOGGING_FILE, None
+        return LOGGING_FILE, None
 
 
 def parse_arguments():
