@@ -314,7 +314,7 @@ def manifest_indexing(
     # Generate uuid if missing
     for fi in files:
         if fi.get("GUID") is None:
-            fi["GUID"] = uuid.uuid4
+            fi["GUID"] = uuid.uuid4()
 
     do_gen_uuid = False
     try:
