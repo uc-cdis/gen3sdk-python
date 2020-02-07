@@ -1335,6 +1335,7 @@ class Gen3Expansion:
         response = requests.get(indexd_url, auth=self._auth_provider) #response = requests.get(indexd_url, auth=auth)
         records = response.json().get("records")
         all_records.extend(records)
+        print("\tRetrieved {} records from indexd.".format(len(all_records)))
 
         previous_did = None
         start_did = records[-1].get("did")
@@ -1345,7 +1346,7 @@ class Gen3Expansion:
             response = requests.get(next_url, auth=self._auth_provider) #response = requests.get(next_url, auth=auth)
             records = response.json().get("records")
             all_records.extend(records)
-
+            print("\tRetrieved {} records from indexd.".format(len(all_records)))
             if records:
                 start_did = response.json().get("records")[-1].get("did")
         return all_records
