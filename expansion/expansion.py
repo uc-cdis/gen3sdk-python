@@ -1364,9 +1364,21 @@ class Gen3Expansion:
         indexd_endpoint = "{}/index/index/".format(api)
         indexd_query = "{}?url={}".format(indexd_endpoint,url)
         output = requests.get(indexd_query, auth=self._auth_provider).text
-        index_record = json.loads(output)
-        guid = index_record['did'][0]
-        return index_record
+        response = json.loads(output)
+        index_records = response['records']
+        return index_records
+
+    def get_guid_for_url(self, url, api):
+        """Return the GUID for a file's URL in indexd"""
+        index_records = self.get_record_for_url(url=url,api=api)
+        if len(index_records) == 1:
+            guid = index_records[0]['did']
+            return guid
+        else:
+            guids = []
+            for index_record in index_records:
+                guids.append(index_record['did'])
+            return guids
 
     def delete_uploaded_files(self, guids):
         """
