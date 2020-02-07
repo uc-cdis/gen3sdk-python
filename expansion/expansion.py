@@ -1324,7 +1324,7 @@ class Gen3Expansion:
 
 
 # indexd functions:
-    def get_urls(self, guids,api):
+    def get_urls(self, guids, api):
         # Get URLs for a list of GUIDs
         if isinstance(guids, str):
             guids = [guids]
@@ -1355,6 +1355,18 @@ class Gen3Expansion:
                 guid = index_record['records'][0]['did']
                 guids[file_name] = guid
         return guids
+
+    def get_record_for_url(self, url, api):
+        """ Returns the indexd record for a file's storage location URL ('urls' in indexd)
+            Example:
+                exp.get_record_for_url(url=https://icgc.bionimbus.org/index/index/?url=s3://pcawg-tcga-sarc-us/2720a2b8-3f4e-5b6e-9f74-1067a068462a, api=api)
+        """
+        indexd_endpoint = "{}/index/index/".format(api)
+        indexd_query = "{}?url={}".format(indexd_endpoint,url)
+        output = requests.get(indexd_query, auth=self._auth_provider).text
+        index_record = json.loads(output)
+        guid = index_record['did'][0]
+        return index_record
 
     def delete_uploaded_files(self, guids):
         """
