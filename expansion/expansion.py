@@ -1324,6 +1324,34 @@ class Gen3Expansion:
 
 
 # indexd functions:
+
+    def get_indexd(self,api):
+        """ get all the records in indexd
+            Example:
+            exp.get_indexd(api='https://icgc.bionimbus.org/')
+        """
+        all_records = []
+        indexd_url = "{}/index/index".format(api)
+        response = requests.get(indexd_url, auth=self._auth_provider) #response = requests.get(indexd_url, auth=auth)
+        records = response.json().get("records")
+        all_records.extend(records)
+
+        previous_did = None
+        start_did = records[-1].get("did")
+
+        while start_did != previous_did:
+            previous_did = start_did
+            next_url = "{}?start={}".format(indexd_url,start_did)
+            response = requests.get(next_url, auth=self._auth_provider) #response = requests.get(next_url, auth=auth)
+            records = response.json().get("records")
+            all_records.extend(records)
+
+            if records:
+                start_did = response.json().get("records")[-1].get("did")
+        return all_records
+
+
+
     def get_urls(self, guids, api):
         # Get URLs for a list of GUIDs
         if isinstance(guids, str):

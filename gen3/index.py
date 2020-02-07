@@ -121,7 +121,7 @@ class Gen3Index:
 
         """
         all_records = []
-        url = "index/"
+        url = "index/index/"
 
         if limit:
             url += f"?limit={limit}"
@@ -166,7 +166,7 @@ class Gen3Index:
 
         """
         params = {}
-        url = "index/"
+        url = "index/index/"
 
         if limit is not None:
             params["limit"] = limit
@@ -318,7 +318,7 @@ class Gen3Index:
                 - record id
 
         """
-        response = self.client._get(f"/index/{guid}/versions")
+        response = self.client._get(f"/index/index/{guid}/versions")
         response.raise_for_status()
         versions = response.json()
 
