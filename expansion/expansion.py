@@ -1325,7 +1325,7 @@ class Gen3Expansion:
 
 # indexd functions:
 
-    def get_indexd(self,api):
+    def get_indexd(self,api,outfile=None):
         """ get all the records in indexd
             Example:
             exp.get_indexd(api='https://icgc.bionimbus.org/')
@@ -1349,6 +1349,12 @@ class Gen3Expansion:
             print("\tRetrieved {} records from indexd.".format(len(all_records)))
             if records:
                 start_did = response.json().get("records")[-1].get("did")
+        if outfile:
+            dc_regex = re.compile(r'https:\/\/(.+)\/')
+            dc = dc_regex.match(api).groups()[0]
+            outname = "{}_indexd_records.txt".format(dc)
+            with open(outname, 'w') as outfile:
+                outfile.write(all_records)
         return all_records
 
 
