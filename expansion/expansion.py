@@ -1359,7 +1359,9 @@ class Gen3Expansion:
     def get_record_for_url(self, url, api):
         """ Returns the indexd record for a file's storage location URL ('urls' in indexd)
             Example:
-                exp.get_record_for_url(url=https://icgc.bionimbus.org/index/index/?url=s3://pcawg-tcga-sarc-us/2720a2b8-3f4e-5b6e-9f74-1067a068462a, api=api)
+                api='https://icgc.bionimbus.org/'
+                url='s3://pcawg-tcga-sarc-us/2720a2b8-3f4e-5b6e-9f74-1067a068462a'
+                exp.get_record_for_url(url=url,api=api)
         """
         indexd_endpoint = "{}/index/index/".format(api)
         indexd_query = "{}?url={}".format(indexd_endpoint,url)
@@ -1369,7 +1371,12 @@ class Gen3Expansion:
         return index_records
 
     def get_guid_for_url(self, url, api):
-        """Return the GUID for a file's URL in indexd"""
+        """Return the GUID for a file's URL in indexd
+            Example:
+                api='https://icgc.bionimbus.org/'
+                url='s3://pcawg-tcga-sarc-us/2720a2b8-3f4e-5b6e-9f74-1067a068462a'
+                exp.get_guid_for_url(url=url,api=api)
+        """
         index_records = self.get_record_for_url(url=url,api=api)
         if len(index_records) == 1:
             guid = index_records[0]['did']
