@@ -309,7 +309,13 @@ def manifest_indexing(
         files, headers = _get_and_verify_fileinfos_from_tsv_manifest(manifest, dem)
     except Exception as e:
         logger.error("Can not read {}. Detail {}".format(manifest, e))
-        return
+        return None, None
+    
+    try:
+        headers.index("url")
+    except ValueError as e:
+        logger.error("The manifest {} has wrong format".format(manifest, e))
+        return None, None
 
     # Generate uuid if missing
     for fi in files:
