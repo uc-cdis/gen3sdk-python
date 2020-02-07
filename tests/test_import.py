@@ -1,11 +1,19 @@
+import pytest
+
+
 def test_import():
 
     import gen3
 
 
-def test_indexclient_import():
+def test_cdisutilstest():
 
-    from gen3.indexclient.client import IndexClient
+    import cdisutilstest
+
+
+def test_indexclient():
+
+    import indexclient
 
 
 def test_auth_import():
