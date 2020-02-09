@@ -33,7 +33,14 @@ setup(
     url="https://gen3.org/",
     version=get_version(),
     packages=find_packages(),
-    install_requires=["requests", "pandas", "indexclient"],
+    install_requires=[
+        "requests",
+        "pandas",
+        "indexclient",
+        "aiohttp",
+        "backoff",
+        "click",
+    ],
     dependency_links=[
         "git+https://github.com/uc-cdis/indexclient.git@1.6.2#egg=indexclient"
     ],
