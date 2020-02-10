@@ -1328,7 +1328,7 @@ class Gen3Expansion:
     def get_indexd(self,api,outfile=None):
         """ get all the records in indexd
             Example:
-            exp.get_indexd(api='https://icgc.bionimbus.org/')
+            exp.get_indexd(api='https://icgc.bionimbus.org/',outfile=True)
         """
         all_records = []
         indexd_url = "{}/index/index".format(api)
