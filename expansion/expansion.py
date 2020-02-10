@@ -1354,10 +1354,8 @@ class Gen3Expansion:
             dc = dc_regex.match(api).groups()[0]
             outname = "{}_indexd_records.txt".format(dc)
             with open(outname, 'w') as outfile:
-                outfile.write(all_records)
+                outfile.write(json.dumps(all_records))
         return all_records
-
-
 
     def get_urls(self, guids, api):
         # Get URLs for a list of GUIDs
