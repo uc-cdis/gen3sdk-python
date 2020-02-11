@@ -181,7 +181,7 @@ class Gen3Submission:
 
     ### Record functions
 
-    def submit_record(self, project_id, json):
+    def submit_record(self, program, project, json):
         """Submit record(s) to a project as json.
 
         Args:
@@ -195,7 +195,7 @@ class Gen3Submission:
             >>> Gen3Submission.submit_record("DCF", "CCLE", json)
 
         """
-        api_url = "{}/api/v0/submission/{}".format(self._endpoint, project_id)
+        api_url = "{}/api/v0/submission/{}-{}".format(self._endpoint, program, project)
         output = requests.put(api_url, auth=self._auth_provider, json=json)
         output.raise_for_status()
         return output.json()
