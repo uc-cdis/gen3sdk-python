@@ -427,14 +427,18 @@ class Gen3Expansion:
                 count+=1
                 backup = "{}_{}.{}".format(fname,count,ext)
 
-            print("Backing up records to delete to file '{}'.".format(backup))
+            total = len(uuids)
+            count = 0
+            print("Attempting to backup {} records to delete to file '{}'.".format(len(uuids),backup))
 
             records = []
             for uuid in uuids:
+                count+=1
                 try:
                     response = self.sub.export_record(program=program,project=project,uuid=uuid,fileformat='json',filename=None)
                     record = json.loads(json.dumps(response[0]))
                     records.append(record)
+                    print("\tRetrieving record for UUID '{}' ({}/{}).".format(uuid,count,total))
                 except Exception as e:
                     print("Exception occurred during 'export_record' request: {}.".format(e))
                     continue
