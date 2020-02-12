@@ -1,5 +1,6 @@
 import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy, re, operator
 import pandas as pd
+from os import path
 from pandas.io.json import json_normalize
 from collections import Counter
 from statistics import mean
@@ -180,7 +181,7 @@ class Gen3Expansion:
         return my_ids
 
 
-    def get_node_tsvs(self, node, projects=None, overwrite=False, remove_empty=True,outdir='node_tsvs'):
+    def get_node_tsvs(self, node, projects=None, overwrite=False, remove_empty=True, outdir='node_tsvs'):
         """Gets a TSV of the structuerd data from particular node for each project specified.
            Also creates a master TSV of merged data from each project for the specified node.
            Returns a DataFrame containing the merged data for the specified node.
@@ -396,7 +397,7 @@ class Gen3Expansion:
             return df
 
 # Delete Sheepdog records/nodes
-    def delete_records(self, uuids, project_id, chunk_size=200):
+    def delete_records(self, uuids, project_id, chunk_size=200, backup=False):
         """
         This function attempts to delete a list of UUIDs from a project.
         It returns a dictionary with a list of successfully deleted UUIDs,
@@ -406,6 +407,7 @@ class Gen3Expansion:
             uuids(list): A list of the UUIDs to delete.
             project_id(str): The project to delete the IDs from.
             chunk_size(int): The number of records to delete in each API request.
+            backup(str): If provided, deleted records are backed up to this filename.
         Example:
             delete_records(project_id=project_id,uuids=uuids,chunk_size=200)
         """
@@ -415,7 +417,30 @@ class Gen3Expansion:
             uuids = [uuids]
 
         if not isinstance(uuids, list):
-            raise Gen3UserError("Please provide a list of UUID(s) to delete with the 'uuid' argument.")
+            raise Gen3Error("Please provide a list of UUID(s) to delete with the 'uuid' argument.")
+
+        if backup:
+            ext = backup.split('.')[-1]
+            fname = ".".join(backup.split('.')[0:-1])
+            count = 0
+            while path.exists(backup):
+                count+=1
+                backup = "{}_{}.{}".format(fname,count,ext)
+
+            print("Backing up records to delete to file '{}'.".format(backup))
+
+            records = []
+            for uuid in uuids:
+                try:
+                    response = self.sub.export_record(program=program,project=project,uuid=uuid,fileformat='json',filename=None)
+                    record = json.loads(json.dumps(response[0]))
+                    records.append(record)
+                except Exception as e:
+                    print("Exception occurred during 'export_record' request: {}.".format(e))
+                    continue
+
+            with open(backup,'w') as backfile:
+                backfile.write("{}".format(records))
 
         responses = []
         errors = []
@@ -1132,7 +1157,7 @@ class Gen3Expansion:
         elif filename.lower().endswith((".tsv", ".txt")):
             df = pd.read_csv(filename, header=0, sep="\t", dtype=str).fillna("")
         else:
-            raise Gen3UserError("Please upload a file in CSV, TSV, or XLSX format.")
+            raise Gen3Error("Please upload a file in CSV, TSV, or XLSX format.")
         df.rename(
             columns={c: c.lstrip("*") for c in df.columns}, inplace=True
         )  # remove any leading asterisks in the DataFrame column names
