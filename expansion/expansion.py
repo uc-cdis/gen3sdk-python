@@ -1,5 +1,6 @@
 import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy, re, operator
 import pandas as pd
+from os import path
 from pandas.io.json import json_normalize
 from collections import Counter
 from statistics import mean
@@ -180,7 +181,7 @@ class Gen3Expansion:
         return my_ids
 
 
-    def get_node_tsvs(self, node, projects=None, overwrite=False, remove_empty=True,outdir='node_tsvs'):
+    def get_node_tsvs(self, node, projects=None, overwrite=False, remove_empty=True, outdir='node_tsvs'):
         """Gets a TSV of the structuerd data from particular node for each project specified.
            Also creates a master TSV of merged data from each project for the specified node.
            Returns a DataFrame containing the merged data for the specified node.
@@ -396,7 +397,7 @@ class Gen3Expansion:
             return df
 
 # Delete Sheepdog records/nodes
-    def delete_records(self, uuids, project_id, chunk_size=200):
+    def delete_records(self, uuids, project_id, chunk_size=200, backup=False):
         """
         This function attempts to delete a list of UUIDs from a project.
         It returns a dictionary with a list of successfully deleted UUIDs,
@@ -406,6 +407,7 @@ class Gen3Expansion:
             uuids(list): A list of the UUIDs to delete.
             project_id(str): The project to delete the IDs from.
             chunk_size(int): The number of records to delete in each API request.
+            backup(str): If provided, deleted records are backed up to this filename.
         Example:
             delete_records(project_id=project_id,uuids=uuids,chunk_size=200)
         """
@@ -415,7 +417,34 @@ class Gen3Expansion:
             uuids = [uuids]
 
         if not isinstance(uuids, list):
-            raise Gen3UserError("Please provide a list of UUID(s) to delete with the 'uuid' argument.")
+            raise Gen3Error("Please provide a list of UUID(s) to delete with the 'uuid' argument.")
+
+        if backup:
+            ext = backup.split('.')[-1]
+            fname = ".".join(backup.split('.')[0:-1])
+            count = 0
+            while path.exists(backup):
+                count+=1
+                backup = "{}_{}.{}".format(fname,count,ext)
+
+            total = len(uuids)
+            count = 0
+            print("Attempting to backup {} records to delete to file '{}'.".format(len(uuids),backup))
+
+            records = []
+            for uuid in uuids:
+                count+=1
+                try:
+                    response = self.sub.export_record(program=program,project=project,uuid=uuid,fileformat='json',filename=None)
+                    record = json.loads(json.dumps(response[0]))
+                    records.append(record)
+                    print("\tRetrieving record for UUID '{}' ({}/{}).".format(uuid,count,total))
+                except Exception as e:
+                    print("Exception occurred during 'export_record' request: {}.".format(e))
+                    continue
+
+            with open(backup,'w') as backfile:
+                backfile.write("{}".format(records))
 
         responses = []
         errors = []
@@ -1132,7 +1161,7 @@ class Gen3Expansion:
         elif filename.lower().endswith((".tsv", ".txt")):
             df = pd.read_csv(filename, header=0, sep="\t", dtype=str).fillna("")
         else:
-            raise Gen3UserError("Please upload a file in CSV, TSV, or XLSX format.")
+            raise Gen3Error("Please upload a file in CSV, TSV, or XLSX format.")
         df.rename(
             columns={c: c.lstrip("*") for c in df.columns}, inplace=True
         )  # remove any leading asterisks in the DataFrame column names
@@ -1324,6 +1353,39 @@ class Gen3Expansion:
 
 
 # indexd functions:
+
+    def get_indexd(self,api,outfile=None):
+        """ get all the records in indexd
+            Example:
+            exp.get_indexd(api='https://icgc.bionimbus.org/',outfile=True)
+        """
+        all_records = []
+        indexd_url = "{}/index/index".format(api)
+        response = requests.get(indexd_url, auth=self._auth_provider) #response = requests.get(indexd_url, auth=auth)
+        records = response.json().get("records")
+        all_records.extend(records)
+        print("\tRetrieved {} records from indexd.".format(len(all_records)))
+
+        previous_did = None
+        start_did = records[-1].get("did")
+
+        while start_did != previous_did:
+            previous_did = start_did
+            next_url = "{}?start={}".format(indexd_url,start_did)
+            response = requests.get(next_url, auth=self._auth_provider) #response = requests.get(next_url, auth=auth)
+            records = response.json().get("records")
+            all_records.extend(records)
+            print("\tRetrieved {} records from indexd.".format(len(all_records)))
+            if records:
+                start_did = response.json().get("records")[-1].get("did")
+        if outfile:
+            dc_regex = re.compile(r'https:\/\/(.+)\/')
+            dc = dc_regex.match(api).groups()[0]
+            outname = "{}_indexd_records.txt".format(dc)
+            with open(outname, 'w') as outfile:
+                outfile.write(json.dumps(all_records))
+        return all_records
+
     def get_urls(self, guids, api):
         # Get URLs for a list of GUIDs
         if isinstance(guids, str):

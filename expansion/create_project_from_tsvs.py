@@ -32,4 +32,3 @@
                 raise Gen3Error("Couldn't create project!")
 
         # submit node TSVs in the proper order:
-        

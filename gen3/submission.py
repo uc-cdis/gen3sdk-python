@@ -3,19 +3,14 @@ import requests
 import pandas as pd
 import os
 
-
 class Gen3Error(Exception):
     pass
-
 
 class Gen3SubmissionQueryError(Gen3Error):
     pass
 
-
 class Gen3UserError(Gen3Error):
     pass
-
-
 
 class Gen3Submission:
     """Submit/Export/Query data from a Gen3 Submission system.
@@ -48,7 +43,247 @@ class Gen3Submission:
         outfile = open(filename, "w")
         outfile.write(output)
         outfile.close
-        print("\nOutput written to file: "+filename)
+        print("\nOutput written to file: " + filename)
+
+    ### Program functions
+
+    def get_programs(self):
+        """List registered programs
+
+        """
+        api_url = f"{self._endpoint}/api/v0/submission/"
+        output = requests.get(api_url, auth=self._auth_provider)
+        output.raise_for_status()
+        return output.json()
+
+    def create_program(self, json):
+        """Create a program.
+        Args:
+            json (object): The json of the program to create
+
+        Examples:
+            This creates a program in the sandbox commons.
+
+            >>> Gen3Submission.create_program(json)
+        """
+        api_url = "{}/api/v0/submission/".format(self._endpoint)
+        output = requests.post(api_url, auth=self._auth_provider, json=json)
+        output.raise_for_status()
+        return output.json()
+
+    def delete_program(self, program):
+        """Delete a program.
+
+        This deletes an empty program from the commons.
+
+        Args:
+            program (str): The program to delete.
+
+        Examples:
+            This deletes the "DCF" program.
+
+            >>> Gen3Submission.delete_program("DCF")
+
+        """
+        api_url = "{}/api/v0/submission/{}".format(self._endpoint, program)
+        output = requests.delete(api_url, auth=self._auth_provider)
+        output.raise_for_status()
+        return output
+
+    ### Project functions
+
+    def get_projects(self, program):
+        """List registered projects for a given program
+
+        Args:
+            program: the name of the program you want the projects from
+
+        Example:
+            This lists all the projects under the DCF program
+
+            >>> Gen3Submission.get_projects("DCF")
+
+        """
+        api_url = f"{self._endpoint}/api/v0/submission/{program}"
+        output = requests.get(api_url, auth=self._auth_provider)
+        output.raise_for_status()
+        return output.json()
+
+    def create_project(self, program, json):
+        """Create a project.
+        Args:
+            program (str): The program to create a project on
+            json (object): The json of the project to create
+
+        Examples:
+            This creates a project on the DCF program in the sandbox commons.
+
+            >>> Gen3Submission.create_project("DCF", json)
+        """
+        api_url = "{}/api/v0/submission/{}".format(self._endpoint, program)
+        output = requests.put(api_url, auth=self._auth_provider, json=json)
+        output.raise_for_status()
+        return output.json()
+
+    def delete_project(self, program, project):
+        """Delete a project.
+
+        This deletes an empty project from the commons.
+
+        Args:
+            program (str): The program containing the project to delete.
+            project (str): The project to delete.
+
+        Examples:
+            This deletes the "CCLE" project from the "DCF" program.
+
+            >>> Gen3Submission.delete_project("DCF", "CCLE")
+
+        """
+        api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
+        output = requests.delete(api_url, auth=self._auth_provider)
+        output.raise_for_status()
+        return output
+
+    def get_project_dictionary(self, program, project):
+        """Get dictionary schema for a given project
+
+        Args:
+            program: the name of the program the project is from
+            project: the name of the project you want the dictionary schema from
+
+        Example:
+
+            >>> Gen3Submission.get_project_dictionary("DCF", "CCLE")
+
+        """
+        api_url = f"{self._endpoint}/api/v0/submission/{program}/{project}/_dictionary"
+        output = requests.get(api_url, auth=self._auth_provider)
+        output.raise_for_status()
+        return output.json()
+
+    def open_project(self, program, project):
+        """Mark a project ``open``. Opening a project means uploads, deletions, etc. are allowed.
+
+        Args:
+            program: the name of the program the project is from
+            project: the name of the project you want to 'open'
+
+        Example:
+
+            >>> Gen3Submission.get_project_manifest("DCF", "CCLE")
+
+        """
+        api_url = f"{self._endpoint}/api/v0/submission/{program}/{project}/open"
+        output = requests.put(api_url, auth=self._auth_provider)
+        output.raise_for_status()
+        return output.json()
+
+    ### Record functions
+
+    def submit_record(self, program, project, json):
+        """Submit record(s) to a project as json.
+
+        Args:
+            program (str): The program to submit to.
+            project (str): The project to submit to.
+            json (object): The json defining the record(s) to submit. For multiple records, the json should be an array of records.
+
+        Examples:
+            This submits records to the CCLE project in the sandbox commons.
+
+            >>> Gen3Submission.submit_record("DCF", "CCLE", json)
+
+        """
+        api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
+        output = requests.put(api_url, auth=self._auth_provider, json=json)
+        output.raise_for_status()
+        return output.json()
+
+    def delete_record(self, program, project, uuid):
+        """Delete a record from a project.
+        Args:
+            program (str): The program to delete from.
+            project (str): The project to delete from.
+            uuid (str): The uuid of the record to delete
+
+        Examples:
+            This deletes a record from the CCLE project in the sandbox commons.
+
+            >>> Gen3Submission.delete_record("DCF", "CCLE", uuid)
+        """
+        api_url = "{}/api/v0/submission/{}/{}/entities/{}".format(
+            self._endpoint, program, project, uuid
+        )
+        output = requests.delete(api_url, auth=self._auth_provider)
+        output.raise_for_status()
+        return output
+
+    def export_record(self, program, project, uuid, fileformat, filename=None):
+        """Export a single record into json.
+
+        Args:
+            program (str): The program the record is under.
+            project (str): The project the record is under.
+            uuid (str): The UUID of the record to export.
+            fileformat (str): Export data as either 'json' or 'tsv'
+            filename (str): Name of the file to export to; if no filename is provided, prints data to screen
+
+        Examples:
+            This exports a single record from the sandbox commons.
+
+            >>> Gen3Submission.export_record("DCF", "CCLE", "d70b41b9-6f90-4714-8420-e043ab8b77b9", "json", filename="DCF-CCLE_one_record.json")
+
+        """
+        assert fileformat in [
+            "json",
+            "tsv",
+        ], "File format must be either 'json' or 'tsv'"
+        api_url = "{}/api/v0/submission/{}/{}/export?ids={}&format={}".format(
+            self._endpoint, program, project, uuid, fileformat
+        )
+        output = requests.get(api_url, auth=self._auth_provider).text
+        if filename is None:
+            if fileformat == "json":
+                output = json.loads(output)
+            return output
+        else:
+            self.__export_file(filename, output)
+            return output
+
+    def export_node(self, program, project, node_type, fileformat, filename=None):
+        """Export all records in a single node type of a project.
+
+        Args:
+            program (str): The program to which records belong.
+            project (str): The project to which records belong.
+            node_type (str): The name of the node to export.
+            fileformat (str): Export data as either 'json' or 'tsv'
+            filename (str): Name of the file to export to; if no filename is provided, prints data to screen
+
+        Examples:
+            This exports all records in the "sample" node from the CCLE project in the sandbox commons.
+
+            >>> Gen3Submission.export_node("DCF", "CCLE", "sample", "tsv", filename="DCF-CCLE_sample_node.tsv")
+
+        """
+        assert fileformat in [
+            "json",
+            "tsv",
+        ], "File format must be either 'json' or 'tsv'"
+        api_url = "{}/api/v0/submission/{}/{}/export/?node_label={}&format={}".format(
+            self._endpoint, program, project, node_type, fileformat
+        )
+        output = requests.get(api_url, auth=self._auth_provider).text
+        if filename is None:
+            if fileformat == "json":
+                output = json.loads(output)
+            return output
+        else:
+            self.__export_file(filename, output)
+            return output
+
+    ### Query functions
 
     def query(self, query_txt, variables=None, max_tries=1):
         """Execute a GraphQL query against a data commons.
@@ -88,163 +323,23 @@ class Gen3Submission:
 
         return data
 
-    def export_record(self, program, project, uuid, fileformat, filename=None):
-        """Export a single record into json.
+    def get_graphql_schema(self):
+        """Returns the GraphQL schema for a commons.
 
-        Args:
-            program (str): The program the record is under.
-            project (str): The project the record is under.
-            uuid (str): The UUID of the record to export.
-            fileformat (str): Export data as either 'json' or 'tsv'
-            filename (str): Name of the file to export to; if no filename is provided, prints data to screen
+        This runs the GraphQL introspection query against a commons and returns the results.
 
         Examples:
-            This exports a single record from the sandbox commons.
+            This returns the GraphQL schema.
 
-            >>> Gen3Submission.export_record("DCF", "CCLE", "d70b41b9-6f90-4714-8420-e043ab8b77b9", "json", filename="DCF-CCLE_one_record.json")
-
-        """
-        assert fileformat in ["json","tsv"],"File format must be either 'json' or 'tsv'"
-        api_url = "{}/api/v0/submission/{}/{}/export?ids={}&format={}".format(
-            self._endpoint, program, project, uuid, fileformat
-        )
-        output = requests.get(api_url, auth=self._auth_provider).text
-        if filename is None:
-            if fileformat == 'json': output = json.loads(output)
-            return output
-        else:
-            self.__export_file(filename, output)
-            return output
-
-    def export_node(self, program, project, node_type, fileformat, filename=None):
-        """Export all records in a single node type of a project.
-
-        Args:
-            program (str): The program to which records belong.
-            project (str): The project to which records belong.
-            node_type (str): The name of the node to export.
-            fileformat (str): Export data as either 'json' or 'tsv'
-            filename (str): Name of the file to export to; if no filename is provided, prints data to screen
-
-        Examples:
-            This exports all records in the "sample" node from the CCLE project in the sandbox commons.
-
-            >>> Gen3Submission.export_node("DCF", "CCLE", "sample", "tsv", filename="DCF-CCLE_sample_node.tsv")
+            >>> Gen3Submission.get_graphql_schema()
 
         """
-        assert fileformat in ["json","tsv"],"File format must be either 'json' or 'tsv'"
-        api_url = "{}/api/v0/submission/{}/{}/export/?node_label={}&format={}".format(
-            self._endpoint, program, project, node_type, fileformat
-        )
-        output = requests.get(api_url, auth=self._auth_provider).text
-        if filename is None:
-            if fileformat == 'json': output = json.loads(output)
-            return output
-        else:
-            self.__export_file(filename, output)
-            return output
+        api_url = "{}/api/v0/submission/getschema".format(self._endpoint)
+        output = requests.get(api_url).text
+        data = json.loads(output)
+        return data
 
-    def submit_record(self, program, project, json):
-        """Submit record(s) to a project as json.
-
-        Args:
-            program (str): The program to submit to.
-            project (str): The project to submit to.
-            json (object): The json defining the record(s) to submit. For multiple records, the json should be an array of records.
-
-        Examples:
-            This submits records to the CCLE project in the sandbox commons.
-
-            >>> Gen3Submission.submit_record("DCF", "CCLE", json)
-
-        """
-        api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
-        output = requests.put(api_url, auth=self._auth_provider, json=json).text
-        return output
-
-    def delete_record(self, program, project, uuid):
-        """Delete a record from a project.
-        Args:
-            program (str): The program to delete from.
-            project (str): The project to delete from.
-            uuid (str): The uuid of the record to delete
-
-        Examples:
-            This deletes a record from the CCLE project in the sandbox commons.
-
-            >>> Gen3Submission.delete_record("DCF", "CCLE", uuid)
-        """
-        api_url = "{}/api/v0/submission/{}/{}/entities/{}".format(
-            self._endpoint, program, project, uuid
-        )
-        output = requests.delete(api_url, auth=self._auth_provider).text
-        return output
-
-    def create_project(self, program, json):
-        """Create a project.
-        Args:
-            program (str): The program to create a project on
-            json (object): The json of the project to create
-
-        Examples:
-            This creates a project on the DCF program in the sandbox commons.
-
-            >>> Gen3Submission.create_project("DCF", json)
-        """
-        api_url = "{}/api/v0/submission/{}".format(self._endpoint, program)
-        output = requests.put(api_url, auth=self._auth_provider, json=json).text
-        return output
-
-    def delete_project(self, program, project):
-        """Delete a project.
-
-        This deletes an empty project from the commons.
-
-        Args:
-            program (str): The program containing the project to delete.
-            project (str): The project to delete.
-
-        Examples:
-            This deletes the "CCLE" project from the "DCF" program.
-
-            >>> Gen3Submission.delete_project("DCF", "CCLE")
-
-        """
-        api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
-        output = requests.delete(api_url, auth=self._auth_provider).text
-        return output
-
-    def create_program(self, json):
-        """Create a program.
-        Args:
-            json (object): The json of the program to create
-
-        Examples:
-            This creates a program in the sandbox commons.
-
-            >>> Gen3Submission.create_program(json)
-        """
-        api_url = "{}/api/v0/submission/".format(self._endpoint)
-        output = requests.post(api_url, auth=self._auth_provider, json=json).text
-        return output
-
-    def delete_program(self, program):
-        """Delete a program.
-
-        This deletes an empty program from the commons.
-
-        Args:
-            program (str): The program to delete.
-
-        Examples:
-            This deletes the "DCF" program.
-
-            >>> Gen3Submission.delete_program("DCF")
-
-        """
-        api_url = "{}/api/v0/submission/{}".format(self._endpoint, program)
-        output = requests.delete(api_url, auth=self._auth_provider).text
-        return output
+    ### Dictionary functions
 
     def get_dictionary_node(self, node_type):
         """Returns the dictionary schema for a specific node.
@@ -280,22 +375,23 @@ class Gen3Submission:
         """
         return self.get_dictionary_node("_all")
 
-    def get_graphql_schema(self):
-        """Returns the GraphQL schema for a commons.
+    ### File functions
 
-        This runs the GraphQL introspection query against a commons and returns the results.
+    def get_project_manifest(self, program, project):
+        """Get a projects file manifest
 
-        Examples:
-            This returns the GraphQL schema.
+        Args:
+            program: the name of the program the project is from
+            project: the name of the project you want the manifest from
 
-            >>> Gen3Submission.get_graphql_schema()
+        Example:
+
+            >>> Gen3Submission.get_project_manifest("DCF", "CCLE")
 
         """
-        api_url = "{}/api/v0/submission/getschema".format(self._endpoint)
-        output = requests.get(api_url).text
-        data = json.loads(output)
-        return data
-
+        api_url = f"{self._endpoint}/api/v0/submission/{program}/{project}/manifest"
+        output = requests.get(api_url, auth=self._auth_provider)
+        return output
 
     def submit_file(self, project_id, filename, chunk_size=30, row_offset=0):
         """Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.
@@ -317,7 +413,7 @@ class Gen3Submission:
         if f.lower().endswith(".csv"):
             df = pd.read_csv(filename, header=0, sep=",", dtype=str).fillna("")
         elif f.lower().endswith(".xlsx"):
-            xl = pd.ExcelFile(filename, dtype=str)  # load excel file
+            xl = pd.ExcelFile(filename)  # load excel file
             sheet = xl.sheet_names[0]  # sheetname
             df = xl.parse(sheet)  # save sheet as dataframe
             converters = {
@@ -383,6 +479,7 @@ class Gen3Submission:
                 ).text
             except requests.exceptions.ConnectionError as e:
                 results["details"].append(e.message)
+                continue
 
             # Handle the API response
             if (
@@ -405,7 +502,6 @@ class Gen3Submission:
                     raise Gen3Error("Unable to parse API response as JSON!")
 
                 if "message" in json_res and "code" not in json_res:
-                    print(json_res)  # trouble-shooting
                     print(
                         "\t No code in the API response for Chunk {}: {}".format(
                             str(count), json_res.get("message")
@@ -415,7 +511,7 @@ class Gen3Submission:
                     results["responses"].append(
                         "Error Chunk {}: {}".format(str(count), json_res.get("message"))
                     )
-                    results["other"].append(json_res.get("message"))
+                    results["other"].append(json_res.get("transactional_errors"))
 
                 elif "code" not in json_res:
                     print("\t Unhandled API-response: {}".format(response))
