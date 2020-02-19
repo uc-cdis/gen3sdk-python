@@ -884,7 +884,7 @@ class Gen3Expansion:
         """ get your temporary access token using your credentials downloaded from the data portal
         """
         token_url = "{}/user/credentials/api/access_token".format(api)
-        resp = requests.post(token_url, auth=auth)
+        resp = requests.post(token_url, auth=self._auth_provider)
         if (resp.status_code != 200):
             raise(Exception(resp.reason))
         token = resp.json()['access_token']
@@ -901,7 +901,7 @@ class Gen3Expansion:
 
         try:
             # get the pre-signed URL
-            res = requests.get(download_url, auth=auth) # get the presigned URL
+            res = requests.get(download_url, auth=self._auth_provider) # get the presigned URL
             file_url = json.loads(response.content)['url']
 
             # extract the filename from the pre-signed url
