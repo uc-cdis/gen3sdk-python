@@ -2,13 +2,20 @@
 This script can be used to convert a file download manifest from https://dcc.icgc.org/
 to a manifest that the gen3-client (https://github.com/uc-cdis/cdis-data-client) can use.
 
-Example:
-python delete_uploaded_files.py -a https://nci-crdc-demo.datacommons.io/ -u user@datacommons.org -c ~/Downloads/demo-credentials.json
+Examples:
+python dcc_to_gen3.py -m dcc_manifest.sh
+python dcc_to_gen3.py -m dcc_manifest.sh -i icgc.bionimbus.org_indexd_records.txt
 
 Arguments:
-    -a or --api: The URL for the data commons the file was uploaded to.
-    -u or --user: The uploader's login email (or user ID).
-    -c or --creds: The location of the credentials.json downloaded from the data commons portal (Windmill's "Profile" page).
+    - manifest(str, required): The manifest downloaded from the DCC portal,e.g., "/Users/christopher/Documents/Notes/ICGC/dcc_manifest.pdc.1581529402015.sh".
+    - indexd(str, not required): If a file already exists with the data commons indexd records, provide the path to that file. Otherwise, if not provided, the indexd database will be queried until it collects all file records.
+
+Use the generated manifest with the gen3-client, downloaded here: https://github.com/uc-cdis/cdis-data-client/releases/latest
+
+Gen3-Client Example:
+    gen3-client configure --profile=icgc --apiendpoint=https://icgc.bionimbus.org/ --cred=~/Downloads/icgc-credentials.json
+    gen3-client download-multiple --profile=icgc --manifest=gen3_manifest_dcc_manifest.sh.json --no-prompt --download-path='icgc_pcawg_files'
+
 """
 import json, requests, os, argparse, re
 import pandas as pd
@@ -17,44 +24,33 @@ global locs, irecs, args, token, all_records
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Generate a gen3-client manifest from a DCC manifest by retrieving GUIDs for files from indexd.")
-    parser.add_argument("-m", "--manifest", required=True, help="The data commons URL.",default="dcc_manifest.pdc.1581529402015.sh")
+    parser.add_argument("-m", "--manifest", required=True, help="The manifest downloaded from DCC portal.",default="dcc_manifest.pdc.1581529402015.sh")
     parser.add_argument("-a", "--api", required=False, help="The data commons URL.",default="https://icgc.bionimbus.org/")
     parser.add_argument("-i", "--indexd", required=False, help="If a file already exists with the data commons indexd records, provide the path to that file.",default=False) # default="icgc.bionimbus.org_indexd_records.txt"
-    parser.add_argument("-c", "--cred", required=False, help="The location of the credentails.json file containing the user's API keys downloaded from the /profile page of the commons.", default="/Users/christopher/Downloads/icgc-credentials.json")
+#    parser.add_argument("-c", "--cred", required=False, help="The location of the credentails.json file containing the user's API keys downloaded from the /profile page of the commons (https://icgc.bionimbus.org/identity)", default="/Users/christopher/Downloads/icgc-credentials.json")
     args = parser.parse_args()
     return args
 
-def get_token():
-    """ get your temporary access token using your credentials downloaded from the data portal
-    """
-    with open (args.cred, 'r') as f:
-        credentials = json.load(f)
-    token_url = "{}/user/credentials/api/access_token".format(args.api)
-    resp = requests.post(token_url, json=credentials)
-    if (resp.status_code != 200):
-        raise(Exception(resp.reason))
-    token = resp.json()['access_token']
-    return token
-
-    # trouble-shooting
-    # cred = '/Users/christopher/Downloads/icgc-credentials.json'
-    # api = 'https://icgc.bionimbus.org/'
-    # with open (cred, 'r') as f:
-    #     credentials = json.load(f)
-    # token_url = "{}/user/credentials/api/access_token".format(api)
-    # resp = requests.post(token_url, json=credentials)
-    # if (resp.status_code != 200):
-    #     raise(Exception(resp.reason))
-    # token = resp.json()['access_token']
-
+# def get_token():
+#     """ get your temporary access token using your credentials downloaded from the data portal
+#     """
+#     with open (args.cred, 'r') as f:
+#         credentials = json.load(f)
+#     token_url = "{}/user/credentials/api/access_token".format(args.api)
+#     resp = requests.post(token_url, json=credentials)
+#     if (resp.status_code != 200):
+#         raise(Exception(resp.reason))
+#     token = resp.json()['access_token']
+#     return token
 
 def get_indexd(outfile=True):
     """ get all the records in indexd
     """
-    headers = {'Authorization': 'bearer ' + get_token()}
+#    headers = {'Authorization': 'bearer ' + get_token()}
     all_records = []
     indexd_url = "{}/index/index".format(args.api)
-    response = requests.get(indexd_url, headers=headers) #response = requests.get(indexd_url, auth=auth)
+#    response = requests.get(indexd_url, headers=headers) #response = requests.get(indexd_url, auth=auth)
+    response = requests.get(indexd_url) #response = requests.get(indexd_url, auth=auth)
     records = response.json().get("records")
     all_records.extend(records)
     print("\tRetrieved {} records from indexd.".format(len(all_records)))
@@ -65,7 +61,8 @@ def get_indexd(outfile=True):
     while start_did != previous_did:
         previous_did = start_did
         next_url = "{}?start={}".format(indexd_url,start_did)
-        response = requests.get(next_url, headers=headers) #response = requests.get(next_url, auth=auth)
+#        response = requests.get(next_url, headers=headers) #response = requests.get(next_url, auth=auth)
+        response = requests.get(next_url) #response = requests.get(next_url, auth=auth)
         records = response.json().get("records")
         all_records.extend(records)
         print("\tRetrieved {} records from indexd.".format(len(all_records)))
@@ -92,10 +89,6 @@ def read_dcc_manifest():
 
     return dcc_files
 
-# # manifest = 'dcc_manifest.sh'
-#         with open(manifest, 'r') as dcc_file:
-#             dcc_files = [line.rstrip() for line in dcc_file]
-
 def write_manifest():
     """ write the gen3-client manifest
     """
@@ -111,7 +104,6 @@ def write_manifest():
 
             fsize = locs[loc]['size']
             object_id = locs[loc]['did']
-            #print("\t{} file_size: {}, object_id: {}".format(loc,fsize,object_id))
 
             manifest.write('\n\t{')
             manifest.write('"object_id": "{}", '.format(object_id))
@@ -161,13 +153,33 @@ if __name__ == "__main__":
 
 
 
-# python dcc_to_gen3.py -m dcc_manifest.sh
-# python dcc_to_gen3.py -m dcc_manifest.sh -i icgc.bionimbus.org_indexd_records.txt
 
 
-# indexd = 'icgc.bionimbus.org_indexd_records.txt'
-# with open(indexd, 'r') as indexd_file:
-#     itxt = indexd_file.readline()
-#     irecs = json.loads(itxt)
 
-# gen3-client download-multiple --profile=icgc --manifest=gen3_manifest_dcc_manifest.sh.json --no-prompt --download-path='pcawg_files'
+
+
+
+
+
+    # # trouble-shooting
+    # cred = '/Users/christopher/Downloads/icgc-credentials.json'
+    # api = 'https://icgc.bionimbus.org/'
+    # with open (cred, 'r') as f:
+    #     credentials = json.load(f)
+    # token_url = "{}/user/credentials/api/access_token".format(api)
+    # resp = requests.post(token_url, json=credentials)
+    # if (resp.status_code != 200):
+    #     raise(Exception(resp.reason))
+    # token = resp.json()['access_token']
+    #
+    # headers = {'Authorization': 'bearer ' + token}
+    # all_records = []
+    # indexd_url = "{}/index/index".format(api)
+    # response = requests.get(indexd_url, headers=headers) #response = requests.get(indexd_url, auth=auth)
+    # records = response.json().get("records")
+    #
+    # response = requests.get(indexd_url)
+
+# # manifest = 'dcc_manifest.sh'
+#         with open(manifest, 'r') as dcc_file:
+#             dcc_files = [line.rstrip() for line in dcc_file]
