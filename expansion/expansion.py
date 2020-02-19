@@ -916,7 +916,7 @@ class Gen3Expansion:
 
             # get the file and write the contents to the file_name
             res_file = requests.get(file_url)
-            open("./{}".format(filename), 'wb').write(res_file.content)
+            open("./{}".format(file_name), 'wb').write(res_file.content)
 
         except Exception as e:
             print("\tFile '{}' failed to download: {}".format(file_name,e))
