@@ -902,7 +902,7 @@ class Gen3Expansion:
         try:
             # get the pre-signed URL
             res = requests.get(download_url, auth=self._auth_provider) # get the presigned URL
-            file_url = json.loads(response.content)['url']
+            file_url = json.loads(res.content)['url']
 
             # extract the filename from the pre-signed url
             f_regex = re.compile(r'.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}\/(.*)\?.*')
