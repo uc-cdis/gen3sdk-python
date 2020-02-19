@@ -880,7 +880,48 @@ class Gen3Expansion:
                 # nested dict: all_guids[project][node]
         return all_guids
 
-    def download_files_by_guids(self, guids=None, profile='profile', client='/home/jovyan/.gen3/gen3-client'):
+    def get_token(self):
+        """ get your temporary access token using your credentials downloaded from the data portal
+        """
+        token_url = "{}/user/credentials/api/access_token".format(api)
+        resp = requests.post(token_url, auth=auth)
+        if (resp.status_code != 200):
+            raise(Exception(resp.reason))
+        token = resp.json()['access_token']
+        return token
+
+    def download_file_endpoint(self, guid=None):
+        """ download files by getting a presigned-url from the "/user/data/download/<guid>" endpoint
+        """
+        if not isinstance(guid,str):
+            raise Gen3Error("Please, supply GUID as string.")
+
+        download_url = "{}/user/data/download/{}".format(self._endpoint, guid)
+        print("Downloading file from '{}'.".format(download_url))
+
+        try:
+            # get the pre-signed URL
+            res = requests.get(download_url, auth=auth) # get the presigned URL
+            file_url = json.loads(response.content)['url']
+
+            # extract the filename from the pre-signed url
+            f_regex = re.compile(r'.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}\/(.*)\?.*')
+            fmatch = f_regex.match(res.text)
+            if fmatch:
+                file_name = fmatch.groups()[0]
+                print("\tSaving downloaded file as '{}'".format(file_name))
+            else:
+                file_name = guid
+                print("No matching filename in the response. Saving file with GUID as filename.")
+
+            # get the file and write the contents to the file_name
+            res_file = requests.get(file_url)
+            open("./{}".format(filename), 'wb').write(res_file.content)
+
+        except Exception as e:
+            print("\tFile '{}' failed to download: {}".format(file_name,e))
+
+    def download_files_client(self, guids=None, profile='profile', client='/home/jovyan/.gen3/gen3-client'):
         # Make a directory for files
         mydir = 'downloaded_data_files'
         file_names = {}
