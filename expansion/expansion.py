@@ -916,12 +916,14 @@ class Gen3Expansion:
 
             # get the file and write the contents to the file_name
             res_file = requests.get(file_url)
-            open("./{}".format(filename), 'wb').write(res_file.content)
+            open("./{}".format(file_name), 'wb').write(res_file.content)
 
         except Exception as e:
             print("\tFile '{}' failed to download: {}".format(file_name,e))
 
-    def download_files_client(self, guids=None, profile='profile', client='/home/jovyan/.gen3/gen3-client'):
+        return file_name
+
+    def download_files_for_guids(self, guids=None, profile='profile', client='/home/jovyan/.gen3/gen3-client',method='endpoint'):
         # Make a directory for files
         mydir = 'downloaded_data_files'
         file_names = {}
@@ -931,24 +933,33 @@ class Gen3Expansion:
             guids = [guids]
         if isinstance(guids, list):
             for guid in guids:
-                cmd = client+' download-single --filename-format=combined --no-prompt --profile='+profile+' --guid='+guid
-                try:
-                    output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
+                if method == 'client':
+                    cmd = client+' download-single --filename-format=combined --no-prompt --profile='+profile+' --guid='+guid
                     try:
-                        file_name = re.search('Successfully downloaded (.+)\\n', output).group(1)
-                        cmd = 'mv ' + file_name + ' ' + mydir
+                        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
                         try:
-                            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
-                        except Exception as e:
-                            output = e.output.decode('UTF-8')
-                            print("ERROR:" + output)
-                    except AttributeError:
-                        file_name = '' # apply your error handling
-                    print('Successfully downloaded: '+file_name)
-                    file_names[guid] = file_name
-                except Exception as e:
-                    output = e.output.decode('UTF-8')
-                    print("ERROR:" + output)
+                            file_name = re.search('Successfully downloaded (.+)\\n', output).group(1)
+                            cmd = 'mv ' + file_name + ' ' + mydir
+                            try:
+                                output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
+                            except Exception as e:
+                                output = e.output.decode('UTF-8')
+                                print("ERROR:" + output)
+                        except AttributeError:
+                            file_name = '' # apply your error handling
+                        print('Successfully downloaded: '+file_name)
+                        file_names[guid] = file_name
+                    except Exception as e:
+                        output = e.output.decode('UTF-8')
+                        print("ERROR:" + output)
+                elif method == 'endpoint':
+                    try:
+                        file_name = self.download_file_endpoint(guid=guid)
+                        file_names[guid] = file_name
+                    except Exception as e:
+                        print("Failed to download GUID {}: {}".format(guid,e))
+                else:
+                    print("\tPlease set method to either 'endpoint' or 'client'!".format())
         else:
             print('Provide a list of guids to download: "get_file_by_guid(guids=guid_list)"')
         return file_names
