@@ -615,3 +615,7 @@ class Gen3Submission:
         print("Failed invalid records: {}".format(str(len(results["invalid"]))))
 
         return results
+
+    def new_function():
+        nothing = ''
+        return nothing
