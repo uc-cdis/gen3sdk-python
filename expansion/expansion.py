@@ -294,7 +294,7 @@ class Gen3Expansion:
         return output
 
 # Query Functions
-    def paginate_query(self, node, project_id=None, props=['id','submitter_id'], chunk_size=10000, format='json',args=None):
+    def paginate_query_old(self, node, project_id=None, props=['id','submitter_id'], chunk_size=10000, format='json',args=None):
         """Function to paginate a query to avoid time-outs.
         Returns a json of all the records in the node.
 
@@ -391,6 +391,68 @@ class Gen3Expansion:
             return df
         else:
             return total
+
+    def paginate_query(self, node, project_id=None, props=[], args=None, chunk_size=5000, offset=0, format='json'):
+        """Function to paginate a query to avoid time-outs.
+        Returns a json of all the records in the node.
+
+        Args:
+            node (str): The node to query.
+            project_id(str): The project_id to limit the query to. Default is None.
+            props(list): A list of properties in the node to return.
+            chunk_size(int): The number of records to return per query. Default is 10000.
+            args(str): Put graphQL arguments here. For example, 'with_path_to:{type:"case",submitter_id:"case-01"}', etc. Don't enclose in parentheses.
+        Example:
+            paginate_query('demographic')
+        """
+        props = list(set(['id','submitter_id']+props))
+        properties = ' '.join(map(str,props))
+
+        if project_id is not None:
+            if args is None:
+                query_txt = """{%s (first: %s, offset: %s, project_id:"%s"){%s}}""" % (node, chunk_size, offset, project_id, properties)
+            else:
+                query_txt = """{%s (first: %s, offset: %s, project_id:"%s", %s){%s}}""" % (node, chunk_size, offset, project_id, args, properties)
+        else:
+            if args is None:
+                query_txt = """{%s (first: %s, offset: %s){%s}}""" % (node, chunk_size, offset, properties)
+            else:
+                query_txt = """{%s (first: %s, offset: %s, %s){%s}}""" % (node, chunk_size, offset, args, properties)
+
+        total = {}
+        total['data'] = {}
+        total['data'][node] = []
+
+        records = list(range(chunk_size))
+        while len(records) == chunk_size:
+
+            res = self.sub.query(query_txt)
+
+            if 'data' in res:
+                records = res['data'][node]
+                total['data'][node] +=  records # res['data'][node] should be a list
+                offset += chunk_size
+
+            elif 'error' in res:
+                print(res['error'])
+                if chunk_size > 1:
+                    chunk_size = int(chunk_size/2)
+                    print("\tHalving chunk_size to: {}.".format(chunk_size))
+                else:
+                    print("\tQuery timing out with chunk_size of 1!")
+                    exit(1)
+
+            else:
+                print("Query Error: {}".format(res))
+
+            print("\tTotal records retrieved: {}".format(len(total['data'][node])))
+
+        if format is 'tsv':
+            df = json_normalize(total['data'][node])
+            return df
+        else:
+            return total
+
 
     def get_uuids_in_node(self,node,project_id):
         """
