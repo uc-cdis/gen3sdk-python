@@ -7,9 +7,7 @@ from pandas.tools.plotting import table
 import gen3
 from gen3.submission import Gen3Submission
 
-import json
-import requests
-import os
+import json, requests, os, collections
 
 class Gen3Error(Exception):
     pass
@@ -48,7 +46,7 @@ class Gen3Analysis(Gen3Submission):
         outfile.close
         print("\nOutput written to file: "+filename)
 
-    def plot_categorical_property(self, property,df):
+    def plot_categorical_property(self, property, df):
         #plot a bar graph of categorical variable counts in a dataframe
         df = df[df[property].notnull()]
         N = len(df)
@@ -63,7 +61,7 @@ class Gen3Analysis(Gen3Submission):
         #add N for each bar
         plt.show()
 
-    def plot_numeric_property(self, property,df,by_project=False):
+    def plot_numeric_property(self, property, df, by_project=False):
         #plot a histogram of numeric variable in a dataframe
         df = df[df[property].notnull()]
         data = list(df[property])

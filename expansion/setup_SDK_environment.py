@@ -2,7 +2,7 @@
 ####################################################################################
 ####################################################################################
 ### Run Locally in "ipython" (or a Jupyter Notebook)
-
+# some random comment
 ## Set gen3-client profile name, api endpoint of the data commons, and path to credentials file
 profile = 'bc'
 api = 'https://data.braincommons.org/' # BRAIN Commons
