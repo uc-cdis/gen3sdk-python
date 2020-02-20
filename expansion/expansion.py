@@ -307,6 +307,19 @@ class Gen3Expansion:
         Example:
             paginate_query('demographic')
         """
+
+        if node == 'datanode':
+            query_txt = """{ %s (%s) { type } }""" % (node, args)
+            response = self.sub.query(query_txt)
+            if 'data' in response:
+                nodes = [record['type'] for record in response['data']['datanode']]
+                if len(nodes) > 1:
+                    print("\tMultiple files with that file_name exist across multiple nodes:\n\t{}.".format(nodes))
+                elif len(nodes) == 1:
+                    node = nodes[0]
+                else:
+                    return nodes
+
         if project_id is not None:
             program,project = project_id.split('-',1)
             if args is None:
@@ -319,14 +332,16 @@ class Gen3Expansion:
             else:
                 query_txt = """{_%s_count (%s)}""" % (node, args)
 
+
         # First query the node count to get the expected number of results for the requested query:
+
         try:
             res = self.sub.query(query_txt)
             count_name = '_'.join(map(str,['',node,'count']))
             qsize = res['data'][count_name]
-            print("Total of " + str(qsize) + " records in node '"+node+"' of project '"+str(project_id)+"'.")
+            print("\tFound {} records in '{}' node of project '{}'. ".format(qsize,node,project_id))
         except:
-            print("Query to get _"+node+"_count failed! "+str(res))
+            print("Query to get _{}_count failed! {}".format(node,query_txt))
 
         #Now paginate the actual query:
         properties = ' '.join(map(str,props))
@@ -334,6 +349,7 @@ class Gen3Expansion:
         total = {}
         total['data'] = {}
         total['data'][node] = []
+        count = 0
         while offset < qsize:
 
             if project_id is not None:
@@ -346,9 +362,16 @@ class Gen3Expansion:
                     query_txt = """{%s (first: %s, offset: %s){%s}}""" % (node, chunk_size, offset, properties)
                 else:
                     query_txt = """{%s (first: %s, offset: %s, %s){%s}}""" % (node, chunk_size, offset, args, properties)
+
             res = self.sub.query(query_txt)
             if 'data' in res:
-                total['data'][node] += res['data'][node]
+                records = res['data'][node]
+
+                if len(records) < chunk_size:
+                    if qsize == 999999999:
+                        return total
+
+                total['data'][node] +=  records # res['data'][node] should be a list
                 offset += chunk_size
             elif 'error' in res:
                 print(res['error'])
@@ -963,6 +986,38 @@ class Gen3Expansion:
         else:
             print('Provide a list of guids to download: "get_file_by_guid(guids=guid_list)"')
         return file_names
+
+# file_name = 'GSE63878_final_list_of_normalized_data.txt.gz'
+# exp.download_file_name(file_name)
+    def download_file_name(self, file_name, node='datanode', project_id=None, props=['type','file_name','object_id','id','submitter_id','data_type','data_format','data_category'], all=False):
+        """downloads the first file that matches a query for a file_name in a node of a project
+        """
+        args = 'file_name:"{}"'.format(file_name)
+        response = self.paginate_query(node=node,project_id=project_id,props=props,args=args) # Use the SDK to send the query and return the response
+
+        if 'data' in response:
+            node = list(response['data'])[0]
+            records = response['data'][node]
+
+            if len(records) > 1 and all is False:
+                print("\tWARNING - More than one record matched query for '{}' in '{}' node of project '{}'.".format(file_name, node, project))
+                print("\t\tDownloading the first file that matched the query:\n{}".format(data[0]))
+
+            if len(records) >= 1 and all is False:
+                record = records[0]
+                guid = record['object_id']
+                fname = self.download_file_endpoint(guid=guid)
+
+            elif all is True:
+                guids = [record['object_id'] for record in records]
+                for guid in guids:
+                    self.download_file_endpoint(guid=guid)
+
+            return records
+
+        else:
+            print("There were no records in the query for '{}' in the '{}' node of project_id '{}'".format(file_name,node,project_id))
+            return response
 
 
     def get_records_for_uuids(self, uuids, project, api):
