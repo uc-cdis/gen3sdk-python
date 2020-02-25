@@ -965,15 +965,14 @@ class Gen3Expansion:
                 # nested dict: all_guids[project][node]
         return all_guids
 
-    def get_token(self):
+    def get_access_token(self):
         """ get your temporary access token using your credentials downloaded from the data portal
+            variable <- jsonlite::toJSON(list(api_key = keys$api_key), auto_unbox = TRUE)
+            auth <- POST('https://data.braincommons.org/user/credentials/cdis/access_token', add_headers("Content-Type" = "application/json"), body = variable)
+
         """
-        token_url = "{}/user/credentials/api/access_token".format(api)
-        resp = requests.post(token_url, auth=self._auth_provider)
-        if (resp.status_code != 200):
-            raise(Exception(resp.reason))
-        token = resp.json()['access_token']
-        return token
+        access_token = self._auth_provider._get_auth_value()
+        return access_token
 
     def download_file_endpoint(self, guid=None):
         """ download files by getting a presigned-url from the "/user/data/download/<guid>" endpoint
@@ -1051,6 +1050,7 @@ class Gen3Expansion:
 
 # file_name = 'GSE63878_final_list_of_normalized_data.txt.gz'
 # exp.download_file_name(file_name)
+
     def download_file_name(self, file_name, node='datanode', project_id=None, props=['type','file_name','object_id','id','submitter_id','data_type','data_format','data_category'], all=False):
         """downloads the first file that matches a query for a file_name in a node of a project
         """
@@ -1587,7 +1587,7 @@ class Gen3Expansion:
                 guids[file_name] = guid
         return guids
 
-    def get_record_for_url(self, url, api):
+    def get_index_for_url(self, url, api):
         """ Returns the indexd record for a file's storage location URL ('urls' in indexd)
             Example:
                 api='https://icgc.bionimbus.org/'
@@ -1596,6 +1596,16 @@ class Gen3Expansion:
         """
         indexd_endpoint = "{}/index/index/".format(api)
         indexd_query = "{}?url={}".format(indexd_endpoint,url)
+        output = requests.get(indexd_query, auth=self._auth_provider).text
+        response = json.loads(output)
+        index_records = response['records']
+        return index_records
+
+    def get_index_for_guid(self, guid, api):
+        """ Returns the indexd record for a GUID ('urls' in indexd)
+        """
+        indexd_endpoint = "{}/index/index/".format(api)
+        indexd_query = "{}{}".format(indexd_endpoint,guid)
         output = requests.get(indexd_query, auth=self._auth_provider).text
         response = json.loads(output)
         index_records = response['records']
