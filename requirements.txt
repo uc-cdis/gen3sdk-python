@@ -1,5 +1,6 @@
 requests
-aiohttp
 pandas
-
--e git+https://github.com/uc-cdis/indexclient.git@1.6.2#egg=indexclient
+indexclient>=1.6.2
+aiohttp
+backoff
+click

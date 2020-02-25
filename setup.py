@@ -36,13 +36,10 @@ setup(
     install_requires=[
         "requests",
         "pandas",
-        "indexclient",
+        "indexclient>=1.6.2",
         "aiohttp",
         "backoff",
         "click",
-    ],
-    dependency_links=[
-        "git+https://github.com/uc-cdis/indexclient.git@1.6.2#egg=indexclient"
     ],
     package_data={"": ["LICENSE"]},
     classifiers=[

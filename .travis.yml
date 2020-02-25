@@ -9,7 +9,7 @@ install:
 script:
 - sed -i.bak "s/0.1.0/$(git describe --tags --abbrev=0 --match=[0-9]*)/g" setup.py
 - python setup.py install
-- py.test -vv tests
+- pytest -vv tests
 deploy:
   skip_cleanup: true
   provider: pypi
