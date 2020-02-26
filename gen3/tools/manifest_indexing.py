@@ -348,7 +348,7 @@ def manifest_indexing(
     )
 
     try:
-        pool.map_async(part_func, files).get(9999999)
+        pool.map_async(part_func, files).get()
     except KeyboardInterrupt:
         pool.terminate()
 
