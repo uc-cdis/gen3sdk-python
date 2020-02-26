@@ -66,8 +66,6 @@ logging.basicConfig(
     handlers=[logging.FileHandler(LOGGING_FILE), logging.StreamHandler()],
 )
 
-logger = logging.getLogger()
-
 
 class ThreadControl(object):
     """
@@ -123,7 +121,7 @@ def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
                     fieldnames[fieldnames.index(key)] = "GUID"
                     standardized_key = "GUID"
                     if not _verify_format(row[key], UUID_FORMAT):
-                        logger.error("ERROR: {} is not in uuid format", row[key])
+                        logging.error("ERROR: {} is not in uuid format", row[key])
                         pass_verification = False
 
                 elif key.lower() in FILENAME:
@@ -133,7 +131,7 @@ def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
                     fieldnames[fieldnames.index(key)] = "md5"
                     standardized_key = "md5"
                     if not _verify_format(row[key], MD5_FORMAT):
-                        logger.error("ERROR: {} is not in md5 format", row[key])
+                        logging.error("ERROR: {} is not in md5 format", row[key])
                         pass_verification = False
                 elif key.lower() in ACLS:
                     fieldnames[fieldnames.index(key)] = "acl"
@@ -155,7 +153,7 @@ def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
             files.append(standardized_dict)
 
     if not pass_verification:
-        logger.error("The manifest is not in the correct format!!!.")
+        logging.error("The manifest is not in the correct format!!!.")
         return None, None
 
     return files, fieldnames
@@ -172,7 +170,7 @@ def _write_csv(filename, files, fieldnames=None):
 
         for f in files:
             writer.writerow(f)
-    
+
     return filename
 
 
@@ -214,7 +212,7 @@ def _index_record(prefix, indexclient, replace_urls, thread_control, fi):
 
         if doc is not None:
             if doc.size != fi.get("size") or doc.hashes.get("md5") != fi.get("md5"):
-                logger.error(
+                logging.error(
                     "The uuid {} with different size/hash already exist. Can not index it without getting a new GUID".format(
                         fi.get("GUID")
                     )
@@ -256,7 +254,7 @@ def _index_record(prefix, indexclient, replace_urls, thread_control, fi):
 
     except Exception as e:
         # Don't break for any reason
-        logger.error(
+        logging.error(
             "Can not update/create an indexd record with uuid {}. Detail {}".format(
                 fi.get("GUID"), e
             )
@@ -265,7 +263,7 @@ def _index_record(prefix, indexclient, replace_urls, thread_control, fi):
     thread_control.mutexLock.acquire()
     thread_control.num_processed_files += 1
     if (thread_control.num_processed_files * 10) % thread_control.num_total_files == 0:
-        logger.info(
+        logging.info(
             "Progress: {}%".format(
                 thread_control.num_processed_files
                 * 100.0
@@ -302,19 +300,19 @@ def manifest_indexing(
         and the input manifest are the same
 
     """
-    logger.info("Start the process ...")
+    logging.info("Start the process ...")
     indexclient = client.IndexClient(common_url, "v0", auth=auth)
 
     try:
         files, headers = _get_and_verify_fileinfos_from_tsv_manifest(manifest, dem)
     except Exception as e:
-        logger.error("Can not read {}. Detail {}".format(manifest, e))
+        logging.error("Can not read {}. Detail {}".format(manifest, e))
         return None, None
-    
+
     try:
         headers.index("url")
     except ValueError as e:
-        logger.error("The manifest {} has wrong format".format(manifest, e))
+        logging.error("The manifest {} has wrong format".format(manifest, e))
         return None, None
 
     # Generate uuid if missing
@@ -346,7 +344,7 @@ def manifest_indexing(
     pool.close()
     pool.join()
 
-    logger.info("Done!!!")
+    logging.info("Done!!!")
     if do_gen_uuid:
         return (
             LOGGING_FILE,

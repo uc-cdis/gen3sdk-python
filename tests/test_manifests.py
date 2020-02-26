@@ -10,7 +10,10 @@ from gen3.tools.indexing import verify_object_manifest
 from gen3.tools.indexing import download_manifest
 from gen3.tools.indexing.download_manifest import TMP_FOLDER
 from gen3.tools.indexing import async_download_object_manifest
-from gen3.tools.manifest_indexing import manifest_indexing, _get_and_verify_fileinfos_from_tsv_manifest
+from gen3.tools.manifest_indexing import (
+    manifest_indexing,
+    _get_and_verify_fileinfos_from_tsv_manifest,
+)
 
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -304,7 +307,7 @@ def test_read_manifest():
     assert headers.index("GUID") >= 0
     assert headers.index("md5") >= 0
     assert headers.index("url") >= 0
-    
+
     assert files[0]["url"] == "[s3://pdcdatastore/test1.raw]"
     assert files[1]["acl"] == "[Open]"
     assert files[1]["url"] == "[s3://pdcdatastore/test2.raw]"
@@ -316,7 +319,7 @@ def test_index_manifest(gen3_index, indexd_server):
         did="255e396f-f1f8-11e9-9a07-0a80fada099c",
         hashes={"md5": "473d83400bc1bc9dc635e334faddf33c"},
         acl=["DEV", "test"],
-        size=363455714,
+        size=363_455_714,
         urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
     )
 
@@ -335,28 +338,20 @@ def test_index_manifest(gen3_index, indexd_server):
     )
     assert rec2["hashes"]["md5"] == "473d83400bc1bc9dc635e334fadde33c"
     assert rec2["size"] == 363_455_714
-    assert rec2["urls"] == [
-        "s3://pdcdatastore/test5.raw"
-    ]
-    assert rec3["urls"] == [
-        "s3://pdcdatastore/test2.raw"
-    ]
-    assert rec4["urls"] == [
-        "s3://pdcdatastore/test3.raw"
-    ]
-    assert rec4['acl'] == ["phs0001", "phs0002"]
-    assert rec5["urls"] == [
-        "s3://pdcdatastore/test4.raw"
-    ]
-    assert rec5['acl'] == ['phs0001', 'phs0002']
-    
+    assert rec2["urls"] == ["s3://pdcdatastore/test5.raw"]
+    assert rec3["urls"] == ["s3://pdcdatastore/test2.raw"]
+    assert rec4["urls"] == ["s3://pdcdatastore/test3.raw"]
+    assert rec4["acl"] == ["phs0001", "phs0002"]
+    assert rec5["urls"] == ["s3://pdcdatastore/test4.raw"]
+    assert rec5["acl"] == ["phs0001", "phs0002"]
+
 
 def test_index_manifest_with_replace_urls(gen3_index, indexd_server):
     rec1 = gen3_index.create_record(
         did="255e396f-f1f8-11e9-9a07-0a80fada099c",
         hashes={"md5": "473d83400bc1bc9dc635e334faddf33c"},
         acl=["DEV", "test"],
-        size=363455714,
+        size=363_455_714,
         urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
     )
     manifest_indexing(
@@ -364,6 +359,4 @@ def test_index_manifest_with_replace_urls(gen3_index, indexd_server):
     )
     rec1 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada099c")
 
-    assert rec1["urls"] == [
-        "s3://pdcdatastore/test1.raw"
-    ]
+    assert rec1["urls"] == ["s3://pdcdatastore/test1.raw"]
