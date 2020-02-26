@@ -9,7 +9,7 @@ See the Attributes session for supported column names.
 
 All supported formats of acl and url fields are shown in the below example.
 
-uuid	md5	size	acl	url
+guid	md5	size	acl	url
 255e396f-f1f8-11e9-9a07-0a80fada099c	473d83400bc1bc9dc635e334faddf33c	363455714	['Open']	[s3://pdcdatastore/test1.raw]
 255e396f-f1f8-11e9-9a07-0a80fada098c	473d83400bc1bc9dc635e334faddd33c	343434344	Open	s3://pdcdatastore/test2.raw
 255e396f-f1f8-11e9-9a07-0a80fada097c	473d83400bc1bc9dc635e334fadd433c	543434443	phs0001, phs0002	s3://pdcdatastore/test3.raw
@@ -26,7 +26,7 @@ Attributes:
 
 
 Usages:
-    python manifest_indexing.py indexing --common_url https://giangb.planx-pla.net/index/ --prefix DG.1046 --manifest_path path_to_manifest --auth "admin,admin" --replace_urls False --thread_num 10
+    python manifest_indexing.py indexing --common_url https://giangb.planx-pla.net/index/  --manifest_path path_to_manifest --auth "admin,admin" --replace_urls False --thread_num 10
 """
 import os
 import csv
@@ -120,10 +120,6 @@ def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
                 if key.lower() in GUID:
                     fieldnames[fieldnames.index(key)] = "GUID"
                     standardized_key = "GUID"
-                    if not _verify_format(row[key], UUID_FORMAT):
-                        logging.error("ERROR: {} is not in uuid format", row[key])
-                        pass_verification = False
-
                 elif key.lower() in FILENAME:
                     fieldnames[fieldnames.index(key)] = "filename"
                     standardized_key = "filename"
@@ -160,6 +156,26 @@ def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
 
 
 def _write_csv(filename, files, fieldnames=None):
+    """
+    write to csv file
+
+    Args:
+        filename(str): file name
+        files(list(dict)): list of file info
+        [
+            {
+                "GUID": "guid_example",
+                "filename": "example",
+                "size": 100,
+                "acl": "['open']",
+                "md5": "md5_hash",
+            },
+        ]
+        fieldnames(list(str)): list of column names
+    
+    Returns:
+        None
+    """
 
     if not files:
         return None
@@ -174,12 +190,11 @@ def _write_csv(filename, files, fieldnames=None):
     return filename
 
 
-def _index_record(prefix, indexclient, replace_urls, thread_control, fi):
+def _index_record(indexclient, replace_urls, thread_control, fi):
     """
     Index single file
 
     Args:
-        prefix(str): GUID prefix
         indexclient(IndexClient): indexd client
         replace_urls(bool): replace urls or not
         fi(dict): file info 
@@ -203,17 +218,17 @@ def _index_record(prefix, indexclient, replace_urls, thread_control, fi):
                 for element in fi.get("acl", "").strip()[1:-1].split(",")
             ]
 
-        uuid = uuid.uuid4() if not fi.get("GUID") else fi.get("GUID")
+        guid = uuid.uuid4() if not fi.get("GUID") else fi.get("GUID")
 
         doc = None
 
         if fi.get("GUID"):
-            doc = indexclient.get(prefix + uuid)
+            doc = indexclient.get(guid)
 
         if doc is not None:
             if doc.size != fi.get("size") or doc.hashes.get("md5") != fi.get("md5"):
                 logging.error(
-                    "The uuid {} with different size/hash already exist. Can not index it without getting a new GUID".format(
+                    "The guid {} with different size/hash already exist. Can not index it without getting a new GUID".format(
                         fi.get("GUID")
                     )
                 )
@@ -245,7 +260,7 @@ def _index_record(prefix, indexclient, replace_urls, thread_control, fi):
                     doc.patch()
         else:
             doc = indexclient.create(
-                did=prefix + fi.get("GUID", "").strip(),
+                did=fi.get("GUID", "").strip(),
                 hashes={"md5": fi.get("md5", "").strip()},
                 size=fi.get("size", 0),
                 acl=acl,
@@ -255,7 +270,7 @@ def _index_record(prefix, indexclient, replace_urls, thread_control, fi):
     except Exception as e:
         # Don't break for any reason
         logging.error(
-            "Can not update/create an indexd record with uuid {}. Detail {}".format(
+            "Can not update/create an indexd record with guid {}. Detail {}".format(
                 fi.get("GUID"), e
             )
         )
@@ -278,7 +293,6 @@ def manifest_indexing(
     common_url,
     thread_num,
     auth=None,
-    prefix=None,
     replace_urls=False,
     dem="\t",
 ):
@@ -291,7 +305,6 @@ def manifest_indexing(
         common_url(str): common url
         thread_num(int): number of threads for indexing
         auth(Gen3Auth): Gen3 auth
-        prefix(str): GUID prefix
         dem(str): manifest's delimiter
     
     Returns:
@@ -327,12 +340,11 @@ def manifest_indexing(
         headers.append("GUID")
         do_gen_uuid = True
 
-    prefix = prefix + "/" if prefix else ""
     pool = ThreadPool(thread_num)
 
     thread_control = ThreadControl(num_total_files=len(files))
     part_func = partial(
-        _index_record, prefix, indexclient, replace_urls, thread_control
+        _index_record, indexclient, replace_urls, thread_control
     )
 
     try:
@@ -368,7 +380,6 @@ def parse_arguments():
     indexing_cmd.add_argument(
         "--thread_num", required=False, default=1, help="Number of threads"
     )
-    indexing_cmd.add_argument("--prefix", required=False, help="Prefix")
     indexing_cmd.add_argument("--auth", required=False, help="auth")
     indexing_cmd.add_argument(
         "--replace_urls", required=False, help="Replace urls or not"
@@ -386,6 +397,5 @@ if __name__ == "__main__":
         args.common_url,
         int(args.thread_num),
         auth,
-        args.prefix,
         args.replace_urls,
     )
