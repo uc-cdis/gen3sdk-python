@@ -530,7 +530,6 @@ class Gen3Expansion:
                 count+=1
                 backup = "{}_{}.{}".format(fname,count,ext)
 
-            total = len(uuids)
             count = 0
             print("Attempting to backup {} records to delete to file '{}'.".format(len(uuids),backup))
 
@@ -541,7 +540,7 @@ class Gen3Expansion:
                     response = self.sub.export_record(program=program,project=project,uuid=uuid,fileformat='json',filename=None)
                     record = json.loads(json.dumps(response[0]))
                     records.append(record)
-                    print("\tRetrieving record for UUID '{}' ({}/{}).".format(uuid,count,total))
+                    print("\tRetrieving record for UUID '{}' ({}/{}).".format(uuid,count,len(uuids)))
                 except Exception as e:
                     print("Exception occurred during 'export_record' request: {}.".format(e))
                     continue
@@ -554,23 +553,24 @@ class Gen3Expansion:
         failure = []
         success = []
         retry = []
+        tried = []
         results = {}
-        total = 0
 
-        while (len(success)+len(failure)) < len(uuids): #loop sorts all uuids into success or failure
+        while len(tried) < len(uuids): #loop sorts all uuids into success or failure
 
             if len(retry) > 0:
-                print("Retrying deletion of "+str(len(retry))+" valid uuids.")
+                print("Retrying deletion of {} valid UUIDs.".format(len(retry)))
                 list_ids = ",".join(retry)
                 retry = []
             else:
-                list_ids  = ",".join(uuids[total:total+chunk_size])
+                list_ids  = ",".join(uuids[len(tried):len(tried)+chunk_size])
 
             rurl = "{}/api/v0/submission/{}/{}/entities/{}".format(
                 self._endpoint,program,project,list_ids
             )
 
             try:
+                print("\n\t{}\n".format(rurl)) # trouble-shooting
                 resp = requests.delete(rurl, auth=self._auth_provider)
             except Exception as e:
                 chunk_size = int(chunk_size/2)
@@ -581,29 +581,31 @@ class Gen3Expansion:
                 chunk_size = int(chunk_size/2)
                 print("Service Failure. The chunk_size is too large. Reducing to '{}'".format(chunk_size))
             elif "The requested URL was not found on the server." in resp.text:
-                print('\n Finished delete workflow. \n') #debug
+                print("\n Requested URL not found on server:\n\t{}\n\t{}".format(resp,rurl)) #debug
                 break
-            else:
+            else: # the delete request got an API response
                 #print(resp.text) #trouble-shooting
                 output = json.loads(resp.text)
                 responses.append(output)
 
-                if output['success']:
-                    total += len(output['entities'])
-                    success += [x['id'] for x in output['entities']]
-                else:
+                if output['success']: # 'success' is True or False in API response
+                    success = list(set(success + [x['id'] for x in output['entities']]))
+                else: # if one UUID fails to delete in the request, the entire request fails.
                     for entity in output['entities']:
-                        if entity['valid']:
+                        if entity['valid']: # get the valid entities from repsonse to retry.
                             retry.append(entity['id'])
                         else:
                             errors.append(entity['errors'][0]['message'])
-                            failure.append(entity['id'])
+                            failure.append(entity['errors'][0]['id'])
+                            # failed_ids = list_ids.split(',')
+                            # failure = list(set(failure + failed_ids))
                     for error in list(set(errors)):
-                        print("Error message for "+str(errors.count(error))+" records: " + str(error))
-                    total += len(failure)
+                        print("Error message for {} records: {}".format(errors.count(error),error))
 
-            print("\tProgress: "+str(len(success)+len(failure))+"/"+str(len(uuids))+" (Success: "+str(len(success)) + ", Failure: "+str(len(failure))+").")
+            tried = list(set(success + failure))
+            print("\tProgress: {}/{} (Success: {}, Failure: {}).".format(len(tried),len(uuids),len(success),len(failure)))
 
+        # exit the while loop if
         results['failure'] = failure
         results['success'] = success
         results['responses'] = responses
@@ -611,6 +613,9 @@ class Gen3Expansion:
         print("\tFinished record deletion script.")
 
         return results
+# uuids = list(set(df['submitter_id']))
+# data = exp.delete_records(uuids=uuids,project_id='mjff-S4')
+
 
     def delete_node(self,node,project_id,chunk_size=200):
         """
