@@ -323,12 +323,13 @@ def test_index_manifest(gen3_index, indexd_server):
         urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
     )
 
-    manifest_indexing("./test.tsv", indexd_server.baseurl, 1, ("admin", "admin"))
+    manifest_indexing("./test.tsv", indexd_server.baseurl, 1, ("admin", "admin"), replace_urls=False)
     rec1 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada099c")
     rec2 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada010c")
     rec3 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada098c")
     rec4 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada097c")
     rec5 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada096c")
+
     assert set(rec1["urls"]) == set(
         [
             "s3://testaws/aws/test.txt",

@@ -12,7 +12,7 @@ All supported formats of acl and url fields are shown in the below example.
 guid	md5	size	acl	url
 255e396f-f1f8-11e9-9a07-0a80fada099c	473d83400bc1bc9dc635e334faddf33c	363455714	['Open']	[s3://pdcdatastore/test1.raw]
 255e396f-f1f8-11e9-9a07-0a80fada098c	473d83400bc1bc9dc635e334faddd33c	343434344	Open	s3://pdcdatastore/test2.raw
-255e396f-f1f8-11e9-9a07-0a80fada097c	473d83400bc1bc9dc635e334fadd433c	543434443	phs0001, phs0002	s3://pdcdatastore/test3.raw
+255e396f-f1f8-11e9-9a07-0a80fada097c	473d83400bc1bc9dc635e334fadd433c	543434443	phs0001 phs0002	s3://pdcdatastore/test3.raw
 255e396f-f1f8-11e9-9a07-0a80fada096c	473d83400bc1bc9dc635e334fadd433c	363455714	['phs0001', 'phs0002']	['s3://pdcdatastore/test4.raw']
 255e396f-f1f8-11e9-9a07-0a80fada010c	473d83400bc1bc9dc635e334fadde33c	363455714	['Open']	s3://pdcdatastore/test5.raw
 
@@ -87,6 +87,26 @@ def _verify_format(s, format):
         return True
     return False
 
+
+def _standardize_str(s):
+    """
+    Remove unnecessary space, commas
+
+    Ex. "abc    d" -> "abc d"
+        "abc, d" -> "abc d"
+    """
+    memory = []
+    s = s.replace(",", " ")
+    res = ""
+    for c in s:
+        if c != " ":
+            res += c
+            memory = []
+        elif not memory:
+            res += c
+            memory.append(" ")
+    return res
+        
 
 def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
     """
@@ -207,7 +227,7 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
     try:
         urls = [
             element.strip().replace("'", "")
-            for element in fi.get("url", "").strip()[1:-1].split(",")
+            for element in _standardize_str(fi.get("url", "")).strip()[1:-1].split(" ")
         ]
 
         if fi.get("acl", "").strip().lower() in {"[u'open']", "['open']"}:
@@ -215,7 +235,7 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
         else:
             acl = [
                 element.strip().replace("'", "")
-                for element in fi.get("acl", "").strip()[1:-1].split(",")
+                for element in _standardize_str(fi.get("acl", "")).strip()[1:-1].split(" ")
             ]
 
         guid = uuid.uuid4() if not fi.get("GUID") else fi.get("GUID")
@@ -234,10 +254,6 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
                 )
             else:
                 need_update = False
-                for url in urls:
-                    if not replace_urls and url not in doc.urls:
-                        doc.urls.append(url)
-                        need_update = True
 
                 if replace_urls and set(urls) != set(doc.urls):
                     doc.urls = urls
@@ -249,8 +265,13 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
                     for url, metadata in doc.urls_metadata.items():
                         if url not in urls:
                             del new_urls_metadata[url]
-
                     doc.urls_metadata = new_urls_metadata
+
+                elif not replace_urls:
+                    for url in urls:
+                        if url not in doc.urls:
+                            doc.urls.append(url)
+                            need_update = True
 
                 if set(doc.acl) != set(acl):
                     doc.acl = acl
@@ -289,12 +310,7 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
 
 
 def manifest_indexing(
-    manifest,
-    common_url,
-    thread_num,
-    auth=None,
-    replace_urls=False,
-    dem="\t",
+    manifest, common_url, thread_num, auth=None, replace_urls=True, dem="\t"
 ):
     """
     Loop through all the files in the manifest, update/create records in indexd
@@ -305,6 +321,7 @@ def manifest_indexing(
         common_url(str): common url
         thread_num(int): number of threads for indexing
         auth(Gen3Auth): Gen3 auth
+        replace_urls(bool): flag to indicate if replace urls or not
         dem(str): manifest's delimiter
     
     Returns:
@@ -343,9 +360,7 @@ def manifest_indexing(
     pool = ThreadPool(thread_num)
 
     thread_control = ThreadControl(num_total_files=len(files))
-    part_func = partial(
-        _index_record, indexclient, replace_urls, thread_control
-    )
+    part_func = partial(_index_record, indexclient, replace_urls, thread_control)
 
     try:
         pool.map_async(part_func, files).get()
