@@ -481,7 +481,25 @@ class Gen3Expansion:
             #guids = df.loc[(df['type'] == node)]['object_id']
             return df
 
-# Delete Sheepdog records/nodes
+    def get_uuids_for_submitter_ids(self, sids, node):
+        """
+        Get a list of UUIDs for a provided list of submitter_ids.
+        """
+        uuids = []
+        count = 0
+        for sid in sids:
+            count += 1
+            args = 'submitter_id:"{}"'.format(sid)
+            res = self.paginate_query(node=node,args=args)
+            recs = res['data'][node]
+            if len(recs) == 1:
+                uuids.append(recs[0]['id'])
+            elif len(recs) == 0:
+                print("No data returned for {}:\n\t{}".format(sid,res))
+            print("\t{}/{}".format(count,len(sids)))
+        print("Finished retrieving {} uuids for {} submitter_ids".format(len(uuids),len(sids)))
+        return uuids
+
     def delete_records(self, uuids, project_id, chunk_size=200, backup=False):
         """
         This function attempts to delete a list of UUIDs from a project.
@@ -965,15 +983,14 @@ class Gen3Expansion:
                 # nested dict: all_guids[project][node]
         return all_guids
 
-    def get_token(self):
+    def get_access_token(self):
         """ get your temporary access token using your credentials downloaded from the data portal
+            variable <- jsonlite::toJSON(list(api_key = keys$api_key), auto_unbox = TRUE)
+            auth <- POST('https://data.braincommons.org/user/credentials/cdis/access_token', add_headers("Content-Type" = "application/json"), body = variable)
+
         """
-        token_url = "{}/user/credentials/api/access_token".format(api)
-        resp = requests.post(token_url, auth=self._auth_provider)
-        if (resp.status_code != 200):
-            raise(Exception(resp.reason))
-        token = resp.json()['access_token']
-        return token
+        access_token = self._auth_provider._get_auth_value()
+        return access_token
 
     def download_file_endpoint(self, guid=None):
         """ download files by getting a presigned-url from the "/user/data/download/<guid>" endpoint
@@ -1051,6 +1068,7 @@ class Gen3Expansion:
 
 # file_name = 'GSE63878_final_list_of_normalized_data.txt.gz'
 # exp.download_file_name(file_name)
+
     def download_file_name(self, file_name, node='datanode', project_id=None, props=['type','file_name','object_id','id','submitter_id','data_type','data_format','data_category'], all=False):
         """downloads the first file that matches a query for a file_name in a node of a project
         """
@@ -1571,7 +1589,7 @@ class Gen3Expansion:
             print("Please provide one or a list of data file GUIDs: get_urls\(guids=guid_list\)")
         return urls
 
-    def get_guids_for_filenames(self, file_names,api):
+    def get_guids_for_file_names(self, file_names):
         # Get GUIDs for a list of file_names
         if isinstance(file_names, str):
             file_names = [file_names]
@@ -1579,15 +1597,29 @@ class Gen3Expansion:
             print("Please provide one or a list of data file file_names: get_guid_for_filename\(file_names=file_name_list\)")
         guids = {}
         for file_name in file_names:
-            index_url = api + '/index/index/?file_name=' + file_name
-            output = requests.get(index_url, auth=self._auth_provider).text
-            index_record = json.loads(output)
+            index_url = "{}/index/index/?file_name={}".format(self._endpoint,file_name)
+            response = requests.get(index_url, auth=self._auth_provider).text
+            index_record = json.loads(response)
             if len(index_record['records']) > 0:
                 guid = index_record['records'][0]['did']
                 guids[file_name] = guid
         return guids
 
-    def get_record_for_url(self, url, api):
+    def get_index_for_file_names(self, file_names):
+        # Get GUIDs for a list of file_names
+        if isinstance(file_names, str):
+            file_names = [file_names]
+        if not isinstance(file_names,list):
+            print("Please provide one or a list of data file file_names: get_guid_for_filename\(file_names=file_name_list\)")
+        index_records = []
+        for file_name in file_names:
+            index_url = "{}/index/index/?file_name={}".format(self._endpoint,file_name)
+            response = requests.get(index_url, auth=self._auth_provider).text
+            index_records.append(json.loads(response))
+
+        return index_records
+
+    def get_index_for_url(self, url, api):
         """ Returns the indexd record for a file's storage location URL ('urls' in indexd)
             Example:
                 api='https://icgc.bionimbus.org/'
@@ -1599,6 +1631,21 @@ class Gen3Expansion:
         output = requests.get(indexd_query, auth=self._auth_provider).text
         response = json.loads(output)
         index_records = response['records']
+        return index_records
+
+    def get_index_for_guids(self, guids):
+        """ Returns the indexd record for a GUID ('urls' in indexd)
+        """
+        if isinstance(guids, str):
+            guids = [guids]
+
+        index_records = []
+        for guid in guids:
+            indexd_endpoint = "{}/index/index/".format(self._endpoint)
+            indexd_query = "{}{}".format(indexd_endpoint,guid)
+            response = requests.get(indexd_query, auth=self._auth_provider).text
+            records = json.loads(response)
+            index_records.append(records)
         return index_records
 
     def get_guid_for_url(self, url, api):

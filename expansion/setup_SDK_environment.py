@@ -2,7 +2,7 @@
 ####################################################################################
 ####################################################################################
 ### Run Locally in "ipython" (or a Jupyter Notebook)
-
+# some random comment
 ## Set gen3-client profile name, api endpoint of the data commons, and path to credentials file
 profile = 'bc'
 api = 'https://data.braincommons.org/' # BRAIN Commons
@@ -71,11 +71,13 @@ exp = Gen3Expansion(api, auth) # Initialize an instance, using its functions lik
 #%run ./migration.py
 
 # Download and configure MacOsX gen3-client
-mkdir -p ~/gen3
+mkdir -p ~/.gen3
+export PATH=$PATH:~/.gen3
 curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*osx |  cut -d '"' -f 4 | wget -qi -
 unzip dataclient_osx.zip
-mv gen3-client /Users/christopher/gen3
+mv gen3-client ~/.gen3
 rm dataclient_osx.zip
+
 
 # Now configure my gen3-client profile:
 client = 'gen3-client'
