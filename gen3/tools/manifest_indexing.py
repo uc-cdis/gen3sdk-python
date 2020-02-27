@@ -4,7 +4,7 @@ Module for indexing object files in a manifest (against indexd's API).
 The default manifest format created is a Tab-Separated Value file (tsv)
 with rows for every record.
 
-Fields that are lists (like acl, authz, and urls) separate the values with commas.
+Fields that are lists (like acl, authz, and urls) separate the values with commas or spaces
 See the Attributes session for supported column names. 
 
 All supported formats of acl and url fields are shown in the below example.
@@ -90,7 +90,7 @@ def _verify_format(s, format):
 
 def _standardize_str(s):
     """
-    Remove unnecessary space, commas
+    Remove unnecessary spaces, commas
 
     Ex. "abc    d" -> "abc d"
         "abc, d" -> "abc d"
@@ -106,7 +106,7 @@ def _standardize_str(s):
             res += c
             memory.append(" ")
     return res
-        
+
 
 def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
     """
@@ -235,7 +235,9 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
         else:
             acl = [
                 element.strip().replace("'", "")
-                for element in _standardize_str(fi.get("acl", "")).strip()[1:-1].split(" ")
+                for element in _standardize_str(fi.get("acl", ""))
+                .strip()[1:-1]
+                .split(" ")
             ]
 
         guid = uuid.uuid4() if not fi.get("GUID") else fi.get("GUID")
@@ -345,17 +347,17 @@ def manifest_indexing(
         logging.error("The manifest {} has wrong format".format(manifest, e))
         return None, None
 
-    # Generate uuid if missing
+    # Generate guid if missing
     for fi in files:
         if fi.get("GUID") is None:
             fi["GUID"] = uuid.uuid4()
 
-    do_gen_uuid = False
+    do_gen_guid = False
     try:
         headers.index("GUID")
     except ValueError:
         headers.append("GUID")
-        do_gen_uuid = True
+        do_gen_guid = True
 
     pool = ThreadPool(thread_num)
 
@@ -372,7 +374,7 @@ def manifest_indexing(
     pool.join()
 
     logging.info("Done!!!")
-    if do_gen_uuid:
+    if do_gen_guid:
         return (
             LOGGING_FILE,
             _write_csv(
