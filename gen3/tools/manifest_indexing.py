@@ -39,6 +39,7 @@ import uuid
 import argparse
 import copy
 
+from gen3.auth import Gen3Auth
 import indexclient.client as client
 
 
@@ -397,6 +398,7 @@ def parse_arguments():
     indexing_cmd.add_argument(
         "--thread_num", required=False, default=1, help="Number of threads"
     )
+    indexing_cmd.add_argument("--api_key", required=False, help="api key")
     indexing_cmd.add_argument("--auth", required=False, help="auth")
     indexing_cmd.add_argument(
         "--replace_urls", required=False, help="Replace urls or not"
@@ -408,6 +410,8 @@ def parse_arguments():
 if __name__ == "__main__":
     args = parse_arguments()
     auth = tuple(args.auth.split(",")) if args.auth else None
+    if not auth:
+        auth = Gen3Auth(args.common_url, refresh_file=args.api_key)
 
     manifest_indexing(
         args.manifest_path,
