@@ -1594,21 +1594,68 @@ class Gen3Expansion:
             print("Please provide one or a list of data file GUIDs: get_urls\(guids=guid_list\)")
         return urls
 
-    def get_guids_for_file_names(self, file_names):
+    def get_guids_for_file_names(self, file_names, method='indexd',match='file_name'):
         # Get GUIDs for a list of file_names
         if isinstance(file_names, str):
             file_names = [file_names]
         if not isinstance(file_names,list):
             print("Please provide one or a list of data file file_names: get_guid_for_filename\(file_names=file_name_list\)")
         guids = {}
-        for file_name in file_names:
-            index_url = "{}/index/index/?file_name={}".format(self._endpoint,file_name)
-            response = requests.get(index_url, auth=self._auth_provider).text
-            index_record = json.loads(response)
-            if len(index_record['records']) > 0:
-                guid = index_record['records'][0]['did']
-                guids[file_name] = guid
+        if method == 'indexd':
+            for file_name in file_names:
+                index_url = "{}/index/index/?file_name={}".format(self._endpoint,file_name)
+                response = requests.get(index_url, auth=self._auth_provider).text
+                index_record = json.loads(response)
+                if len(index_record['records']) > 0:
+                    guid = index_record['records'][0]['did']
+                    guids[file_name] = guid
+        elif method == 'sheepdog':
+            for file_name in file_names:
+                if match == 'file_name':
+                    args = 'file_name:"{}"'.format(file_name)
+                elif match == 'submitter_id':
+                    args = 'submitter_id:"{}"'.format(file_name)
+                props = ['object_id']
+                res = self.paginate_query(node='datanode',args=args,props=props)
+                recs = res['data']['datanode']
+                if len(recs) >= 1:
+                    guid = recs[0]['object_id']
+                    guids[file_name] = guid
+                else:
+                    print("Found no sheepdog records with {}: {}".format(method,file_name))
+                if len(recs) > 1:
+                    guids = [rec['object_id'] for rec in recs]
+                    guids[file_name] = guids
+                    print("Found more than 1 sheepdog record with {}: {}".format(method,file_name))
+        else:
+            print("Enter a valid method.\n\tValid methods: 'sheepdog','indexd'")
         return guids
+
+    def write_manifest_for_guids(self,guids,filename="gen3_manifest.json"):
+        """ write a gen3-client manifest from provided list of guids
+        """
+
+        with open(filename, 'w') as manifest:
+
+            manifest.write('[')
+
+            count = 0
+            for guid in guids:
+                count += 1
+                manifest.write('\n\t{')
+                manifest.write('"object_id": "{}"'.format(guid))
+
+                if count == len(guids):
+                    manifest.write('  }]')
+                else:
+                    manifest.write('  },')
+
+                print("\t{} ({}/{})".format(guid,count,len(guids)))
+
+            print("\tDone ({}/{}).".format(count,len(guids)))
+            print("\tManifest written to file: {}".format(filename))
+
+# guids = exp.get_guids_for_file_names(file_names=file_names,method='sheepdog',match='submitter_id')
 
     def get_index_for_file_names(self, file_names):
         # Get GUIDs for a list of file_names
