@@ -27,6 +27,7 @@ Attributes:
 
 Usages:
     python manifest_indexing.py indexing --common_url https://giangb.planx-pla.net/index/  --manifest_path path_to_manifest --auth "admin,admin" --replace_urls False --thread_num 10
+    python manifest_indexing.py indexing --common_url https://giangb.planx-pla.net/index/  --manifest_path path_to_manifest --api_key ./credentials.json --replace_urls False --thread_num 10
 """
 import os
 import csv
@@ -37,7 +38,6 @@ from multiprocessing.dummy import Pool as ThreadPool
 import threading
 import re
 import uuid
-import argparse
 import copy
 
 from gen3.auth import Gen3Auth
