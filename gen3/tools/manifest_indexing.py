@@ -30,6 +30,7 @@ Usages:
 """
 import os
 import csv
+import click
 from functools import partial
 import logging
 from multiprocessing.dummy import Pool as ThreadPool
@@ -386,37 +387,43 @@ def manifest_indexing(
         return LOGGING_FILE, None
 
 
-def parse_arguments():
-    parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(title="action", dest="action")
+@click.group()
+def cli():
+    pass
 
-    indexing_cmd = subparsers.add_parser("indexing")
-    indexing_cmd.add_argument("--common_url", required=True, help="Common link.")
-    indexing_cmd.add_argument(
-        "--manifest_path", required=True, help="The path to input manifest"
-    )
-    indexing_cmd.add_argument(
-        "--thread_num", required=False, default=1, help="Number of threads"
-    )
-    indexing_cmd.add_argument("--api_key", required=False, help="api key")
-    indexing_cmd.add_argument("--auth", required=False, help="auth")
-    indexing_cmd.add_argument(
-        "--replace_urls", required=False, help="Replace urls or not"
-    )
 
-    return parser.parse_args()
+@cli.command()
+@click.option(
+    "--common_url",
+    help="Root domain (url) for a commons containing indexd.",
+    required=True,
+)
+@click.option("--manifest_path", help="The path to input manifest")
+@click.option("--thread_num", type=int, help="Number of threads", default=1)
+@click.option("--api_key", help="path to api key")
+@click.option("--auth", help="basic auth")
+@click.option("--replace_urls", type=bool, help="Replace urls or not", default=False)
+def indexing(common_url, manifest_path, thread_num, api_key, auth, replace_urls):
+    """
+    Commandline interface for indexing a given manifest to indexd
+
+    Args:
+        common_url (str): root domain for common
+        manifest_path (str): the full path to the manifest
+        thread_num (int): number of threads being requested
+        api_key (str): the path to api key
+        auth(str): the basic auth
+        replace_urls(bool): Replace urls or not
+            NOTE: if both api_key and auth are specified, it will take the former as a default
+    """
+
+    if api_key:
+        auth = Gen3Auth(common_url, refresh_file=api_key)
+    else:
+        auth = tuple(auth.split(",")) if auth else None
+
+    manifest_indexing(manifest_path, common_url, int(thread_num), auth, replace_urls)
 
 
 if __name__ == "__main__":
-    args = parse_arguments()
-    auth = tuple(args.auth.split(",")) if args.auth else None
-    if not auth:
-        auth = Gen3Auth(args.common_url, refresh_file=args.api_key)
-
-    manifest_indexing(
-        args.manifest_path,
-        args.common_url,
-        int(args.thread_num),
-        auth,
-        args.replace_urls,
-    )
+    cli()
