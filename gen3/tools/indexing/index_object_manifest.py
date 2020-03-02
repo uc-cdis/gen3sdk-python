@@ -7,9 +7,9 @@ with rows for every record.
 Fields that are lists (like acl, authz, and urls) separate the values with commas or spaces
 See the Attributes session for supported column names. 
 
-All supported formats of acl and url fields are shown in the below example.
+All supported formats of acl, authz and url fields are shown in the below example.
 
-guid	md5	size	acl	url
+guid	md5	size    acl authz   url
 255e396f-f1f8-11e9-9a07-0a80fada099c	473d83400bc1bc9dc635e334faddf33c	363455714	['Open']	[s3://pdcdatastore/test1.raw]
 255e396f-f1f8-11e9-9a07-0a80fada098c	473d83400bc1bc9dc635e334faddd33c	343434344	Open	s3://pdcdatastore/test2.raw
 255e396f-f1f8-11e9-9a07-0a80fada097c	473d83400bc1bc9dc635e334fadd433c	543434443	phs0001 phs0002	s3://pdcdatastore/test3.raw
@@ -23,11 +23,12 @@ Attributes:
     MD5 (list(string)): supported md5 hash column names
     ACLS (list(string)): supported acl column names
     URLS (list(string)): supported url column names
+    AUTHZ (list(string)): supported authz column names
 
 
 Usages:
-    python manifest_indexing.py indexing --common_url https://giangb.planx-pla.net/index/  --manifest_path path_to_manifest --auth "admin,admin" --replace_urls False --thread_num 10
-    python manifest_indexing.py indexing --common_url https://giangb.planx-pla.net/index/  --manifest_path path_to_manifest --api_key ./credentials.json --replace_urls False --thread_num 10
+    python index_object_manifest.py indexing --common_url https://giangb.planx-pla.net/index/  --manifest_path path_to_manifest --auth "admin,admin" --replace_urls False --thread_num 10
+    python index_object_manifest.py indexing --common_url https://giangb.planx-pla.net/index/  --manifest_path path_to_manifest --api_key ./credentials.json --replace_urls False --thread_num 10
 """
 import os
 import csv
@@ -39,34 +40,29 @@ import threading
 import re
 import uuid
 import copy
+import sys
 
 from gen3.auth import Gen3Auth
 import indexclient.client as client
 
 
+CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 # Pre-defined supported column names
-GUID = ["guid", "uuid"]
+GUID = ["guid"]
 FILENAME = ["filename", "file_name"]
 SIZE = ["size", "filesize", "file_size"]
 MD5 = ["md5", "md5_hash", "md5hash", "hash"]
 ACLS = ["acl", "acls"]
 URLS = ["url", "urls"]
+AUTHZ = ["authz"]
 
 UUID_FORMAT = (
-    "^.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+    r"^.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
 )
-MD5_FORMAT = "^[a-fA-F0-9]{32}$"
-ACL_FORMAT = "^\[.*\]$"
-URL_FORMAT = "^\[.*\]$"
-
-CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
-LOGGING_FILE = os.path.join(CURRENT_DIR, "manifest_indexing.log")
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(message)s",
-    handlers=[logging.FileHandler(LOGGING_FILE), logging.StreamHandler()],
-)
+MD5_FORMAT = r"^[a-fA-F0-9]{32}$"
+ACL_FORMAT = r"^\[.*\]$"
+URL_FORMAT = r"^\[.*\]$"
+AUTHZ_FORMAT = r"^\[.*\]$"
 
 
 class ThreadControl(object):
@@ -155,11 +151,16 @@ def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
                     fieldnames[fieldnames.index(key)] = "acl"
                     standardized_key = "acl"
                     if not _verify_format(row[key], ACL_FORMAT):
-                        row[key] = "[{}]".format(row[key])
+                        row[key] = "[{}]".format(row[key]) if row[key] != "" else None
                 elif key.lower() in URLS:
                     fieldnames[fieldnames.index(key)] = "url"
                     standardized_key = "url"
                     if not _verify_format(row[key], URL_FORMAT):
+                        row[key] = "[{}]".format(row[key])
+                elif key.lower() in AUTHZ:
+                    fieldnames[fieldnames.index(key)] = "authz"
+                    standardized_key = "authz"
+                    if not _verify_format(row[key], AUTHZ_FORMAT):
                         row[key] = "[{}]".format(row[key])
 
                 if standardized_key:
@@ -229,18 +230,25 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
     try:
         urls = [
             element.strip().replace("'", "")
-            for element in _standardize_str(fi.get("url", "")).strip()[1:-1].split(" ")
-        ]
+            for element in _standardize_str(fi["url"]).strip()[1:-1].split(" ")
+        ] if "url" in fi else None
+        authz = [
+            element.strip().replace("'", "")
+            for element in _standardize_str(fi["authz"]).strip()[1:-1].split(" ")
+        ] if "authz" in fi else None
 
-        if fi.get("acl", "").strip().lower() in {"[u'open']", "['open']"}:
-            acl = ["*"]
+        if "acl" in fi:
+            if fi["acl"].strip().lower() in {"[u'open']", "['open']"}:
+                acl = ["*"]
+            else:
+                acl = [
+                    element.strip().replace("'", "")
+                    for element in _standardize_str(fi["acl"])
+                    .strip()[1:-1]
+                    .split(" ")
+                ]
         else:
-            acl = [
-                element.strip().replace("'", "")
-                for element in _standardize_str(fi.get("acl", ""))
-                .strip()[1:-1]
-                .split(" ")
-            ]
+            acl = None
 
         guid = uuid.uuid4() if not fi.get("GUID") else fi.get("GUID")
 
@@ -280,6 +288,10 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
                 if set(doc.acl) != set(acl):
                     doc.acl = acl
                     need_update = True
+                
+                if set(doc.authz) != set(authz):
+                    doc.authz = authz
+                    need_update = True
 
                 if need_update:
                     doc.patch()
@@ -289,6 +301,7 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
                 hashes={"md5": fi.get("md5", "").strip()},
                 size=fi.get("size", 0),
                 acl=acl,
+                authz=authz,
                 urls=urls,
             )
 
@@ -378,13 +391,11 @@ def manifest_indexing(
     logging.info("Done!!!")
     if do_gen_guid:
         return (
-            LOGGING_FILE,
             _write_csv(
                 os.path.join(CURRENT_DIR, "output_manifest.tsv"), files, headers
             ),
         )
-    else:
-        return LOGGING_FILE, None
+    return None
 
 
 @click.group()
@@ -414,7 +425,7 @@ def indexing(common_url, manifest_path, thread_num, api_key, auth, replace_urls)
         api_key (str): the path to api key
         auth(str): the basic auth
         replace_urls(bool): Replace urls or not
-            NOTE: if both api_key and auth are specified, it will take the former as a default
+            NOTE: if both api_key and auth are specified, it will ignore the leter and take the former as a default
     """
 
     if api_key:
@@ -426,4 +437,6 @@ def indexing(common_url, manifest_path, thread_num, api_key, auth, replace_urls)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(filename="manifest_indexing.log", level=logging.DEBUG)
+    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
     cli()

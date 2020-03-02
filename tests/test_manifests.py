@@ -10,7 +10,7 @@ from gen3.tools.indexing import verify_object_manifest
 from gen3.tools.indexing import download_manifest
 from gen3.tools.indexing.download_manifest import TMP_FOLDER
 from gen3.tools.indexing import async_download_object_manifest
-from gen3.tools.manifest_indexing import (
+from gen3.tools.indexing.index_object_manifest import (
     manifest_indexing,
     _get_and_verify_fileinfos_from_tsv_manifest,
 )
@@ -341,12 +341,15 @@ def test_index_manifest(gen3_index, indexd_server):
     )
     assert rec2["hashes"]["md5"] == "473d83400bc1bc9dc635e334fadde33c"
     assert rec2["size"] == 363_455_714
+    assert rec2["authz"] == ["/program/DEV/project/test"]
     assert rec2["urls"] == ["s3://pdcdatastore/test5.raw"]
     assert rec3["urls"] == ["s3://pdcdatastore/test2.raw"]
+    assert rec3["authz"] == ["/program/DEV/project/test"]
     assert rec4["urls"] == ["s3://pdcdatastore/test3.raw"]
     assert rec4["acl"] == ["phs0001", "phs0002"]
     assert rec5["urls"] == ["s3://pdcdatastore/test4.raw"]
     assert rec5["acl"] == ["phs0001", "phs0002"]
+    assert rec5["authz"] == ["/program/DEV/project/test"]
 
 
 def test_index_manifest_with_replace_urls(gen3_index, indexd_server):
