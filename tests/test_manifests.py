@@ -339,6 +339,8 @@ def test_index_manifest(gen3_index, indexd_server):
             "s3://pdcdatastore/test1.raw",
         ]
     )
+
+    assert rec1["authz"] == []
     assert rec2["hashes"]["md5"] == "473d83400bc1bc9dc635e334fadde33c"
     assert rec2["size"] == 363_455_714
     assert rec2["authz"] == ["/program/DEV/project/test"]

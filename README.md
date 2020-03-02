@@ -170,20 +170,22 @@ if __name__ == "__main__":
 
 The module for indexing object files in a manifest (against indexd's API). 
 
-The manifest format can be either tsv or csv. The following is an example of tsv manifest.
-Fields that are lists (like acl, authz, and urls) separate the values with commas or spaces.
-The field values can contain single quote, open bracket and the closed bracket but they will 
-be removed in the preprocessed step.
+The manifest format can be either tsv or csv. The fields that are lists (like acl, authz, and urls)
+separate the values with commas or spaces.
+The field values can contain single quote, open bracket and the closed bracket. However, they will 
+be removed in the preprocessing step.
 
+The following is an example of tsv manifest.
+```
 guid	md5	size	authz   acl	url
 255e396f-f1f8-11e9-9a07-0a80fada099c	473d83400bc1bc9dc635e334faddf33c	363455714	/program/DEV/project/test   'Open']	[s3://pdcdatastore/test1.raw]
 255e396f-f1f8-11e9-9a07-0a80fada097c	473d83400bc1bc9dc635e334fadd433c	543434443	/program/DEV/project/test   phs0001 phs0002	s3://pdcdatastore/test3.raw
 255e396f-f1f8-11e9-9a07-0a80fada096c	473d83400bc1bc9dc635e334fadd433c	363455714	/program/DEV/project/test   ['phs0001', 'phs0002']	['s3://pdcdatastore/test4.raw']
+```
 
 ```
 import sys
 import logging
-import asyncio
 
 from gen3.index import Gen3Index
 from gen3.tools import indexing
@@ -197,13 +199,12 @@ MANIFEST = "./example_manifest.tsv"
 def main():
     indexing.manifest_indexing(
         common_url=COMMONS,
-        manifest=MANIFEST
+        manifest=MANIFEST,
         thread_num=8,
-        api_key="./credentials.json",
+        auth="./credentials.json",
         replace_urls=False,
         dem="\t" # put "," if the manifest is csv file
     )
-):
 
 if __name__ == "__main__":
     main()

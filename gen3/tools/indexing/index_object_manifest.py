@@ -27,8 +27,8 @@ Attributes:
 
 
 Usages:
-    python index_object_manifest.py indexing --common_url https://giangb.planx-pla.net/index/  --manifest_path path_to_manifest --auth "admin,admin" --replace_urls False --thread_num 10
-    python index_object_manifest.py indexing --common_url https://giangb.planx-pla.net/index/  --manifest_path path_to_manifest --api_key ./credentials.json --replace_urls False --thread_num 10
+    python index_object_manifest.py indexing --common_url https://giangb.planx-pla.net  --manifest_path path_to_manifest --auth "admin,admin" --replace_urls False --thread_num 10
+    python index_object_manifest.py indexing --common_url https://giangb.planx-pla.net  --manifest_path path_to_manifest --api_key ./credentials.json --replace_urls False --thread_num 10
 """
 import os
 import csv
@@ -228,27 +228,39 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
     """
 
     try:
-        urls = [
-            element.strip().replace("'", "")
-            for element in _standardize_str(fi["url"]).strip()[1:-1].split(" ")
-        ] if "url" in fi else None
-        authz = [
-            element.strip().replace("'", "")
-            for element in _standardize_str(fi["authz"]).strip()[1:-1].split(" ")
-        ] if "authz" in fi else None
+        urls = (
+            [
+                element.strip().replace("'", "")
+                for element in _standardize_str(fi["url"]).strip()[1:-1].split(" ")
+            ]
+            if "url" in fi and fi["url"] != "[]"
+            else []
+        )
+        authz = (
+            [
+                element.strip().replace("'", "")
+                for element in _standardize_str(fi["authz"]).strip()[1:-1].split(" ")
+            ]
+            if "authz" in fi and fi["authz"] != "[]"
+            else []
+        )
 
         if "acl" in fi:
             if fi["acl"].strip().lower() in {"[u'open']", "['open']"}:
                 acl = ["*"]
             else:
-                acl = [
-                    element.strip().replace("'", "")
-                    for element in _standardize_str(fi["acl"])
-                    .strip()[1:-1]
-                    .split(" ")
-                ]
+                acl = (
+                    [
+                        element.strip().replace("'", "")
+                        for element in _standardize_str(fi["acl"])
+                        .strip()[1:-1]
+                        .split(" ")
+                    ]
+                    if "acl" in fi and fi["acl"] != "[]"
+                    else []
+                )
         else:
-            acl = None
+            acl = []
 
         guid = uuid.uuid4() if not fi.get("GUID") else fi.get("GUID")
 
@@ -288,7 +300,7 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
                 if set(doc.acl) != set(acl):
                     doc.acl = acl
                     need_update = True
-                
+
                 if set(doc.authz) != set(authz):
                     doc.authz = authz
                     need_update = True
@@ -433,7 +445,7 @@ def indexing(common_url, manifest_path, thread_num, api_key, auth, replace_urls)
     else:
         auth = tuple(auth.split(",")) if auth else None
 
-    manifest_indexing(manifest_path, common_url, int(thread_num), auth, replace_urls)
+    manifest_indexing(manifest_path, common_url+"/index", int(thread_num), auth, replace_urls)
 
 
 if __name__ == "__main__":
