@@ -201,7 +201,8 @@ def main():
         common_url=COMMONS,
         manifest=MANIFEST,
         thread_num=8,
-        auth="./credentials.json",
+        api_key="./credentials.json",
+        #auth = "admin,admin", # comment the above line and un-comment this line if basic auth is used
         replace_urls=False,
         dem="\t" # put "," if the manifest is csv file
     )
