@@ -445,7 +445,9 @@ def indexing(common_url, manifest_path, thread_num, api_key, auth, replace_urls)
     else:
         auth = tuple(auth.split(",")) if auth else None
 
-    manifest_indexing(manifest_path, common_url+"/index", int(thread_num), auth, replace_urls)
+    manifest_indexing(
+        manifest_path, common_url + "/index", int(thread_num), auth, replace_urls
+    )
 
 
 if __name__ == "__main__":
