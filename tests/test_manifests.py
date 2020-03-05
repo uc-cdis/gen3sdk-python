@@ -10,8 +10,8 @@ from gen3.tools.indexing import verify_object_manifest
 from gen3.tools.indexing import download_manifest
 from gen3.tools.indexing.download_manifest import TMP_FOLDER
 from gen3.tools.indexing import async_download_object_manifest
-from gen3.tools.indexing.index_object_manifest import (
-    manifest_indexing,
+from gen3.tools.indexing.index_manifest import (
+    index_object_manifest,
     _get_and_verify_fileinfos_from_tsv_manifest,
 )
 
@@ -315,6 +315,7 @@ def test_read_manifest():
 
 
 def test_index_manifest(gen3_index, indexd_server):
+
     rec1 = gen3_index.create_record(
         did="255e396f-f1f8-11e9-9a07-0a80fada099c",
         hashes={"md5": "473d83400bc1bc9dc635e334faddf33c"},
@@ -323,8 +324,8 @@ def test_index_manifest(gen3_index, indexd_server):
         urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
     )
 
-    manifest_indexing(
-        "./test.tsv", indexd_server.baseurl, 1, ("admin", "admin"), replace_urls=False
+    index_object_manifest(
+        indexd_server.baseurl, "./test.tsv", 1, ("admin", "admin"), replace_urls=False
     )
     rec1 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada099c")
     rec2 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada010c")
@@ -362,8 +363,8 @@ def test_index_manifest_with_replace_urls(gen3_index, indexd_server):
         size=363_455_714,
         urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
     )
-    manifest_indexing(
-        "./test.tsv", indexd_server.baseurl, 1, ("admin", "admin"), replace_urls=True
+    index_object_manifest(
+        indexd_server.baseurl, "./test.tsv", 1, ("admin", "admin"), replace_urls=True
     )
     rec1 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada099c")
 

@@ -204,11 +204,11 @@ def main():
     # use basic auth for admin privileges in indexd
     # auth = ("basic_auth_username", "basic_auth_password")
 
-    indexing.index_object_manifest(
+    index_object_manifest(
         commons_url=COMMONS,
         manifest_file=MANIFEST,
         thread_num=8,
-        auth=None,
+        auth=auth,
         replace_urls=False,
         manifest_file_delimiter="\t" # put "," if the manifest is csv file
     )
