@@ -369,3 +369,13 @@ def test_index_manifest_with_replace_urls(gen3_index, indexd_server):
     rec1 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada099c")
 
     assert rec1["urls"] == ["s3://pdcdatastore/test1.raw"]
+
+
+def test_index_non_guid_manifest(gen3_index, indexd_server):
+    files, _ = index_object_manifest(
+        indexd_server.baseurl, "./test2.tsv", 1, ("admin", "admin"), replace_urls=True
+    )
+
+    assert "testprefix" in files[0]["GUID"]
+    rec1 = gen3_index.get(files[0]["GUID"])
+    assert rec1["urls"] == ["s3://pdcdatastore/test1.raw"]

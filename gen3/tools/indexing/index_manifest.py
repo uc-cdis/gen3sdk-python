@@ -27,8 +27,8 @@ Attributes:
 
 
 Usages:
-    python index_object_manifest.py indexing --commons_url https://giangb.planx-pla.net  --manifest_file path_to_manifest --auth "admin,admin" --replace_urls False --thread_num 10
-    python index_object_manifest.py indexing --commons_url https://giangb.planx-pla.net  --manifest_file path_to_manifest --api_key ./credentials.json --replace_urls False --thread_num 10
+    python index_manifest.py --commons_url https://giangb.planx-pla.net  --manifest_file path_to_manifest --auth "admin,admin" --replace_urls False --thread_num 10
+    python index_manifest.py --commons_url https://giangb.planx-pla.net  --manifest_file path_to_manifest --api_key ./credentials.json --replace_urls False --thread_num 10
 """
 import os
 import csv
@@ -127,6 +127,8 @@ def _get_and_verify_fileinfos_from_tsv_manifest(
                 "md5": "md5_hash",
             },
         ]
+        headers(list(str)): field names
+
     """
     files = []
     with open(manifest_file, "r") as csvfile:
@@ -264,12 +266,12 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
         else:
             acl = []
 
-        guid = uuid.uuid4() if not fi.get("GUID") else fi.get("GUID")
+        # guid = uuid.uuid4() if not fi.get("GUID") else fi.get("GUID")
 
         doc = None
 
         if fi.get("GUID"):
-            doc = indexclient.get(guid)
+            doc = indexclient.get(fi["GUID"])
 
         if doc is not None:
             if doc.size != fi.get("size") or doc.hashes.get("md5") != fi.get("md5"):
@@ -310,14 +312,19 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
                 if need_update:
                     doc.patch()
         else:
+            if fi.get("GUID"):
+                guid = fi.get("GUID", "").strip()
+            else:
+                guid = None
             doc = indexclient.create(
-                did=fi.get("GUID", "").strip(),
+                did=guid,
                 hashes={"md5": fi.get("md5", "").strip()},
                 size=fi.get("size", 0),
                 acl=acl,
                 authz=authz,
                 urls=urls,
             )
+            fi["GUID"] = doc.did
 
     except Exception as e:
         # Don't break for any reason
@@ -383,17 +390,10 @@ def index_object_manifest(
         logging.error("The manifest {} has wrong format".format(manifest_file, e))
         return None, None
 
-    # Generate guid if missing
-    for fi in files:
-        if fi.get("GUID") is None:
-            fi["GUID"] = uuid.uuid4()
-
-    do_gen_guid = False
     try:
         headers.index("GUID")
     except ValueError:
-        headers.append("GUID")
-        do_gen_guid = True
+        headers.insert(0, "GUID")
 
     pool = ThreadPool(thread_num)
 
@@ -409,22 +409,10 @@ def index_object_manifest(
     pool.close()
     pool.join()
 
-    logging.info("Done!!!")
-    if do_gen_guid:
-        return (
-            _write_csv(
-                os.path.join(CURRENT_DIR, "output_manifest.tsv"), files, headers
-            ),
-        )
-    return None
+    return files, headers
 
 
-@click.group()
-def cli():
-    pass
-
-
-@cli.command()
+@click.command()
 @click.option(
     "--commons_url",
     help="Root domain (url) for a commons containing indexd.",
@@ -440,6 +428,7 @@ def cli():
     help="string character that delimites the file (tab or comma). Defaults to tab.",
     default="\t",
 )
+@click.option("--out_manifest_file", help="The path to output manifest")
 def index_object_manifest_cli(
     commons_url,
     manifest_file,
@@ -448,6 +437,7 @@ def index_object_manifest_cli(
     auth,
     replace_urls,
     manifest_file_delimiter,
+    out_manifest_file,
 ):
     """
     Commandline interface for indexing a given manifest to indexd
@@ -459,9 +449,11 @@ def index_object_manifest_cli(
         api_key (str): the path to api key
         auth(str): the basic auth
         replace_urls(bool): Replace urls or not
-            NOTE: if both api_key and auth are specified, it will ignore the leter and
+            NOTE: if both api_key and auth are specified, it will ignore the later and
             take the former as a default
         manifest_file_delimiter(str): manifest's delimiter
+        out_manifest_file(str): path to the output manifest
+
     """
 
     if api_key:
@@ -469,7 +461,7 @@ def index_object_manifest_cli(
     else:
         auth = tuple(auth.split(",")) if auth else None
 
-    index_object_manifest(
+    files, headers = index_object_manifest(
         commons_url + "/index",
         manifest_file,
         int(thread_num),
@@ -478,8 +470,11 @@ def index_object_manifest_cli(
         manifest_file_delimiter,
     )
 
+    if out_manifest_file:
+        _write_csv(os.path.join(CURRENT_DIR, out_manifest_file), files, headers)
+
 
 if __name__ == "__main__":
     logging.basicConfig(filename="index_object_manifest.log", level=logging.DEBUG)
     logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
-    cli()
+    index_object_manifest_cli()
