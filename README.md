@@ -168,27 +168,28 @@ if __name__ == "__main__":
 ### Indexing Manifest
 
 
-The module for indexing object files in a manifest (against indexd's API). 
+The module for indexing object files in a manifest (against indexd's API).
 
 The manifest format can be either tsv or csv. The fields that are lists (like acl, authz, and urls)
-separate the values with commas or spaces.
-The field values can contain single quote, open bracket and the closed bracket. However, they will 
+separate the values with commas or spaces (but you must use spaces if the file is a csv).
+The field values can contain single quote, open bracket and the closed bracket. However, they will
 be removed in the preprocessing step.
 
 The following is an example of tsv manifest.
 ```
-guid	md5	size	authz   acl	url
-255e396f-f1f8-11e9-9a07-0a80fada099c	473d83400bc1bc9dc635e334faddf33c	363455714	/program/DEV/project/test   'Open']	[s3://pdcdatastore/test1.raw]
-255e396f-f1f8-11e9-9a07-0a80fada097c	473d83400bc1bc9dc635e334fadd433c	543434443	/program/DEV/project/test   phs0001 phs0002	s3://pdcdatastore/test3.raw
-255e396f-f1f8-11e9-9a07-0a80fada096c	473d83400bc1bc9dc635e334fadd433c	363455714	/program/DEV/project/test   ['phs0001', 'phs0002']	['s3://pdcdatastore/test4.raw']
+guid	md5	size	authz	acl	url
+255e396f-f1f8-11e9-9a07-0a80fada099c	473d83400bc1bc9dc635e334faddf33c	363455714	/programs/DEV/project/test	['Open']	[s3://examplebucket/test1.raw]
+255e396f-f1f8-11e9-9a07-0a80fada097c	473d83400bc1bc9dc635e334fadd433c	543434443	/programs/DEV/project/test	phs0001 phs0002	s3://examplebucket/test3.raw gs://examplebucket/test3.raw
+255e396f-f1f8-11e9-9a07-0a80fada096c	473d83400bc1bc9dc635e334fadd433c	363455714	/programs/DEV/project/test	['phs0001', 'phs0002']	['s3://examplebucket/test4.raw', 'gs://examplebucket/test3.raw']
 ```
 
 ```
 import sys
 import logging
 
+from gen3.auth import Gen3Auth
 from gen3.index import Gen3Index
-from gen3.tools import indexing
+from gen3.tools.indexing import index_object_manifest
 
 logging.basicConfig(filename="output.log", level=logging.DEBUG)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
@@ -196,15 +197,20 @@ logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 COMMONS = "https://{{insert-commons-here}}/"
 MANIFEST = "./example_manifest.tsv"
 
+
 def main():
-    indexing.manifest_indexing(
-        common_url=COMMONS,
-        manifest=MANIFEST,
+    auth = Gen3Auth(COMMONS, refresh_file="credentials.json")
+
+    # use basic auth for admin privileges in indexd
+    # auth = ("basic_auth_username", "basic_auth_password")
+
+    indexing.index_object_manifest(
+        commons_url=COMMONS,
+        manifest_file=MANIFEST,
         thread_num=8,
-        api_key="./credentials.json",
-        #auth = "admin,admin", # comment the above line and un-comment this line if basic auth is used
+        auth=None,
         replace_urls=False,
-        dem="\t" # put "," if the manifest is csv file
+        manifest_file_delimiter="\t" # put "," if the manifest is csv file
     )
 
 if __name__ == "__main__":

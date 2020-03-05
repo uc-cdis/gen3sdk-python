@@ -1,20 +1,20 @@
 """
-Module for indexing object files in a manifest (against indexd's API). 
+Module for indexing object files in a manifest (against indexd's API).
 
 The default manifest format created is a Tab-Separated Value file (tsv)
 with rows for every record.
 
 Fields that are lists (like acl, authz, and urls) separate the values with commas or spaces
-See the Attributes session for supported column names. 
+See the Attributes session for supported column names.
 
 All supported formats of acl, authz and url fields are shown in the below example.
 
-guid	md5	size    acl authz   url
-255e396f-f1f8-11e9-9a07-0a80fada099c	473d83400bc1bc9dc635e334faddf33c	363455714	['Open']	[s3://pdcdatastore/test1.raw]
-255e396f-f1f8-11e9-9a07-0a80fada098c	473d83400bc1bc9dc635e334faddd33c	343434344	Open	s3://pdcdatastore/test2.raw
-255e396f-f1f8-11e9-9a07-0a80fada097c	473d83400bc1bc9dc635e334fadd433c	543434443	phs0001 phs0002	s3://pdcdatastore/test3.raw
-255e396f-f1f8-11e9-9a07-0a80fada096c	473d83400bc1bc9dc635e334fadd433c	363455714	['phs0001', 'phs0002']	['s3://pdcdatastore/test4.raw']
-255e396f-f1f8-11e9-9a07-0a80fada010c	473d83400bc1bc9dc635e334fadde33c	363455714	['Open']	s3://pdcdatastore/test5.raw
+guid    md5 size    acl authz   url
+255e396f-f1f8-11e9-9a07-0a80fada099c    473d83400bc1bc9dc635e334faddf33c    363455714   ['Open']    [s3://pdcdatastore/test1.raw]
+255e396f-f1f8-11e9-9a07-0a80fada098c    473d83400bc1bc9dc635e334faddd33c    343434344   Open    s3://pdcdatastore/test2.raw
+255e396f-f1f8-11e9-9a07-0a80fada097c    473d83400bc1bc9dc635e334fadd433c    543434443   phs0001 phs0002 s3://pdcdatastore/test3.raw
+255e396f-f1f8-11e9-9a07-0a80fada096c    473d83400bc1bc9dc635e334fadd433c    363455714   ['phs0001', 'phs0002']  ['s3://pdcdatastore/test4.raw']
+255e396f-f1f8-11e9-9a07-0a80fada010c    473d83400bc1bc9dc635e334fadde33c    363455714   ['Open']    s3://pdcdatastore/test5.raw
 
 Attributes:
     CURRENT_DIR (str): directory this file is in
@@ -27,8 +27,8 @@ Attributes:
 
 
 Usages:
-    python index_object_manifest.py indexing --common_url https://giangb.planx-pla.net  --manifest_path path_to_manifest --auth "admin,admin" --replace_urls False --thread_num 10
-    python index_object_manifest.py indexing --common_url https://giangb.planx-pla.net  --manifest_path path_to_manifest --api_key ./credentials.json --replace_urls False --thread_num 10
+    python index_object_manifest.py indexing --commons_url https://giangb.planx-pla.net  --manifest_file path_to_manifest --auth "admin,admin" --replace_urls False --thread_num 10
+    python index_object_manifest.py indexing --commons_url https://giangb.planx-pla.net  --manifest_file path_to_manifest --api_key ./credentials.json --replace_urls False --thread_num 10
 """
 import os
 import csv
@@ -106,14 +106,16 @@ def _standardize_str(s):
     return res
 
 
-def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
+def _get_and_verify_fileinfos_from_tsv_manifest(
+    manifest_file, manifest_file_delimiter="\t"
+):
     """
     get and verify file infos from tsv manifest
 
     Args:
         manifest_file(str): the path to the input manifest
-        dem(str): delimiter
-    
+        manifest_file_delimiter(str): delimiter
+
     Returns:
         list(dict): list of file info
         [
@@ -128,7 +130,7 @@ def _get_and_verify_fileinfos_from_tsv_manifest(manifest_file, dem="\t"):
     """
     files = []
     with open(manifest_file, "r") as csvfile:
-        csvReader = csv.DictReader(csvfile, delimiter=dem)
+        csvReader = csv.DictReader(csvfile, delimiter=manifest_file_delimiter)
         fieldnames = csvReader.fieldnames
         pass_verification = True
         for row in csvReader:
@@ -195,7 +197,7 @@ def _write_csv(filename, files, fieldnames=None):
             },
         ]
         fieldnames(list(str)): list of column names
-    
+
     Returns:
         None
     """
@@ -220,7 +222,7 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
     Args:
         indexclient(IndexClient): indexd client
         replace_urls(bool): replace urls or not
-        fi(dict): file info 
+        fi(dict): file info
 
     Returns:
         None
@@ -338,40 +340,47 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
     thread_control.mutexLock.release()
 
 
-def manifest_indexing(
-    manifest, common_url, thread_num, auth=None, replace_urls=True, dem="\t"
+def index_object_manifest(
+    commons_url,
+    manifest_file,
+    thread_num,
+    auth=None,
+    replace_urls=True,
+    manifest_file_delimiter="\t",
 ):
     """
     Loop through all the files in the manifest, update/create records in indexd
     update indexd if the url is not in the record url list or acl has changed
 
     Args:
-        manifest(str): path to the manifest
-        common_url(str): common url
+        commons_url(str): common url
+        manifest_file(str): path to the manifest
         thread_num(int): number of threads for indexing
-        auth(Gen3Auth): Gen3 auth
+        auth(Gen3Auth): Gen3 auth or tuple with basic auth name and password
         replace_urls(bool): flag to indicate if replace urls or not
-        dem(str): manifest's delimiter
-    
+        manifest_file_delimiter(str): manifest's delimiter
+
     Returns:
         logging_file(str): path to the logging file
-        output_manifest(str): path to output manifest. None if the output manifest 
+        output_manifest(str): path to output manifest. None if the output manifest
         and the input manifest are the same
 
     """
     logging.info("Start the process ...")
-    indexclient = client.IndexClient(common_url, "v0", auth=auth)
+    indexclient = client.IndexClient(commons_url, "v0", auth=auth)
 
     try:
-        files, headers = _get_and_verify_fileinfos_from_tsv_manifest(manifest, dem)
+        files, headers = _get_and_verify_fileinfos_from_tsv_manifest(
+            manifest_file, manifest_file_delimiter
+        )
     except Exception as e:
-        logging.error("Can not read {}. Detail {}".format(manifest, e))
+        logging.error("Can not read {}. Detail {}".format(manifest_file, e))
         return None, None
 
     try:
         headers.index("url")
     except ValueError as e:
-        logging.error("The manifest {} has wrong format".format(manifest, e))
+        logging.error("The manifest {} has wrong format".format(manifest_file, e))
         return None, None
 
     # Generate guid if missing
@@ -417,40 +426,60 @@ def cli():
 
 @cli.command()
 @click.option(
-    "--common_url",
+    "--commons_url",
     help="Root domain (url) for a commons containing indexd.",
     required=True,
 )
-@click.option("--manifest_path", help="The path to input manifest")
+@click.option("--manifest_file", help="The path to input manifest")
 @click.option("--thread_num", type=int, help="Number of threads", default=1)
 @click.option("--api_key", help="path to api key")
 @click.option("--auth", help="basic auth")
 @click.option("--replace_urls", type=bool, help="Replace urls or not", default=False)
-def indexing(common_url, manifest_path, thread_num, api_key, auth, replace_urls):
+@click.option(
+    "--manifest_file_delimiter",
+    help="string character that delimites the file (tab or comma). Defaults to tab.",
+    default="\t",
+)
+def index_object_manifest_cli(
+    commons_url,
+    manifest_file,
+    thread_num,
+    api_key,
+    auth,
+    replace_urls,
+    manifest_file_delimiter,
+):
     """
     Commandline interface for indexing a given manifest to indexd
 
     Args:
-        common_url (str): root domain for common
-        manifest_path (str): the full path to the manifest
+        commons_url (str): root domain for common
+        manifest_file (str): the full path to the manifest
         thread_num (int): number of threads being requested
         api_key (str): the path to api key
         auth(str): the basic auth
         replace_urls(bool): Replace urls or not
-            NOTE: if both api_key and auth are specified, it will ignore the leter and take the former as a default
+            NOTE: if both api_key and auth are specified, it will ignore the leter and
+            take the former as a default
+        manifest_file_delimiter(str): manifest's delimiter
     """
 
     if api_key:
-        auth = Gen3Auth(common_url, refresh_file=api_key)
+        auth = Gen3Auth(commons_url, refresh_file=api_key)
     else:
         auth = tuple(auth.split(",")) if auth else None
 
-    manifest_indexing(
-        manifest_path, common_url + "/index", int(thread_num), auth, replace_urls
+    index_object_manifest(
+        commons_url + "/index",
+        manifest_file,
+        int(thread_num),
+        auth,
+        replace_urls,
+        manifest_file_delimiter,
     )
 
 
 if __name__ == "__main__":
-    logging.basicConfig(filename="manifest_indexing.log", level=logging.DEBUG)
+    logging.basicConfig(filename="index_object_manifest.log", level=logging.DEBUG)
     logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
     cli()
