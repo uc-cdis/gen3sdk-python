@@ -368,9 +368,17 @@ def index_object_manifest(
         manifest_file_delimiter(str): manifest's delimiter
 
     Returns:
-        logging_file(str): path to the logging file
-        output_manifest(str): path to output manifest. None if the output manifest
-        and the input manifest are the same
+        files(list(dict)): list of file info
+        [
+            {
+                "GUID": "guid_example",
+                "filename": "example",
+                "size": 100,
+                "acl": "['open']",
+                "md5": "md5_hash",
+            },
+        ]
+        headers(list(str)): list of fieldnames
 
     """
     logging.info("Start the process ...")

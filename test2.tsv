@@ -1,0 +1,3 @@
+md5	size	authz	acl	url
+273d83400bc1bc9dc635e334faddf33c	363455714		['Open']	[s3://pdcdatastore/test1.raw]
+273d83400bc1bc9dc635e334faddd33c	343434344	/program/DEV/project/test	Open	s3://pdcdatastore/test2.raw
