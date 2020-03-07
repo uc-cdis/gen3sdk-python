@@ -570,7 +570,9 @@ class Gen3Expansion:
             )
 
             try:
-                print("\n\t{}\n".format(rurl)) # trouble-shooting
+                #print("\n\trurl='{}'\n".format(rurl)) # trouble-shooting
+                #print("\n\tresp = requests.delete(rurl, auth=auth)")
+                #print("\n\tprint(resp.text)")
                 resp = requests.delete(rurl, auth=self._auth_provider)
             except Exception as e:
                 chunk_size = int(chunk_size/2)
@@ -596,9 +598,7 @@ class Gen3Expansion:
                             retry.append(entity['id'])
                         else:
                             errors.append(entity['errors'][0]['message'])
-                            failure.append(entity['errors'][0]['id'])
-                            # failed_ids = list_ids.split(',')
-                            # failure = list(set(failure + failed_ids))
+                            failure = list(set(failure.append(entity['id'])))
                     for error in list(set(errors)):
                         print("Error message for {} records: {}".format(errors.count(error),error))
 
@@ -613,8 +613,6 @@ class Gen3Expansion:
         print("\tFinished record deletion script.")
 
         return results
-# uuids = list(set(df['submitter_id']))
-# data = exp.delete_records(uuids=uuids,project_id='mjff-S4')
 
 
     def delete_node(self,node,project_id,chunk_size=200):
