@@ -266,8 +266,6 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
         else:
             acl = []
 
-        # guid = uuid.uuid4() if not fi.get("GUID") else fi.get("GUID")
-
         doc = None
 
         if fi.get("GUID"):
