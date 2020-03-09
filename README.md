@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
 ```
 
-The output file will contain columns `guid, urls, authz, acl, md5, file_size` with info
+The output file will contain columns `guid, urls, authz, acl, md5, file_size, file_name` with info
 populated from indexd.
 
 ### Verify Manifest
@@ -66,7 +66,7 @@ How to verify the file objects in indexd against a "source of truth" manifest.
 
 In the example below we assume a manifest named `alternate-manifest.csv` already exists
 with info of what's expected in indexd. The headers in the `alternate-manifest.csv`
-are `guid, urls, authz, acl, md5, size`.
+are `guid, urls, authz, acl, md5, size, file_name`.
 
 > NOTE: The alternate manifest headers differ rfom the default headers described above (`file_size` doesn't exist and should be taken from `size`)
 

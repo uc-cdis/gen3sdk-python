@@ -1,11 +1,13 @@
 """
-Module for indexing actions for verify indexd against a manifest of
-expected indexed file objects. Supports
-multiple processes using Python's multiprocessing library.
+Module for indexing actions for verifying a manifest of
+indexed file objects (against indexd's API). Supports
+multiple processes and coroutines using Python's asyncio library.
 
-The default manifest format expected is a Comma-Separated Value file (csv)
-with rows for every record. A header row is required with field names. The default
-expected header row is: guid,authz,acl,file_size,md5,urls
+The default manifest format created is a Comma-Separated Value file (csv)
+with rows for every record. A header row is created with field names:
+guid,authz,acl,file_size,md5,urls,file_name
+
+Fields that are lists (like acl, authz, and urls) separate the values with spaces.
 
 There is a default mapping for those column names above but you can override it.
 Fields that expect lists (like acl, authz, and urls) by default assume these values are
@@ -33,31 +35,31 @@ format:
 ex: 93d9af72-b0f1-450c-a5c6-7d3d8d2083b4|authz|expected ['']|actual ['/programs/DEV/projects/test']
 
 Attributes:
-    CURRENT_DIR (str): abs path of current directory where this file lives
-    manifest_row_parsers (TYPE): Description
+    CURRENT_DIR (str): directory this file is in
+    MAX_CONCURRENT_REQUESTS (int): maximum number of desired concurrent requests across
+        processes/threads
     TMP_FOLDER (str): Folder directory for placing temporary files
         NOTE: We have to use a temporary folder b/c Python's file writing is not
               thread-safe so we can't have all processes writing to the same file.
               To workaround this, we have each process write to a file and concat
               them all post-processing.
 """
+import asyncio
+import click
+import time
 import csv
 import glob
 import logging
-import fnmatch
-from multiprocessing import Pool, Process, Manager, Queue
-import multiprocessing
 import os
 import sys
 import shutil
 import math
-import time
-import urllib.parse
 
 from gen3.index import Gen3Index
 
-TMP_FOLDER = os.path.abspath("./tmp") + "/"
+MAX_CONCURRENT_REQUESTS = 24
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+TMP_FOLDER = os.path.abspath(CURRENT_DIR + "/tmp") + "/"
 
 
 def _get_guid_from_row(row):
@@ -192,26 +194,26 @@ manifest_row_parsers = {
 }
 
 
-def verify_object_manifest(
+async def async_verify_object_manifest(
     commons_url,
     manifest_file,
-    num_processes=20,
+    max_concurrent_requests=MAX_CONCURRENT_REQUESTS,
     manifest_row_parsers=manifest_row_parsers,
     manifest_file_delimiter=",",
-    log_output_filename=f"verify-manifest-errors-{time.time()}.log",
+    output_filename=f"verify-manifest-errors-{time.time()}.log",
 ):
     """
-    Verify all the indexd records provided in the manifest file.
+    Verify all file object records into a manifest csv
 
     Args:
-        commons_url (str): host url for the commons where indexd lives
-        log_output_filename (str): filename for output logs
-        num_processes (int): number of parallel python processes to run
+        commons_url (str): root domain for commons where indexd lives
         manifest_file (str): the file to verify against
+        max_concurrent_requests (int): the maximum number of concurrent requests allowed
         manifest_row_parsers (Dict{indexd_field:func_to_parse_row}): Row parsers
         manifest_file_delimiter (str): delimeter in manifest_file
+        output_filename (str): filename for output logs
     """
-    start_time = time.time()
+    start_time = time.perf_counter()
     logging.info(f"start time: {start_time}")
 
     # ensure tmp directory exists and is empty
@@ -221,113 +223,81 @@ def verify_object_manifest(
         if os.path.isfile(file_path):
             os.unlink(file_path)
 
-    _verify_all_index_records_in_file(
+    result = await _verify_all_index_records_in_file(
         commons_url,
-        log_output_filename,
-        num_processes,
         manifest_file,
-        manifest_row_parsers,
         manifest_file_delimiter,
+        max_concurrent_requests,
+        output_filename,
     )
 
-    end_time = time.time()
+    end_time = time.perf_counter()
     logging.info(f"end time: {end_time}")
     logging.info(f"run time: {end_time-start_time}")
 
 
-def _verify_all_index_records_in_file(
+async def _verify_all_index_records_in_file(
     commons_url,
-    log_output_filename,
-    num_processes,
     manifest_file,
-    manifest_row_parsers,
     manifest_file_delimiter,
+    max_concurrent_requests,
+    output_filename,
 ):
     """
-    Verify all the indexd records provided in the manifest file by creating a thread-safe
-    queue and dumping all the rows from the manifest into it. Then start up processes
-    to parallelly pop off the queue and verify the manifest row against indexd's API.
-    Then combine all the output logs into a single file.
+    Getting indexd records and writing to a file. This function
+    creates semaphores to limit the number of concurrent http connections that
+    get opened to send requests to indexd.
+
+    It then uses asyncio to start a number of coroutines. Steps:
+        1) requests to indexd to get records (writes resulting records to a queue)
+        2) puts a final "DONE" in the queue to stop coroutine that will read from queue
+        3) reading those records from the queue and writing to a file
+
+    Args:
+        commons_url (str): root domain for commons where indexd lives
+        manifest_file (str): the file to verify against
+        manifest_file_delimiter (str): delimeter in manifest_file
+        output_filename (str, optional): filename for output
+        max_concurrent_requests (int): the maximum number of concurrent requests allowed
     """
-    index = Gen3Index(commons_url)
-
-    queue = Queue()
-
-    logging.info(f"adding rows from {manifest_file} to queue...")
-
-    with open(manifest_file, encoding="utf-8-sig") as csvfile:
-        manifest_reader = csv.DictReader(csvfile, delimiter=manifest_file_delimiter)
-        for row in manifest_reader:
-            row = {key.strip(" "): value for key, value in row.items()}
-            queue.put(row)
-
-    logging.info(
-        f"done adding to queue, sending {num_processes} STOP messages b/c {num_processes} processes"
+    max_requests = int(max_concurrent_requests)
+    logging.debug(f"max concurrent requests: {max_requests}")
+    lock = asyncio.Semaphore(max_requests)
+    queue = asyncio.Queue()
+    write_to_file_task = asyncio.ensure_future(
+        _parse_from_queue(queue, lock, commons_url, output_filename)
     )
 
-    for x in range(num_processes):
-        queue.put("STOP")
+    with open(manifest_file, encoding="utf-8-sig") as manifest:
+        reader = csv.DictReader(manifest, delimiter=manifest_file_delimiter)
+        for row in reader:
+            new_row = {}
+            for key, value in row.items():
+                new_row[key.strip()] = value.strip()
+            await queue.put(new_row)
 
-    _start_processes_and_process_queue(
-        queue, commons_url, num_processes, manifest_row_parsers
-    )
-
-    logging.info(
-        f"done processing queue, combining outputs to single file {log_output_filename}"
-    )
-
-    # remove existing output if it exists
-    if os.path.isfile(log_output_filename):
-        os.unlink(log_output_filename)
-
-    with open(log_output_filename, "wb") as outfile:
-        for filename in glob.glob(TMP_FOLDER + "*"):
-            if log_output_filename == filename:
-                # don't want to copy the output into the output
-                continue
-            logging.info(f"combining {filename} into {log_output_filename}")
-            with open(filename, "rb") as readfile:
-                shutil.copyfileobj(readfile, outfile)
-
-    logging.info(f"done writing output to file {log_output_filename}")
+    await queue.put("DONE")
+    await write_to_file_task
 
 
-def _start_processes_and_process_queue(
-    queue, commons_url, num_processes, manifest_row_parsers
-):
-    """
-    Startup num_processes and wait for them to finish processing the provided queue.
-    """
-    logging.info(f"starting {num_processes} processes..")
-
-    processes = []
-    for x in range(num_processes):
-        p = Process(
-            target=_verify_records_in_indexd,
-            args=(queue, commons_url, manifest_row_parsers),
-        )
-        p.start()
-        processes.append(p)
-
-    logging.info(f"waiting for processes to finish processing queue...")
-
-    for process in processes:
-        process.join()
-
-
-def _verify_records_in_indexd(queue, commons_url, manifest_row_parsers):
+async def _parse_from_queue(queue, lock, commons_url, output_filename):
     """
     Keep getting items from the queue and verifying that indexd contains the expected
     fields from that row. If there are any issues, log errors into a file. Return
     when nothing is left in the queue.
-    """
-    index = Gen3Index(commons_url)
-    row = queue.get()
-    process_name = multiprocessing.current_process().name
-    file_name = TMP_FOLDER + str(process_name) + ".log"
 
-    with open(file_name, "w+", encoding="utf8") as file:
-        while row != "STOP":
+    Args:
+        queue (asyncio.Queue): queue to read indexd records from
+        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
+            connections
+        commons_url (str): root domain for commons where indexd lives
+        output_filename (str, optional): filename for output
+    """
+    loop = asyncio.get_event_loop()
+
+    row = await queue.get()
+    with open(output_filename, "w+", encoding="utf8") as file:
+        while row != "DONE":
             guid = manifest_row_parsers["guid"](row)
             authz = manifest_row_parsers["authz"](row)
             acl = manifest_row_parsers["acl"](row)
@@ -337,16 +307,16 @@ def _verify_records_in_indexd(queue, commons_url, manifest_row_parsers):
             file_name = manifest_row_parsers["file_name"](row)
 
             try:
-                actual_record = index.get_record(guid)
+                actual_record = await _get_record_from_indexd(guid, commons_url, lock)
                 if not actual_record:
                     raise Exception(
                         f"Index client could not find record for GUID: {guid}"
                     )
             except Exception as exc:
                 output = f"{guid}|no_record|expected {row}|actual {exc}\n"
-                file.write(output)
+                loop.run_in_executor(None, file.write, output)
                 logging.error(output)
-                row = queue.get()
+                row = await queue.get()
                 continue
 
             logging.info(f"verifying {guid}...")
@@ -355,12 +325,12 @@ def _verify_records_in_indexd(queue, commons_url, manifest_row_parsers):
                 output = (
                     f"{guid}|authz|expected {authz}|actual {actual_record['authz']}\n"
                 )
-                file.write(output)
+                loop.run_in_executor(None, file.write, output)
                 logging.error(output)
 
             if sorted(acl) != sorted(actual_record["acl"]):
                 output = f"{guid}|acl|expected {acl}|actual {actual_record['acl']}\n"
-                file.write(output)
+                loop.run_in_executor(None, file.write, output)
                 logging.error(output)
 
             if file_size != actual_record["size"]:
@@ -376,7 +346,7 @@ def _verify_records_in_indexd(queue, commons_url, manifest_row_parsers):
                     pass
                 else:
                     output = f"{guid}|file_size|expected {file_size}|actual {actual_record['size']}\n"
-                    file.write(output)
+                    loop.run_in_executor(None, file.write, output)
                     logging.error(output)
 
             if md5 != actual_record["hashes"].get("md5"):
@@ -392,21 +362,47 @@ def _verify_records_in_indexd(queue, commons_url, manifest_row_parsers):
                     pass
                 else:
                     output = f"{guid}|md5|expected {md5}|actual {actual_record['hashes'].get('md5')}\n"
-                    file.write(output)
+                    loop.run_in_executor(None, file.write, output)
                     logging.error(output)
 
             if sorted(urls) != sorted(actual_record["urls"]):
                 output = f"{guid}|urls|expected {urls}|actual {actual_record['urls']}\n"
-                file.write(output)
+                loop.run_in_executor(None, file.write, output)
                 logging.error(output)
 
             if not actual_record["file_name"] and file_name:
                 # if the actual record name is "" or None but something was specified
                 # in the manifest, we have a problem
                 output = f"{guid}|file_name|expected {file_name}|actual {actual_record['file_name']}\n"
-                file.write(output)
+                loop.run_in_executor(None, file.write, output)
                 logging.error(output)
 
-            row = queue.get()
+            row = await queue.get()
 
-    logging.info(f"{process_name}:Stop")
+        file.flush()
+
+
+async def _get_record_from_indexd(guid, commons_url, lock):
+    """
+    Gets a semaphore then requests a record for the given guid
+
+    Args:
+        guid (str): indexd record globally unique id
+        commons_url (str): root domain for commons where indexd lives
+        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
+            connections
+    """
+    index = Gen3Index(commons_url)
+    async with lock:
+        # default ssl handling unless it's explicitly http://
+        ssl = None
+        if "https" not in commons_url:
+            ssl = False
+
+    return await index.async_get_record(guid, _ssl=ssl)
+
+
+if __name__ == "__main__":
+    logging.basicConfig(filename="output.log", level=logging.DEBUG)
+    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+    verify_manifest_against_indexd()
