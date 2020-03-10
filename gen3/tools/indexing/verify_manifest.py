@@ -223,7 +223,7 @@ async def async_verify_object_manifest(
         if os.path.isfile(file_path):
             os.unlink(file_path)
 
-    result = await _verify_all_index_records_in_file(
+    await _verify_all_index_records_in_file(
         commons_url,
         manifest_file,
         manifest_file_delimiter,
@@ -264,9 +264,6 @@ async def _verify_all_index_records_in_file(
     logging.debug(f"max concurrent requests: {max_requests}")
     lock = asyncio.Semaphore(max_requests)
     queue = asyncio.Queue()
-    write_to_file_task = asyncio.ensure_future(
-        _parse_from_queue(queue, lock, commons_url, output_filename)
-    )
 
     with open(manifest_file, encoding="utf-8-sig") as manifest:
         reader = csv.DictReader(manifest, delimiter=manifest_file_delimiter)
@@ -276,8 +273,17 @@ async def _verify_all_index_records_in_file(
                 new_row[key.strip()] = value.strip()
             await queue.put(new_row)
 
-    await queue.put("DONE")
-    await write_to_file_task
+    for _ in range(0, int(max_concurrent_requests + (max_concurrent_requests / 4))):
+        await queue.put("DONE")
+
+    await asyncio.gather(
+        *(
+            _parse_from_queue(queue, lock, commons_url, output_filename)
+            for _ in range(
+                0, int(max_concurrent_requests + (max_concurrent_requests / 4))
+            )
+        )
+    )
 
 
 async def _parse_from_queue(queue, lock, commons_url, output_filename):
@@ -314,7 +320,7 @@ async def _parse_from_queue(queue, lock, commons_url, output_filename):
                     )
             except Exception as exc:
                 output = f"{guid}|no_record|expected {row}|actual {exc}\n"
-                loop.run_in_executor(None, file.write, output)
+                await loop.run_in_executor(None, file.write, output)
                 logging.error(output)
                 row = await queue.get()
                 continue
@@ -325,12 +331,12 @@ async def _parse_from_queue(queue, lock, commons_url, output_filename):
                 output = (
                     f"{guid}|authz|expected {authz}|actual {actual_record['authz']}\n"
                 )
-                loop.run_in_executor(None, file.write, output)
+                await loop.run_in_executor(None, file.write, output)
                 logging.error(output)
 
             if sorted(acl) != sorted(actual_record["acl"]):
                 output = f"{guid}|acl|expected {acl}|actual {actual_record['acl']}\n"
-                loop.run_in_executor(None, file.write, output)
+                await loop.run_in_executor(None, file.write, output)
                 logging.error(output)
 
             if file_size != actual_record["size"]:
@@ -346,7 +352,7 @@ async def _parse_from_queue(queue, lock, commons_url, output_filename):
                     pass
                 else:
                     output = f"{guid}|file_size|expected {file_size}|actual {actual_record['size']}\n"
-                    loop.run_in_executor(None, file.write, output)
+                    await loop.run_in_executor(None, file.write, output)
                     logging.error(output)
 
             if md5 != actual_record["hashes"].get("md5"):
@@ -362,19 +368,19 @@ async def _parse_from_queue(queue, lock, commons_url, output_filename):
                     pass
                 else:
                     output = f"{guid}|md5|expected {md5}|actual {actual_record['hashes'].get('md5')}\n"
-                    loop.run_in_executor(None, file.write, output)
+                    await loop.run_in_executor(None, file.write, output)
                     logging.error(output)
 
             if sorted(urls) != sorted(actual_record["urls"]):
                 output = f"{guid}|urls|expected {urls}|actual {actual_record['urls']}\n"
-                loop.run_in_executor(None, file.write, output)
+                await loop.run_in_executor(None, file.write, output)
                 logging.error(output)
 
             if not actual_record["file_name"] and file_name:
                 # if the actual record name is "" or None but something was specified
                 # in the manifest, we have a problem
                 output = f"{guid}|file_name|expected {file_name}|actual {actual_record['file_name']}\n"
-                loop.run_in_executor(None, file.write, output)
+                await loop.run_in_executor(None, file.write, output)
                 logging.error(output)
 
             row = await queue.get()
@@ -399,7 +405,7 @@ async def _get_record_from_indexd(guid, commons_url, lock):
         if "https" not in commons_url:
             ssl = False
 
-    return await index.async_get_record(guid, _ssl=ssl)
+        return await index.async_get_record(guid, _ssl=ssl)
 
 
 if __name__ == "__main__":

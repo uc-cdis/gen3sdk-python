@@ -6,7 +6,7 @@ import shutil
 import logging
 from unittest.mock import MagicMock, patch
 
-from gen3.tools.indexing import verify_object_manifest
+from gen3.tools.indexing import async_verify_object_manifest
 from gen3.tools.indexing import download_manifest
 from gen3.tools.indexing.download_manifest import _get_records_and_write_to_file
 from gen3.tools.indexing.download_manifest import TMP_FOLDER
@@ -25,7 +25,7 @@ def test_verify_manifest(mock_index):
     NOTE: records in indexd are mocked
     """
     mock_index.return_value.get_record.side_effect = _mock_get_guid
-    verify_object_manifest(
+    async_verify_object_manifest(
         "http://localhost",
         CURRENT_DIR + "/test_manifest.csv",
         num_processes=3,
