@@ -27,8 +27,8 @@ def test_verify_manifest(mock_index):
     mock_index.return_value.get_record.side_effect = _mock_get_guid
     async_verify_object_manifest(
         "http://localhost",
-        CURRENT_DIR + "/test_manifest.csv",
-        num_processes=3,
+        manifest_file=CURRENT_DIR + "/test_manifest.csv",
+        max_concurrent_requests=3,
         log_output_filename="test.log",
     )
 
