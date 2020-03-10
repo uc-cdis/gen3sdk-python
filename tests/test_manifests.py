@@ -29,7 +29,7 @@ def test_verify_manifest(mock_index):
         "http://localhost",
         manifest_file=CURRENT_DIR + "/test_manifest.csv",
         max_concurrent_requests=3,
-        log_output_filename="test.log",
+        output_filename="test.log",
     )
 
     logs = {}
