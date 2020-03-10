@@ -380,7 +380,7 @@ def index_object_manifest(
 
     """
     logging.info("Start the process ...")
-
+    service_location = "index"
     commons_url = commons_url.strip("/")
     # if running locally, indexd is deployed by itself without a location relative
     # to the commons
