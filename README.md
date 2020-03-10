@@ -205,7 +205,7 @@ def main():
     # auth = ("basic_auth_username", "basic_auth_password")
 
     index_object_manifest(
-        commons_url=COMMONS,
+        commons_url=COMMONS+"/index",
         manifest_file=MANIFEST,
         thread_num=8,
         auth=auth,
