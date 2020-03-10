@@ -381,8 +381,14 @@ def index_object_manifest(
     """
     logging.info("Start the process ...")
 
-    if not commons_url.strip("/").endswith("index"):
-        commons_url = commons_url.strip("/") + "/index"
+    commons_url = commons_url.strip("/")
+    # if running locally, indexd is deployed by itself without a location relative
+    # to the commons
+    if "http://localhost" in commons_url:
+        service_location = ""
+
+    if not commons_url.endswith(service_location):
+        commons_url += "/" + service_location
 
     indexclient = client.IndexClient(commons_url, "v0", auth=auth)
 
