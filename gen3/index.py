@@ -285,6 +285,15 @@ class Gen3Index:
         return rec.to_json()
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    def get_record_doc(self, guid):
+        """
+
+        Get the metadata associated with a given id
+
+        """
+        return self.client.get(guid)
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_with_params(self, params=None):
         """
 
