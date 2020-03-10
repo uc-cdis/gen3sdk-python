@@ -8,9 +8,12 @@ from unittest.mock import MagicMock, patch
 
 from gen3.tools.indexing import async_verify_object_manifest
 from gen3.tools.indexing import download_manifest
-from gen3.tools.indexing.download_manifest import _get_records_and_write_to_file
 from gen3.tools.indexing.download_manifest import TMP_FOLDER
 from gen3.tools.indexing import async_download_object_manifest
+from gen3.tools.indexing.index_manifest import (
+    index_object_manifest,
+    _get_and_verify_fileinfos_from_tsv_manifest,
+)
 
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -351,3 +354,82 @@ def _mock_get_records_on_page(page, limit, **kwargs):
         ]
     else:
         return []
+
+
+def test_read_manifest():
+    files, headers = _get_and_verify_fileinfos_from_tsv_manifest("./test.tsv")
+    assert headers.index("GUID") >= 0
+    assert headers.index("md5") >= 0
+    assert headers.index("url") >= 0
+
+    assert files[0]["url"] == "[s3://pdcdatastore/test1.raw]"
+    assert files[1]["acl"] == "[Open]"
+    assert files[1]["url"] == "[s3://pdcdatastore/test2.raw]"
+    assert files[3]["url"] == "['s3://pdcdatastore/test4.raw']"
+
+
+def test_index_manifest(gen3_index, indexd_server):
+
+    rec1 = gen3_index.create_record(
+        did="255e396f-f1f8-11e9-9a07-0a80fada099c",
+        hashes={"md5": "473d83400bc1bc9dc635e334faddf33c"},
+        acl=["DEV", "test"],
+        size=363_455_714,
+        urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
+    )
+
+    index_object_manifest(
+        indexd_server.baseurl, "./test.tsv", 1, ("admin", "admin"), replace_urls=False
+    )
+    rec1 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada099c")
+    rec2 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada010c")
+    rec3 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada098c")
+    rec4 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada097c")
+    rec5 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada096c")
+
+    assert set(rec1["urls"]) == set(
+        [
+            "s3://testaws/aws/test.txt",
+            "gs://test/test.txt",
+            "s3://pdcdatastore/test1.raw",
+        ]
+    )
+
+    assert rec1["authz"] == []
+    assert rec2["hashes"]["md5"] == "473d83400bc1bc9dc635e334fadde33c"
+    assert rec2["size"] == 363_455_714
+    assert rec2["authz"] == ["/program/DEV/project/test"]
+    assert rec2["urls"] == ["s3://pdcdatastore/test5.raw"]
+    assert rec3["urls"] == ["s3://pdcdatastore/test2.raw"]
+    assert rec3["authz"] == ["/program/DEV/project/test"]
+    assert rec4["urls"] == ["s3://pdcdatastore/test3.raw"]
+    assert rec4["acl"] == ["phs0001", "phs0002"]
+    assert rec5["urls"] == ["s3://pdcdatastore/test4.raw"]
+    assert rec5["acl"] == ["phs0001", "phs0002"]
+    assert rec5["authz"] == ["/program/DEV/project/test"]
+
+
+def test_index_manifest_with_replace_urls(gen3_index, indexd_server):
+    rec1 = gen3_index.create_record(
+        did="255e396f-f1f8-11e9-9a07-0a80fada099c",
+        hashes={"md5": "473d83400bc1bc9dc635e334faddf33c"},
+        acl=["DEV", "test"],
+        size=363_455_714,
+        urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
+    )
+    index_object_manifest(
+        indexd_server.baseurl, "./test.tsv", 1, ("admin", "admin"), replace_urls=True
+    )
+    rec1 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada099c")
+
+    assert rec1["urls"] == ["s3://pdcdatastore/test1.raw"]
+
+
+def test_index_non_guid_manifest(gen3_index, indexd_server):
+    files, _ = index_object_manifest(
+        indexd_server.baseurl, "./test2.tsv", 1, ("admin", "admin"), replace_urls=True
+    )
+
+    assert "testprefix" in files[0]["GUID"]
+    rec1 = gen3_index.get(files[0]["GUID"])
+    assert rec1["urls"] == ["s3://pdcdatastore/test1.raw"]
