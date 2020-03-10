@@ -228,8 +228,26 @@ async def async_verify_object_manifest(
         manifest_file,
         manifest_file_delimiter,
         max_concurrent_requests,
-        output_filename,
+        output_filename.split("/")[-1],
     )
+
+    output_filename = os.path.abspath(output_filename)
+    logging.info(f"done processing, combining outputs to single file {output_filename}")
+
+    # remove existing output if it exists
+    if os.path.isfile(output_filename):
+        os.unlink(output_filename)
+
+    with open(output_filename, "wb") as outfile:
+        for filename in glob.glob(TMP_FOLDER + "*"):
+            if output_filename == filename:
+                # don't want to copy the output into the output
+                continue
+            logging.info(f"combining {filename} into {output_filename}")
+            with open(filename, "rb") as readfile:
+                shutil.copyfileobj(readfile, outfile)
+
+    logging.info(f"done writing output to file {output_filename}")
 
     end_time = time.perf_counter()
     logging.info(f"end time: {end_time}")
@@ -278,8 +296,10 @@ async def _verify_all_index_records_in_file(
 
     await asyncio.gather(
         *(
-            _parse_from_queue(queue, lock, commons_url, output_filename)
-            for _ in range(
+            _parse_from_queue(
+                queue, lock, commons_url, TMP_FOLDER + output_filename + "_" + str(x)
+            )
+            for x in range(
                 0, int(max_concurrent_requests + (max_concurrent_requests / 4))
             )
         )
@@ -302,6 +322,8 @@ async def _parse_from_queue(queue, lock, commons_url, output_filename):
     loop = asyncio.get_event_loop()
 
     row = await queue.get()
+    logging.info(f"writing partial output to {output_filename}")
+
     with open(output_filename, "w+", encoding="utf8") as file:
         while row != "DONE":
             guid = manifest_row_parsers["guid"](row)
@@ -312,80 +334,73 @@ async def _parse_from_queue(queue, lock, commons_url, output_filename):
             urls = manifest_row_parsers["urls"](row)
             file_name = manifest_row_parsers["file_name"](row)
 
-            try:
-                actual_record = await _get_record_from_indexd(guid, commons_url, lock)
-                if not actual_record:
-                    raise Exception(
-                        f"Index client could not find record for GUID: {guid}"
+            actual_record = await _get_record_from_indexd(guid, commons_url, lock)
+            if not actual_record:
+                output = f"{guid}|no_record|expected {row}|actual None\n"
+                result = await loop.run_in_executor(None, file.write, output)
+                logging.error(output)
+            else:
+                logging.info(f"verifying {guid}...")
+
+                if sorted(authz) != sorted(actual_record["authz"]):
+                    output = f"{guid}|authz|expected {authz}|actual {actual_record['authz']}\n"
+                    await loop.run_in_executor(None, file.write, output)
+                    logging.error(output)
+
+                if sorted(acl) != sorted(actual_record["acl"]):
+                    output = (
+                        f"{guid}|acl|expected {acl}|actual {actual_record['acl']}\n"
                     )
-            except Exception as exc:
-                output = f"{guid}|no_record|expected {row}|actual {exc}\n"
-                await loop.run_in_executor(None, file.write, output)
-                logging.error(output)
-                row = await queue.get()
-                continue
-
-            logging.info(f"verifying {guid}...")
-
-            if sorted(authz) != sorted(actual_record["authz"]):
-                output = (
-                    f"{guid}|authz|expected {authz}|actual {actual_record['authz']}\n"
-                )
-                await loop.run_in_executor(None, file.write, output)
-                logging.error(output)
-
-            if sorted(acl) != sorted(actual_record["acl"]):
-                output = f"{guid}|acl|expected {acl}|actual {actual_record['acl']}\n"
-                await loop.run_in_executor(None, file.write, output)
-                logging.error(output)
-
-            if file_size != actual_record["size"]:
-                if (
-                    not file_size
-                    and file_size != 0
-                    and not actual_record["size"]
-                    and actual_record["size"] != 0
-                ):
-                    # actual and expected are both either empty string or None
-                    # so even though they're not equal, they represent null value so
-                    # we don't need to consider this an error in validation
-                    pass
-                else:
-                    output = f"{guid}|file_size|expected {file_size}|actual {actual_record['size']}\n"
                     await loop.run_in_executor(None, file.write, output)
                     logging.error(output)
 
-            if md5 != actual_record["hashes"].get("md5"):
-                if (
-                    not md5
-                    and md5 != 0
-                    and not actual_record["hashes"].get("md5")
-                    and actual_record["hashes"].get("md5") != 0
-                ):
-                    # actual and expected are both either empty string or None
-                    # so even though they're not equal, they represent null value so
-                    # we don't need to consider this an error in validation
-                    pass
-                else:
-                    output = f"{guid}|md5|expected {md5}|actual {actual_record['hashes'].get('md5')}\n"
+                if file_size != actual_record["size"]:
+                    if (
+                        not file_size
+                        and file_size != 0
+                        and not actual_record["size"]
+                        and actual_record["size"] != 0
+                    ):
+                        # actual and expected are both either empty string or None
+                        # so even though they're not equal, they represent null value so
+                        # we don't need to consider this an error in validation
+                        pass
+                    else:
+                        output = f"{guid}|file_size|expected {file_size}|actual {actual_record['size']}\n"
+                        await loop.run_in_executor(None, file.write, output)
+                        logging.error(output)
+
+                if md5 != actual_record["hashes"].get("md5"):
+                    if (
+                        not md5
+                        and md5 != 0
+                        and not actual_record["hashes"].get("md5")
+                        and actual_record["hashes"].get("md5") != 0
+                    ):
+                        # actual and expected are both either empty string or None
+                        # so even though they're not equal, they represent null value so
+                        # we don't need to consider this an error in validation
+                        pass
+                    else:
+                        output = f"{guid}|md5|expected {md5}|actual {actual_record['hashes'].get('md5')}\n"
+                        await loop.run_in_executor(None, file.write, output)
+                        logging.error(output)
+
+                if sorted(urls) != sorted(actual_record["urls"]):
+                    output = (
+                        f"{guid}|urls|expected {urls}|actual {actual_record['urls']}\n"
+                    )
                     await loop.run_in_executor(None, file.write, output)
                     logging.error(output)
 
-            if sorted(urls) != sorted(actual_record["urls"]):
-                output = f"{guid}|urls|expected {urls}|actual {actual_record['urls']}\n"
-                await loop.run_in_executor(None, file.write, output)
-                logging.error(output)
-
-            if not actual_record["file_name"] and file_name:
-                # if the actual record name is "" or None but something was specified
-                # in the manifest, we have a problem
-                output = f"{guid}|file_name|expected {file_name}|actual {actual_record['file_name']}\n"
-                await loop.run_in_executor(None, file.write, output)
-                logging.error(output)
+                if not actual_record["file_name"] and file_name:
+                    # if the actual record name is "" or None but something was specified
+                    # in the manifest, we have a problem
+                    output = f"{guid}|file_name|expected {file_name}|actual {actual_record['file_name']}\n"
+                    await loop.run_in_executor(None, file.write, output)
+                    logging.error(output)
 
             row = await queue.get()
-
-        file.flush()
 
 
 async def _get_record_from_indexd(guid, commons_url, lock):
