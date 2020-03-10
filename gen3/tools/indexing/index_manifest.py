@@ -380,6 +380,10 @@ def index_object_manifest(
 
     """
     logging.info("Start the process ...")
+
+    if not commons_url.strip("/").endswith("index"):
+        commons_url = commons_url.strip("/") + "/index"
+
     indexclient = client.IndexClient(commons_url, "v0", auth=auth)
 
     try:
