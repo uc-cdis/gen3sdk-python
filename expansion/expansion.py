@@ -1691,6 +1691,7 @@ class Gen3Expansion:
 
         index_records = []
         for guid in guids:
+            print("\tGetting index for GUID ({}/{}): {}".format(guid,len(index_records),len(guids)))
             indexd_endpoint = "{}/index/index/".format(self._endpoint)
             indexd_query = "{}{}".format(indexd_endpoint,guid)
             response = requests.get(indexd_query, auth=self._auth_provider).text
