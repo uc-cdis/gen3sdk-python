@@ -76,13 +76,16 @@ class Gen3Metadata:
 
         self.endpoint = endpoint.rstrip("/")
         self.admin_endpoint = endpoint.rstrip("/") + "-admin"
+        self._auth_provider = auth_provider
 
     def is_healthy(self):
         """
         Return if indexd is healthy or not
         """
         try:
-            response = requests.get(self.endpoint + "/_status")
+            response = requests.get(
+                self.endpoint + "/_status", auth=self._auth_provider
+            )
             response.raise_for_status()
         except Exception as exc:
             logging.error(exc)
@@ -95,7 +98,7 @@ class Gen3Metadata:
         """
         Return the version of indexd
         """
-        response = requests.get(self.endpoint + "/version")
+        response = requests.get(self.endpoint + "/version", auth=self._auth_provider)
         response.raise_for_status()
         return response.text
 
@@ -104,7 +107,9 @@ class Gen3Metadata:
         """
         List all the metadata key paths indexed in the database.
         """
-        response = requests.get(self.admin_endpoint + "/metadata_index")
+        response = requests.get(
+            self.admin_endpoint + "/metadata_index", auth=self._auth_provider
+        )
         response.raise_for_status()
         return response.json()
 
@@ -113,7 +118,9 @@ class Gen3Metadata:
         """
         Create a metadata key path indexed in the database.
         """
-        response = requests.post(self.admin_endpoint + f"/metadata_index/{path}")
+        response = requests.post(
+            self.admin_endpoint + f"/metadata_index/{path}", auth=self._auth_provider
+        )
         response.raise_for_status()
         return response.json()
 
@@ -122,7 +129,9 @@ class Gen3Metadata:
         """
         List all the metadata key paths indexed in the database.
         """
-        response = requests.delete(self.admin_endpoint + f"/metadata_index/{path}")
+        response = requests.delete(
+            self.admin_endpoint + f"/metadata_index/{path}", auth=self._auth_provider
+        )
         response.raise_for_status()
         return response.json()
 
@@ -137,7 +146,7 @@ class Gen3Metadata:
             url, data=return_full_metadata, limit=limit, offset=offset, **kwargs
         )
         logging.debug(f"hitting: {url_with_params}")
-        response = requests.get(url_with_params)
+        response = requests.get(url_with_params, auth=self._auth_provider)
         response.raise_for_status()
 
         return response.json()
@@ -151,7 +160,7 @@ class Gen3Metadata:
 
         url_with_params = append_query_params(url, **kwargs)
         logging.debug(f"hitting: {url_with_params}")
-        response = requests.get(url_with_params)
+        response = requests.get(url_with_params, auth=self._auth_provider)
         response.raise_for_status()
 
         return response.json()
@@ -166,7 +175,9 @@ class Gen3Metadata:
         url_with_params = append_query_params(url, overwrite=overwrite, **kwargs)
         logging.debug(f"hitting: {url_with_params}")
         logging.debug(f"data: {metadata_list}")
-        response = requests.post(url_with_params, data=metadata_list)
+        response = requests.post(
+            url_with_params, data=metadata_list, auth=self._auth_provider
+        )
         response.raise_for_status()
 
         return response.json()
@@ -181,7 +192,9 @@ class Gen3Metadata:
         url_with_params = append_query_params(url, overwrite=overwrite, **kwargs)
         logging.debug(f"hitting: {url_with_params}")
         logging.debug(f"data: {metadata}")
-        response = requests.post(url_with_params, data=metadata)
+        response = requests.post(
+            url_with_params, data=metadata, auth=self._auth_provider
+        )
         response.raise_for_status()
 
         return response.json()
@@ -196,7 +209,9 @@ class Gen3Metadata:
         url_with_params = append_query_params(url, overwrite=overwrite, **kwargs)
         logging.debug(f"hitting: {url_with_params}")
         logging.debug(f"data: {metadata}")
-        response = requests.put(url_with_params, data=metadata)
+        response = requests.put(
+            url_with_params, data=metadata, auth=self._auth_provider
+        )
         response.raise_for_status()
 
         return response.json()
@@ -210,7 +225,7 @@ class Gen3Metadata:
 
         url_with_params = append_query_params(url, **kwargs)
         logging.debug(f"hitting: {url_with_params}")
-        response = requests.delete(url_with_params)
+        response = requests.delete(url_with_params, auth=self._auth_provider)
         response.raise_for_status()
 
         return response.json()
