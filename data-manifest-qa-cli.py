@@ -131,8 +131,7 @@ def checkindex(args):
     indexing.verify_object_manifest(
         "https://{}".format(target_env),
         manifest_file=manifest_file,
-        num_processes=20,
-        manifest_file_delimiter="\t",
+        num_processes=20
     )
 
 
