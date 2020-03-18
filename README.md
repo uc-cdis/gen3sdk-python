@@ -73,6 +73,7 @@ are `guid, urls, authz, acl, md5, size, file_name`.
 ```
 import sys
 import logging
+import asyncio
 
 from gen3.index import Gen3Index
 from gen3.tools import indexing
@@ -95,8 +96,13 @@ def main():
     # override default parsers
     manifest_row_parsers["file_size"] = _get_file_size
 
-    indexing.verify_object_manifest(
-        COMMONS, manifest_file="alternate-manifest.csv", num_processes=20
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(
+        indexing.async_verify_object_manifest(
+            COMMONS, manifest_file="alternate-manifest.csv"
+        )
     )
 
 
