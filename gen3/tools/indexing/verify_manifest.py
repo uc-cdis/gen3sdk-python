@@ -197,7 +197,7 @@ def verify_object_manifest(
     manifest_file,
     num_processes=20,
     manifest_row_parsers=manifest_row_parsers,
-    manifest_file_delimiter=",",
+    manifest_file_delimiter=None,
     log_output_filename=f"verify-manifest-errors-{time.time()}.log",
 ):
     """
@@ -220,6 +220,15 @@ def verify_object_manifest(
         file_path = os.path.join(TMP_FOLDER, file)
         if os.path.isfile(file_path):
             os.unlink(file_path)
+
+    # if delimter not specified, try to get based on file ext
+    if not manifest_file_delimiter:
+        file_ext = os.path.splitext(manifest_file)
+        if file_ext[-1].lower() == ".tsv":
+            manifest_file_delimiter = "\t"
+        else:
+            # default, assume CSV
+            manifest_file_delimiter = ","
 
     _verify_all_index_records_in_file(
         commons_url,
