@@ -129,9 +129,7 @@ def checkindex(args):
     manifest_row_parsers["urls"] = _get_urls
 
     indexing.verify_object_manifest(
-        "https://{}".format(target_env),
-        manifest_file=manifest_file,
-        num_processes=20
+        "https://{}".format(target_env), manifest_file=manifest_file, num_processes=20
     )
 
 
