@@ -200,7 +200,7 @@ async def async_verify_object_manifest(
     max_concurrent_requests=MAX_CONCURRENT_REQUESTS,
     manifest_row_parsers=manifest_row_parsers,
     manifest_file_delimiter=None,
-    log_output_filename=f"verify-manifest-errors-{time.time()}.log",
+    output_filename=f"verify-manifest-errors-{time.time()}.log",
 ):
     """
     Verify all file object records into a manifest csv
