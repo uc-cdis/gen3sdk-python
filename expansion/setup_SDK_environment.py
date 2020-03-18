@@ -120,7 +120,8 @@ except Exception as e:
 # Run this in a Python 3 Jupyter notebook.
 
 # Get the gen3sdk and expansion functions
-import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy, re
+import os
+import requests, json, fnmatch, os.path, sys, subprocess, glob, ntpath, copy, re
 import pandas as pd
 from pandas.io.json import json_normalize
 from collections import Counter
@@ -131,13 +132,14 @@ import seaborn as sns
 # make a directory for the gen3 sdk/client in the 'pd' (persistent drive)
 home_dir = "/home/jovyan/pd"
 gen3_dir = "{}/gen3".format(home_dir)
-!mkdir -p ${gen3_dir}
+os.system('mkdir -p {}'.format(gen3_dir))
 os.chdir(gen3_dir)
 
 # Get the latest gen3 SDK files
-!wget https://raw.githubusercontent.com/uc-cdis/gen3sdk-python/master/gen3/submission.py
-!wget https://raw.githubusercontent.com/uc-cdis/gen3sdk-python/master/gen3/auth.py
-!wget https://raw.githubusercontent.com/cgmeyer/gen3sdk-python/master/expansion/expansion.py
+# Get the latest gen3 SDK files
+os.system("wget https://raw.githubusercontent.com/uc-cdis/gen3sdk-python/master/gen3/submission.py -O {}/submission.py".format(gen3_dir))
+os.system("wget https://raw.githubusercontent.com/uc-cdis/gen3sdk-python/master/gen3/auth.py -O {}/auth.py".format(gen3_dir))
+os.system("wget https://raw.githubusercontent.com/cgmeyer/gen3sdk-python/master/expansion/expansion.py -O {}/expansion.py".format(gen3_dir))
 
 # Run the SDK files
 %run ./auth.py
