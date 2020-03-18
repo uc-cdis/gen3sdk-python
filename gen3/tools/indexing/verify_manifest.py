@@ -232,7 +232,7 @@ async def async_verify_object_manifest(
             # default, assume CSV
             manifest_file_delimiter = ","
 
-    _verify_all_index_records_in_file(
+    await _verify_all_index_records_in_file(
         commons_url,
         manifest_file,
         manifest_file_delimiter,
