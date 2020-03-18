@@ -351,7 +351,7 @@ def index_object_manifest(
     thread_num,
     auth=None,
     replace_urls=True,
-    manifest_file_delimiter="\t",
+    manifest_file_delimiter=None,
 ):
     """
     Loop through all the files in the manifest, update/create records in indexd
@@ -391,6 +391,15 @@ def index_object_manifest(
         commons_url += "/" + service_location
 
     indexclient = client.IndexClient(commons_url, "v0", auth=auth)
+
+    # if delimter not specified, try to get based on file ext
+    if not manifest_file_delimiter:
+        file_ext = os.path.splitext(manifest_file)
+        if file_ext[-1].lower() == ".tsv":
+            manifest_file_delimiter = "\t"
+        else:
+            # default, assume CSV
+            manifest_file_delimiter = ","
 
     try:
         files, headers = _get_and_verify_fileinfos_from_tsv_manifest(
