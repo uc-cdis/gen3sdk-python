@@ -199,8 +199,8 @@ async def async_verify_object_manifest(
     manifest_file,
     max_concurrent_requests=MAX_CONCURRENT_REQUESTS,
     manifest_row_parsers=manifest_row_parsers,
-    manifest_file_delimiter=",",
-    output_filename=f"verify-manifest-errors-{time.time()}.log",
+    manifest_file_delimiter=None,
+    log_output_filename=f"verify-manifest-errors-{time.time()}.log",
 ):
     """
     Verify all file object records into a manifest csv
@@ -223,7 +223,16 @@ async def async_verify_object_manifest(
         if os.path.isfile(file_path):
             os.unlink(file_path)
 
-    await _verify_all_index_records_in_file(
+    # if delimter not specified, try to get based on file ext
+    if not manifest_file_delimiter:
+        file_ext = os.path.splitext(manifest_file)
+        if file_ext[-1].lower() == ".tsv":
+            manifest_file_delimiter = "\t"
+        else:
+            # default, assume CSV
+            manifest_file_delimiter = ","
+
+    _verify_all_index_records_in_file(
         commons_url,
         manifest_file,
         manifest_file_delimiter,
