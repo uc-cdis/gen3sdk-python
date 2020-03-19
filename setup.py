@@ -11,7 +11,7 @@ def get_version():
     except Exception:
         # if somehow you get the repo not from git,
         # hardcode default major version
-        return "0.1.0"
+        return "2.2.3"
 
 
 with open("README.md", "r") as f:

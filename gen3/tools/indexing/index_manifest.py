@@ -38,7 +38,6 @@ import logging
 from multiprocessing.dummy import Pool as ThreadPool
 import threading
 import re
-import uuid
 import copy
 import sys
 
@@ -51,7 +50,7 @@ CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 GUID = ["guid"]
 FILENAME = ["filename", "file_name"]
 SIZE = ["size", "filesize", "file_size"]
-MD5 = ["md5", "md5_hash", "md5hash", "hash"]
+MD5 = ["md5", "md5_hash", "md5hash", "md5sum"]
 ACLS = ["acl", "acls"]
 URLS = ["url", "urls"]
 AUTHZ = ["authz"]
@@ -93,17 +92,11 @@ def _standardize_str(s):
     Ex. "abc    d" -> "abc d"
         "abc, d" -> "abc d"
     """
-    memory = []
-    s = s.replace(",", " ")
     res = ""
-    for c in s:
-        if c != " ":
-            res += c
-            memory = []
-        elif not memory:
-            res += c
-            memory.append(" ")
-    return res
+    for w in re.split("[ ,]+", s):
+        res = res + w + " "
+    if res:
+        return res[:-1]
 
 
 def _get_and_verify_fileinfos_from_tsv_manifest(

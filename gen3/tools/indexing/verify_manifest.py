@@ -7,7 +7,7 @@ The default manifest format created is a Comma-Separated Value file (csv)
 with rows for every record. A header row is created with field names:
 guid,authz,acl,file_size,md5,urls,file_name
 
-Fields that are lists (like acl, authz, and urls) separate the values with spaces.
+Fields that are lists (like acl, authz, and urls) separate the values with spaces or commas.
 
 There is a default mapping for those column names above but you can override it.
 Fields that expect lists (like acl, authz, and urls) by default assume these values are
@@ -49,6 +49,7 @@ import os
 import sys
 import shutil
 import math
+import re
 
 from gen3.index import Gen3Index
 
@@ -109,7 +110,7 @@ def _get_file_size_from_row(row):
             return None
     except Exception:
         logging.warning(f"could not convert this to an int: {row.get('file_size')}")
-        return row.get("file_size")
+        return None
 
 
 def _get_acl_from_row(row):
@@ -122,7 +123,7 @@ def _get_acl_from_row(row):
     Returns:
         List[str]: acls for the indexd record
     """
-    return [item for item in row.get("acl", "").strip().split(" ") if item]
+    return [item for item in re.split("[ ,']+", row.get("acl", "").strip()) if item]
 
 
 def _get_authz_from_row(row):
@@ -136,7 +137,7 @@ def _get_authz_from_row(row):
     Returns:
         List[str]: authz resources for the indexd record
     """
-    return [item for item in row.get("authz", "").strip().split(" ") if item]
+    return [item for item in re.split("[ ,]+", row.get("authz", "").strip()) if item]
 
 
 def _get_urls_from_row(row):
@@ -150,9 +151,9 @@ def _get_urls_from_row(row):
         List[str]: urls for indexd record file location(s)
     """
     if "urls" in row:
-        return [item for item in row.get("urls", "").strip().split(" ") if item]
+        return [item for item in re.split("[ ,]+", row.get("urls", "").strip()) if item]
     elif "url" in row:
-        return [item for item in row.get("urls", "").strip().split(" ") if item]
+        return [item for item in re.split("[ ,]+", row.get("url", "").strip()) if item]
     else:
         return []
 

@@ -357,7 +357,7 @@ def _mock_get_records_on_page(page, limit, **kwargs):
 
 
 def test_read_manifest():
-    files, headers = _get_and_verify_fileinfos_from_tsv_manifest("./test.tsv")
+    files, headers = _get_and_verify_fileinfos_from_tsv_manifest("./tests/test.tsv")
     assert headers.index("GUID") >= 0
     assert headers.index("md5") >= 0
     assert headers.index("url") >= 0
@@ -379,7 +379,7 @@ def test_index_manifest(gen3_index, indexd_server):
     )
 
     index_object_manifest(
-        indexd_server.baseurl, "./test.tsv", 1, ("admin", "admin"), replace_urls=False
+        indexd_server.baseurl, "./tests/test.tsv", 1, ("admin", "admin"), replace_urls=False
     )
     rec1 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada099c")
     rec2 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada010c")
@@ -418,7 +418,7 @@ def test_index_manifest_with_replace_urls(gen3_index, indexd_server):
         urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
     )
     index_object_manifest(
-        indexd_server.baseurl, "./test.tsv", 1, ("admin", "admin"), replace_urls=True
+        indexd_server.baseurl, "./tests/test.tsv", 1, ("admin", "admin"), replace_urls=True
     )
     rec1 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada099c")
 
@@ -427,7 +427,7 @@ def test_index_manifest_with_replace_urls(gen3_index, indexd_server):
 
 def test_index_non_guid_manifest(gen3_index, indexd_server):
     files, _ = index_object_manifest(
-        indexd_server.baseurl, "./test2.tsv", 1, ("admin", "admin"), replace_urls=True
+        indexd_server.baseurl, "./tests/test2.tsv", 1, ("admin", "admin"), replace_urls=True
     )
 
     assert "testprefix" in files[0]["GUID"]
