@@ -6,7 +6,7 @@ import shutil
 import logging
 from unittest.mock import MagicMock, patch
 
-from gen3.tools.indexing import verify_object_manifest
+from gen3.tools.indexing import async_verify_object_manifest
 from gen3.tools.indexing import download_manifest
 from gen3.tools.indexing.download_manifest import TMP_FOLDER
 from gen3.tools.indexing import async_download_object_manifest
@@ -27,24 +27,29 @@ def test_verify_manifest(mock_index):
 
     NOTE: records in indexd are mocked
     """
-    mock_index.return_value.get_record.side_effect = _mock_get_guid
-    verify_object_manifest(
-        "http://localhost",
-        CURRENT_DIR + "/test_manifest.csv",
-        num_processes=3,
-        log_output_filename="test.log",
+    mock_index.return_value.async_get_record.side_effect = _async_mock_get_guid
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(
+        async_verify_object_manifest(
+            "http://localhost",
+            manifest_file=CURRENT_DIR + "/test_manifest.csv",
+            max_concurrent_requests=3,
+            output_filename="test.log",
+        )
     )
 
     logs = {}
     try:
         with open("test.log") as file:
             for line in file:
-                guid, error, expected, actual = line.split("|")
+                guid, error, expected, actual = line.strip("\n").split("|")
                 logs.setdefault(guid, {})[error] = {
                     "expected": expected.split("expected ")[1],
                     "actual": actual.split("actual ")[1],
                 }
-    except Exception:
+    except Exception as exc:
         # unexpected file format, fail test
         assert False
 
@@ -179,6 +184,55 @@ def test_download_manifest(monkeypatch, gen3_index):
 
 
 def _mock_get_guid(guid, **kwargs):
+    if guid == "dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b":
+        return {
+            "acl": ["DEV", "test"],
+            "authz": ["/programs/DEV/projects/test"],
+            "baseid": f"'1' + {guid[1:-1]} + '1'",
+            "created_date": "2019-11-24T18:29:48.218755",
+            "did": f"{guid}",
+            "file_name": None,
+            "form": "object",
+            "hashes": {"md5": "a1234567891234567890123456789012"},
+            "metadata": {},
+            "rev": "abc123",
+            "size": 123,
+            "updated_date": "2019-11-24T18:29:48.218761",
+            "uploader": None,
+            "urls": ["s3://testaws/aws/test.txt", "gs://test/test.txt"],
+            "urls_metadata": {
+                "gs://test/test.txt": {},
+                "s3://testaws/aws/test.txt": {},
+            },
+            "version": None,
+        }
+    elif guid == "dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2":
+        return {
+            "acl": ["DEV", "test2"],
+            "authz": [
+                "/programs/DEV/projects/test2",
+                "/programs/DEV/projects/test2bak",
+            ],
+            "baseid": f"'1' + {guid[1:-1]} + '1'",
+            "created_date": "2019-11-24T18:29:48.218755",
+            "did": f"{guid}",
+            "file_name": None,
+            "form": "object",
+            "hashes": {"md5": "b1234567891234567890123456789012"},
+            "metadata": {},
+            "rev": "abc234",
+            "size": 234,
+            "updated_date": "2019-11-24T18:29:48.218761",
+            "uploader": None,
+            "urls": ["gs://test/test.txt"],
+            "urls_metadata": {"gs://test/test.txt": {}},
+            "version": None,
+        }
+    else:
+        return None
+
+
+async def _async_mock_get_guid(guid, **kwargs):
     if guid == "dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b":
         return {
             "acl": ["DEV", "test"],
