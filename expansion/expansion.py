@@ -746,7 +746,7 @@ class Gen3Expansion:
     def plot_numeric_property(self, property, df, by_project=False):
         #plot a histogram of numeric variable in a dataframe
         df = df[df[property].notnull()]
-        data = list(df[property])
+        data = list(df[property]).astype(float)
         N = len(data)
         fig = sns.distplot(data, hist=False, kde=True,
                  bins=int(180/5), color = 'darkblue',
@@ -781,16 +781,17 @@ class Gen3Expansion:
         categories = list(set(df[category_property]))
         for category in categories:
             df_2 = df[df[category_property]==category]
-            data = list(df_2[numeric_property])
-            N = len(data)
-            fig = sns.distplot(data, hist=False, kde=True,
-                     bins=int(180/5), color = 'darkblue',
-                     kde_kws={'linewidth': 2})
-#            plt.figtext(.8, .8, 'N = '+str(N))
-            plt.xlabel(numeric_property)
-            plt.ylabel("Probability")
-            plt.title("PDF of "+numeric_property+' for ' + category +' (N = '+str(N)+')') # You can comment this line out if you don't need title
-            plt.show(fig)
+            if len(df_2) != 0:
+                data = list(df_2[numeric_property].astype(float))
+                N = len(data)
+                fig = sns.distplot(data, hist=False, kde=True,
+                         bins=int(180/5), color = 'darkblue',
+                         kde_kws={'linewidth': 2})
+    #            plt.figtext(.8, .8, 'N = '+str(N))
+                plt.xlabel(numeric_property)
+                plt.ylabel("Probability")
+                plt.title("PDF of "+numeric_property+' for ' + category +' (N = '+str(N)+')') # You can comment this line out if you don't need title
+                plt.show(fig)
 
     def plot_numeric_by_category(self, numeric_property, category_property, df):
         sns.set(style="darkgrid")
@@ -800,7 +801,8 @@ class Gen3Expansion:
         for category in categories:
             subset = df[df[category_property] == category]
             N += len(subset)
-            fig = sns.distplot(subset[numeric_property].dropna(), hist = False, kde = True,
+            data = subset[numeric_property].dropna().astype(float)
+            fig = sns.distplot(data, hist = False, kde = True,
                          bins = 3, kde_kws = {'linewidth': 2}, label = category)
 
             plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
