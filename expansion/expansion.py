@@ -816,7 +816,7 @@ class Gen3Expansion:
 
         category_means = {}
         for category in categories:
-            df_2 = df[df[numeric_property].notnull()]
+            df_2 = df[df[numeric_property].notnull()].astype(float)
             data = list(df_2.loc[df_2[category_property]==category][numeric_property])
 
             if len(data) > 5:
@@ -830,7 +830,8 @@ class Gen3Expansion:
         for category in categories_list:
             subset = df[df[category_property] == category]
             N += len(subset)
-            fig = sns.distplot(subset[numeric_property].dropna(), hist = False, kde = True,
+            data = subset[numeric_property].dropna().astype(float)
+            fig = sns.distplot(data, hist = False, kde = True,
                          bins = 3, kde_kws = {'linewidth': 2}, label = category)
 
             plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
@@ -853,7 +854,8 @@ class Gen3Expansion:
             for category_2 in categories_2:
                 subset = df_2[df_2[category_property_2] == category_2]
                 N += len(subset)
-                fig = sns.distplot(subset[numeric_property].dropna(), hist = False, kde = True,
+                data = subset[numeric_property].dropna().astype(float)
+                fig = sns.distplot(data, hist = False, kde = True,
                             bins = 3,
                             kde_kws = {'linewidth': 2}, label = category_2)
 
@@ -888,7 +890,8 @@ class Gen3Expansion:
                 for category_2 in categories_2_list:
                     subset = df_2[df_2[category_property_2] == category_2]
                     N += len(subset)
-                    fig = sns.distplot(subset[numeric_property].dropna(), hist = False, kde = True,
+                    data = subset[numeric_property].dropna().astype(float)
+                    fig = sns.distplot(data, hist = False, kde = True,
                                 bins = 3,
                                 kde_kws = {'linewidth': 2}, label = category_2)
 
