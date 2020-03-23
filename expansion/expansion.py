@@ -877,7 +877,7 @@ class Gen3Expansion:
             category_2_means = {}
             for category_2 in categories_2:
                 df_3 = df_2[df_2[numeric_property].notnull()]
-                data = list(df_3.loc[df_3[category_property_2]==category_2][numeric_property])
+                data = list(df_3.loc[df_3[category_property_2]==category_2][numeric_property].astype(float))
 
                 if len(data) > 5:
                     category_2_means[category_2] = mean(data)
