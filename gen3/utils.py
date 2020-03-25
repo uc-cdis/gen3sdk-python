@@ -1,3 +1,9 @@
+from urllib.parse import urlunsplit
+from urllib.parse import urlencode
+from urllib.parse import urlsplit
+from urllib.parse import parse_qs
+
+
 def append_query_params(original_url, **kwargs):
     """
     Add additional query string arguments to the given url.

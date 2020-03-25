@@ -195,6 +195,7 @@ class Gen3Index:
         url = f"{self.client.url}/index/{guid}"
         async with aiohttp.ClientSession() as session:
             async with session.get(url, ssl=_ssl) as response:
+                response.raise_for_status()
                 response = await response.json()
 
         return response

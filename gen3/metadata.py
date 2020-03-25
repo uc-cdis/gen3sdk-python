@@ -143,7 +143,7 @@ class Gen3Metadata:
         url = self.endpoint + f"/metadata?{query}"
 
         url_with_params = append_query_params(
-            url, data=return_full_metadata, limit=limit, offset=offset, **kwargs
+            url, json=return_full_metadata, limit=limit, offset=offset, **kwargs
         )
         logging.debug(f"hitting: {url_with_params}")
         response = requests.get(url_with_params, auth=self._auth_provider)
@@ -176,7 +176,7 @@ class Gen3Metadata:
         logging.debug(f"hitting: {url_with_params}")
         logging.debug(f"data: {metadata_list}")
         response = requests.post(
-            url_with_params, data=metadata_list, auth=self._auth_provider
+            url_with_params, json=metadata_list, auth=self._auth_provider
         )
         response.raise_for_status()
 
@@ -193,7 +193,7 @@ class Gen3Metadata:
         logging.debug(f"hitting: {url_with_params}")
         logging.debug(f"data: {metadata}")
         response = requests.post(
-            url_with_params, data=metadata, auth=self._auth_provider
+            url_with_params, json=metadata, auth=self._auth_provider
         )
         response.raise_for_status()
 
@@ -210,7 +210,7 @@ class Gen3Metadata:
         logging.debug(f"hitting: {url_with_params}")
         logging.debug(f"data: {metadata}")
         response = requests.put(
-            url_with_params, data=metadata, auth=self._auth_provider
+            url_with_params, json=metadata, auth=self._auth_provider
         )
         response.raise_for_status()
 

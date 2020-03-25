@@ -16,6 +16,35 @@ This is the client for interacting with the Indexd service for GUID brokering an
 
 This is the client for interacting with the Gen3 submission service including GraphQL queries.
 
+## Metadata
+
+For interacting with Gen3's metadata service.
+
+```
+import sys
+import logging
+import asyncio
+
+from gen3.auth import Gen3Auth
+from gen3.metadata import Gen3Metadata
+
+logging.basicConfig(filename="output.log", level=logging.DEBUG)
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
+COMMONS = "https://{{insert-commons-here}}/"
+
+def main():
+    auth = Gen3Auth(COMMONS, refresh_file="credentials.json")
+    metadata = Gen3Metadata(COMMONS, auth=auth)
+
+    if metadata.is_healthy():
+        print(metadata.get_version())
+
+if __name__ == "__main__":
+    main()
+```
+
+
 ## Indexing Tools
 
 ### Download Manifest
