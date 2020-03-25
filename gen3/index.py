@@ -314,6 +314,32 @@ class Gen3Index:
         return rec.to_json()
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    async def async_get_with_params(self, params, _ssl=None):
+        """
+
+        Return a document object corresponding to the supplied parameter
+
+        - need to include all the hashes in the request
+        - need to handle the query param `'hash': 'hash_type:hash'`
+
+        Args:
+            params (dict): params to search with
+            _ssl (None, optional): whether or not to use ssl
+
+        Returns:
+            Document: json representation of an entry in indexd
+
+        """
+        query_params = urllib.parse.urlencode(params)
+        url = f"{self.client.url}/index/?{query_params}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, ssl=_ssl) as response:
+                await response.raise_for_status()
+                response = await response.json()
+
+        return response
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_latest_version(self, guid, has_version=False):
         """
 
@@ -621,6 +647,44 @@ class Gen3Index:
         rec = self.client.get(guid)
         rec.delete()
         return rec
+
+    ### Query Requests
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    def query_urls(self, pattern):
+        """
+
+        Query all record URLs for given pattern
+
+        Args:
+            pattern (str): pattern to match against indexd urls
+
+        Returns:
+            List[records]: indexd records with urls matching pattern
+        """
+        response = self.client._get(f"/_query/urls/q?include={pattern}")
+        response.raise_for_status()
+        return response.json()
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    async def async_query_urls(self, pattern, _ssl=None):
+        """
+        Asynchronous function to query urls from indexd.
+
+        Args:
+            pattern (str): pattern to match against indexd urls
+
+        Returns:
+            List[records]: indexd records with urls matching pattern
+        """
+        url = f"{self.client.url}/_query/urls/q?include={pattern}"
+        async with aiohttp.ClientSession() as session:
+            logging.debug(f"request: {url}")
+            async with session.get(url, ssl=_ssl) as response:
+                response.raise_for_status()
+                response = await response.json()
+
+        return response
 
 
 def _print_func_name(function):
