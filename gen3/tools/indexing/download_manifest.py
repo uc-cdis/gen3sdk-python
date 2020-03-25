@@ -5,7 +5,7 @@ multiple processes and coroutines using Python's asyncio library.
 
 The default manifest format created is a Comma-Separated Value file (csv)
 with rows for every record. A header row is created with field names:
-guid,authz,acl,file_size,md5,urls
+guid,authz,acl,file_size,md5,urls,file_name
 
 Fields that are lists (like acl, authz, and urls) separate the values with spaces.
 
@@ -91,9 +91,6 @@ async def _write_all_index_records_to_file(
         max_concurrent_requests (int): the maximum number of concurrent requests allowed
             NOTE: This is the TOTAL number, not just for this process. Used to help
             determine how many requests a process should be making at one time
-
-    No Longer Raises:
-        IndexError: If script detects missing files in indexd after initial parsing
     """
     index = Gen3Index(commons_url)
     logging.debug(f"requesting indexd stats...")

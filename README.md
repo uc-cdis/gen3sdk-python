@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
 ```
 
-The output file will contain columns `guid, urls, authz, acl, md5, file_size` with info
+The output file will contain columns `guid, urls, authz, acl, md5, file_size, file_name` with info
 populated from indexd.
 
 ### Verify Manifest
@@ -66,13 +66,14 @@ How to verify the file objects in indexd against a "source of truth" manifest.
 
 In the example below we assume a manifest named `alternate-manifest.csv` already exists
 with info of what's expected in indexd. The headers in the `alternate-manifest.csv`
-are `guid, urls, authz, acl, md5, size`.
+are `guid, urls, authz, acl, md5, size, file_name`.
 
 > NOTE: The alternate manifest headers differ rfom the default headers described above (`file_size` doesn't exist and should be taken from `size`)
 
 ```
 import sys
 import logging
+import asyncio
 
 from gen3.index import Gen3Index
 from gen3.tools import indexing
@@ -95,8 +96,13 @@ def main():
     # override default parsers
     manifest_row_parsers["file_size"] = _get_file_size
 
-    indexing.verify_object_manifest(
-        COMMONS, manifest_file="alternate-manifest.csv", num_processes=20
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(
+        indexing.async_verify_object_manifest(
+            COMMONS, manifest_file="alternate-manifest.csv"
+        )
     )
 
 

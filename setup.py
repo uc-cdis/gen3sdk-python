@@ -23,7 +23,7 @@ with open("CHANGELOG.md", "r") as f:
 setup(
     name="gen3",
     description=(
-        "The Gen3 SDK makes it easy to utilize " "functionality in Gen3 data commons. "
+        "The Gen3 SDK makes it easy to utilize functionality in Gen3 data commons."
     ),
     long_description=README + "\n\n" + CHANGELOG,
     long_description_content_type="text/markdown",

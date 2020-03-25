@@ -182,6 +182,24 @@ class Gen3Index:
         return response.json().get("records")
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    async def async_get_record(self, guid=None, _ssl=None):
+        """
+        Asynchronous function to request a record from indexd.
+
+        Args:
+            guid (str): record guid
+
+        Returns:
+            dict: indexd record
+        """
+        url = f"{self.client.url}/index/{guid}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, ssl=_ssl) as response:
+                response = await response.json()
+
+        return response
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     async def async_get_records_on_page(self, limit=None, page=None, _ssl=None):
         """
         Asynchronous function to request a page from indexd.
@@ -579,7 +597,7 @@ class Gen3Index:
         }
         rec = self.client.get(guid)
         for k, v in updatable_attrs.items():
-            if v:
+            if v is not None:
                 exec(f"rec.{k} = v")
         rec.patch()
         return rec.to_json()
