@@ -5,8 +5,9 @@ from pandas.io.json import json_normalize
 from collections import Counter
 from statistics import mean
 
-import matplotlib.pyplot as plt
 import numpy as np
+import scipy
+import matplotlib.pyplot as plt
 import seaborn as sns
 
 import gen3

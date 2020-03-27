@@ -16,13 +16,16 @@ if sys.version_info[0] < 3:
 else:
     from io import StringIO
 
-import gen3
-from gen3.auth import Gen3Auth
-from gen3.submission import Gen3Submission
-
-# sys.path.insert(1, '/Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/')
-# from gen3.submission import Gen3Submission
+# import gen3
 # from gen3.auth import Gen3Auth
+# from gen3.submission import Gen3Submission
+
+git_dir='/Users/christopher/Documents/GitHub'
+sdk_dir='/cgmeyer/gen3sdk-python'
+sys.path.insert(1, '{}{}'.format(git_dir,sdk_dir))
+from gen3.submission import Gen3Submission
+from gen3.auth import Gen3Auth
+from expansion.expansion import Gen3Expansion
 
 class Gen3Error(Exception):
     pass
