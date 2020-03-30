@@ -33,3 +33,60 @@ def split_url_and_query_params(url):
     query_params = parse_qs(query_string)
     url = urlunsplit((scheme, netloc, path, None, fragment))
     return url, query_params
+
+
+def _print_func_name(function):
+    return "{}.{}".format(function.__module__, function.__name__)
+
+
+def _print_kwargs(kwargs):
+    return ", ".join("{}={}".format(k, repr(v)) for k, v in list(kwargs.items()))
+
+
+def log_backoff_retry(details):
+    args_str = ", ".join(map(str, details["args"]))
+    kwargs_str = (
+        (", " + _print_kwargs(details["kwargs"])) if details.get("kwargs") else ""
+    )
+    func_call_log = "{}({}{})".format(
+        _print_func_name(details["target"]), args_str, kwargs_str
+    )
+    logging.warning(
+        "backoff: call {func_call} delay {wait:0.1f} seconds after {tries} tries".format(
+            func_call=func_call_log, **details
+        )
+    )
+
+
+def log_backoff_giveup(details):
+    args_str = ", ".join(map(str, details["args"]))
+    kwargs_str = (
+        (", " + _print_kwargs(details["kwargs"])) if details.get("kwargs") else ""
+    )
+    func_call_log = "{}({}{})".format(
+        _print_func_name(details["target"]), args_str, kwargs_str
+    )
+    logging.error(
+        "backoff: gave up call {func_call} after {tries} tries; exception: {exc}".format(
+            func_call=func_call_log, exc=sys.exc_info(), **details
+        )
+    )
+
+
+def exception_do_not_retry(error):
+    if (
+        str(getattr(error, "code", None)) == "409"
+        or str(getattr(error, "status_code", None)) == "409"
+    ):
+        return True
+
+    return False
+
+
+# Default settings to control usage of backoff library.
+DEFAULT_BACKOFF_SETTINGS = {
+    "on_backoff": log_backoff_retry,
+    "on_giveup": log_backoff_giveup,
+    "max_tries": 3,
+    "giveup": exception_do_not_retry,
+}

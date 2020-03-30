@@ -1,3 +1,6 @@
+"""
+Contains class for interacting with Gen3's Metadata Service.
+"""
 import aiohttp
 import backoff
 import requests
@@ -5,54 +8,12 @@ import urllib.parse
 import logging
 import sys
 
-from gen3.utils import append_query_params
-
-
-def __log_backoff_retry(details):
-    args_str = ", ".join(map(str, details["args"]))
-    kwargs_str = (
-        (", " + _print_kwargs(details["kwargs"])) if details.get("kwargs") else ""
-    )
-    func_call_log = "{}({}{})".format(
-        _print_func_name(details["target"]), args_str, kwargs_str
-    )
-    logging.warning(
-        "backoff: call {func_call} delay {wait:0.1f} seconds after {tries} tries".format(
-            func_call=func_call_log, **details
-        )
-    )
-
-
-def __log_backoff_giveup(details):
-    args_str = ", ".join(map(str, details["args"]))
-    kwargs_str = (
-        (", " + _print_kwargs(details["kwargs"])) if details.get("kwargs") else ""
-    )
-    func_call_log = "{}({}{})".format(
-        _print_func_name(details["target"]), args_str, kwargs_str
-    )
-    logging.error(
-        "backoff: gave up call {func_call} after {tries} tries; exception: {exc}".format(
-            func_call=func_call_log, exc=sys.exc_info(), **details
-        )
-    )
-
-
-# Default settings to control usage of backoff library.
-BACKOFF_SETTINGS = {
-    "on_backoff": __log_backoff_retry,
-    "on_giveup": __log_backoff_giveup,
-    "max_tries": 2,
-}
+from gen3.utils import append_query_params, DEFAULT_BACKOFF_SETTINGS
 
 
 class Gen3Metadata:
     """
-    A class for interacting with the Gen3 Index services.
-
-    Args:
-        endpoint (str): The URL of the data commons.
-        auth_provider (Gen3Auth): A Gen3Auth class instance.
+    A class for interacting with the Gen3 Metadata services.
 
     Examples:
         This generates the Gen3Metadata class pointed at the sandbox commons while
@@ -60,11 +21,24 @@ class Gen3Metadata:
 
         >>> endpoint = "https://nci-crdc-demo.datacommons.io"
         ... auth = Gen3Auth(endpoint, refresh_file="credentials.json")
-        ... sub = Gen3Submission(endpoint, auth)
+        ... sub = Gen3Metadata(endpoint, auth)
 
+    Attributes:
+        admin_endpoint (str): endpoint for admin functionality (Create/Update/Delete)
+        endpoint (str): public endpoint for reading/querying metadata
     """
 
     def __init__(self, endpoint, auth_provider=None, service_location="mds"):
+        """
+        Initialization for instance of the class to setup basic endpoint info.
+
+        Args:
+            endpoint (str): URL for a data commons that has metadata service deployed
+            auth_provider (Gen3Auth, optional): Gen3Auth class to handle passing your
+                token, required for admin endpoints
+            service_location (str, optional): deployment location relative to the
+                endpoint provided
+        """
         endpoint = endpoint.strip("/")
         # if running locally, mds is deployed by itself without a location relative
         # to the commons
@@ -81,6 +55,9 @@ class Gen3Metadata:
     def is_healthy(self):
         """
         Return if indexd is healthy or not
+
+        Returns:
+            bool: True if healthy
         """
         try:
             response = requests.get(
@@ -93,19 +70,25 @@ class Gen3Metadata:
 
         return response.json().get("status") == "OK"
 
-    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def get_version(self):
         """
         Return the version of indexd
+
+        Returns:
+            str: the version of indexd
         """
         response = requests.get(self.endpoint + "/version", auth=self._auth_provider)
         response.raise_for_status()
         return response.text
 
-    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def get_index_key_paths(self):
         """
         List all the metadata key paths indexed in the database.
+
+        Returns:
+            List: list of metadata key paths
         """
         response = requests.get(
             self.admin_endpoint + "/metadata_index", auth=self._auth_provider
@@ -113,10 +96,16 @@ class Gen3Metadata:
         response.raise_for_status()
         return response.json()
 
-    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def create_index_key_path(self, path):
         """
         Create a metadata key path indexed in the database.
+
+        Args:
+            path (str): metadata key path
+
+        Returns:
+            TYPE: Description
         """
         response = requests.post(
             self.admin_endpoint + f"/metadata_index/{path}", auth=self._auth_provider
@@ -124,10 +113,16 @@ class Gen3Metadata:
         response.raise_for_status()
         return response.json()
 
-    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def delete_index_key_path(self, path):
         """
         List all the metadata key paths indexed in the database.
+
+        Args:
+            path (str): metadata key path
+
+        Returns:
+            TYPE: Description
         """
         response = requests.delete(
             self.admin_endpoint + f"/metadata_index/{path}", auth=self._auth_provider
@@ -135,15 +130,57 @@ class Gen3Metadata:
         response.raise_for_status()
         return response.json()
 
-    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def query(self, query, return_full_metadata=False, limit=10, offset=0, **kwargs):
         """
-        Query the metadata given a query
+        Query the metadata given a query.
+
+        Query format is based off the logic used in the service:
+            '''
+            Without filters, this will return all data. Add filters as query strings like this:
+
+            GET /metadata?a=1&b=2
+
+        This will match all records that have metadata containing all of:
+            {"a": 1, "b": 2}
+            The values are always treated as strings for filtering. Nesting is supported:
+
+            GET /metadata?a.b.c=3
+
+        Matching records containing:
+            {"a": {"b": {"c": 3}}}
+            Providing the same key with more than one value filters records whose value of the given key matches any of the given values. But values of different keys must all match. For example:
+
+            GET /metadata?a.b.c=3&a.b.c=33&a.b.d=4
+
+        Matches these:
+            {"a": {"b": {"c": 3, "d": 4}}}
+            {"a": {"b": {"c": 33, "d": 4}}}
+            {"a": {"b": {"c": "3", "d": 4, "e": 5}}}
+            But won't match these:
+
+            {"a": {"b": {"c": 3}}}
+            {"a": {"b": {"c": 3, "d": 5}}}
+            {"a": {"b": {"d": 5}}}
+            {"a": {"b": {"c": "333", "d": 4}}}
+            '''
+
+        Args:
+            query (str): mds query as defined by the metadata api
+            return_full_metadata (bool, optional): if False will just return a list of guids
+            limit (int, optional): max num records to return
+            offset (int, optional): offset for output
+
+        Returns:
+            List: list of guids matching query
+                OR if return_full_metadata=True
+            Dict{guid: {metadata}}: Dictionary with GUIDs as keys and associated
+                metadata JSON blobs as values
         """
         url = self.endpoint + f"/metadata?{query}"
 
         url_with_params = append_query_params(
-            url, json=return_full_metadata, limit=limit, offset=offset, **kwargs
+            url, data=return_full_metadata, limit=limit, offset=offset, **kwargs
         )
         logging.debug(f"hitting: {url_with_params}")
         response = requests.get(url_with_params, auth=self._auth_provider)
@@ -151,10 +188,16 @@ class Gen3Metadata:
 
         return response.json()
 
-    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def get(self, guid, **kwargs):
         """
         Get the metadata associated with the guid
+
+        Args:
+            guid (str): guid to use
+
+        Returns:
+            Dict: metadata for given guid
         """
         url = self.endpoint + f"/metadata/{guid}"
 
@@ -165,12 +208,28 @@ class Gen3Metadata:
 
         return response.json()
 
-    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def batch_create(self, metadata_list, overwrite=True, **kwargs):
         """
         Create the list of metadata associated with the list of guids
+
+        Args:
+            metadata_list (List[Dict{"guid": "", "data": {}}]): list of metadata
+                objects in a specific format. Expects a dict with "guid" and "data"
+                fields where "data" is another JSON blob to add to the mds
+            overwrite (bool, optional): whether or not to overwrite existing data
         """
         url = self.admin_endpoint + f"/metadata"
+
+        if len(metadata_list) > 1 and (
+            "guid" not in metadata_list[0] and "data" not in metadata_list[0]
+        ):
+            logging.warning(
+                "it looks like your metadata list for bulk create is malformed. "
+                "the expected format is a list of dicts that have 2 keys: 'guid' "
+                "and 'data', where 'guid' is a string and 'data' is another dict. "
+                f"The first element doesn't match that pattern: {metadata_list[0]}"
+            )
 
         url_with_params = append_query_params(url, overwrite=overwrite, **kwargs)
         logging.debug(f"hitting: {url_with_params}")
@@ -182,10 +241,16 @@ class Gen3Metadata:
 
         return response.json()
 
-    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def create(self, guid, metadata, overwrite=False, **kwargs):
         """
         Create the metadata associated with the guid
+
+        Args:
+            guid (str): guid to use
+            metadata (Dict): dictionary representing what will end up a JSON blob
+                attached to the provided GUID as metadata
+            overwrite (bool, optional): whether or not to overwrite existing data
         """
         url = self.admin_endpoint + f"/metadata/{guid}"
 
@@ -199,10 +264,44 @@ class Gen3Metadata:
 
         return response.json()
 
-    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    async def async_create(self, guid, metadata, overwrite=False, _ssl=None, **kwargs):
+        """
+        Asynchronous function to create metadata
+
+        Args:
+            guid (str): guid to use
+            metadata (Dict): dictionary representing what will end up a JSON blob
+                attached to the provided GUID as metadata
+            overwrite (bool, optional): whether or not to overwrite existing data
+            _ssl (None, optional): whether or not to use ssl
+        """
+        async with aiohttp.ClientSession() as session:
+            url = self.admin_endpoint + f"/metadata/{guid}"
+            url_with_params = append_query_params(url, overwrite=overwrite, **kwargs)
+
+            # aiohttp only allows basic auth with their built in auth, so we
+            # need to manually add JWT auth header
+            headers = {"Authorization": self._auth_provider._get_auth_value()}
+
+            async with session.post(
+                url_with_params, json=metadata, headers=headers, ssl=_ssl
+            ) as response:
+                response.raise_for_status()
+                response = await response.json()
+
+        return response
+
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def update(self, guid, metadata, overwrite=False, **kwargs):
         """
         Update the metadata associated with the guid
+
+        Args:
+            guid (str): guid to use
+            metadata (Dict): dictionary representing what will end up a JSON blob
+                attached to the provided GUID as metadata
+            overwrite (bool, optional): whether or not to overwrite existing data
         """
         url = self.admin_endpoint + f"/metadata/{guid}"
 
@@ -216,10 +315,41 @@ class Gen3Metadata:
 
         return response.json()
 
-    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    async def async_update(self, guid, metadata, overwrite=False, _ssl=None, **kwargs):
+        """
+        Asynchronous function to update metadata
+
+        Args:
+            guid (str): guid to use
+            metadata (Dict): dictionary representing what will end up a JSON blob
+                attached to the provided GUID as metadata
+            overwrite (bool, optional): whether or not to overwrite existing data
+            _ssl (None, optional): whether or not to use ssl
+        """
+        async with aiohttp.ClientSession() as session:
+            url = self.admin_endpoint + f"/metadata/{guid}"
+            url_with_params = append_query_params(url, overwrite=overwrite, **kwargs)
+
+            # aiohttp only allows basic auth with their built in auth, so we
+            # need to manually add JWT auth header
+            headers = {"Authorization": self._auth_provider._get_auth_value()}
+
+            async with session.put(
+                url_with_params, json=metadata, headers=headers, ssl=_ssl
+            ) as response:
+                response.raise_for_status()
+                response = await response.json()
+
+        return response
+
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def delete(self, guid, **kwargs):
         """
         Delete the metadata associated with the guid
+
+        Args:
+            guid (str): guid to use
         """
         url = self.admin_endpoint + f"/metadata/{guid}"
 
@@ -229,11 +359,3 @@ class Gen3Metadata:
         response.raise_for_status()
 
         return response.json()
-
-
-def _print_func_name(function):
-    return "{}.{}".format(function.__module__, function.__name__)
-
-
-def _print_kwargs(kwargs):
-    return ", ".join("{}={}".format(k, repr(v)) for k, v in list(kwargs.items()))

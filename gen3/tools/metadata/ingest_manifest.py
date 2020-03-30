@@ -1,6 +1,25 @@
 """
-TODO
+Tools for ingesting a CSV/TSV metadata manifest into the Metdata Service.
+
+Attributes:
+    COLUMN_TO_USE_AS_GUID (str): file column containing guid to use
+    GUID_TYPE_FOR_INDEXED_FILE_OBJECT (str): type to populate in mds when guid exists
+        in indexd
+    GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT (str): type to populate in mds when guid does
+        NOT exist in indexd
+    manifest_row_parsers (Dict{str: function}): functions for parsing, users can override
+        manifest_row_parsers = {
+            "guid_from_file": _get_guid_from_file,
+            "indexed_file_object_guid": _query_for_associated_indexd_record_guid,
+        }
+
+        "guid_from_file" is the function to retrieve the guid from the given file
+        "indexed_file_object_guid" is the function to retrieve the guid from elsewhere,
+            like indexd (by querying)
+
+    MAX_CONCURRENT_REQUESTS (int): Maximum concurrent requests to mds for ingestion
 """
+import aiohttp
 import asyncio
 import csv
 import json
@@ -14,6 +33,7 @@ from gen3.metadata import Gen3Metadata
 
 TMP_FOLDER = os.path.abspath("./tmp") + "/"
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+
 MAX_CONCURRENT_REQUESTS = 24
 COLUMN_TO_USE_AS_GUID = "guid"
 GUID_TYPE_FOR_INDEXED_FILE_OBJECT = "indexed_file_object"
@@ -25,7 +45,7 @@ def _get_guid_from_file(commons_url, row, lock):
     Given a row from the manifest, return the guid to use for the metadata object.
 
     Args:
-        commons_url (str): root domain for commons where indexd lives
+        commons_url (str): root domain for commons where mds lives
         row (dict): column_name:row_value
         lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
             connections
@@ -40,8 +60,17 @@ async def _query_for_associated_indexd_record_guid(commons_url, row, lock):
     """
     Given a row from the manifest, return the guid for the related indexd record.
 
+    By default attempts to use a column "submitted_sample_id" to pattern match
+    URLs in indexd records to find a single match.
+
+    For example:
+        "NWD12345" would match a record with url: "s3://some-bucket/file_NWD12345.cram"
+
+    WARNING: The query endpoint this uses in indexd is incredibly slow when there are
+             lots of indexd records.
+
     Args:
-        commons_url (str): root domain for commons where indexd lives
+        commons_url (str): root domain for commons where mds lives
         row (dict): column_name:row_value
         lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
             connections
@@ -120,10 +149,11 @@ async def async_ingest_metadata_manifest(
     Ingest all metadata records into a manifest csv
 
     Args:
-        commons_url (str): root domain for commons where indexd lives
+        commons_url (str): root domain for commons where mds lives
         manifest_file (str): the file to ingest against
-        metadata_namespace (str): the name of the source of metadata (used to namespace
+        metadata_source (str): the name of the source of metadata (used to namespace
             in the metadata service) ex: dbgap
+        auth (Gen3Auth): Gen3 auth or tuple with basic auth name and password
         max_concurrent_requests (int): the maximum number of concurrent requests allowed
         manifest_row_parsers (Dict{indexd_field:func_to_parse_row}): Row parsers
         manifest_file_delimiter (str): delimeter in manifest_file
@@ -174,19 +204,26 @@ async def _ingest_all_metadata_in_file(
     """
     Getting metadata and writing to a file. This function
     creates semaphores to limit the number of concurrent http connections that
-    get opened to send requests to indexd.
+    get opened to send requests to mds.
 
     It then uses asyncio to start a number of coroutines. Steps:
-        1) requests to indexd to get records (writes resulting records to a queue)
-        2) puts a final "DONE" in the queue to stop coroutine that will read from queue
-        3) reading those records from the queue and writing to a file
+        1) reads given metadata file (writes resulting rows to a queue)
+        2) puts final "DONE"s in the queue to stop coroutine that will read from queue
+        3) posts/puts to mds to write metadata for rows
 
     Args:
-        commons_url (str): root domain for commons where indexd lives
+        commons_url (str): root domain for commons where mds lives
         manifest_file (str): the file to ingest against
-        manifest_file_delimiter (str): delimeter in manifest_file
-        output_filename (str, optional): filename for output
+        metadata_source (str): the name of the source of metadata (used to namespace
+            in the metadata service) ex: dbgap
+        auth (Gen3Auth): Gen3 auth or tuple with basic auth name and password
         max_concurrent_requests (int): the maximum number of concurrent requests allowed
+        manifest_file_delimiter (str): delimeter in manifest_file
+        output_filename (str): filename for output logs
+        get_guid_from_file (bool): whether or not to get the guid for metadata from file
+            NOTE: When this is True, will use the function in
+                  manifest_row_parsers["guid_from_file"] to determine the GUID
+                  (usually just a specific column in the file row like "guid")
     """
     max_requests = int(max_concurrent_requests)
     logging.debug(f"max concurrent requests: {max_requests}")
@@ -258,8 +295,15 @@ async def _parse_from_queue(
         queue (asyncio.Queue): queue to read metadata from
         lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
             connections
-        commons_url (str): root domain for commons where indexd lives
+        commons_url (str): root domain for commons where mds lives
         output_queue (asyncio.Queue): queue for output
+        auth (Gen3Auth): Gen3 auth or tuple with basic auth name and password
+        get_guid_from_file (bool): whether or not to get the guid for metadata from file
+            NOTE: When this is True, will use the function in
+                  manifest_row_parsers["guid_from_file"] to determine the GUID
+                  (usually just a specific column in the file row like "guid")
+        metadata_source (str): the name of the source of metadata (used to namespace
+            in the metadata service) ex: dbgap
     """
     loop = asyncio.get_event_loop()
 
@@ -310,8 +354,15 @@ async def _parse_from_queue(
 
             logging.debug(f"metadata: {metadata}")
 
-            mds = Gen3Metadata(commons_url, auth_provider=auth)
-            mds.update(guid, metadata)
+            try:
+                await _create_metadata(guid, metadata, auth, commons_url, lock)
+                logging.info(f"Successfully created {guid}")
+            except Exception as exc:
+                logging.info(
+                    f"Got conflict for {guid}. Let's update instead of create..."
+                )
+                await _update_metadata(guid, metadata, auth, commons_url, lock)
+                logging.info(f"Successfully updated {guid}")
         else:
             logging.warning(
                 f"Did not add a metadata object for row because an invalid "
@@ -321,13 +372,59 @@ async def _parse_from_queue(
         row = await queue.get()
 
 
+async def _create_metadata(guid, metadata, auth, commons_url, lock):
+    """
+    Gets a semaphore then creates metadata for guid
+
+    Args:
+        guid (str): indexd record globally unique id
+        metadata (str): the metadata to add
+        auth (Gen3Auth): Gen3 auth or tuple with basic auth name and password
+        commons_url (str): root domain for commons where metadata service lives
+        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
+            connections
+    """
+    mds = Gen3Metadata(commons_url, auth_provider=auth)
+    async with lock:
+        # default ssl handling unless it's explicitly http://
+        ssl = None
+        if "https" not in commons_url:
+            ssl = False
+
+        response = await mds.async_create(guid, metadata, _ssl=ssl)
+        return response
+
+
+async def _update_metadata(guid, metadata, auth, commons_url, lock):
+    """
+    Gets a semaphore then updates metadata for guid
+
+    Args:
+        guid (str): indexd record globally unique id
+        metadata (str): the metadata to add
+        auth (Gen3Auth): Gen3 auth or tuple with basic auth name and password
+        commons_url (str): root domain for commons where metadata service lives
+        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
+            connections
+    """
+    mds = Gen3Metadata(commons_url, auth_provider=auth)
+    async with lock:
+        # default ssl handling unless it's explicitly http://
+        ssl = None
+        if "https" not in commons_url:
+            ssl = False
+
+        response = await mds.async_update(guid, metadata, _ssl=ssl)
+        return response
+
+
 async def _is_indexed_file_object(guid, commons_url, lock):
     """
     Gets a semaphore then requests a record for the given guid
 
     Args:
         guid (str): indexd record globally unique id
-        commons_url (str): root domain for commons where indexd lives
+        commons_url (str): root domain for commons where mds lives
         lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
             connections
     """
@@ -348,7 +445,7 @@ async def _query_urls_from_indexd(pattern, commons_url, lock):
 
     Args:
         pattern (str): url pattern to match
-        commons_url (str): root domain for commons where indexd lives
+        commons_url (str): root domain for commons where mds lives
         lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
             connections
     """
@@ -368,7 +465,7 @@ async def _get_with_params_from_indexd(params, commons_url, lock):
 
     Args:
         params (str): params to match
-        commons_url (str): root domain for commons where indexd lives
+        commons_url (str): root domain for commons where mds lives
         lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
             connections
     """
