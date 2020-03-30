@@ -9,11 +9,11 @@ Attributes:
         NOT exist in indexd
     manifest_row_parsers (Dict{str: function}): functions for parsing, users can override
         manifest_row_parsers = {
-            "guid_from_file": _get_guid_from_file,
+            "guid_from_file": _get_guid_for_row,
             "indexed_file_object_guid": _query_for_associated_indexd_record_guid,
         }
 
-        "guid_from_file" is the function to retrieve the guid from the given file
+        "guid_for_row" is the function to retrieve the guid from the given file
         "indexed_file_object_guid" is the function to retrieve the guid from elsewhere,
             like indexd (by querying)
 
@@ -40,7 +40,7 @@ GUID_TYPE_FOR_INDEXED_FILE_OBJECT = "indexed_file_object"
 GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT = "metadata_object"
 
 
-def _get_guid_from_file(commons_url, row, lock):
+def _get_guid_for_row(commons_url, row, lock):
     """
     Given a row from the manifest, return the guid to use for the metadata object.
 
@@ -76,7 +76,7 @@ async def _query_for_associated_indexd_record_guid(commons_url, row, lock):
             connections
 
     Returns:
-        str: guid
+        str: guid or None
     """
     mapping = {"urls": "submitted_sample_id"}
     # Alternate example:
@@ -101,7 +101,7 @@ async def _query_for_associated_indexd_record_guid(commons_url, row, lock):
     if "urls" in mapping:
         pattern = row.get(mapping["urls"])
         logging.debug(f"trying to find matching record matching url pattern: {pattern}")
-        records = await _query_urls_from_indexd(pattern, commons_url, lock)
+        records = await async_query_urls_from_indexd(pattern, commons_url, lock)
     else:
         params = {
             mapping_key: row.get(mapping_value)
@@ -129,7 +129,7 @@ async def _query_for_associated_indexd_record_guid(commons_url, row, lock):
 
 
 manifest_row_parsers = {
-    "guid_from_file": _get_guid_from_file,
+    "guid_for_row": _get_guid_for_row,
     "indexed_file_object_guid": _query_for_associated_indexd_record_guid,
 }
 
@@ -160,7 +160,7 @@ async def async_ingest_metadata_manifest(
         output_filename (str): filename for output logs
         get_guid_from_file (bool): whether or not to get the guid for metadata from file
             NOTE: When this is True, will use the function in
-                  manifest_row_parsers["guid_from_file"] to determine the GUID
+                  manifest_row_parsers["guid_for_row"] to determine the GUID
                   (usually just a specific column in the file row like "guid")
     """
     start_time = time.perf_counter()
@@ -222,7 +222,7 @@ async def _ingest_all_metadata_in_file(
         output_filename (str): filename for output logs
         get_guid_from_file (bool): whether or not to get the guid for metadata from file
             NOTE: When this is True, will use the function in
-                  manifest_row_parsers["guid_from_file"] to determine the GUID
+                  manifest_row_parsers["guid_for_row"] to determine the GUID
                   (usually just a specific column in the file row like "guid")
     """
     max_requests = int(max_concurrent_requests)
@@ -300,7 +300,7 @@ async def _parse_from_queue(
         auth (Gen3Auth): Gen3 auth or tuple with basic auth name and password
         get_guid_from_file (bool): whether or not to get the guid for metadata from file
             NOTE: When this is True, will use the function in
-                  manifest_row_parsers["guid_from_file"] to determine the GUID
+                  manifest_row_parsers["guid_for_row"] to determine the GUID
                   (usually just a specific column in the file row like "guid")
         metadata_source (str): the name of the source of metadata (used to namespace
             in the metadata service) ex: dbgap
@@ -311,7 +311,7 @@ async def _parse_from_queue(
 
     while row != "DONE":
         if get_guid_from_file:
-            guid = manifest_row_parsers["guid_from_file"](commons_url, row, lock)
+            guid = manifest_row_parsers["guid_for_row"](commons_url, row, lock)
             is_indexed_file_object = await _is_indexed_file_object(
                 guid, commons_url, lock
             )
@@ -439,7 +439,7 @@ async def _is_indexed_file_object(guid, commons_url, lock):
         return bool(record)
 
 
-async def _query_urls_from_indexd(pattern, commons_url, lock):
+async def async_query_urls_from_indexd(pattern, commons_url, lock):
     """
     Gets a semaphore then requests a record for the given pattern
 
