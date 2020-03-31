@@ -128,7 +128,7 @@ class Gen3Metadata:
             self.admin_endpoint + f"/metadata_index/{path}", auth=self._auth_provider
         )
         response.raise_for_status()
-        return response.json()
+        return response
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def query(self, query, return_full_metadata=False, limit=10, offset=0, **kwargs):
@@ -293,7 +293,7 @@ class Gen3Metadata:
         return response
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    def update(self, guid, metadata, overwrite=False, **kwargs):
+    def update(self, guid, metadata, **kwargs):
         """
         Update the metadata associated with the guid
 
@@ -301,11 +301,10 @@ class Gen3Metadata:
             guid (str): guid to use
             metadata (Dict): dictionary representing what will end up a JSON blob
                 attached to the provided GUID as metadata
-            overwrite (bool, optional): whether or not to overwrite existing data
         """
         url = self.admin_endpoint + f"/metadata/{guid}"
 
-        url_with_params = append_query_params(url, overwrite=overwrite, **kwargs)
+        url_with_params = append_query_params(url, **kwargs)
         logging.debug(f"hitting: {url_with_params}")
         logging.debug(f"data: {metadata}")
         response = requests.put(
