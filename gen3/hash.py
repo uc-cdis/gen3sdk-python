@@ -35,7 +35,7 @@ class Gen3Hash:
                 if not chunk:
                     break
                 hash.update(chunk)
-            return hash.hexdigest()
+            return {hash_type: hash.hexdigest()}
 
     async def get_hash_async(self, hash_types, queue):
         """
@@ -47,10 +47,11 @@ class Gen3Hash:
 
         """
         ec = ProcessPoolExecutor()
+        loop = asyncio.get_event_loop()
 
         for f in asyncio.as_completed(
             [
-                loop.run_in_executor(ec, gen3Hash.get_hash, hash_type)
+                loop.run_in_executor(ec, self.get_hash, hash_type)
                 for hash_type in hash_types
             ]
         ):
