@@ -8,14 +8,14 @@ from concurrent.futures import ProcessPoolExecutor
 CHUNK_SIZE = 4 * 1024
 
 
-class Gen3Hash():
+class Gen3Hash:
     def __init__(self, file_path, chunk_size=CHUNK_SIZE):
         self.file_path = file_path
         self.chunk_size = chunk_size
 
     def get_hash(self, hash_type):
         """
-        Compute hash
+        Compute hash of the object.
 
         Args:
             hash_type(str): the type of hash needs to be computed
@@ -47,25 +47,12 @@ class Gen3Hash():
 
         """
         ec = ProcessPoolExecutor()
-       
+
         for f in asyncio.as_completed(
             [
                 loop.run_in_executor(ec, gen3Hash.get_hash, hash_type)
                 for hash_type in hash_types
-            ],
+            ]
         ):
             hash = await f
             await queue.put(hash)
-
-
-if __name__ == "__main__" :
-    gen3Hash = Gen3Hash("./mymovie1.mov")
-    gen3Hash.get_hash("md5")
-
-    start = time.time()
-    hashes = asyncio.Queue()
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(gen3Hash.get_hash_async(["md5", "sha12"], hashes))
-    end = time.time()
-    print(hashes)
-    logging.info("Async:", end - start)
