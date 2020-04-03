@@ -3,6 +3,7 @@ import hashlib
 import asyncio
 import logging
 from concurrent.futures import ProcessPoolExecutor
+from multiprocessing.pool import ThreadPool
 
 
 CHUNK_SIZE = 4 * 1024
@@ -31,29 +32,25 @@ class Gen3Hash:
             return None
         with open(self.file_path, "rb") as f:
             while True:
-                chunk = f.read(CHUNK_SIZE)
-                if not chunk:
+                chunk = bytearray(CHUNK_SIZE)
+                num = f.readinto(chunk)
+                if not num:
                     break
-                hash.update(chunk)
+                hash.update(chunk[:num])
             return {hash_type: hash.hexdigest()}
 
-    async def get_hash_async(self, hash_types, queue):
+    def get_hashes(self, hash_types: str):
         """
-        This function computes multiple hash types 
+        Get multiple hashes with multiple processing
 
         Args:
             hash_types(list(str)): list of hash types
-            queue(asyncio.Queue()): output queue
+        
+        Returns:
+            list(str): list of hashes
 
         """
-        ec = ProcessPoolExecutor()
-        loop = asyncio.get_event_loop()
-
-        for f in asyncio.as_completed(
-            [
-                loop.run_in_executor(ec, self.get_hash, hash_type)
-                for hash_type in hash_types
-            ]
-        ):
-            hash = await f
-            await queue.put(hash)
+        number_of_workers = os.cpu_count()
+        with ThreadPool(number_of_workers) as pool:
+            files_hash = pool.map(self.get_hash, hash_types)
+            return files_hash
