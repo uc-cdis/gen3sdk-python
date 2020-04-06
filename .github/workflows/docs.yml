@@ -11,6 +11,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        ref: ${{ github.head_ref }}
     - name: Set up Python 3.6
       uses: actions/setup-python@v1
       with:
@@ -35,12 +37,6 @@ jobs:
         # Required if Action is used in Workflow listening to the `pull_request` event
         branch: ${{ github.head_ref }}
 
-        # Optional git params
-        commit_options: '--no-verify --signoff'
-
         # Optional glob pattern of files which should be added to the commit
         file_pattern: docs/_build/\*
-
-        # Optional local file path to the repository
-        repository: .
 
