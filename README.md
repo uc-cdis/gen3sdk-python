@@ -5,11 +5,9 @@ to simplify communication with various microservices in a clear Python package.
 
 The docs here contain general descriptions of the different pieces of the SDK and example scripts. For detailed API documentation, see the link below:
 
-* [detailed API documentation](https://uc-cdis.github.io/gen3sdk-python/_build/html/index.html)
+* [Detailed API Documentation](https://uc-cdis.github.io/gen3sdk-python/_build/html/index.html)
 
-**Table of Contents**
-
----
+## Table of Contents
 
 - [Installation](#installation)
 - [Quickstart Example](#quickstart-example)
