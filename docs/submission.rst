@@ -1,5 +1,5 @@
-Gen3 Submission
-----------------
+Gen3 Submission Class
+---------------------
 
 .. autoclass:: gen3.submission.Gen3Submission
    :members:
