@@ -14,6 +14,8 @@
     <script src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Gen3 Submission Class" href="submission.html" />
+    <link rel="prev" title="Gen3 Auth Helper" href="auth.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -32,9 +34,9 @@
             
   <div class="section" id="gen3-file-class">
 <h1>Gen3 File Class<a class="headerlink" href="#gen3-file-class" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
+<dl class="py class">
 <dt id="gen3.file.Gen3File">
-<em class="property">class </em><code class="sig-prename descclassname">gen3.file.</code><code class="sig-name descname">Gen3File</code><span class="sig-paren">(</span><em class="sig-param">endpoint</em>, <em class="sig-param">auth_provider</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.file.Gen3File" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">gen3.file.</code><code class="sig-name descname">Gen3File</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">endpoint</span></em>, <em class="sig-param"><span class="n">auth_provider</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.file.Gen3File" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>For interacting with Gen3 file management features.</p>
 <p>A class for interacting with the Gen3 file download services.
@@ -55,9 +57,9 @@ using the credentials.json downloaded from the commons profile page.</p>
 <span class="gp">... </span><span class="n">sub</span> <span class="o">=</span> <span class="n">Gen3File</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">auth</span><span class="p">)</span>
 </pre></div>
 </div>
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.file.Gen3File.get_presigned_url">
-<code class="sig-name descname">get_presigned_url</code><span class="sig-paren">(</span><em class="sig-param">guid</em>, <em class="sig-param">protocol='http'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.get_presigned_url"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.file.Gen3File.get_presigned_url" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_presigned_url</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">guid</span></em>, <em class="sig-param"><span class="n">protocol</span><span class="o">=</span><span class="default_value">'http'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.get_presigned_url"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.file.Gen3File.get_presigned_url" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates a presigned URL for a file.</p>
 <p>Retrieves a presigned url for a file giving access to a file for a limited time.</p>
 <dl class="field-list simple">
@@ -102,11 +104,19 @@ using the credentials.json downloaded from the commons profile page.</p>
 
 
 <h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="auth.html">Gen3 Auth Helper</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Gen3 File Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="submission.html">Gen3 Submission Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tools.html">Gen3 Tools</a></li>
+</ul>
 
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="auth.html" title="previous chapter">Gen3 Auth Helper</a></li>
+      <li>Next: <a href="submission.html" title="next chapter">Gen3 Submission Class</a></li>
   </ul></li>
 </ul>
 </div>
