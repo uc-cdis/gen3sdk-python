@@ -1,19 +1,23 @@
 # Gen3 SDK for Python
 
-The Gen3 SDK for Python provides classes for handling the authentication flow using a refresh token and getting an access token from the commons. The access token is then refreshed as necessary while the refresh token remains valid. The submission client contains various functions for submitting, exporting, and deleting data from a Gen3 data commons.
+The Gen3 PSDK for Python provides classes and functions for handling common tasks when interacting with a Gen3 commons. The API for a commons can be overwhelming, so this SDK aims
+to simplify communication with various microservices in a clear Python package.
 
-Some docs for this SDK are available at [http://gen3sdk-python.rtfd.io/](http://gen3sdk-python.rtfd.io/)
+The docs here contain general descriptions of the different pieces of the SDK and example scripts. For detailed API documentation, see the link below:
+
+* [detailed API documentation](https://uc-cdis.github.io/gen3sdk-python/_build/html/index.html)
 
 **Table of Contents**
 
 ---
 
-<!-- MarkdownTOC autolink=true -->
-
-- [Auth](#auth)
-- [IndexClient](#indexclient)
-- [SubmissionClient](#submissionclient)
-- [Metadata](#metadata)
+- [Installation](#installation)
+- [Quickstart Example](#quickstart-example)
+- [Quickstart Example w/ Auth](#quickstart-example-w-auth)
+- [Available Classes](#available-classes)
+    - [Gen3Auth](#gen3auth)
+    - [Gen3Index](#gen3index)
+    - [Gen3Submission](#gen3submission)
 - [Indexing Tools](#indexing-tools)
     - [Download Manifest](#download-manifest)
     - [Verify Manifest](#verify-manifest)
@@ -25,19 +29,110 @@ Some docs for this SDK are available at [http://gen3sdk-python.rtfd.io/](http://
         - [Ideal Scenario \(Column to Column Match, Indexing:Metadata Manifest Rows\)](#ideal-scenario-column-to-column-match-indexingmetadata-manifest-rows)
         - [Non-Ideal Scenario \(Partial URL Matching\)](#non-ideal-scenario-partial-url-matching)
 
-<!-- /MarkdownTOC -->
-
 ---
 
-## Auth
+## Installation
+
+To get the latest released version of the SDK:
+
+`pip install gen3`
+
+To use the latest code in this repo you can clone this and then run:
+
+`python setup.py install`
+
+> Developer Note: If you want to edit this SDK and test it you can do a development install with `python setup.py develop`.
+
+## Quickstart Example
+
+```python
+"""
+This script will use an instance of the Gen3Index class to communicate with a Gen3
+Commons indexing service to get some basic information.
+
+The example commons we're using is an open Canine Data Commons.
+"""
+from gen3.index import Gen3Index
+
+# Gen3 Commons URL
+COMMONS = "https://caninedc.org/"
+
+
+def main():
+    index = Gen3Index(COMMONS)
+    if not index.is_healthy():
+        print(f"uh oh! The indexing service is not healthy in the commons {COMMONS}")
+        exit()
+
+    print("some file stats:")
+    print(index.get_stats())
+
+    print("example GUID record:")
+    print(index.get(guid="afea506a-62d0-4e8e-9388-19d3c5ac52be"))
+
+
+if __name__ == "__main__":
+    main()
+
+```
+
+## Quickstart Example w/ Auth
+
+Some Gen3 API endpoints require authentication and special privileges to be able to use. The SDK can automate a lot of this by simply providing it with an API Key you download from the Gen3 Commons UI after logging in.
+
+> NOTE: The below script will most likely fail for you because your user doesn't have access to create in that commons. However, the example is still important because if you *did* have access, this would handle passing your access token to the commons API correctly.
+
+```python
+"""
+This script will use an instance of the Gen3Index class to attempt to create a
+new indexed file record in the specified Gen3 Commons indexing service.
+
+The example commons we're using is an open Canine Data Commons.
+"""
+from gen3.index import Gen3Index
+from gen3.auth import Gen3Auth
+
+# Gen3 Commons URL
+COMMONS = "https://caninedc.org/"
+
+# An API Key downloaded from the above commons' "Profile" page
+API_KEY_FILEPATH = "credentials.json"
+
+
+def main():
+    auth = Gen3Auth(COMMONS, refresh_file=API_KEY_FILEPATH)
+    index = Gen3Index(COMMONS, auth_provider=auth)
+    if not index.is_healthy():
+        print(f"uh oh! The indexing service is not healthy in the commons {COMMONS}")
+        exit()
+
+    print("trying to create new indexed file object record:\n")
+    try:
+        response = index.create_record(
+            hashes={"md5": "ab167e49d25b488939b1ede42752458b"}, size=42, acl=["*"]
+        )
+    except Exception as exc:
+        print(
+            "\nERROR ocurred when trying to create the record, you probably don't have access."
+        )
+
+
+if __name__ == "__main__":
+    main()
+
+```
+
+## Available Classes
+
+### Gen3Auth
 
 This contains an auth wrapper for supporting JWT based authentication with `requests`. The access token is generated from the refresh token and is regenerated on expiration.
 
-## IndexClient
+### Gen3Index
 
 This is the client for interacting with the Indexd service for GUID brokering and resolution.
 
-## SubmissionClient
+### Gen3Submission
 
 This is the client for interacting with the Gen3 submission service including GraphQL queries.
 
