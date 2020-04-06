@@ -28,7 +28,13 @@ class Gen3Metadata:
         endpoint (str): public endpoint for reading/querying metadata
     """
 
-    def __init__(self, endpoint, auth_provider=None, service_location="mds"):
+    def __init__(
+        self,
+        endpoint,
+        auth_provider=None,
+        service_location="mds",
+        admin_endpoint_suffix="-admin",
+    ):
         """
         Initialization for instance of the class to setup basic endpoint info.
 
@@ -44,12 +50,13 @@ class Gen3Metadata:
         # to the commons
         if "http://localhost" in endpoint:
             service_location = ""
+            admin_endpoint_suffix = ""
 
         if not endpoint.endswith(service_location):
             endpoint += "/" + service_location
 
         self.endpoint = endpoint.rstrip("/")
-        self.admin_endpoint = endpoint.rstrip("/") + "-admin"
+        self.admin_endpoint = endpoint.rstrip("/") + admin_endpoint_suffix
         self._auth_provider = auth_provider
 
     def is_healthy(self):
