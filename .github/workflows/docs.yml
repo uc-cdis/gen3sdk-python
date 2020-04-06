@@ -17,12 +17,12 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: 3.6
-    - name: Install dependencies
+    - name: Install dependencies (allow "failures" and attempt to continue)
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r test-requirements.txt
-        pip install sphinx
+        python -m pip install --upgrade pip || true
+        pip install -r requirements.txt || true
+        pip install -r test-requirements.txt || true
+        pip install sphinx || true
     - name: Build docs
       run: |
         cd docs
