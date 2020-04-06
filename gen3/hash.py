@@ -1,9 +1,8 @@
 import os
 import hashlib
-import asyncio
 import logging
-from concurrent.futures import ProcessPoolExecutor
-from multiprocessing.pool import ThreadPool
+from typing import List, Dict
+from multiprocessing.pool import Pool
 
 
 CHUNK_SIZE = 4 * 1024
@@ -22,7 +21,7 @@ class Gen3Hash:
             hash_type(str): the type of hash needs to be computed
 
         Returns:
-            str: hash string
+            (str, str): hash type and hash string
         """
 
         try:
@@ -37,9 +36,9 @@ class Gen3Hash:
                 if not num:
                     break
                 hash.update(chunk[:num])
-            return {hash_type: hash.hexdigest()}
+            return hash_type, hash.hexdigest()
 
-    def get_hashes(self, hash_types: str):
+    def get_hashes(self, hash_types: List[str]) -> Dict[str, str]:
         """
         Get multiple hashes with multiple processing
 
@@ -47,10 +46,14 @@ class Gen3Hash:
             hash_types(list(str)): list of hash types
         
         Returns:
-            list(str): list of hashes
+            Dict[str, str]: hash dictionary
+                {
+                    "md5": "md5_example",
+                    "sha1": "sha1_example"
+                }
 
         """
         number_of_workers = os.cpu_count()
-        with ThreadPool(number_of_workers) as pool:
+        with Pool(number_of_workers) as pool:
             files_hash = pool.map(self.get_hash, hash_types)
-            return files_hash
+            return dict(files_hash)
