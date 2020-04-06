@@ -1,0 +1,731 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>gen3.submission &#8212; Gen3 SDK  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for gen3.submission</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+
+<span class="k">class</span> <span class="nc">Gen3Error</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+
+<span class="k">class</span> <span class="nc">Gen3SubmissionQueryError</span><span class="p">(</span><span class="n">Gen3Error</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+
+<span class="k">class</span> <span class="nc">Gen3UserError</span><span class="p">(</span><span class="n">Gen3Error</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+
+<div class="viewcode-block" id="Gen3Submission"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission">[docs]</a><span class="k">class</span> <span class="nc">Gen3Submission</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Submit/Export/Query data from a Gen3 Submission system.</span>
+
+<span class="sd">    A class for interacting with the Gen3 submission services.</span>
+<span class="sd">    Supports submitting and exporting from Sheepdog.</span>
+<span class="sd">    Supports GraphQL queries through Peregrine.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        endpoint (str): The URL of the data commons.</span>
+<span class="sd">        auth_provider (Gen3Auth): A Gen3Auth class instance.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        This generates the Gen3Submission class pointed at the sandbox commons while</span>
+<span class="sd">        using the credentials.json downloaded from the commons profile page.</span>
+
+<span class="sd">        &gt;&gt;&gt; endpoint = &quot;https://nci-crdc-demo.datacommons.io&quot;</span>
+<span class="sd">        ... auth = Gen3Auth(endpoint, refresh_file=&quot;credentials.json&quot;)</span>
+<span class="sd">        ... sub = Gen3Submission(endpoint, auth)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">,</span> <span class="n">auth_provider</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span> <span class="o">=</span> <span class="n">auth_provider</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span> <span class="o">=</span> <span class="n">endpoint</span>
+
+    <span class="k">def</span> <span class="nf">__export_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">output</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Writes an API response to a file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">outfile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span>
+        <span class="n">outfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="n">outfile</span><span class="o">.</span><span class="n">close</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Output written to file: &quot;</span> <span class="o">+</span> <span class="n">filename</span><span class="p">)</span>
+
+    <span class="c1">### Program functions</span>
+
+<div class="viewcode-block" id="Gen3Submission.get_programs"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.get_programs">[docs]</a>    <span class="k">def</span> <span class="nf">get_programs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;List registered programs</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="si">}</span><span class="s2">/api/v0/submission/&quot;</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Submission.create_program"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.create_program">[docs]</a>    <span class="k">def</span> <span class="nf">create_program</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">json</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a program.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            json (object): The json of the program to create</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            This creates a program in the sandbox commons.</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.create_program(json)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/api/v0/submission/&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">json</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Submission.delete_program"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.delete_program">[docs]</a>    <span class="k">def</span> <span class="nf">delete_program</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Delete a program.</span>
+
+<span class="sd">        This deletes an empty program from the commons.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            program (str): The program to delete.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            This deletes the &quot;DCF&quot; program.</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.delete_program(&quot;DCF&quot;)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/api/v0/submission/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">program</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">output</span></div>
+
+    <span class="c1">### Project functions</span>
+
+<div class="viewcode-block" id="Gen3Submission.get_projects"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.get_projects">[docs]</a>    <span class="k">def</span> <span class="nf">get_projects</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;List registered projects for a given program</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            program: the name of the program you want the projects from</span>
+
+<span class="sd">        Example:</span>
+<span class="sd">            This lists all the projects under the DCF program</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.get_projects(&quot;DCF&quot;)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="si">}</span><span class="s2">/api/v0/submission/</span><span class="si">{</span><span class="n">program</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Submission.create_project"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.create_project">[docs]</a>    <span class="k">def</span> <span class="nf">create_project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">json</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a project.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            program (str): The program to create a project on</span>
+<span class="sd">            json (object): The json of the project to create</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            This creates a project on the DCF program in the sandbox commons.</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.create_project(&quot;DCF&quot;, json)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/api/v0/submission/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">program</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">json</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Submission.delete_project"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.delete_project">[docs]</a>    <span class="k">def</span> <span class="nf">delete_project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Delete a project.</span>
+
+<span class="sd">        This deletes an empty project from the commons.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            program (str): The program containing the project to delete.</span>
+<span class="sd">            project (str): The project to delete.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            This deletes the &quot;CCLE&quot; project from the &quot;DCF&quot; program.</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.delete_project(&quot;DCF&quot;, &quot;CCLE&quot;)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/api/v0/submission/</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">output</span></div>
+
+<div class="viewcode-block" id="Gen3Submission.get_project_dictionary"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.get_project_dictionary">[docs]</a>    <span class="k">def</span> <span class="nf">get_project_dictionary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get dictionary schema for a given project</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            program: the name of the program the project is from</span>
+<span class="sd">            project: the name of the project you want the dictionary schema from</span>
+
+<span class="sd">        Example:</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.get_project_dictionary(&quot;DCF&quot;, &quot;CCLE&quot;)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="si">}</span><span class="s2">/api/v0/submission/</span><span class="si">{</span><span class="n">program</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">project</span><span class="si">}</span><span class="s2">/_dictionary&quot;</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Submission.open_project"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.open_project">[docs]</a>    <span class="k">def</span> <span class="nf">open_project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Mark a project ``open``. Opening a project means uploads, deletions, etc. are allowed.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            program: the name of the program the project is from</span>
+<span class="sd">            project: the name of the project you want to &#39;open&#39;</span>
+
+<span class="sd">        Example:</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.get_project_manifest(&quot;DCF&quot;, &quot;CCLE&quot;)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="si">}</span><span class="s2">/api/v0/submission/</span><span class="si">{</span><span class="n">program</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">project</span><span class="si">}</span><span class="s2">/open&quot;</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+    <span class="c1">### Record functions</span>
+
+<div class="viewcode-block" id="Gen3Submission.submit_record"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.submit_record">[docs]</a>    <span class="k">def</span> <span class="nf">submit_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">json</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Submit record(s) to a project as json.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            program (str): The program to submit to.</span>
+<span class="sd">            project (str): The project to submit to.</span>
+<span class="sd">            json (object): The json defining the record(s) to submit. For multiple records, the json should be an array of records.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            This submits records to the CCLE project in the sandbox commons.</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.submit_record(&quot;DCF&quot;, &quot;CCLE&quot;, json)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/api/v0/submission/</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">json</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Submission.delete_record"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.delete_record">[docs]</a>    <span class="k">def</span> <span class="nf">delete_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">uuid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Delete a record from a project.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            program (str): The program to delete from.</span>
+<span class="sd">            project (str): The project to delete from.</span>
+<span class="sd">            uuid (str): The uuid of the record to delete</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            This deletes a record from the CCLE project in the sandbox commons.</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.delete_record(&quot;DCF&quot;, &quot;CCLE&quot;, uuid)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/api/v0/submission/</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/entities/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">uuid</span>
+        <span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">output</span></div>
+
+<div class="viewcode-block" id="Gen3Submission.export_record"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.export_record">[docs]</a>    <span class="k">def</span> <span class="nf">export_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">uuid</span><span class="p">,</span> <span class="n">fileformat</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Export a single record into json.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            program (str): The program the record is under.</span>
+<span class="sd">            project (str): The project the record is under.</span>
+<span class="sd">            uuid (str): The UUID of the record to export.</span>
+<span class="sd">            fileformat (str): Export data as either &#39;json&#39; or &#39;tsv&#39;</span>
+<span class="sd">            filename (str): Name of the file to export to; if no filename is provided, prints data to screen</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            This exports a single record from the sandbox commons.</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.export_record(&quot;DCF&quot;, &quot;CCLE&quot;, &quot;d70b41b9-6f90-4714-8420-e043ab8b77b9&quot;, &quot;json&quot;, filename=&quot;DCF-CCLE_one_record.json&quot;)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">fileformat</span> <span class="ow">in</span> <span class="p">[</span>
+            <span class="s2">&quot;json&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;tsv&quot;</span><span class="p">,</span>
+        <span class="p">],</span> <span class="s2">&quot;File format must be either &#39;json&#39; or &#39;tsv&#39;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/api/v0/submission/</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/export?ids=</span><span class="si">{}</span><span class="s2">&amp;format=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">uuid</span><span class="p">,</span> <span class="n">fileformat</span>
+        <span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+        <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">fileformat</span> <span class="o">==</span> <span class="s2">&quot;json&quot;</span><span class="p">:</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">output</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__export_file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">output</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">output</span></div>
+
+<div class="viewcode-block" id="Gen3Submission.export_node"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.export_node">[docs]</a>    <span class="k">def</span> <span class="nf">export_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">node_type</span><span class="p">,</span> <span class="n">fileformat</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Export all records in a single node type of a project.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            program (str): The program to which records belong.</span>
+<span class="sd">            project (str): The project to which records belong.</span>
+<span class="sd">            node_type (str): The name of the node to export.</span>
+<span class="sd">            fileformat (str): Export data as either &#39;json&#39; or &#39;tsv&#39;</span>
+<span class="sd">            filename (str): Name of the file to export to; if no filename is provided, prints data to screen</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            This exports all records in the &quot;sample&quot; node from the CCLE project in the sandbox commons.</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.export_node(&quot;DCF&quot;, &quot;CCLE&quot;, &quot;sample&quot;, &quot;tsv&quot;, filename=&quot;DCF-CCLE_sample_node.tsv&quot;)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">fileformat</span> <span class="ow">in</span> <span class="p">[</span>
+            <span class="s2">&quot;json&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;tsv&quot;</span><span class="p">,</span>
+        <span class="p">],</span> <span class="s2">&quot;File format must be either &#39;json&#39; or &#39;tsv&#39;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/api/v0/submission/</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/export/?node_label=</span><span class="si">{}</span><span class="s2">&amp;format=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">node_type</span><span class="p">,</span> <span class="n">fileformat</span>
+        <span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+        <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">fileformat</span> <span class="o">==</span> <span class="s2">&quot;json&quot;</span><span class="p">:</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">output</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__export_file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">output</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">output</span></div>
+
+    <span class="c1">### Query functions</span>
+
+<div class="viewcode-block" id="Gen3Submission.query"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.query">[docs]</a>    <span class="k">def</span> <span class="nf">query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query_txt</span><span class="p">,</span> <span class="n">variables</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_tries</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Execute a GraphQL query against a data commons.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            query_txt (str): Query text.</span>
+<span class="sd">            variables (:obj:`object`, optional): Dictionary of variables to pass with the query.</span>
+<span class="sd">            max_tries (:obj:`int`, optional): Number of times to retry if the request fails.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            This executes a query to get the list of all the project codes for all the projects</span>
+<span class="sd">            in the data commons.</span>
+
+<span class="sd">            &gt;&gt;&gt; query = &quot;{ project(first:0) { code } }&quot;</span>
+<span class="sd">            ... Gen3Submission.query(query)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/api/v0/submission/graphql&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">variables</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="n">query_txt</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="n">query_txt</span><span class="p">,</span> <span class="s2">&quot;variables&quot;</span><span class="p">:</span> <span class="n">variables</span><span class="p">}</span>
+
+        <span class="n">tries</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">tries</span> <span class="o">&lt;</span> <span class="n">max_tries</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="s2">&quot;errors&quot;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">Gen3SubmissionQueryError</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;errors&quot;</span><span class="p">])</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="s2">&quot;data&quot;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">query_txt</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+            <span class="n">tries</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Gen3Submission.get_graphql_schema"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.get_graphql_schema">[docs]</a>    <span class="k">def</span> <span class="nf">get_graphql_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the GraphQL schema for a commons.</span>
+
+<span class="sd">        This runs the GraphQL introspection query against a commons and returns the results.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            This returns the GraphQL schema.</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.get_graphql_schema()</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/api/v0/submission/getschema&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+    <span class="c1">### Dictionary functions</span>
+
+<div class="viewcode-block" id="Gen3Submission.get_dictionary_node"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.get_dictionary_node">[docs]</a>    <span class="k">def</span> <span class="nf">get_dictionary_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_type</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the dictionary schema for a specific node.</span>
+
+<span class="sd">        This gets the current json dictionary schema for a specific node type in a commons.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            node_type (str): The node_type (or name of the node) to retrieve.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            This returns the dictionary schema the &quot;subject&quot; node.</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.get_dictionary_node(&quot;subject&quot;)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/api/v0/submission/_dictionary/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">node_type</span>
+        <span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Gen3Submission.get_dictionary_all"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.get_dictionary_all">[docs]</a>    <span class="k">def</span> <span class="nf">get_dictionary_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the entire dictionary object for a commons.</span>
+
+<span class="sd">        This gets a json of the current dictionary schema for a commons.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            This returns the dictionary schema for a commons.</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.get_dictionary_all()</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_dictionary_node</span><span class="p">(</span><span class="s2">&quot;_all&quot;</span><span class="p">)</span></div>
+
+    <span class="c1">### File functions</span>
+
+<div class="viewcode-block" id="Gen3Submission.get_project_manifest"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.get_project_manifest">[docs]</a>    <span class="k">def</span> <span class="nf">get_project_manifest</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get a projects file manifest</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            program: the name of the program the project is from</span>
+<span class="sd">            project: the name of the project you want the manifest from</span>
+
+<span class="sd">        Example:</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.get_project_manifest(&quot;DCF&quot;, &quot;CCLE&quot;)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="si">}</span><span class="s2">/api/v0/submission/</span><span class="si">{</span><span class="n">program</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">project</span><span class="si">}</span><span class="s2">/manifest&quot;</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">output</span></div>
+
+<div class="viewcode-block" id="Gen3Submission.submit_file"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.submit_file">[docs]</a>    <span class="k">def</span> <span class="nf">submit_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">project_id</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">row_offset</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            project_id (str): The project_id to submit to.</span>
+<span class="sd">            filename (str): The file containing data to submit. The format can be TSV, CSV or XLSX (first worksheet only for now).</span>
+<span class="sd">            chunk_size (integer): The number of rows of data to submit for each request to the API.</span>
+<span class="sd">            row_offset (integer): The number of rows of data to skip; &#39;0&#39; starts submission from the first row and submits all data.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            This submits a spreadsheet file containing multiple records in rows to the CCLE project in the sandbox commons.</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.submit_file(&quot;DCF-CCLE&quot;,&quot;data_spreadsheet.tsv&quot;)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Read the file in as a pandas DataFrame</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.csv&quot;</span><span class="p">):</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">f</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.xlsx&quot;</span><span class="p">):</span>
+            <span class="n">xl</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">ExcelFile</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>  <span class="c1"># load excel file</span>
+            <span class="n">sheet</span> <span class="o">=</span> <span class="n">xl</span><span class="o">.</span><span class="n">sheet_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># sheetname</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">xl</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">sheet</span><span class="p">)</span>  <span class="c1"># save sheet as dataframe</span>
+            <span class="n">converters</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">col</span><span class="p">:</span> <span class="nb">str</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+            <span class="p">}</span>  <span class="c1"># make sure int isn&#39;t converted to float</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_excel</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">converters</span><span class="o">=</span><span class="n">converters</span><span class="p">)</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>  <span class="c1"># remove nan</span>
+        <span class="k">elif</span> <span class="n">filename</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">((</span><span class="s2">&quot;.tsv&quot;</span><span class="p">,</span> <span class="s2">&quot;.txt&quot;</span><span class="p">)):</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Gen3UserError</span><span class="p">(</span><span class="s2">&quot;Please upload a file in CSV, TSV, or XLSX format.&quot;</span><span class="p">)</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="n">c</span><span class="p">:</span> <span class="n">c</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;*&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>  <span class="c1"># remove any leading asterisks in the DataFrame column names</span>
+
+        <span class="c1"># Check uniqueness of submitter_ids:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">submitter_id</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">submitter_id</span><span class="o">.</span><span class="n">unique</span><span class="p">())):</span>
+            <span class="k">raise</span> <span class="n">Gen3Error</span><span class="p">(</span>
+                <span class="s2">&quot;Warning: file contains duplicate submitter_ids. </span><span class="se">\n</span><span class="s2">Note: submitter_ids must be unique within a node!&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Chunk the file</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Submitting </span><span class="si">{}</span><span class="s2"> with </span><span class="si">{}</span><span class="s2"> records.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">))))</span>
+        <span class="n">program</span><span class="p">,</span> <span class="n">project</span> <span class="o">=</span> <span class="n">project_id</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/api/v0/submission/</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">)</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;content-type&quot;</span><span class="p">:</span> <span class="s2">&quot;text/tab-separated-values&quot;</span><span class="p">}</span>
+
+        <span class="n">start</span> <span class="o">=</span> <span class="n">row_offset</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="n">row_offset</span> <span class="o">+</span> <span class="n">chunk_size</span>
+        <span class="n">chunk</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+
+        <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;invalid&quot;</span><span class="p">:</span> <span class="p">{},</span>  <span class="c1"># these are invalid records</span>
+            <span class="s2">&quot;other&quot;</span><span class="p">:</span> <span class="p">[],</span>  <span class="c1"># any unhandled API responses</span>
+            <span class="s2">&quot;details&quot;</span><span class="p">:</span> <span class="p">[],</span>  <span class="c1"># entire API response details</span>
+            <span class="s2">&quot;succeeded&quot;</span><span class="p">:</span> <span class="p">[],</span>  <span class="c1"># list of submitter_ids that were successfully updated/created</span>
+            <span class="s2">&quot;responses&quot;</span><span class="p">:</span> <span class="p">[],</span>  <span class="c1"># list of API response codes</span>
+        <span class="p">}</span>
+
+        <span class="c1"># Start the chunking loop:</span>
+        <span class="k">while</span> <span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">))</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+
+            <span class="n">timeout</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">valid_but_failed</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">invalid</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="s2">&quot;Chunk </span><span class="si">{}</span><span class="s2"> (chunk size: </span><span class="si">{}</span><span class="s2">, submitted: </span><span class="si">{}</span><span class="s2"> of </span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">count</span><span class="p">),</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">chunk_size</span><span class="p">),</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s2">&quot;succeeded&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s2">&quot;invalid&quot;</span><span class="p">])),</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)),</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">put</span><span class="p">(</span>
+                    <span class="n">api_url</span><span class="p">,</span>
+                    <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">,</span>
+                    <span class="n">data</span><span class="o">=</span><span class="n">chunk</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                    <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">text</span>
+            <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ConnectionError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">results</span><span class="p">[</span><span class="s2">&quot;details&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># Handle the API response</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="s2">&quot;Request Timeout&quot;</span> <span class="ow">in</span> <span class="n">response</span>
+                <span class="ow">or</span> <span class="s2">&quot;413 Request Entity Too Large&quot;</span> <span class="ow">in</span> <span class="n">response</span>
+                <span class="ow">or</span> <span class="s2">&quot;Connection aborted.&quot;</span> <span class="ow">in</span> <span class="n">response</span>
+                <span class="ow">or</span> <span class="s2">&quot;service failure - try again later&quot;</span> <span class="ow">in</span> <span class="n">response</span>
+            <span class="p">):</span>  <span class="c1"># time-out, response is not valid JSON at the moment</span>
+
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2"> Reducing Chunk Size: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">response</span><span class="p">))</span>
+                <span class="n">results</span><span class="p">[</span><span class="s2">&quot;responses&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Reducing Chunk Size: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">response</span><span class="p">))</span>
+                <span class="n">timeout</span> <span class="o">=</span> <span class="kc">True</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">json_res</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+                    <span class="k">raise</span> <span class="n">Gen3Error</span><span class="p">(</span><span class="s2">&quot;Unable to parse API response as JSON!&quot;</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="s2">&quot;message&quot;</span> <span class="ow">in</span> <span class="n">json_res</span> <span class="ow">and</span> <span class="s2">&quot;code&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">json_res</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span>
+                        <span class="s2">&quot;</span><span class="se">\t</span><span class="s2"> No code in the API response for Chunk </span><span class="si">{}</span><span class="s2">: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="nb">str</span><span class="p">(</span><span class="n">count</span><span class="p">),</span> <span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message&quot;</span><span class="p">)</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2"> </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;transactional_errors&quot;</span><span class="p">))))</span>
+                    <span class="n">results</span><span class="p">[</span><span class="s2">&quot;responses&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="s2">&quot;Error Chunk </span><span class="si">{}</span><span class="s2">: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">count</span><span class="p">),</span> <span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message&quot;</span><span class="p">))</span>
+                    <span class="p">)</span>
+                    <span class="n">results</span><span class="p">[</span><span class="s2">&quot;other&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;transactional_errors&quot;</span><span class="p">))</span>
+
+                <span class="k">elif</span> <span class="s2">&quot;code&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">json_res</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2"> Unhandled API-response: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">response</span><span class="p">))</span>
+                    <span class="n">results</span><span class="p">[</span><span class="s2">&quot;responses&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="s2">&quot;Unhandled API response: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+                    <span class="p">)</span>
+
+                <span class="k">elif</span> <span class="n">json_res</span><span class="p">[</span><span class="s2">&quot;code&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span>  <span class="c1"># success</span>
+
+                    <span class="n">entities</span> <span class="o">=</span> <span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;entities&quot;</span><span class="p">,</span> <span class="p">[])</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2"> Succeeded: </span><span class="si">{}</span><span class="s2"> entities.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">entities</span><span class="p">))))</span>
+                    <span class="n">results</span><span class="p">[</span><span class="s2">&quot;responses&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="s2">&quot;Chunk </span><span class="si">{}</span><span class="s2"> Succeeded: </span><span class="si">{}</span><span class="s2"> entities.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="nb">str</span><span class="p">(</span><span class="n">count</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">entities</span><span class="p">))</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+
+                    <span class="k">for</span> <span class="n">entity</span> <span class="ow">in</span> <span class="n">entities</span><span class="p">:</span>
+                        <span class="n">sid</span> <span class="o">=</span> <span class="n">entity</span><span class="p">[</span><span class="s2">&quot;unique_keys&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;submitter_id&quot;</span><span class="p">]</span>
+                        <span class="n">results</span><span class="p">[</span><span class="s2">&quot;succeeded&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sid</span><span class="p">)</span>
+
+                <span class="k">elif</span> <span class="p">(</span>
+                    <span class="n">json_res</span><span class="p">[</span><span class="s2">&quot;code&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">400</span>
+                    <span class="ow">or</span> <span class="n">json_res</span><span class="p">[</span><span class="s2">&quot;code&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">403</span>
+                    <span class="ow">or</span> <span class="n">json_res</span><span class="p">[</span><span class="s2">&quot;code&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">404</span>
+                <span class="p">):</span>  <span class="c1"># failure</span>
+
+                    <span class="n">entities</span> <span class="o">=</span> <span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;entities&quot;</span><span class="p">,</span> <span class="p">[])</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">Chunk Failed: </span><span class="si">{}</span><span class="s2"> entities.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">entities</span><span class="p">))))</span>
+                    <span class="n">results</span><span class="p">[</span><span class="s2">&quot;responses&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="s2">&quot;Chunk </span><span class="si">{}</span><span class="s2"> Failed: </span><span class="si">{}</span><span class="s2"> entities.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="nb">str</span><span class="p">(</span><span class="n">count</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">entities</span><span class="p">))</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+
+                    <span class="k">for</span> <span class="n">entity</span> <span class="ow">in</span> <span class="n">entities</span><span class="p">:</span>
+                        <span class="n">sid</span> <span class="o">=</span> <span class="n">entity</span><span class="p">[</span><span class="s2">&quot;unique_keys&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;submitter_id&quot;</span><span class="p">]</span>
+                        <span class="k">if</span> <span class="n">entity</span><span class="p">[</span><span class="s2">&quot;valid&quot;</span><span class="p">]:</span>  <span class="c1"># valid but failed</span>
+                            <span class="n">valid_but_failed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sid</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>  <span class="c1"># invalid and failed</span>
+                            <span class="n">message</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">entity</span><span class="p">[</span><span class="s2">&quot;errors&quot;</span><span class="p">])</span>
+                            <span class="n">results</span><span class="p">[</span><span class="s2">&quot;invalid&quot;</span><span class="p">][</span><span class="n">sid</span><span class="p">]</span> <span class="o">=</span> <span class="n">message</span>
+                            <span class="n">invalid</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sid</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span>
+                        <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">Invalid records in this chunk: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">invalid</span><span class="p">)))</span>
+                    <span class="p">)</span>
+
+                <span class="k">elif</span> <span class="n">json_res</span><span class="p">[</span><span class="s2">&quot;code&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">500</span><span class="p">:</span>  <span class="c1"># internal server error</span>
+
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2"> Internal Server Error: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">response</span><span class="p">))</span>
+                    <span class="n">results</span><span class="p">[</span><span class="s2">&quot;responses&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="s2">&quot;Internal Server Error: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+                    <span class="p">)</span>
+
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="nb">len</span><span class="p">(</span><span class="n">valid_but_failed</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">invalid</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+            <span class="p">):</span>  <span class="c1"># if valid entities failed bc grouped with invalid, retry submission</span>
+                <span class="n">chunk</span> <span class="o">=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;submitter_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">valid_but_failed</span><span class="p">)</span>
+                <span class="p">]</span>  <span class="c1"># these are records that weren&#39;t successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="s2">&quot;Retrying submission of valid entities from failed chunk: </span><span class="si">{}</span><span class="s2"> valid entities.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">))</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+
+            <span class="k">elif</span> <span class="p">(</span>
+                <span class="nb">len</span><span class="p">(</span><span class="n">valid_but_failed</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">invalid</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+            <span class="p">):</span>  <span class="c1"># if all entities are valid but submission still failed, probably due to duplicate submitter_ids. Can remove this section once the API response is fixed: https://ctds-planx.atlassian.net/browse/PXP-3065</span>
+                <span class="k">raise</span> <span class="n">Gen3Error</span><span class="p">(</span>
+                    <span class="s2">&quot;Please check your data for correct file encoding, special characters, or duplicate submitter_ids or ids.&quot;</span>
+                <span class="p">)</span>
+
+            <span class="k">elif</span> <span class="n">timeout</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>  <span class="c1"># get new chunk if didn&#39;t timeout</span>
+                <span class="n">start</span> <span class="o">+=</span> <span class="n">chunk_size</span>
+                <span class="n">end</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">chunk_size</span>
+                <span class="n">chunk</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># if timeout, reduce chunk size and retry smaller chunk</span>
+                <span class="k">if</span> <span class="n">chunk_size</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">chunk_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">chunk_size</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+                    <span class="n">end</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">chunk_size</span>
+                    <span class="n">chunk</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+                    <span class="nb">print</span><span class="p">(</span>
+                        <span class="s2">&quot;Retrying Chunk with reduced chunk_size: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="nb">str</span><span class="p">(</span><span class="n">chunk_size</span><span class="p">)</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+                    <span class="n">timeout</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">Gen3SubmissionError</span><span class="p">(</span>
+                        <span class="s2">&quot;Submission is timing out. Please contact the Helpdesk.&quot;</span>
+                    <span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Finished data submission.&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Successful records: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s2">&quot;succeeded&quot;</span><span class="p">])))))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Failed invalid records: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s2">&quot;invalid&quot;</span><span class="p">]))))</span>
+
+        <span class="k">return</span> <span class="n">results</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Gen3 SDK</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=uc-cdis&repo=gen3sdk-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../auth.html">Gen3 Auth Helper</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../file.html">Gen3 File Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../indexing.html">Gen3 Index Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../metadata.html">Gen3 Metadata Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../submission.html">Gen3 Submission Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools.html">Gen3 Tools</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  <li><a href="../gen3.html">gen3</a><ul>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Center for Translational Data Science.
+      
+    </div>
+
+    
+    <a href="https://github.com/uc-cdis/gen3sdk-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,429 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>gen3.tools.indexing.download_manifest &#8212; Gen3 SDK  documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for gen3.tools.indexing.download_manifest</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module for indexing actions for downloading a manifest of</span>
+<span class="sd">indexed file objects (against indexd&#39;s API). Supports</span>
+<span class="sd">multiple processes and coroutines using Python&#39;s asyncio library.</span>
+
+<span class="sd">The default manifest format created is a Comma-Separated Value file (csv)</span>
+<span class="sd">with rows for every record. A header row is created with field names:</span>
+<span class="sd">guid,authz,acl,file_size,md5,urls,file_name</span>
+
+<span class="sd">Fields that are lists (like acl, authz, and urls) separate the values with spaces.</span>
+
+<span class="sd">Attributes:</span>
+<span class="sd">    CURRENT_DIR (str): directory this file is in</span>
+<span class="sd">    INDEXD_RECORD_PAGE_SIZE (int): number of records to request per page</span>
+<span class="sd">    MAX_CONCURRENT_REQUESTS (int): maximum number of desired concurrent requests across</span>
+<span class="sd">        processes/threads</span>
+<span class="sd">    TMP_FOLDER (str): Folder directory for placing temporary files</span>
+<span class="sd">        NOTE - We have to use a temporary folder b/c Python&#39;s file writing is not</span>
+<span class="sd">              thread-safe so we can&#39;t have all processes writing to the same file.</span>
+<span class="sd">              To workaround this, we have each process write to a file and concat</span>
+<span class="sd">              them all post-processing.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">asyncio</span>
+<span class="kn">import</span> <span class="nn">click</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">import</span> <span class="nn">glob</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">math</span>
+
+<span class="kn">from</span> <span class="nn">gen3.index</span> <span class="kn">import</span> <span class="n">Gen3Index</span>
+
+<span class="n">INDEXD_RECORD_PAGE_SIZE</span> <span class="o">=</span> <span class="mi">1024</span>
+<span class="n">MAX_CONCURRENT_REQUESTS</span> <span class="o">=</span> <span class="mi">24</span>
+<span class="n">CURRENT_DIR</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="n">TMP_FOLDER</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">CURRENT_DIR</span> <span class="o">+</span> <span class="s2">&quot;/tmp&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span>
+
+
+<div class="viewcode-block" id="async_download_object_manifest"><a class="viewcode-back" href="../../../../tools/indexing.html#gen3.tools.indexing.download_manifest.async_download_object_manifest">[docs]</a><span class="k">async</span> <span class="k">def</span> <span class="nf">async_download_object_manifest</span><span class="p">(</span>
+    <span class="n">commons_url</span><span class="p">,</span>
+    <span class="n">output_filename</span><span class="o">=</span><span class="s2">&quot;object-manifest.csv&quot;</span><span class="p">,</span>
+    <span class="n">num_processes</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">max_concurrent_requests</span><span class="o">=</span><span class="n">MAX_CONCURRENT_REQUESTS</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Download all file object records into a manifest csv</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        commons_url (str): root domain for commons where indexd lives</span>
+<span class="sd">        output_filename (str, optional): filename for output</span>
+<span class="sd">        num_processes (int, optional): number of parallel python processes to use for</span>
+<span class="sd">          hitting indexd api and processing</span>
+<span class="sd">        max_concurrent_requests (int): the maximum number of concurrent requests allowed</span>
+<span class="sd">            NOTE: This is the TOTAL number, not just for this process. Used to help</span>
+<span class="sd">            determine how many requests a process should be making at one time</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;start time: </span><span class="si">{</span><span class="n">start_time</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># ensure tmp directory exists and is empty</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">TMP_FOLDER</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">TMP_FOLDER</span><span class="p">):</span>
+        <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">TMP_FOLDER</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">file_path</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_write_all_index_records_to_file</span><span class="p">(</span>
+        <span class="n">commons_url</span><span class="p">,</span> <span class="n">output_filename</span><span class="p">,</span> <span class="n">num_processes</span><span class="p">,</span> <span class="n">max_concurrent_requests</span>
+    <span class="p">)</span>
+
+    <span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;end time: </span><span class="si">{</span><span class="n">end_time</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;run time: </span><span class="si">{</span><span class="n">end_time</span><span class="o">-</span><span class="n">start_time</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">_write_all_index_records_to_file</span><span class="p">(</span>
+    <span class="n">commons_url</span><span class="p">,</span> <span class="n">output_filename</span><span class="p">,</span> <span class="n">num_processes</span><span class="p">,</span> <span class="n">max_concurrent_requests</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Spins up number of processes provided to parse indexd records and eventually</span>
+<span class="sd">    write to a single output file manifest.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        commons_url (str): root domain for commons where indexd lives</span>
+<span class="sd">        output_filename (str, optional): filename for output</span>
+<span class="sd">        num_processes (int, optional): number of parallel python processes to use for</span>
+<span class="sd">          hitting indexd api and processing</span>
+<span class="sd">        max_concurrent_requests (int): the maximum number of concurrent requests allowed</span>
+<span class="sd">            NOTE: This is the TOTAL number, not just for this process. Used to help</span>
+<span class="sd">            determine how many requests a process should be making at one time</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">Gen3Index</span><span class="p">(</span><span class="n">commons_url</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;requesting indexd stats...&quot;</span><span class="p">)</span>
+    <span class="n">num_files</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">index</span><span class="o">.</span><span class="n">get_stats</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;fileCount&quot;</span><span class="p">))</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;number files: </span><span class="si">{</span><span class="n">num_files</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># paging is 0-based, so subtract 1 from ceiling</span>
+    <span class="c1"># note: float() is necessary to force Python 3 to not floor the result</span>
+    <span class="n">max_page</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">num_files</span><span class="p">)</span> <span class="o">/</span> <span class="n">INDEXD_RECORD_PAGE_SIZE</span><span class="p">))</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;max page: </span><span class="si">{</span><span class="n">max_page</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;num processes: </span><span class="si">{</span><span class="n">num_processes</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">pages</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_page</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+
+    <span class="c1"># batch pages into subprocesses</span>
+    <span class="n">chunk_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pages</span><span class="p">))</span> <span class="o">/</span> <span class="n">num_processes</span><span class="p">))</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;page chunk size: </span><span class="si">{</span><span class="n">chunk_size</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">chunk_size</span><span class="p">:</span>
+        <span class="n">page_chunks</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">page_chunks</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">pages</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">chunk_size</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">pages</span><span class="p">),</span> <span class="n">chunk_size</span><span class="p">)</span>
+        <span class="p">]</span>
+
+    <span class="n">processes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">page_chunks</span><span class="p">)):</span>
+        <span class="n">pages</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">page_chunks</span><span class="p">[</span><span class="n">x</span><span class="p">]))</span>
+
+        <span class="c1"># call the cli function below and pass in chunks of pages for each process</span>
+        <span class="n">command</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;python </span><span class="si">{</span><span class="n">CURRENT_DIR</span><span class="si">}</span><span class="s2">/download_manifest.py --commons_url &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">commons_url</span><span class="si">}</span><span class="s2"> --pages </span><span class="si">{</span><span class="n">pages</span><span class="si">}</span><span class="s2"> --num_processes </span><span class="si">{</span><span class="n">num_processes</span><span class="si">}</span><span class="s2"> &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;--max_concurrent_requests </span><span class="si">{</span><span class="n">max_concurrent_requests</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">command</span><span class="p">)</span>
+
+        <span class="n">process</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">create_subprocess_shell</span><span class="p">(</span><span class="n">command</span><span class="p">)</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Process_</span><span class="si">{</span><span class="n">process</span><span class="o">.</span><span class="n">pid</span><span class="si">}</span><span class="s2"> - Started w/: </span><span class="si">{</span><span class="n">command</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">processes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">process</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">process</span> <span class="ow">in</span> <span class="n">processes</span><span class="p">:</span>
+        <span class="c1"># wait for the subprocesses to finish</span>
+        <span class="n">stdout</span><span class="p">,</span> <span class="n">stderr</span> <span class="o">=</span> <span class="k">await</span> <span class="n">process</span><span class="o">.</span><span class="n">communicate</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">process</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Process_</span><span class="si">{</span><span class="n">process</span><span class="o">.</span><span class="n">pid</span><span class="si">}</span><span class="s2"> - Done&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Process_</span><span class="si">{</span><span class="n">process</span><span class="o">.</span><span class="n">pid</span><span class="si">}</span><span class="s2"> - FAILED&quot;</span><span class="p">)</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;done processing, combining outputs to single file </span><span class="si">{</span><span class="n">output_filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># remove existing output if it exists</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">output_filename</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_filename</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
+        <span class="n">outfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
+            <span class="s2">&quot;guid, urls, authz, acl, md5, file_size, file_name</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf8&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">TMP_FOLDER</span> <span class="o">+</span> <span class="s2">&quot;*&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">output_filename</span> <span class="o">==</span> <span class="n">filename</span><span class="p">:</span>
+                <span class="c1"># don&#39;t want to copy the output into the output</span>
+                <span class="k">continue</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;combining </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2"> into </span><span class="si">{</span><span class="n">output_filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">readfile</span><span class="p">:</span>
+                <span class="n">shutil</span><span class="o">.</span><span class="n">copyfileobj</span><span class="p">(</span><span class="n">readfile</span><span class="p">,</span> <span class="n">outfile</span><span class="p">)</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;done writing output to file </span><span class="si">{</span><span class="n">output_filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="nd">@click</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--commons_url&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Root domain (url) for a commons containing indexd.&quot;</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--pages&quot;</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Comma-Separated string of integers representing pages. ex: &quot;2,4,5,6&quot;&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--num_processes&quot;</span><span class="p">,</span>
+    <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;number of processes you are running so we can make sure we don&#39;t open &quot;</span>
+    <span class="s1">&#39;too many http connections. ex: &quot;4&quot;&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--max_concurrent_requests&quot;</span><span class="p">,</span>
+    <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;number of processes you are running so we can make sure we don&#39;t open &quot;</span>
+    <span class="s1">&#39;too many http connections. ex: &quot;4&quot;&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">write_page_records_to_files</span><span class="p">(</span>
+    <span class="n">commons_url</span><span class="p">,</span> <span class="n">pages</span><span class="p">,</span> <span class="n">num_processes</span><span class="p">,</span> <span class="n">max_concurrent_requests</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Command line interface function for requesting a number of pages of</span>
+<span class="sd">    records from indexd and writing to a file in that process. num_processes</span>
+<span class="sd">    is only used to calculate how many open connections this process should request.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        commons_url (str): root domain for commons where indexd lives</span>
+<span class="sd">        pages (List[int/str]): List of indexd pages to request</span>
+<span class="sd">        num_processes (int): number of concurrent processes being requested</span>
+<span class="sd">            (including this one)</span>
+<span class="sd">        max_concurrent_requests (int): the maximum number of concurrent requests allowed</span>
+<span class="sd">            NOTE: This is the TOTAL number, not just for this process. Used to help</span>
+<span class="sd">            determine how many requests a process should be making at one time</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        AttributeError: No pages specified to get records from</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pages</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;No pages specified to get records from.&quot;</span><span class="p">)</span>
+
+    <span class="n">pages</span> <span class="o">=</span> <span class="n">pages</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
+    <span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_event_loop</span><span class="p">()</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">loop</span><span class="o">.</span><span class="n">run_until_complete</span><span class="p">(</span>
+        <span class="n">_get_records_and_write_to_file</span><span class="p">(</span>
+            <span class="n">commons_url</span><span class="p">,</span> <span class="n">pages</span><span class="p">,</span> <span class="n">num_processes</span><span class="p">,</span> <span class="n">max_concurrent_requests</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">_get_records_and_write_to_file</span><span class="p">(</span>
+    <span class="n">commons_url</span><span class="p">,</span> <span class="n">pages</span><span class="p">,</span> <span class="n">num_processes</span><span class="p">,</span> <span class="n">max_concurrent_requests</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Getting indexd records and writing to a file. This function</span>
+<span class="sd">    creates semaphores to limit the number of concurrent http connections that</span>
+<span class="sd">    get opened to send requests to indexd.</span>
+
+<span class="sd">    It then uses asyncio to start a number of coroutines. Steps:</span>
+<span class="sd">        1) requests to indexd to get records (writes resulting records to a queue)</span>
+<span class="sd">        2) puts a final &quot;DONE&quot; in the queue to stop coroutine that will read from queue</span>
+<span class="sd">        3) reading those records from the queue and writing to a file</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        commons_url (str): root domain for commons where indexd lives</span>
+<span class="sd">        pages (List[int/str]): List of indexd pages to request</span>
+<span class="sd">        num_processes (int): number of concurrent processes being requested</span>
+<span class="sd">            (including this one)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">max_requests</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">max_concurrent_requests</span> <span class="o">/</span> <span class="n">num_processes</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;max concurrent requests per process: </span><span class="si">{</span><span class="n">max_requests</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">lock</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Semaphore</span><span class="p">(</span><span class="n">max_requests</span><span class="p">)</span>
+    <span class="n">queue</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+    <span class="n">write_to_file_task</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">ensure_future</span><span class="p">(</span><span class="n">_parse_from_queue</span><span class="p">(</span><span class="n">queue</span><span class="p">))</span>
+    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span>
+        <span class="o">*</span><span class="p">(</span>
+            <span class="n">_put_records_from_page_in_queue</span><span class="p">(</span><span class="n">page</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">lock</span><span class="p">,</span> <span class="n">queue</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">page</span> <span class="ow">in</span> <span class="n">pages</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;DONE&quot;</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">write_to_file_task</span>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">_put_records_from_page_in_queue</span><span class="p">(</span><span class="n">page</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">lock</span><span class="p">,</span> <span class="n">queue</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Gets a semaphore then requests records for the given page and</span>
+<span class="sd">    puts them in a queue.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        commons_url (str): root domain for commons where indexd lives</span>
+<span class="sd">        page (int/str): indexd page to request</span>
+<span class="sd">        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http</span>
+<span class="sd">            connections</span>
+<span class="sd">        queue (asyncio.Queue): queue to put indexd records in</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">Gen3Index</span><span class="p">(</span><span class="n">commons_url</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">lock</span><span class="p">:</span>
+        <span class="c1"># default ssl handling unless it&#39;s explicitly http://</span>
+        <span class="n">ssl</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="s2">&quot;https&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">commons_url</span><span class="p">:</span>
+            <span class="n">ssl</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="n">records</span> <span class="o">=</span> <span class="k">await</span> <span class="n">index</span><span class="o">.</span><span class="n">async_get_records_on_page</span><span class="p">(</span>
+            <span class="n">page</span><span class="o">=</span><span class="n">page</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="n">INDEXD_RECORD_PAGE_SIZE</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="n">ssl</span>
+        <span class="p">)</span>
+        <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">records</span><span class="p">)</span>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">_parse_from_queue</span><span class="p">(</span><span class="n">queue</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read from the queue and write to a file</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        queue (asyncio.Queue): queue to read indexd records from</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_event_loop</span><span class="p">()</span>
+    <span class="n">file_name</span> <span class="o">=</span> <span class="n">TMP_FOLDER</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span><span class="si">}</span><span class="s2">.csv&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="s2">&quot;w+&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Write to </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">csv_writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+
+        <span class="n">records</span> <span class="o">=</span> <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">while</span> <span class="n">records</span> <span class="o">!=</span> <span class="s2">&quot;DONE&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">records</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">records</span><span class="p">):</span>
+                    <span class="n">manifest_row</span> <span class="o">=</span> <span class="p">[</span>
+                        <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;did&quot;</span><span class="p">),</span>
+                        <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;urls&quot;</span><span class="p">)),</span>
+                        <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;authz&quot;</span><span class="p">)),</span>
+                        <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;acl&quot;</span><span class="p">)),</span>
+                        <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;hashes&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;md5&quot;</span><span class="p">),</span>
+                        <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;size&quot;</span><span class="p">),</span>
+                        <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;file_name&quot;</span><span class="p">),</span>
+                    <span class="p">]</span>
+                    <span class="n">loop</span><span class="o">.</span><span class="n">run_in_executor</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">csv_writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">,</span> <span class="n">manifest_row</span><span class="p">)</span>
+
+            <span class="n">records</span> <span class="o">=</span> <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+
+        <span class="n">file</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="s2">&quot;output.log&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">))</span>
+    <span class="n">write_page_records_to_files</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Gen3 SDK</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=uc-cdis&repo=gen3sdk-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../auth.html">Gen3 Auth Helper</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../file.html">Gen3 File Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../indexing.html">Gen3 Index Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../metadata.html">Gen3 Metadata Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../submission.html">Gen3 Submission Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../tools.html">Gen3 Tools</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  <li><a href="../../../gen3.html">gen3</a><ul>
+  <li><a href="../../tools.html">gen3.tools</a><ul>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Center for Translational Data Science.
+      
+    </div>
+
+    
+    <a href="https://github.com/uc-cdis/gen3sdk-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

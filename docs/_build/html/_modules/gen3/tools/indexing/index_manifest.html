@@ -1,0 +1,621 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>gen3.tools.indexing.index_manifest &#8212; Gen3 SDK  documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for gen3.tools.indexing.index_manifest</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module for indexing object files in a manifest (against indexd&#39;s API).</span>
+
+<span class="sd">The default manifest format created is a Tab-Separated Value file (tsv)</span>
+<span class="sd">with rows for every record.</span>
+
+<span class="sd">Fields that are lists (like acl, authz, and urls) separate the values with commas or spaces</span>
+<span class="sd">See the Attributes session for supported column names.</span>
+
+<span class="sd">All supported formats of acl, authz and url fields are shown in the below example.</span>
+
+<span class="sd">guid    md5 size    acl authz   url</span>
+<span class="sd">255e396f-f1f8-11e9-9a07-0a80fada099c    473d83400bc1bc9dc635e334faddf33c    363455714   [&#39;Open&#39;]    [s3://pdcdatastore/test1.raw]</span>
+<span class="sd">255e396f-f1f8-11e9-9a07-0a80fada098c    473d83400bc1bc9dc635e334faddd33c    343434344   Open    s3://pdcdatastore/test2.raw</span>
+<span class="sd">255e396f-f1f8-11e9-9a07-0a80fada097c    473d83400bc1bc9dc635e334fadd433c    543434443   phs0001 phs0002 s3://pdcdatastore/test3.raw</span>
+<span class="sd">255e396f-f1f8-11e9-9a07-0a80fada096c    473d83400bc1bc9dc635e334fadd433c    363455714   [&#39;phs0001&#39;, &#39;phs0002&#39;]  [&#39;s3://pdcdatastore/test4.raw&#39;]</span>
+<span class="sd">255e396f-f1f8-11e9-9a07-0a80fada010c    473d83400bc1bc9dc635e334fadde33c    363455714   [&#39;Open&#39;]    s3://pdcdatastore/test5.raw</span>
+
+<span class="sd">Attributes:</span>
+<span class="sd">    CURRENT_DIR (str): directory this file is in</span>
+<span class="sd">    GUID (list(string)): supported file id column names</span>
+<span class="sd">    SIZE (list(string)): supported file size column names</span>
+<span class="sd">    MD5 (list(string)): supported md5 hash column names</span>
+<span class="sd">    ACLS (list(string)): supported acl column names</span>
+<span class="sd">    URLS (list(string)): supported url column names</span>
+<span class="sd">    AUTHZ (list(string)): supported authz column names</span>
+
+
+<span class="sd">Usages:</span>
+<span class="sd">    python index_manifest.py --commons_url https://giangb.planx-pla.net  --manifest_file path_to_manifest --auth &quot;admin,admin&quot; --replace_urls False --thread_num 10</span>
+<span class="sd">    python index_manifest.py --commons_url https://giangb.planx-pla.net  --manifest_file path_to_manifest --api_key ./credentials.json --replace_urls False --thread_num 10</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">import</span> <span class="nn">click</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">multiprocessing.dummy</span> <span class="kn">import</span> <span class="n">Pool</span> <span class="k">as</span> <span class="n">ThreadPool</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">from</span> <span class="nn">gen3.auth</span> <span class="kn">import</span> <span class="n">Gen3Auth</span>
+<span class="kn">import</span> <span class="nn">indexclient.client</span> <span class="k">as</span> <span class="nn">client</span>
+
+
+<span class="n">CURRENT_DIR</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="c1"># Pre-defined supported column names</span>
+<span class="n">GUID</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;guid&quot;</span><span class="p">]</span>
+<span class="n">FILENAME</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;filename&quot;</span><span class="p">,</span> <span class="s2">&quot;file_name&quot;</span><span class="p">]</span>
+<span class="n">SIZE</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;size&quot;</span><span class="p">,</span> <span class="s2">&quot;filesize&quot;</span><span class="p">,</span> <span class="s2">&quot;file_size&quot;</span><span class="p">]</span>
+<span class="n">MD5</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;md5&quot;</span><span class="p">,</span> <span class="s2">&quot;md5_hash&quot;</span><span class="p">,</span> <span class="s2">&quot;md5hash&quot;</span><span class="p">,</span> <span class="s2">&quot;hash&quot;</span><span class="p">]</span>
+<span class="n">ACLS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;acl&quot;</span><span class="p">,</span> <span class="s2">&quot;acls&quot;</span><span class="p">]</span>
+<span class="n">URLS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">,</span> <span class="s2">&quot;urls&quot;</span><span class="p">]</span>
+<span class="n">AUTHZ</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;authz&quot;</span><span class="p">]</span>
+
+<span class="n">UUID_FORMAT</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="sa">r</span><span class="s2">&quot;^.*[a-fA-F0-9]</span><span class="si">{8}</span><span class="s2">-[a-fA-F0-9]</span><span class="si">{4}</span><span class="s2">-[a-fA-F0-9]</span><span class="si">{4}</span><span class="s2">-[a-fA-F0-9]</span><span class="si">{4}</span><span class="s2">-[a-fA-F0-9]</span><span class="si">{12}</span><span class="s2">$&quot;</span>
+<span class="p">)</span>
+<span class="n">MD5_FORMAT</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;^[a-fA-F0-9]</span><span class="si">{32}</span><span class="s2">$&quot;</span>
+<span class="n">ACL_FORMAT</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;^\[.*\]$&quot;</span>
+<span class="n">URL_FORMAT</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;^\[.*\]$&quot;</span>
+<span class="n">AUTHZ_FORMAT</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;^\[.*\]$&quot;</span>
+
+
+<div class="viewcode-block" id="ThreadControl"><a class="viewcode-back" href="../../../../tools/indexing.html#gen3.tools.indexing.index_manifest.ThreadControl">[docs]</a><span class="k">class</span> <span class="nc">ThreadControl</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class for thread synchronization</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">processed_files</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_total_files</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mutexLock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_processed_files</span> <span class="o">=</span> <span class="n">processed_files</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_total_files</span> <span class="o">=</span> <span class="n">num_total_files</span></div>
+
+
+<span class="k">def</span> <span class="nf">_verify_format</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="nb">format</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Make sure the input is in the right format</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="nb">format</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">def</span> <span class="nf">_standardize_str</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Remove unnecessary spaces, commas</span>
+
+<span class="sd">    Ex. &quot;abc    d&quot; -&gt; &quot;abc d&quot;</span>
+<span class="sd">        &quot;abc, d&quot; -&gt; &quot;abc d&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">memory</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">s</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">c</span> <span class="o">!=</span> <span class="s2">&quot; &quot;</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">+=</span> <span class="n">c</span>
+            <span class="n">memory</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">memory</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">+=</span> <span class="n">c</span>
+            <span class="n">memory</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">res</span>
+
+
+<span class="k">def</span> <span class="nf">_get_and_verify_fileinfos_from_tsv_manifest</span><span class="p">(</span>
+    <span class="n">manifest_file</span><span class="p">,</span> <span class="n">manifest_file_delimiter</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    get and verify file infos from tsv manifest</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        manifest_file(str): the path to the input manifest</span>
+<span class="sd">        manifest_file_delimiter(str): delimiter</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list(dict): list of file info</span>
+<span class="sd">        [</span>
+<span class="sd">            {</span>
+<span class="sd">                &quot;GUID&quot;: &quot;guid_example&quot;,</span>
+<span class="sd">                &quot;filename&quot;: &quot;example&quot;,</span>
+<span class="sd">                &quot;size&quot;: 100,</span>
+<span class="sd">                &quot;acl&quot;: &quot;[&#39;open&#39;]&quot;,</span>
+<span class="sd">                &quot;md5&quot;: &quot;md5_hash&quot;,</span>
+<span class="sd">            },</span>
+<span class="sd">        ]</span>
+<span class="sd">        headers(list(str)): field names</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvfile</span><span class="p">:</span>
+        <span class="n">csvReader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">csvfile</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">manifest_file_delimiter</span><span class="p">)</span>
+        <span class="n">fieldnames</span> <span class="o">=</span> <span class="n">csvReader</span><span class="o">.</span><span class="n">fieldnames</span>
+        <span class="n">pass_verification</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">csvReader</span><span class="p">:</span>
+            <span class="n">standardized_dict</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">row</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">standardized_key</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">GUID</span><span class="p">:</span>
+                    <span class="n">fieldnames</span><span class="p">[</span><span class="n">fieldnames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;GUID&quot;</span>
+                    <span class="n">standardized_key</span> <span class="o">=</span> <span class="s2">&quot;GUID&quot;</span>
+                <span class="k">elif</span> <span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">FILENAME</span><span class="p">:</span>
+                    <span class="n">fieldnames</span><span class="p">[</span><span class="n">fieldnames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;filename&quot;</span>
+                    <span class="n">standardized_key</span> <span class="o">=</span> <span class="s2">&quot;filename&quot;</span>
+                <span class="k">elif</span> <span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">MD5</span><span class="p">:</span>
+                    <span class="n">fieldnames</span><span class="p">[</span><span class="n">fieldnames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;md5&quot;</span>
+                    <span class="n">standardized_key</span> <span class="o">=</span> <span class="s2">&quot;md5&quot;</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">_verify_format</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">MD5_FORMAT</span><span class="p">):</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;ERROR: </span><span class="si">{}</span><span class="s2"> is not in md5 format&quot;</span><span class="p">,</span> <span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+                        <span class="n">pass_verification</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">elif</span> <span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">ACLS</span><span class="p">:</span>
+                    <span class="n">fieldnames</span><span class="p">[</span><span class="n">fieldnames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;acl&quot;</span>
+                    <span class="n">standardized_key</span> <span class="o">=</span> <span class="s2">&quot;acl&quot;</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">_verify_format</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">ACL_FORMAT</span><span class="p">):</span>
+                        <span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;[</span><span class="si">{}</span><span class="s2">]&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">])</span> <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="k">elif</span> <span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">URLS</span><span class="p">:</span>
+                    <span class="n">fieldnames</span><span class="p">[</span><span class="n">fieldnames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;url&quot;</span>
+                    <span class="n">standardized_key</span> <span class="o">=</span> <span class="s2">&quot;url&quot;</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">_verify_format</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">URL_FORMAT</span><span class="p">):</span>
+                        <span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;[</span><span class="si">{}</span><span class="s2">]&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+                <span class="k">elif</span> <span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">AUTHZ</span><span class="p">:</span>
+                    <span class="n">fieldnames</span><span class="p">[</span><span class="n">fieldnames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;authz&quot;</span>
+                    <span class="n">standardized_key</span> <span class="o">=</span> <span class="s2">&quot;authz&quot;</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">_verify_format</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">AUTHZ_FORMAT</span><span class="p">):</span>
+                        <span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;[</span><span class="si">{}</span><span class="s2">]&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+
+                <span class="k">if</span> <span class="n">standardized_key</span><span class="p">:</span>
+                    <span class="n">standardized_dict</span><span class="p">[</span><span class="n">standardized_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+                <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">SIZE</span><span class="p">:</span>
+                    <span class="n">standardized_dict</span><span class="p">[</span><span class="s2">&quot;size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;size&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+
+            <span class="n">files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">standardized_dict</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pass_verification</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;The manifest is not in the correct format!!!.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="n">files</span><span class="p">,</span> <span class="n">fieldnames</span>
+
+
+<span class="k">def</span> <span class="nf">_write_csv</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">files</span><span class="p">,</span> <span class="n">fieldnames</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    write to csv file</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        filename(str): file name</span>
+<span class="sd">        files(list(dict)): list of file info</span>
+<span class="sd">        [</span>
+<span class="sd">            {</span>
+<span class="sd">                &quot;GUID&quot;: &quot;guid_example&quot;,</span>
+<span class="sd">                &quot;filename&quot;: &quot;example&quot;,</span>
+<span class="sd">                &quot;size&quot;: 100,</span>
+<span class="sd">                &quot;acl&quot;: &quot;[&#39;open&#39;]&quot;,</span>
+<span class="sd">                &quot;md5&quot;: &quot;md5_hash&quot;,</span>
+<span class="sd">            },</span>
+<span class="sd">        ]</span>
+<span class="sd">        fieldnames(list(str)): list of column names</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">files</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">fieldnames</span> <span class="o">=</span> <span class="n">fieldnames</span> <span class="ow">or</span> <span class="n">files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
+        <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictWriter</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">fieldnames</span><span class="o">=</span><span class="n">fieldnames</span><span class="p">)</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">writeheader</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">filename</span>
+
+
+<span class="k">def</span> <span class="nf">_index_record</span><span class="p">(</span><span class="n">indexclient</span><span class="p">,</span> <span class="n">replace_urls</span><span class="p">,</span> <span class="n">thread_control</span><span class="p">,</span> <span class="n">fi</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Index single file</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        indexclient(IndexClient): indexd client</span>
+<span class="sd">        replace_urls(bool): replace urls or not</span>
+<span class="sd">        fi(dict): file info</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        None</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">urls</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">element</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">_standardize_str</span><span class="p">(</span><span class="n">fi</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">strip</span><span class="p">()[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+            <span class="p">]</span>
+            <span class="k">if</span> <span class="s2">&quot;url&quot;</span> <span class="ow">in</span> <span class="n">fi</span> <span class="ow">and</span> <span class="n">fi</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;[]&quot;</span>
+            <span class="k">else</span> <span class="p">[]</span>
+        <span class="p">)</span>
+        <span class="n">authz</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">element</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">_standardize_str</span><span class="p">(</span><span class="n">fi</span><span class="p">[</span><span class="s2">&quot;authz&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">strip</span><span class="p">()[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+            <span class="p">]</span>
+            <span class="k">if</span> <span class="s2">&quot;authz&quot;</span> <span class="ow">in</span> <span class="n">fi</span> <span class="ow">and</span> <span class="n">fi</span><span class="p">[</span><span class="s2">&quot;authz&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;[]&quot;</span>
+            <span class="k">else</span> <span class="p">[]</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="s2">&quot;acl&quot;</span> <span class="ow">in</span> <span class="n">fi</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">fi</span><span class="p">[</span><span class="s2">&quot;acl&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;[u&#39;open&#39;]&quot;</span><span class="p">,</span> <span class="s2">&quot;[&#39;open&#39;]&quot;</span><span class="p">}:</span>
+                <span class="n">acl</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;*&quot;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">acl</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="p">[</span>
+                        <span class="n">element</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                        <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">_standardize_str</span><span class="p">(</span><span class="n">fi</span><span class="p">[</span><span class="s2">&quot;acl&quot;</span><span class="p">])</span>
+                        <span class="o">.</span><span class="n">strip</span><span class="p">()[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+                    <span class="p">]</span>
+                    <span class="k">if</span> <span class="s2">&quot;acl&quot;</span> <span class="ow">in</span> <span class="n">fi</span> <span class="ow">and</span> <span class="n">fi</span><span class="p">[</span><span class="s2">&quot;acl&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;[]&quot;</span>
+                    <span class="k">else</span> <span class="p">[]</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">acl</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">doc</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;GUID&quot;</span><span class="p">):</span>
+            <span class="n">doc</span> <span class="o">=</span> <span class="n">indexclient</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">fi</span><span class="p">[</span><span class="s2">&quot;GUID&quot;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">doc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">doc</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;size&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">doc</span><span class="o">.</span><span class="n">hashes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;md5&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;md5&quot;</span><span class="p">):</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                    <span class="s2">&quot;The guid </span><span class="si">{}</span><span class="s2"> with different size/hash already exist. Can not index it without getting a new GUID&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;GUID&quot;</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">need_update</span> <span class="o">=</span> <span class="kc">False</span>
+
+                <span class="k">if</span> <span class="n">replace_urls</span> <span class="ow">and</span> <span class="nb">set</span><span class="p">(</span><span class="n">urls</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">urls</span><span class="p">):</span>
+                    <span class="n">doc</span><span class="o">.</span><span class="n">urls</span> <span class="o">=</span> <span class="n">urls</span>
+                    <span class="n">need_update</span> <span class="o">=</span> <span class="kc">True</span>
+
+                    <span class="c1"># indexd doesn&#39;t like when records have metadata for non-existing</span>
+                    <span class="c1"># urls</span>
+                    <span class="n">new_urls_metadata</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">urls_metadata</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">url</span><span class="p">,</span> <span class="n">metadata</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">urls_metadata</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="n">url</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">urls</span><span class="p">:</span>
+                            <span class="k">del</span> <span class="n">new_urls_metadata</span><span class="p">[</span><span class="n">url</span><span class="p">]</span>
+                    <span class="n">doc</span><span class="o">.</span><span class="n">urls_metadata</span> <span class="o">=</span> <span class="n">new_urls_metadata</span>
+
+                <span class="k">elif</span> <span class="ow">not</span> <span class="n">replace_urls</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">urls</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">url</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">urls</span><span class="p">:</span>
+                            <span class="n">doc</span><span class="o">.</span><span class="n">urls</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+                            <span class="n">need_update</span> <span class="o">=</span> <span class="kc">True</span>
+
+                <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">acl</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">acl</span><span class="p">):</span>
+                    <span class="n">doc</span><span class="o">.</span><span class="n">acl</span> <span class="o">=</span> <span class="n">acl</span>
+                    <span class="n">need_update</span> <span class="o">=</span> <span class="kc">True</span>
+
+                <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">authz</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">authz</span><span class="p">):</span>
+                    <span class="n">doc</span><span class="o">.</span><span class="n">authz</span> <span class="o">=</span> <span class="n">authz</span>
+                    <span class="n">need_update</span> <span class="o">=</span> <span class="kc">True</span>
+
+                <span class="k">if</span> <span class="n">need_update</span><span class="p">:</span>
+                    <span class="n">doc</span><span class="o">.</span><span class="n">patch</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;GUID&quot;</span><span class="p">):</span>
+                <span class="n">guid</span> <span class="o">=</span> <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;GUID&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">guid</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">doc</span> <span class="o">=</span> <span class="n">indexclient</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+                <span class="n">did</span><span class="o">=</span><span class="n">guid</span><span class="p">,</span>
+                <span class="n">hashes</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;md5&quot;</span><span class="p">:</span> <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;md5&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()},</span>
+                <span class="n">size</span><span class="o">=</span><span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;size&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                <span class="n">acl</span><span class="o">=</span><span class="n">acl</span><span class="p">,</span>
+                <span class="n">authz</span><span class="o">=</span><span class="n">authz</span><span class="p">,</span>
+                <span class="n">urls</span><span class="o">=</span><span class="n">urls</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">fi</span><span class="p">[</span><span class="s2">&quot;GUID&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">did</span>
+
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="c1"># Don&#39;t break for any reason</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="s2">&quot;Can not update/create an indexd record with guid </span><span class="si">{}</span><span class="s2">. Detail </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;GUID&quot;</span><span class="p">),</span> <span class="n">e</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="n">thread_control</span><span class="o">.</span><span class="n">mutexLock</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
+    <span class="n">thread_control</span><span class="o">.</span><span class="n">num_processed_files</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">thread_control</span><span class="o">.</span><span class="n">num_processed_files</span> <span class="o">*</span> <span class="mi">10</span><span class="p">)</span> <span class="o">%</span> <span class="n">thread_control</span><span class="o">.</span><span class="n">num_total_files</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;Progress: </span><span class="si">{}</span><span class="s2">%&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">thread_control</span><span class="o">.</span><span class="n">num_processed_files</span>
+                <span class="o">*</span> <span class="mf">100.0</span>
+                <span class="o">/</span> <span class="n">thread_control</span><span class="o">.</span><span class="n">num_total_files</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+    <span class="n">thread_control</span><span class="o">.</span><span class="n">mutexLock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="index_object_manifest"><a class="viewcode-back" href="../../../../tools/indexing.html#gen3.tools.indexing.index_manifest.index_object_manifest">[docs]</a><span class="k">def</span> <span class="nf">index_object_manifest</span><span class="p">(</span>
+    <span class="n">commons_url</span><span class="p">,</span>
+    <span class="n">manifest_file</span><span class="p">,</span>
+    <span class="n">thread_num</span><span class="p">,</span>
+    <span class="n">auth</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">replace_urls</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">manifest_file_delimiter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Loop through all the files in the manifest, update/create records in indexd</span>
+<span class="sd">    update indexd if the url is not in the record url list or acl has changed</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        commons_url(str): common url</span>
+<span class="sd">        manifest_file(str): path to the manifest</span>
+<span class="sd">        thread_num(int): number of threads for indexing</span>
+<span class="sd">        auth(Gen3Auth): Gen3 auth or tuple with basic auth name and password</span>
+<span class="sd">        replace_urls(bool): flag to indicate if replace urls or not</span>
+<span class="sd">        manifest_file_delimiter(str): manifest&#39;s delimiter</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        files(list(dict)): list of file info</span>
+<span class="sd">        [</span>
+<span class="sd">            {</span>
+<span class="sd">                &quot;GUID&quot;: &quot;guid_example&quot;,</span>
+<span class="sd">                &quot;filename&quot;: &quot;example&quot;,</span>
+<span class="sd">                &quot;size&quot;: 100,</span>
+<span class="sd">                &quot;acl&quot;: &quot;[&#39;open&#39;]&quot;,</span>
+<span class="sd">                &quot;md5&quot;: &quot;md5_hash&quot;,</span>
+<span class="sd">            },</span>
+<span class="sd">        ]</span>
+<span class="sd">        headers(list(str)): list of fieldnames</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Start the process ...&quot;</span><span class="p">)</span>
+    <span class="n">service_location</span> <span class="o">=</span> <span class="s2">&quot;index&quot;</span>
+    <span class="n">commons_url</span> <span class="o">=</span> <span class="n">commons_url</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+    <span class="c1"># if running locally, indexd is deployed by itself without a location relative</span>
+    <span class="c1"># to the commons</span>
+    <span class="k">if</span> <span class="s2">&quot;http://localhost&quot;</span> <span class="ow">in</span> <span class="n">commons_url</span><span class="p">:</span>
+        <span class="n">service_location</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">commons_url</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">service_location</span><span class="p">):</span>
+        <span class="n">commons_url</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">service_location</span>
+
+    <span class="n">indexclient</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">IndexClient</span><span class="p">(</span><span class="n">commons_url</span><span class="p">,</span> <span class="s2">&quot;v0&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="n">auth</span><span class="p">)</span>
+
+    <span class="c1"># if delimter not specified, try to get based on file ext</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">manifest_file_delimiter</span><span class="p">:</span>
+        <span class="n">file_ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">file_ext</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.tsv&quot;</span><span class="p">:</span>
+            <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># default, assume CSV</span>
+            <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">files</span><span class="p">,</span> <span class="n">headers</span> <span class="o">=</span> <span class="n">_get_and_verify_fileinfos_from_tsv_manifest</span><span class="p">(</span>
+            <span class="n">manifest_file</span><span class="p">,</span> <span class="n">manifest_file_delimiter</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Can not read </span><span class="si">{}</span><span class="s2">. Detail </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">,</span> <span class="n">e</span><span class="p">))</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">headers</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;The manifest </span><span class="si">{}</span><span class="s2"> has wrong format&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">,</span> <span class="n">e</span><span class="p">))</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">headers</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;GUID&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="n">headers</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;GUID&quot;</span><span class="p">)</span>
+
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">ThreadPool</span><span class="p">(</span><span class="n">thread_num</span><span class="p">)</span>
+
+    <span class="n">thread_control</span> <span class="o">=</span> <span class="n">ThreadControl</span><span class="p">(</span><span class="n">num_total_files</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">))</span>
+    <span class="n">part_func</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">_index_record</span><span class="p">,</span> <span class="n">indexclient</span><span class="p">,</span> <span class="n">replace_urls</span><span class="p">,</span> <span class="n">thread_control</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">pool</span><span class="o">.</span><span class="n">map_async</span><span class="p">(</span><span class="n">part_func</span><span class="p">,</span> <span class="n">files</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+        <span class="n">pool</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+
+    <span class="c1"># close the pool and wait for the work to finish</span>
+    <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">files</span><span class="p">,</span> <span class="n">headers</span></div>
+
+
+<span class="nd">@click</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--commons_url&quot;</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Root domain (url) for a commons containing indexd.&quot;</span><span class="p">,</span>
+    <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--manifest_file&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;The path to input manifest&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--thread_num&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Number of threads&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--api_key&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;path to api key&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--auth&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;basic auth&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--replace_urls&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Replace urls or not&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--manifest_file_delimiter&quot;</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;string character that delimites the file (tab or comma). Defaults to tab.&quot;</span><span class="p">,</span>
+    <span class="n">default</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--out_manifest_file&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;The path to output manifest&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index_object_manifest_cli</span><span class="p">(</span>
+    <span class="n">commons_url</span><span class="p">,</span>
+    <span class="n">manifest_file</span><span class="p">,</span>
+    <span class="n">thread_num</span><span class="p">,</span>
+    <span class="n">api_key</span><span class="p">,</span>
+    <span class="n">auth</span><span class="p">,</span>
+    <span class="n">replace_urls</span><span class="p">,</span>
+    <span class="n">manifest_file_delimiter</span><span class="p">,</span>
+    <span class="n">out_manifest_file</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Commandline interface for indexing a given manifest to indexd</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        commons_url (str): root domain for common</span>
+<span class="sd">        manifest_file (str): the full path to the manifest</span>
+<span class="sd">        thread_num (int): number of threads being requested</span>
+<span class="sd">        api_key (str): the path to api key</span>
+<span class="sd">        auth(str): the basic auth</span>
+<span class="sd">        replace_urls(bool): Replace urls or not</span>
+<span class="sd">            NOTE: if both api_key and auth are specified, it will ignore the later and</span>
+<span class="sd">            take the former as a default</span>
+<span class="sd">        manifest_file_delimiter(str): manifest&#39;s delimiter</span>
+<span class="sd">        out_manifest_file(str): path to the output manifest</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">api_key</span><span class="p">:</span>
+        <span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">commons_url</span><span class="p">,</span> <span class="n">refresh_file</span><span class="o">=</span><span class="n">api_key</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">auth</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">auth</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">))</span> <span class="k">if</span> <span class="n">auth</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="n">files</span><span class="p">,</span> <span class="n">headers</span> <span class="o">=</span> <span class="n">index_object_manifest</span><span class="p">(</span>
+        <span class="n">commons_url</span> <span class="o">+</span> <span class="s2">&quot;/index&quot;</span><span class="p">,</span>
+        <span class="n">manifest_file</span><span class="p">,</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">thread_num</span><span class="p">),</span>
+        <span class="n">auth</span><span class="p">,</span>
+        <span class="n">replace_urls</span><span class="p">,</span>
+        <span class="n">manifest_file_delimiter</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">out_manifest_file</span><span class="p">:</span>
+        <span class="n">_write_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">CURRENT_DIR</span><span class="p">,</span> <span class="n">out_manifest_file</span><span class="p">),</span> <span class="n">files</span><span class="p">,</span> <span class="n">headers</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="s2">&quot;index_object_manifest.log&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">))</span>
+    <span class="n">index_object_manifest_cli</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Gen3 SDK</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=uc-cdis&repo=gen3sdk-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../auth.html">Gen3 Auth Helper</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../file.html">Gen3 File Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../indexing.html">Gen3 Index Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../metadata.html">Gen3 Metadata Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../submission.html">Gen3 Submission Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../tools.html">Gen3 Tools</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  <li><a href="../../../gen3.html">gen3</a><ul>
+  <li><a href="../../tools.html">gen3.tools</a><ul>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Center for Translational Data Science.
+      
+    </div>
+
+    
+    <a href="https://github.com/uc-cdis/gen3sdk-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
