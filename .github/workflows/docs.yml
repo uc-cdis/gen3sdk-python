@@ -38,5 +38,5 @@ jobs:
         branch: ${{ github.head_ref }}
 
         # Optional glob pattern of files which should be added to the commit
-        file_pattern: docs/_build/\*
+        file_pattern: ./docs/_build/\*
 
