@@ -88,13 +88,13 @@ class Gen3Migration:
             nodes = [nodes]
 
         if nodes == ['all']:
-            pattern = "{}*{}".format(prefix,suffix)
+            pattern = "{0}*{1}".format(prefix,suffix)
             filenames = glob.glob(pattern)
 
         elif isinstance(nodes, list):
             filenames = []
             for node in nodes:
-                pattern = "{}*{}.{}".format(prefix,node,suffix)
+                pattern = "{0}*{1}.{2}".format(prefix,node,suffix)
                 node_files = glob.glob(pattern)
                 if len(node_files) > 0:
                     filenames.append(glob.glob(pattern)[0])
@@ -107,7 +107,7 @@ class Gen3Migration:
         if overwrite is True:
             for filename in filenames:
                 temp_name = "{}_{}".format(name,filename)
-                print("\tCopying file {} to:\n\t{}".format(filename,temp_name))
+                print("\tCopying file {0} to:\n\t\t{1}".format(filename,temp_name))
                 copyfile(filename,temp_name)
             print("\tTotal of {} '{}' files created.".format(len(filenames),name))
 
@@ -118,11 +118,11 @@ class Gen3Migration:
 
     def check_null(self,project_id,node,prop,name='temp'):
         """
-        Checks if all data for a property in a TSV are null.
+        Checks if all data for a prop in a TSV are null.
         Returns the number of non-null records in the TSV.
         If check_null(project,node,prop) == 0, all data are null.
         """
-        print("\tChecking for non-null data in '{}' property of '{}' node in project '{}'.".format(prop,node,project_id))
+        print("\tChecking for non-null data in '{}' prop of '{}' node in project '{}'.".format(prop,node,project_id))
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         filename = "{}_{}_{}.tsv".format(name,project_id,node)
         if prop in list(df):
@@ -136,9 +136,9 @@ class Gen3Migration:
 
     def get_non_null(self,project_id,node,prop,name='temp'):
         """
-        Returns list of non-null data for a property in a TSV.
+        Returns list of non-null data for a prop in a TSV.
         """
-        print("\tChecking for non-null data in '{}' property of '{}' node in project '{}'.".format(prop,node,project_id))
+        print("\tChecking for non-null data in '{}' prop of '{}' node in project '{}'.".format(prop,node,project_id))
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         filename = "{}_{}_{}.tsv".format(name,project_id,node)
         if prop in list(df):
@@ -178,22 +178,22 @@ class Gen3Migration:
             print("\tTotal of {} records written to node {} in file {}.".format(len(df),out_node,outname))
             return df
 
-    def merge_properties(self,project_id,node,properties,name='temp'):
+    def merge_props(self,project_id,node,props,name='temp'):
         """
-        This function merges a list of properties into a single property and then drops the list of properties from the column headers.
+        This function merges a list of props into a single prop and then drops the list of props from the column headers.
         Args:
             project_id(str): The project_id of the data.
-            node(str): The node TSV to merge properties in.
-            properties(dict): A dictionary of "single_property_to_merge_into":["list","of","properties","to","merge","and","drop"]
+            node(str): The node TSV to merge props in.
+            props(dict): A dictionary of "single_prop_to_merge_into":["list","of","props","to","merge","and","drop"]
         """
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         # filename = "{}_{}_{}.tsv".format(name,project_id,node)
 
         dropped = []
-        for prop in list(properties.keys()):
+        for prop in list(props.keys()):
             if prop not in list(df):
                 df[prop] = np.nan
-            old_props = properties[prop]
+            old_props = props[prop]
             for old_prop in old_props:
                 if old_prop in list(df):
                     df_old = df.loc[df[old_prop].notnull()]
@@ -202,15 +202,15 @@ class Gen3Migration:
                     df_merged = pd.concat([df_rest,df_old],ignore_index=True,sort=False)
                     df = df_merged.drop(columns=[old_prop])
                     dropped.append(old_prop)
-                    print("\tProperty '{}' merged into '{}' and dropped from '{}' TSV.".format(old_prop,prop,node))
+                    print("\tprop '{}' merged into '{}' and dropped from '{}' TSV.".format(old_prop,prop,node))
                 else:
-                    print("\tProperty '{}' not found in '{}' TSV. Skipping...".format(old_prop,node))
+                    print("\tprop '{}' not found in '{}' TSV. Skipping...".format(old_prop,node))
         if len(dropped) > 0:
-            print("\tProperties {} merged into {}.".format(dropped,list(properties.keys())))
+            print("\tprops {} merged into {}.".format(dropped,list(props.keys())))
             df = self.write_tsv(df,project_id,node)
             return df
         else:
-            print("\tNo properties dropped from '{}'. No TSV written.".format(node))
+            print("\tNo props dropped from '{}'. No TSV written.".format(node))
             return
 
     def add_missing_links(self,project_id,node,link,old_parent=None,links=None, name='temp'):
@@ -241,18 +241,18 @@ class Gen3Migration:
             print("\tNo records are missing links to '{}' in the '{}' TSV.".format(link,node))
             return
 
-    def create_missing_links(self,project_id,node,link,old_parent,properties,new_dd,old_dd,links=None,name='temp'):
+    def create_missing_links(self,project_id,node,link,old_parent,props,new_dd,old_dd,links=None,name='temp'):
         """
         This fxn creates links TSV for links in a node that don't exist.
         Args:
             node(str): This is the node TSV in which to look for links that don't exist.
             link(str): This is the node to create the link records in.
             old_parent(str): This is the backref of the parent node of 'node' prior to the dictionary change.
-            properties(dict): Dict of required properties/values to add to new link records.
+            props(dict): Dict of required props/values to add to new link records.
         Example:
             This will create visit records that don't exist in the visit TSV but are in the imaging_exam TSV.
-            create_missing_links(node='imaging_exam',link='visit',old_parent='cases',properties={'visit_label':'Imaging','visit_method':'In-person Visit'},new_dd=dd,old_dd=prod_dd,links=None)
-            create_missing_links(node='diagnosis',link='visit',old_parent='cases',properties={'visit_label':'Unknown','visit_method':'Unknown'},new_dd=dd,old_dd=prod_dd)
+            create_missing_links(node='imaging_exam',link='visit',old_parent='cases',props={'visit_label':'Imaging','visit_method':'In-person Visit'},new_dd=dd,old_dd=prod_dd,links=None)
+            create_missing_links(node='diagnosis',link='visit',old_parent='cases',props={'visit_label':'Unknown','visit_method':'Unknown'},new_dd=dd,old_dd=prod_dd)
         """
         print("\tCreating missing '{}' records with links to '{}' for '{}'.".format(link,old_parent,node))
 
@@ -286,8 +286,8 @@ class Gen3Migration:
             new_links = df.loc[df[link_name].isin(missing)][[link_name,parent_link]]
         new_links = new_links.rename(columns={link_name:'submitter_id'})
         new_links['type'] = link
-        for prop in properties:
-            new_links[prop] = properties[prop]
+        for prop in props:
+            new_links[prop] = props[prop]
         if old_parent is not 'cases':
             old_links = old_dd[node]['links']
             for old_link in old_links:
@@ -364,13 +364,13 @@ class Gen3Migration:
             if 'cases' not in links_to_drop and len(links_to_drop) == 1 and 'visit' in targets and len(targets) == 1:
                 df = self.add_missing_links(project_id=project_id,node=node,link='visit')
                 if df is not None:
-                    df = self.create_missing_links(project_id=project_id,node=node,link='visit',old_parent=links_to_drop[0],properties=required_props,new_dd=new_dd,old_dd=old_dd,links=links)
+                    df = self.create_missing_links(project_id=project_id,node=node,link='visit',old_parent=links_to_drop[0],props=required_props,new_dd=new_dd,old_dd=old_dd,links=links)
                     dfs.append(df)
                     total += len(df)
             elif 'cases' in links_to_drop and 'visit' in targets and len(targets) == 1:
                 df = self.add_missing_links(project_id=project_id,node=node,link='visit')
                 if df is not None:
-                    df = self.create_missing_links(project_id=project_id,node=node,link='visit',old_parent='cases',properties=required_props,new_dd=new_dd,old_dd=old_dd,links=links)
+                    df = self.create_missing_links(project_id=project_id,node=node,link='visit',old_parent='cases',props=required_props,new_dd=new_dd,old_dd=old_dd,links=links)
                     dfs.append(df)
                     total += len(df)
             else:
@@ -380,21 +380,21 @@ class Gen3Migration:
         print("\tTotal of {} missing visit links created for this batch.".format(total))
         return df
 
-    def move_properties(self,project_id,from_node,to_node,properties,dd,parent_node=None,required_props=None,name='temp'):
+    def move_props(self,project_id,from_node,to_node,props,dd,parent_node=None,required_props=None,name='temp'):
         """
-        This function takes a node with properties to be moved (from_node) and moves those properties/data to a new node (to_node).
-        Fxn also checks whether the data for properties to be moved actually has non-null data. If all data are null, no new records are created.
+        This function takes a node with props to be moved (from_node) and moves those props/data to a new node (to_node).
+        Fxn also checks whether the data for props to be moved actually has non-null data. If all data are null, no new records are created.
         Args:
             from_node(str): Node TSV to copy data from.
             to_node(str): Node TSV to add copied data to.
-            properties(list): List of column headers containing data to copy.
+            props(list): List of column headers containing data to copy.
             parent_node(str): The parent node that links the from_node to the to_node, e.g., 'visit' or 'case'.
-            required_props(dict): If the to_node has additional required properties, enter the value all records should get for each key.
+            required_props(dict): If the to_node has additional required props, enter the value all records should get for each key.
         Example:
-            This moves the property 'military_status' from 'demographic' node to 'military_history' node, which should link to the same parent node 'case'.
-            move_properties(from_node='demographic',to_node='military_history',properties=['military_status'],parent_node='case')
+            This moves the prop 'military_status' from 'demographic' node to 'military_history' node, which should link to the same parent node 'case'.
+            move_props(from_node='demographic',to_node='military_history',props=['military_status'],parent_node='case')
         """
-        print("\tMoving {} from '{}' to '{}'.".format(properties,from_node,to_node))
+        print("\tMoving {} from '{}' to '{}'.".format(props,from_node,to_node))
 
         from_name = "{}_{}_{}.tsv".format(name,project_id,from_node) #from imaging_exam
         try:
@@ -416,7 +416,7 @@ class Gen3Migration:
         proceed = False
         exists = False
 
-        for prop in properties:
+        for prop in props:
             if len(df_from.loc[df_from[prop].notnull()]) > 0:
                 proceed = True
             if prop in list(df_to.columns):
@@ -427,7 +427,7 @@ class Gen3Migration:
             return
 
         if exists:
-            print("\tProperties {} already exist in '{}' node.".format(properties,to_node))
+            print("\tprops {} already exist in '{}' node.".format(props,to_node))
             return
 
         if parent_node is not None:
@@ -439,8 +439,8 @@ class Gen3Migration:
         else:
             parent_link = "{}s.submitter_id".format(to_node)
             # note this only works if the backref is not
-        # keep records only if they have some non-null value in "properties"
-        all_props = [parent_link] + properties
+        # keep records only if they have some non-null value in "props"
+        all_props = [parent_link] + props
         new_to = df_from[all_props] #demo_case = demo[['cases.submitter_id']+static_case]
         new_to = new_to[all_props].dropna(thresh=2) # drops any rows where there aren't at least 2 non-null values (1 of them is submitter_id)
 
@@ -474,7 +474,7 @@ class Gen3Migration:
             add_to = new_to.loc[~new_to['submitter_id'].isin(list(df_to.submitter_id))]
             all_to = pd.concat([df_to,add_to],ignore_index=True,sort=False)
 
-        # add any missing required properties to new DF
+        # add any missing required props to new DF
         to_required = list(set(list(dd[to_node]['required'])).difference(list(all_to)))
         link_target = None
         for link in list(dd[to_node]['links']):
@@ -486,90 +486,98 @@ class Gen3Migration:
             for prop in to_required:
                 if prop in list(required_props.keys()):
                     all_to[prop] = required_props[prop]
-                    print("\tMissing required property '{}' added to new '{}' TSV with all {} values.".format(prop,to_node,required_props[prop]))
+                    print("\tMissing required prop '{}' added to new '{}' TSV with all {} values.".format(prop,to_node,required_props[prop]))
                 else:
                     all_to[prop] = np.nan
-                    print("\tMissing required property '{}' added to new '{}' TSV with all null values.".format(prop,to_node))
+                    print("\tMissing required prop '{}' added to new '{}' TSV with all null values.".format(prop,to_node))
 
         all_to.to_csv(to_name,sep='\t',index=False,encoding='utf-8')
-        print("\tProperties moved to '{}' node from '{}'. Data saved in file:\n\t{}".format(to_node,from_node,to_name))
+        print("\tprops moved to '{}' node from '{}'. Data saved in file:\n\t{}".format(to_node,from_node,to_name))
         return all_to
 
-    def add_property(self,project_id,node,properties):
+    def add_prop(self,project_id,node,props):
 
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         # filename = "{}_{}_{}.tsv".format(name,project_id,node)
 
-        for prop in list(properties.keys()):
+        for prop in list(props.keys()):
             if prop not in list(df):
-                df[prop] = properties[prop]
+                df[prop] = props[prop]
             else:
-                print("\tProperty '{}' already in the TSV for node '{}'.".format(prop,node))
+                print("\tprop '{}' already in the TSV for node '{}'.".format(prop,node))
 
         df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
         return df
 
 
-    def change_property_names(self,project_id,node,properties,name='temp'):
+    def change_prop_name(self,project_id,node,props,name='temp'):
         """
         Changes the names of columns in a TSV.
         Args:
             project_id(str): The project_id of the TSVs.
             node(str): The name of the node TSV to change column names in.
-            properties(dict): A dict with keys of old prop names to change with values as new names.
+            props(dict): A dict with keys of old prop names to change with values as new names.
         Example:
             This changes the column header "time_of_surgery" to "hour_of_surgery" in the surgery TSV.
-            change_property_names(project_id='P001',node='surgery',properties={'time_of_surgery':'hour_of_surgery'})
+            change_prop_name(project_id='P001',node='surgery',props={'time_of_surgery':'hour_of_surgery'})
         """
-        print("\tChanging property names in {} node:\n\t\t{}".format(node,properties))
+
+        print("\tAttempting to change prop names in {} node:\n\t\t{}".format(node,props))
         df = self.read_tsv(project_id=project_id,node=node,name=name)
-        filename = "{}_{}_{}.tsv".format(name,project_id,node)
+        filename = "{0}_{1}_{2}.tsv".format(name,project_id,node)
 
-        try:
-            df.rename(columns=properties,inplace = True)
-            df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
-            print("\tProperties names changed and TSV written to file: \n\t\t{}".format(filename))
-            return df
-        except Exception as e:
-            print("\tCouldn't change property names: {}".format(e))
-            return
+        prop1 = list(props)[0]
+        prop2 = props[prop1]
 
-    def drop_properties(self,project_id,node,properties,name='temp'):
+        if prop1 not in df:
+            print("\t\tNo prop {0} found in the TSV. Nothing changed.".format(prop1))
+        elif prop2 in df:
+            print("\t\tprop {0} already found in the TSV with {1} non-null records.".format(prop2,len(df.loc[df[prop2].notnull()])))
+        else:
+            try:
+                df.rename(columns=props,inplace = True)
+                df = self.write_tsv(df,project_id,node,name=name)
+            except Exception as e:
+                print("\tCouldn't change prop names: {}".format(e))
+
+        return df
+
+    def drop_props(self,project_id,node,props,name='temp'):
         """
-        Function drops the list of properties from column headers of a node TSV.
+        Function drops the list of props from column headers of a node TSV.
         Args:
             node(str): The node TSV to drop headers from.
-            properties(list): List of column headers to drop from the TSV.
+            props(list): List of column headers to drop from the TSV.
         Example:
-            This will drop the 'military_status' property from the 'demographic' node.
-            drop_properties(node='demographic',properties=['military_status'])
+            This will drop the 'military_status' prop from the 'demographic' node.
+            drop_props(node='demographic',props=['military_status'])
         """
-        if not isinstance(properties,list):
-            if isinstance(properties, str):
-                properties = [properties]
+        if not isinstance(props,list):
+            if isinstance(props, str):
+                props = [props]
             else:
-                print("\tPlease provide properties to drop as a list or string:\n\t{}".format(properties))
+                print("\tPlease provide props to drop as a list or string:\n\t{}".format(props))
 
-        print("\t{}:\n\t\tDropping {}.".format(node,properties))
+        print("\t{}:\n\t\tDropping {}.".format(node,props))
 
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         filename = "{}_{}_{}.tsv".format(name,project_id,node)
 
         dropped = []
-        for prop in properties:
+        for prop in props:
             try:
                 df = df.drop(columns=[prop])
                 dropped.append(prop)
             except Exception as e:
-                print("\tCouldn't drop property '{}' from '{}':\n\t{}".format(prop,node,e))
+                print("\tCouldn't drop prop '{}' from '{}':\n\t{}".format(prop,node,e))
                 continue
 
         if len(dropped) > 0:
-            print("\tProperties {} dropped from '{}' and data written to TSV:\n\t{}".format(dropped,node,filename))
+            print("\tprops {} dropped from '{}' and data written to TSV:\n\t{}".format(dropped,node,filename))
             df = self.write_tsv(df,project_id,node)
             return df
         else:
-            print("\tNo properties dropped from '{}'. No TSV written.".format(node))
+            print("\tNo props dropped from '{}'. No TSV written.".format(node))
             return df
 
     def change_enum(self,project_id,node,prop,enums,name='temp'):
@@ -578,13 +586,13 @@ class Gen3Migration:
         Args:
             project_id(str): The project_id of the data.
             node(str): The node TSV to change enumeration values in.
-            prop(str): The property (an enum) to change values for.
+            prop(str): The prop (an enum) to change values for.
             enums(dict): A dict containing the mapping of {'old':'new'} enum values.
         Example:
-            This changes all 'Percent' to 'Pct' in property 'test_units' of node 'lab_test'
+            This changes all 'Percent' to 'Pct' in prop 'test_units' of node 'lab_test'
             change_enum(project_id=project_id,node='lab_test',prop='test_units',enums={'Percent':'Pct'})
         """
-        print("\t{}:\n\t\tChanging values for property '{}'".format(node,prop))
+        print("\t{}:\n\t\tChanging values for prop '{}'".format(node,prop))
         filename = "{}_{}_{}.tsv".format(name,project_id,node)
         try:
             df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
@@ -593,22 +601,22 @@ class Gen3Migration:
                 value = enums[key]
                 total = len(df.loc[df[prop]==key])
                 if total == 0:
-                    print("\tNo records found with property '{}' equal to '{}'. Values in TSV include:\n\t\t{}".format(prop,key,set(list(df[prop]))))
+                    print("\tNo records found with prop '{}' equal to '{}'. Values in TSV include:\n\t\t{}".format(prop,key,set(list(df[prop]))))
                     continue
                 if value == 'null':
                     try:
                         df.at[df[prop]==key,prop] = np.nan
                         success += 1
-                        print("\tChanged {} enum values from '{}' to 'NaN' for property '{}'".format(total,key,prop))
+                        print("\tChanged {} enum values from '{}' to 'NaN' for prop '{}'".format(total,key,prop))
                     except Exception as e:
-                        print("\tCouldn't change enum value from '{}' to 'NaN' for property '{}'".format(key,prop))
+                        print("\tCouldn't change enum value from '{}' to 'NaN' for prop '{}'".format(key,prop))
                 else:
                     try:
                         df.at[df[prop]==key,prop] = value
                         success += 1
-                        print("\tChanged {} enum values from '{}' to '{}' for property '{}'".format(total,key,value,prop))
+                        print("\tChanged {} enum values from '{}' to '{}' for prop '{}'".format(total,key,value,prop))
                     except Exception as e:
-                        print("\tCouldn't change enum value '{}' to '{}' for property '{}'".format(key,value,prop))
+                        print("\tCouldn't change enum value '{}' to '{}' for prop '{}'".format(key,value,prop))
             if success > 0:
                 df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
                 print("\tEnum values changed in '{}' node and TSV written to file: \n\t\t{}".format(node,filename))
@@ -718,12 +726,12 @@ class Gen3Migration:
 
         dropped = False
         if 'id' in df.columns:
-            self.drop_properties(project_id=project_id,node=node,properties=['id'])
+            self.drop_props(project_id=project_id,node=node,props=['id'])
             dropped = True
         r = re.compile(".*s\.id")
         ids_to_drop = list(filter(r.match, df.columns))
         if len(ids_to_drop) > 0:
-            self.drop_properties(project_id=project_id,node=node,properties=ids_to_drop)
+            self.drop_props(project_id=project_id,node=node,props=ids_to_drop)
             dropped = True
         if not dropped:
             print("\t{}:".format(node))
@@ -747,13 +755,13 @@ class Gen3Migration:
 
             dropped = False
             if 'id' in df.columns:
-                self.drop_properties(project_id=project_id,node=node,properties=['id'])
+                self.drop_props(project_id=project_id,node=node,props=['id'])
                 dropped = True
             r = re.compile(".*s\.id")
             ids_to_drop = list(filter(r.match, df.columns))
 
             if len(ids_to_drop) > 0:
-                self.drop_properties(project_id=project_id,node=node,properties=ids_to_drop)
+                self.drop_props(project_id=project_id,node=node,props=ids_to_drop)
                 dropped = True
 
             if not dropped:
@@ -1022,10 +1030,10 @@ class Gen3Migration:
         return
 
     def required_not_reported(self,project_id,node,prop,name='temp',replace_value='Not Reported'):
-        """ Change null values for a required property to "Not Reported".
+        """ Change null values for a required prop to "Not Reported".
         """
 
-        print("\t{}:\n\t\tChanging values for property '{}'".format(node,prop))
+        print("\t{}:\n\t\tChanging values for prop '{}'".format(node,prop))
         filename = "{}_{}_{}.tsv".format(name,project_id,node)
         df = self.read_tsv(project_id=project_id,node=node,name=name)
 
@@ -1035,7 +1043,7 @@ class Gen3Migration:
             new_count = len(df.loc[df[prop]==replace_value])
             replace_count = new_count - original_count
             df = self.write_tsv(df,project_id,node)
-            print("\t{} missing (NaN) value(s) for required property '{}' in '{}' node changed to '{}'.".format(replace_count,prop,node,replace_value))
+            print("\t{} missing (NaN) value(s) for required prop '{}' in '{}' node changed to '{}'.".format(replace_count,prop,node,replace_value))
 
         except FileNotFoundError as e:
             print("\tNo TSV found for node '{}'.".format(node))
@@ -1259,7 +1267,7 @@ class Gen3Migration:
 
         return results
 
-    def change_visit_links(self,project_id,node,temp_name='temp'):
+    def change_visit_links(self,project_id,node,name='temp'):
         """ for DM v2.2 change: change visits.submitter_id to visit_id and add links to case
         """
         vdf = self.read_tsv(project_id=project_id,node='visit')
@@ -1276,3 +1284,18 @@ class Gen3Migration:
         except Exception as e:
             print(e)
         ### Add "cases.submitter_id" to TSVs with new "visit_ids"
+
+    def change_all_visits(self,project_id,name='temp'):
+        """ Change links to visit for every node in a project_tsvs directory.
+        """
+        # find temp_files with visits.id prop
+        print("Changing visit links for TSVs in {}".format(project_id))
+        grep_cmd = 'grep -rl . -e "visits.id"'
+        vfiles = subprocess.check_output(grep_cmd, shell=True).decode("utf-8").split('\n')
+        vfiles = [vfile for vfile in vfiles if re.search("^./{}_".format(name),vfile)]
+
+        node_regex = re.compile('^./{}_{}_([a-z0-9_]+)\.tsv'.format(name,project_id))
+        nodes = [node_regex.match(vfile).groups()[0] for vfile in vfiles]
+
+        for node in nodes:
+            self.change_visit_links(project_id=project_id,node=node,name='temp')
