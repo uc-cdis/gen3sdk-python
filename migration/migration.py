@@ -63,9 +63,9 @@ class Gen3Migration:
 
     def write_tsv(self,df,project_id,node,name='temp'):
         if name is not None:
-            outname = "{}_{}_{}.tsv".format(name,project_id,node)
+            outname = "{0}_{1}_{2}.tsv".format(name,project_id,node)
         else:
-            outname = "{}_{}.tsv".format(project_id,node)
+            outname = "{0}_{1}.tsv".format(project_id,node)
         try:
             df.to_csv(outname, sep='\t', index=False, encoding='utf-8')
             print("\tTotal of {} records written to node '{}' in file:\n\t\t{}.".format(len(df),node,outname))
@@ -380,7 +380,7 @@ class Gen3Migration:
         print("\tTotal of {} missing visit links created for this batch.".format(total))
         return df
 
-    def move_props(self,project_id,from_node,to_node,props,dd,parent_node=None,required_props=None,name='temp'):
+    def move_props(self,project_id,old_node,new_node,props,dd,parent_node=None,required_props=None,name='temp'):
         """
         This function takes a node with props to be moved (from_node) and moves those props/data to a new node (to_node).
         Fxn also checks whether the data for props to be moved actually has non-null data. If all data are null, no new records are created.
@@ -396,20 +396,15 @@ class Gen3Migration:
         """
         print("\tMoving {} from '{}' to '{}'.".format(props,from_node,to_node))
 
-        from_name = "{}_{}_{}.tsv".format(name,project_id,from_node) #from imaging_exam
-        try:
-            df_from = pd.read_csv(from_name,sep='\t',header=0,dtype=str)
-        except FileNotFoundError as e:
-            print("\tNo '{}' TSV found with the data to be moved. Nothing to do. Finished.".format(from_node))
-            return
+        odf = self.read_tsv(project_id,old_node)
 
-        to_name = "{}_{}_{}.tsv".format(name,project_id,to_node) #to reproductive_health
-        try:
-            df_to = pd.read_csv(to_name,sep='\t',header=0,dtype=str)
+        try: # if the new node TSV already exists, read it in, if not, create a new df
+            ndf = self.read_tsv(project_id,new_node)
+            print("\t'{}' TSV already exists with {} records.".format(new_node,len(ndf)))
             new_file = False
         except FileNotFoundError as e:
-            df_to = pd.DataFrame(columns=['submitter_id'])
-            print("\tNo '{}' TSV found. Creating new TSV for data to be moved.".format(to_node))
+            ndf = pd.DataFrame(columns=['submitter_id'])
+            print("\tNo '{}' TSV found. Creating new TSV for data to be moved.".format(new_node))
             new_file = True
 
         # Check that the data to move is not entirely null. If it is, then give warning and quit.
@@ -510,13 +505,23 @@ class Gen3Migration:
         return df
 
 
-    def change_prop_name(self,project_id,node,props,name='temp'):
+    def non_null_data(self,project_id,node,prop,name='temp'):
+        """ Returns the non-null data for a property.
         """
-        Changes the names of columns in a TSV.
+        df = self.read_tsv(project_id=project_id,node=node,name=name)
+        nn = df.loc[df[prop].notnull()]
+        return nn
+
+
+    def change_prop_name(self,project_id,node,props,name='temp',force=False):
+        """
+        Changes the name of a column header in a single TSV.
+        Checks TSV for existing non-null data for both old and new prop name.
+
         Args:
             project_id(str): The project_id of the TSVs.
             node(str): The name of the node TSV to change column names in.
-            props(dict): A dict with keys of old prop names to change with values as new names.
+            props(dict): A dict with keys of old prop names to change with values as new names. {'old_prop':'new_prop'}
         Example:
             This changes the column header "time_of_surgery" to "hour_of_surgery" in the surgery TSV.
             change_prop_name(project_id='P001',node='surgery',props={'time_of_surgery':'hour_of_surgery'})
@@ -524,25 +529,34 @@ class Gen3Migration:
 
         print("\tAttempting to change prop names in {} node:\n\t\t{}".format(node,props))
         df = self.read_tsv(project_id=project_id,node=node,name=name)
-        filename = "{0}_{1}_{2}.tsv".format(name,project_id,node)
 
-        prop1 = list(props)[0]
-        prop2 = props[prop1]
+        old_prop = list(props)[0]
+        new_prop = props[old_prop]
 
-        if prop1 not in df:
-            print("\t\tNo prop {0} found in the TSV. Nothing changed.".format(prop1))
-        elif prop2 in df:
-            print("\t\tprop {0} already found in the TSV with {1} non-null records.".format(prop2,len(df.loc[df[prop2].notnull()])))
-        else:
-            try:
-                df.rename(columns=props,inplace = True)
-                df = self.write_tsv(df,project_id,node,name=name)
-            except Exception as e:
-                print("\tCouldn't change prop names: {}".format(e))
+        if old_prop not in df: # old property not in TSV, fail
+            print("\t\tOld prop name '{0}' not found in the TSV. Nothing changed.".format(old_prop))
+            return df
+
+        if new_prop in df:
+            ndf = df.loc[df[new_prop].notnull()]
+            if len(ndf) > 0:
+                print("\t\tExisting new prop '{0}' data found in TSV: {1} non-null records! \n\n\nCheck '{}' data before using this script!!!".format(new_prop,len(ndf),props))
+                return df
+            else: # if all data is null, drop the column
+                df.drop(columns=[new_prop],inplace=True)
+
+        try:
+            df.rename(columns=props,inplace = True)
+            df = self.write_tsv(df,project_id,node,name=name)
+            ndf = df.loc[df[new_prop].notnull()]
+            print("\t\tProp name changed from '{}' to '{}' in '{}' TSV with {} non-null records.".format(old_prop,new_prop,node,len(ndf)))
+
+        except Exception as e:
+            print("\tCouldn't change prop names: {}".format(e))
 
         return df
 
-    def drop_props(self,project_id,node,props,name='temp'):
+    def drop_props(self,project_id,node,props,name='temp',check_null=True):
         """
         Function drops the list of props from column headers of a node TSV.
         Args:
@@ -558,7 +572,7 @@ class Gen3Migration:
             else:
                 print("\tPlease provide props to drop as a list or string:\n\t{}".format(props))
 
-        print("\t{}:\n\t\tDropping {}.".format(node,props))
+        print("\t{}:\n\t\tDropping props {}.".format(node,props))
 
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         filename = "{}_{}_{}.tsv".format(name,project_id,node)
@@ -569,7 +583,7 @@ class Gen3Migration:
                 df = df.drop(columns=[prop])
                 dropped.append(prop)
             except Exception as e:
-                print("\tCouldn't drop prop '{}' from '{}':\n\t{}".format(prop,node,e))
+                print("\tCouldn't drop prop '{}' from '{}' TSV:\n\t\t{}".format(prop,node,e))
                 continue
 
         if len(dropped) > 0:
