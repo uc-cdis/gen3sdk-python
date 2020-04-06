@@ -388,6 +388,8 @@ provided. However, this is limited by indexd's ability to scale to the queries y
 want to run. Indexd's querying capabilities are limited and don't scale well with a
 large volume of records (it is meant to be a key:value store much like the metadata service).
 
+> WARNING: This is not recommended to be used at scale. Consider making these associations to metadata before ingestion. See [merging tools](#manifest-merge)
+
 ```python
 import sys
 import logging
@@ -489,3 +491,179 @@ the provided custom query function instead of relying on a column in the manifes
 
 > NOTE: By default, the `indexed_file_object_guid` function attempts to query indexd URLs to pattern match
 whatever is in the manifest column `submitted_sample_id`.
+
+
+### Manifest Merge
+
+If you have a manifest full of metadata and a manifest of indexed file objects in Indexd, you can use this script to merge the two into a metadata manifest for ingestion.
+
+For example, a common use case for this is if you have a file full of metadata from dbGaP and want to get associated GUIDs for each row. You can then add the dbGaP metadata to the metadata service for those GUIDs with the file output from this merge script.
+
+The script is also fairly configurable depending on how you need to map between the two files.
+
+The ideal scenario is when you can map column to column between your _metadata manifest_ and _indexing manifest_ (e.g. what's in indexd).
+
+The non-ideal scenario is if you need something for partially matching one column to another. For example: if one of the indexed URLs will contain `submitted_sample_id` somewhere in the filename. In this case, the efficiency of the script becomes O(n2). If you can reliably parse out the section of the URL to match that could improve this. *tl;dr* Depending on your logic and number of rows in both files, this could be very very slow.
+
+> NOTE: By default this merge can match multiple GUIDs with the same metadata (depending on the configuration). This supports situations where there may exist metadata that applies to multiple files. For example: dbGaP sample metadata applied to both CRAM and CRAI genomic files.
+
+#### Ideal Scenario (Column to Column Match, Indexing:Metadata Manifest Rows)
+
+Consider the following example files.
+
+*metadata manifest*: dbGaP extract file perhaps by using [this tool](https://github.com/uc-cdis/dbgap-extract):
+
+```
+submitted_sample_id, dbgap_subject_id, consent_short_name, body_site, ....
+```
+
+*indexing manifest* (perhaps provided by the data owner):
+
+```
+guid, sample_id, file_size, md5, md5_hex, aws_uri, gcp_uri
+```
+
+The strategy here is to map from the `submitted_sample_id` from the metadata manifest into the `sample_id` and then use the `guid` from the indexing manifest in the final output. That final output will can be used as the ingestion file for metadata ingestion.
+
+```python
+import sys
+import logging
+
+from gen3.tools.merge import merge_guids_into_metadata
+from gen3.tools.merge import manifests_mapping_config
+
+
+logging.basicConfig(filename="output.log", level=logging.DEBUG)
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
+COMMONS = "https://{{insert-commons-here}}/"
+
+
+def main():
+    indexing_manifest = (
+        "/path/to/indexing_manifest.csv"
+    )
+    metadata_manifest = (
+        "/path/to/metadata_extract.tsv"
+    )
+
+    # what column to use as the final GUID for metadata (this MUST exist in the
+    # smaller file, which is expected to be the indexing file)
+    manifests_mapping_config["guid_column_name"] = "guid"
+
+    # what column from the "metadata file" to use for mapping
+    manifests_mapping_config["row_column_name"] = "submitted_sample_id"
+
+    # smaller file by default is expected to be the "indexing file"
+    # this configuration tells the function to use the "sample_id" column
+    # from the "indexing file" to map to the metadata column configured above
+    # (and these should match EXACTLY, 1:1)
+    manifests_mapping_config["smaller_file_column_name"] = "sample_id"
+
+    output_filename = "metadata-manifest.tsv"
+
+    merge_guids_into_metadata(
+        indexing_manifest, metadata_manifest, output_filename=output_filename,
+        manifests_mapping_config=manifests_mapping_config
+    )
+
+if __name__ == "__main__":
+    main()
+
+```
+
+The final output file will contain all the columns from the metadata manifest in addition to a new GUID column which maps to indexed records.
+
+*output manifest* (to be used in metadata ingestion):
+
+```
+guid, submitted_sample_id, dbgap_subject_id, consent_short_name, body_site, ....
+```
+
+#### Non-Ideal Scenario (Partial URL Matching)
+
+Consider the following example files.
+
+*metadata manifest*: dbGaP extract file perhaps by using [this tool](https://github.com/uc-cdis/dbgap-extract):
+
+```
+submitted_sample_id, dbgap_subject_id, consent_short_name, body_site, ....
+```
+
+*indexing manifest* (perhaps by using the [download manifest tool](#download-manifest)):
+
+```
+guid, urls, authz, acl, md5, file_size, file_name
+```
+
+> NOTE: The indexing manifest contains no exact column match to the metadata manifest.
+
+The strategy here is to look for partial matches of the metadata manifest's `submitted_sample_id` in the indexing manifest's `urls` field.
+
+```python
+import sys
+import logging
+
+from gen3.tools.merge import (
+    merge_guids_into_metadata,
+    manifest_row_parsers,
+    manifests_mapping_config,
+    get_guids_for_row_partial_match,
+)
+
+
+logging.basicConfig(filename="output.log", level=logging.DEBUG)
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
+COMMONS = "https://{{insert-commons-here}}/"
+
+
+def main():
+    indexing_manifest = (
+        "/path/to/indexing_manifest.csv"
+    )
+    metadata_manifest = (
+        "/path/to/metadata_extract.tsv"
+    )
+    # what column to use as the final GUID for metadata (this MUST exist in the
+    # smaller file, which is expected to be the indexing file)
+    manifests_mapping_config["guid_column_name"] = "guid"
+
+    # what column from the "metadata file" to use for mapping
+    manifests_mapping_config["row_column_name"] = "submitted_sample_id"
+
+    # smaller file by default is expected to be the "indexing file"
+    # this configuration tells the function to use the "gcp_uri" column
+    # from the "indexing file" to map to the metadata column configured above
+    # (for partial matching the metdata data column to this column )
+    manifests_mapping_config["smaller_file_column_name"] = "gcp_uri"
+
+    # by default, the functions for parsing the manifests and rows assumes a 1:1
+    # mapping. There is an additional function provided for partial string matching
+    # which we can use here.
+    manifest_row_parsers["guids_for_row"] = get_guids_for_row_partial_match
+
+    output_filename = "metadata-manifest-partial.tsv"
+
+    merge_guids_into_metadata(
+        indexing_manifest=indexing_manifest,
+        metadata_manifest=metadata_manifest,
+        output_filename=output_filename,
+        manifests_mapping_config=manifests_mapping_config,
+        manifest_row_parsers=manifest_row_parsers,
+    )
+
+
+if __name__ == "__main__":
+    main()
+```
+
+> WARNING: The efficiency here is O(n2) so this does not scale well with large files.
+
+The final output file will contain all the columns from the metadata manifest in addition to a new GUID column which maps to indexed records.
+
+*output manifest* (to be used in metadata ingestion):
+
+```
+guid, submitted_sample_id, dbgap_subject_id, consent_short_name, body_site, ....
+```
