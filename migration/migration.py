@@ -1258,3 +1258,21 @@ class Gen3Migration:
         print("Failed invalid records: {}".format(str(len(results["invalid"]))))
 
         return results
+
+    def change_visit_links(self,project_id,node,temp_name='temp'):
+        """ for DM v2.2 change: change visits.submitter_id to visit_id and add links to case
+        """
+        vdf = self.read_tsv(project_id=project_id,node='visit')
+        vdf.rename(columns={'submitter_id':'visit_id'},inplace=True)
+        v = vdf[['visit_id','cases.submitter_id']]
+
+        ndf = self.read_tsv(project_id=project_id,node=node)
+        props = {"visits.submitter_id":"visit_id"}
+        try:
+            ndf.rename(columns=props,inplace=True)
+            n = pd.merge(ndf,v,on='visit_id')
+            self.write_tsv(df=n,project_id=project_id,node=node,name='temp')
+            return n
+        except Exception as e:
+            print(e)
+        ### Add "cases.submitter_id" to TSVs with new "visit_ids"

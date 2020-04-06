@@ -747,7 +747,7 @@ class Gen3Expansion:
     def plot_numeric_property(self, property, df, by_project=False):
         #plot a histogram of numeric variable in a dataframe
         df = df[df[property].notnull()]
-        data = list(df[property]).astype(float)
+        data = list(df[property].astype(float))
         N = len(data)
         fig = sns.distplot(data, hist=False, kde=True,
                  bins=int(180/5), color = 'darkblue',
@@ -762,7 +762,7 @@ class Gen3Expansion:
             projects = list(set(df['project_id']))
             for project in projects:
                 proj_df = df[df['project_id']==project]
-                data = list(proj_df[property])
+                data = list(proj_df[property].astype(float))
                 N = len(data)
                 fig = sns.distplot(data, hist=False, kde=True,
                          bins=int(180/5), color = 'darkblue',
