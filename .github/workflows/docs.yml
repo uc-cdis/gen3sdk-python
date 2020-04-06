@@ -1,0 +1,46 @@
+name: Build docs
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.6
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.6
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r test-requirements.txt
+        pip install sphinx
+    - name: Build docs
+      run: |
+        cd docs
+        make html
+        cd ..
+
+    - uses: stefanzweifel/git-auto-commit-action@v4.1.2
+      with:
+        commit_message: Apply automatic documentation changes
+
+        # Optional name of the branch the commit should be pushed to
+        # Required if Action is used in Workflow listening to the `pull_request` event
+        branch: ${{ github.head_ref }}
+
+        # Optional git params
+        commit_options: '--no-verify --signoff'
+
+        # Optional glob pattern of files which should be added to the commit
+        file_pattern: docs/_build/\*
+
+        # Optional local file path to the repository
+        repository: .
+
