@@ -2,7 +2,32 @@
 
 The Gen3 SDK for Python provides classes for handling the authentication flow using a refresh token and getting an access token from the commons. The access token is then refreshed as necessary while the refresh token remains valid. The submission client contains various functions for submitting, exporting, and deleting data from a Gen3 data commons.
 
-Docs for this SDK are available at [http://gen3sdk-python.rtfd.io/](http://gen3sdk-python.rtfd.io/)
+Some docs for this SDK are available at [http://gen3sdk-python.rtfd.io/](http://gen3sdk-python.rtfd.io/)
+
+**Table of Contents**
+
+---
+
+<!-- MarkdownTOC autolink=true -->
+
+- [Auth](#auth)
+- [IndexClient](#indexclient)
+- [SubmissionClient](#submissionclient)
+- [Metadata](#metadata)
+- [Indexing Tools](#indexing-tools)
+    - [Download Manifest](#download-manifest)
+    - [Verify Manifest](#verify-manifest)
+    - [Indexing Manifest](#indexing-manifest)
+- [Metadata Tools](#metadata-tools)
+    - [Ingest Manifest](#ingest-manifest)
+    - [Searching Indexd to get GUID for Metadata Ingestion](#searching-indexd-to-get-guid-for-metadata-ingestion)
+    - [Manifest Merge](#manifest-merge)
+        - [Ideal Scenario \(Column to Column Match, Indexing:Metadata Manifest Rows\)](#ideal-scenario-column-to-column-match-indexingmetadata-manifest-rows)
+        - [Non-Ideal Scenario \(Partial URL Matching\)](#non-ideal-scenario-partial-url-matching)
+
+<!-- /MarkdownTOC -->
+
+---
 
 ## Auth
 
