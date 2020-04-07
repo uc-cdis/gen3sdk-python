@@ -241,9 +241,9 @@ async def _ingest_all_metadata_in_file(
                 # Basically make sure the resulting column is something that we can
                 # later json.loads().
                 # remove redudant quoting
-                new_row[key.strip()] = (
-                    value.strip().strip("'").strip('"').replace("''", "'")
-                )
+                if value:
+                    value = value.strip().strip("'").strip('"').replace("''", "'")
+                new_row[key.strip()] = value
             await queue.put(new_row)
 
     for _ in range(0, int(max_concurrent_requests + (max_concurrent_requests / 4))):
@@ -435,8 +435,11 @@ async def _is_indexed_file_object(guid, commons_url, lock):
         if "https" not in commons_url:
             ssl = False
 
-        record = await index.async_get_record(guid, _ssl=ssl)
-        return bool(record)
+        try
+            record = await index.async_get_record(guid, _ssl=ssl)
+            return bool(record)
+        except Exception:
+            return False
 
 
 async def async_query_urls_from_indexd(pattern, commons_url, lock):
