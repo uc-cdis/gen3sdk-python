@@ -403,10 +403,10 @@ class Gen3Index:
 
         Args:
             json - json in the format:
-                    {
-                        'uploader': type(string)
-                        'file_name': type(string) (optional*)
-                      }
+            {
+                'uploader': type(string)
+                'file_name': type(string) (optional*)
+            }
 
         """
         json = {"uploader": uploader, "file_name": file_name}
@@ -440,10 +440,10 @@ class Gen3Index:
 
         Add new version for the document associated to the provided uuid
 
-        - Since data content is immutable, when you want to change the
-              size or hash, a new index document with a new uuid needs to be
-              created as its new version. That uuid is returned in the did
-              field of the response. The old index document is not deleted.
+        Since data content is immutable, when you want to change the
+        size or hash, a new index document with a new uuid needs to be
+        created as its new version. That uuid is returned in the did
+        field of the response. The old index document is not deleted.
 
         Args:
             guid: (string): record id
@@ -460,10 +460,10 @@ class Gen3Index:
             authz (str): RBAC string
 
             body: json/dictionary format
-                - Metadata object that needs to be added to the store.
-                  Providing size and at least one hash is necessary and
-                  sufficient. Note: it is a good idea to add a version
-                  number
+            - Metadata object that needs to be added to the store.
+              Providing size and at least one hash is necessary and
+              sufficient. Note: it is a good idea to add a version
+              number
 
         """
         if urls is None:

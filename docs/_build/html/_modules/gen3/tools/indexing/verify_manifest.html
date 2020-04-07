@@ -1,0 +1,528 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>gen3.tools.indexing.verify_manifest &#8212; Gen3 SDK  documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for gen3.tools.indexing.verify_manifest</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module for indexing actions for verifying a manifest of</span>
+<span class="sd">indexed file objects (against indexd&#39;s API). Supports</span>
+<span class="sd">multiple processes and coroutines using Python&#39;s asyncio library.</span>
+
+<span class="sd">The default manifest format created is a Comma-Separated Value file (csv)</span>
+<span class="sd">with rows for every record. A header row is created with field names:</span>
+<span class="sd">guid,authz,acl,file_size,md5,urls,file_name</span>
+
+<span class="sd">Fields that are lists (like acl, authz, and urls) separate the values with spaces.</span>
+
+<span class="sd">There is a default mapping for those column names above but you can override it.</span>
+<span class="sd">Fields that expect lists (like acl, authz, and urls) by default assume these values are</span>
+<span class="sd">separated with spaces. If you need alternate behavior, you can simply override the</span>
+<span class="sd">`manifest_row_parsers` for specific fields and replace the default parsing function</span>
+<span class="sd">with a custom one. For example:</span>
+
+<span class="sd">```</span>
+<span class="sd">from gen3.tools import indexing</span>
+<span class="sd">from gen3.tools.indexing.verify_manifest import manifest_row_parsers</span>
+
+<span class="sd">def _get_authz_from_row(row):</span>
+<span class="sd">    return [row.get(&quot;authz&quot;).strip().strip(&quot;[&quot;).strip(&quot;]&quot;).strip(&quot;&#39;&quot;)]</span>
+
+<span class="sd"># override default parsers</span>
+<span class="sd">manifest_row_parsers[&quot;authz&quot;] = _get_authz_from_row</span>
+
+<span class="sd">indexing.verify_object_manifest(COMMONS)</span>
+<span class="sd">```</span>
+
+<span class="sd">The output from this verification is a file containing any errors in the following</span>
+<span class="sd">format:</span>
+
+<span class="sd">{guid}|{error_name}|expected {value_from_manifest}|actual {value_from_indexd}</span>
+<span class="sd">ex: 93d9af72-b0f1-450c-a5c6-7d3d8d2083b4|authz|expected [&#39;&#39;]|actual [&#39;/programs/DEV/projects/test&#39;]</span>
+
+<span class="sd">Attributes:</span>
+<span class="sd">    CURRENT_DIR (str): directory this file is in</span>
+<span class="sd">    MAX_CONCURRENT_REQUESTS (int): maximum number of desired concurrent requests across</span>
+<span class="sd">        processes/threads</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">asyncio</span>
+<span class="kn">import</span> <span class="nn">click</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">import</span> <span class="nn">glob</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">math</span>
+
+<span class="kn">from</span> <span class="nn">gen3.index</span> <span class="kn">import</span> <span class="n">Gen3Index</span>
+
+<span class="n">MAX_CONCURRENT_REQUESTS</span> <span class="o">=</span> <span class="mi">24</span>
+<span class="n">CURRENT_DIR</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_get_guid_from_row</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given a row from the manifest, return the field representing expected indexd guid.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        row (dict): column_name:row_value</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: guid</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">guid</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;guid&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">guid</span><span class="p">:</span>
+        <span class="n">guid</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;GUID&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">guid</span>
+
+
+<span class="k">def</span> <span class="nf">_get_md5_from_row</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given a row from the manifest, return the field representing file&#39;s md5 sum.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        row (dict): column_name:row_value</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: md5 sum for file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="s2">&quot;md5&quot;</span> <span class="ow">in</span> <span class="n">row</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;md5&quot;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="s2">&quot;md5sum&quot;</span> <span class="ow">in</span> <span class="n">row</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;md5sum&quot;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span> <span class="nf">_get_file_size_from_row</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given a row from the manifest, return the field representing file&#39;s size in bytes.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        row (dict): column_name:row_value</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int: integer representing file size in bytes</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">&quot;file_size&quot;</span> <span class="ow">in</span> <span class="n">row</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;file_size&quot;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="s2">&quot;size&quot;</span> <span class="ow">in</span> <span class="n">row</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;size&quot;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;could not convert this to an int: </span><span class="si">{</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;file_size&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;file_size&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_get_acl_from_row</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given a row from the manifest, return the field representing file&#39;s expected acls.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        row (dict): column_name:row_value</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List[str]: acls for the indexd record</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;acl&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">item</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">_get_authz_from_row</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given a row from the manifest, return the field representing file&#39;s expected authz</span>
+<span class="sd">    resources.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        row (dict): column_name:row_value</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List[str]: authz resources for the indexd record</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;authz&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">item</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">_get_urls_from_row</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given a row from the manifest, return the field representing file&#39;s expected urls.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        row (dict): column_name:row_value</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List[str]: urls for indexd record file location(s)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="s2">&quot;urls&quot;</span> <span class="ow">in</span> <span class="n">row</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;urls&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">item</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="s2">&quot;url&quot;</span> <span class="ow">in</span> <span class="n">row</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;urls&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">item</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+
+<span class="k">def</span> <span class="nf">_get_file_name_from_row</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given a row from the manifest, return the field representing file&#39;s expected file_name.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        row (dict): column_name:row_value</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List[str]: file_name for indexd record file location(s)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="s2">&quot;file_name&quot;</span> <span class="ow">in</span> <span class="n">row</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="s2">&quot;filename&quot;</span> <span class="ow">in</span> <span class="n">row</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;filename&quot;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="s2">&quot;name&quot;</span> <span class="ow">in</span> <span class="n">row</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="n">manifest_row_parsers</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;guid&quot;</span><span class="p">:</span> <span class="n">_get_guid_from_row</span><span class="p">,</span>
+    <span class="s2">&quot;md5&quot;</span><span class="p">:</span> <span class="n">_get_md5_from_row</span><span class="p">,</span>
+    <span class="s2">&quot;file_size&quot;</span><span class="p">:</span> <span class="n">_get_file_size_from_row</span><span class="p">,</span>
+    <span class="s2">&quot;acl&quot;</span><span class="p">:</span> <span class="n">_get_acl_from_row</span><span class="p">,</span>
+    <span class="s2">&quot;authz&quot;</span><span class="p">:</span> <span class="n">_get_authz_from_row</span><span class="p">,</span>
+    <span class="s2">&quot;urls&quot;</span><span class="p">:</span> <span class="n">_get_urls_from_row</span><span class="p">,</span>
+    <span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="n">_get_file_name_from_row</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="async_verify_object_manifest"><a class="viewcode-back" href="../../../../tools/indexing.html#gen3.tools.indexing.verify_manifest.async_verify_object_manifest">[docs]</a><span class="k">async</span> <span class="k">def</span> <span class="nf">async_verify_object_manifest</span><span class="p">(</span>
+    <span class="n">commons_url</span><span class="p">,</span>
+    <span class="n">manifest_file</span><span class="p">,</span>
+    <span class="n">max_concurrent_requests</span><span class="o">=</span><span class="n">MAX_CONCURRENT_REQUESTS</span><span class="p">,</span>
+    <span class="n">manifest_row_parsers</span><span class="o">=</span><span class="n">manifest_row_parsers</span><span class="p">,</span>
+    <span class="n">manifest_file_delimiter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">output_filename</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;verify-manifest-errors-</span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="si">}</span><span class="s2">.log&quot;</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Verify all file object records into a manifest csv</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        commons_url (str): root domain for commons where indexd lives</span>
+<span class="sd">        manifest_file (str): the file to verify against</span>
+<span class="sd">        max_concurrent_requests (int): the maximum number of concurrent requests allowed</span>
+<span class="sd">        manifest_row_parsers (Dict{indexd_field:func_to_parse_row}): Row parsers</span>
+<span class="sd">        manifest_file_delimiter (str): delimeter in manifest_file</span>
+<span class="sd">        output_filename (str): filename for output logs</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;start time: </span><span class="si">{</span><span class="n">start_time</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># if delimter not specified, try to get based on file ext</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">manifest_file_delimiter</span><span class="p">:</span>
+        <span class="n">file_ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">file_ext</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.tsv&quot;</span><span class="p">:</span>
+            <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># default, assume CSV</span>
+            <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span>
+
+    <span class="k">await</span> <span class="n">_verify_all_index_records_in_file</span><span class="p">(</span>
+        <span class="n">commons_url</span><span class="p">,</span>
+        <span class="n">manifest_file</span><span class="p">,</span>
+        <span class="n">manifest_file_delimiter</span><span class="p">,</span>
+        <span class="n">max_concurrent_requests</span><span class="p">,</span>
+        <span class="n">output_filename</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;end time: </span><span class="si">{</span><span class="n">end_time</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;run time: </span><span class="si">{</span><span class="n">end_time</span><span class="o">-</span><span class="n">start_time</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">_verify_all_index_records_in_file</span><span class="p">(</span>
+    <span class="n">commons_url</span><span class="p">,</span>
+    <span class="n">manifest_file</span><span class="p">,</span>
+    <span class="n">manifest_file_delimiter</span><span class="p">,</span>
+    <span class="n">max_concurrent_requests</span><span class="p">,</span>
+    <span class="n">output_filename</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Getting indexd records and writing to a file. This function</span>
+<span class="sd">    creates semaphores to limit the number of concurrent http connections that</span>
+<span class="sd">    get opened to send requests to indexd.</span>
+
+<span class="sd">    It then uses asyncio to start a number of coroutines. Steps:</span>
+<span class="sd">        1) requests to indexd to get records (writes resulting records to a queue)</span>
+<span class="sd">        2) puts a final &quot;DONE&quot; in the queue to stop coroutine that will read from queue</span>
+<span class="sd">        3) reading those records from the queue and writing to a file</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        commons_url (str): root domain for commons where indexd lives</span>
+<span class="sd">        manifest_file (str): the file to verify against</span>
+<span class="sd">        manifest_file_delimiter (str): delimeter in manifest_file</span>
+<span class="sd">        output_filename (str, optional): filename for output</span>
+<span class="sd">        max_concurrent_requests (int): the maximum number of concurrent requests allowed</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">max_requests</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">max_concurrent_requests</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;max concurrent requests: </span><span class="si">{</span><span class="n">max_requests</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">lock</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Semaphore</span><span class="p">(</span><span class="n">max_requests</span><span class="p">)</span>
+    <span class="n">queue</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+    <span class="n">output_queue</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8-sig&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">manifest</span><span class="p">:</span>
+        <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">manifest_file_delimiter</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">reader</span><span class="p">:</span>
+            <span class="n">new_row</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">row</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">new_row</span><span class="p">[</span><span class="n">key</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">new_row</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">max_concurrent_requests</span> <span class="o">+</span> <span class="p">(</span><span class="n">max_concurrent_requests</span> <span class="o">/</span> <span class="mi">4</span><span class="p">))):</span>
+        <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;DONE&quot;</span><span class="p">)</span>
+
+    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span>
+        <span class="o">*</span><span class="p">(</span>
+            <span class="n">_parse_from_queue</span><span class="p">(</span><span class="n">queue</span><span class="p">,</span> <span class="n">lock</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">output_queue</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span>
+                <span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">max_concurrent_requests</span> <span class="o">+</span> <span class="p">(</span><span class="n">max_concurrent_requests</span> <span class="o">/</span> <span class="mi">4</span><span class="p">))</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="n">output_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;done processing, writing output queue to single file </span><span class="si">{</span><span class="n">output_filename</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+
+    <span class="c1"># remove existing output if it exists</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">output_filename</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_filename</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">outfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;done writing output to file </span><span class="si">{</span><span class="n">output_filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">_parse_from_queue</span><span class="p">(</span><span class="n">queue</span><span class="p">,</span> <span class="n">lock</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">output_queue</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Keep getting items from the queue and verifying that indexd contains the expected</span>
+<span class="sd">    fields from that row. If there are any issues, log errors into a file. Return</span>
+<span class="sd">    when nothing is left in the queue.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        queue (asyncio.Queue): queue to read indexd records from</span>
+<span class="sd">        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http</span>
+<span class="sd">            connections</span>
+<span class="sd">        commons_url (str): root domain for commons where indexd lives</span>
+<span class="sd">        output_queue (asyncio.Queue): queue for output</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_event_loop</span><span class="p">()</span>
+
+    <span class="n">row</span> <span class="o">=</span> <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+
+    <span class="k">while</span> <span class="n">row</span> <span class="o">!=</span> <span class="s2">&quot;DONE&quot;</span><span class="p">:</span>
+        <span class="n">guid</span> <span class="o">=</span> <span class="n">manifest_row_parsers</span><span class="p">[</span><span class="s2">&quot;guid&quot;</span><span class="p">](</span><span class="n">row</span><span class="p">)</span>
+        <span class="n">authz</span> <span class="o">=</span> <span class="n">manifest_row_parsers</span><span class="p">[</span><span class="s2">&quot;authz&quot;</span><span class="p">](</span><span class="n">row</span><span class="p">)</span>
+        <span class="n">acl</span> <span class="o">=</span> <span class="n">manifest_row_parsers</span><span class="p">[</span><span class="s2">&quot;acl&quot;</span><span class="p">](</span><span class="n">row</span><span class="p">)</span>
+        <span class="n">file_size</span> <span class="o">=</span> <span class="n">manifest_row_parsers</span><span class="p">[</span><span class="s2">&quot;file_size&quot;</span><span class="p">](</span><span class="n">row</span><span class="p">)</span>
+        <span class="n">md5</span> <span class="o">=</span> <span class="n">manifest_row_parsers</span><span class="p">[</span><span class="s2">&quot;md5&quot;</span><span class="p">](</span><span class="n">row</span><span class="p">)</span>
+        <span class="n">urls</span> <span class="o">=</span> <span class="n">manifest_row_parsers</span><span class="p">[</span><span class="s2">&quot;urls&quot;</span><span class="p">](</span><span class="n">row</span><span class="p">)</span>
+        <span class="n">file_name</span> <span class="o">=</span> <span class="n">manifest_row_parsers</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">](</span><span class="n">row</span><span class="p">)</span>
+
+        <span class="n">actual_record</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_get_record_from_indexd</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">lock</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">actual_record</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">|no_record|expected </span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2">|actual None</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;verifying </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">authz</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">actual_record</span><span class="p">[</span><span class="s2">&quot;authz&quot;</span><span class="p">]):</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">|authz|expected </span><span class="si">{</span><span class="n">authz</span><span class="si">}</span><span class="s2">|actual </span><span class="si">{</span><span class="n">actual_record</span><span class="p">[</span><span class="s1">&#39;authz&#39;</span><span class="p">]</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+                <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">acl</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">actual_record</span><span class="p">[</span><span class="s2">&quot;acl&quot;</span><span class="p">]):</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">|acl|expected </span><span class="si">{</span><span class="n">acl</span><span class="si">}</span><span class="s2">|actual </span><span class="si">{</span><span class="n">actual_record</span><span class="p">[</span><span class="s1">&#39;acl&#39;</span><span class="p">]</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">file_size</span> <span class="o">!=</span> <span class="n">actual_record</span><span class="p">[</span><span class="s2">&quot;size&quot;</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="ow">not</span> <span class="n">file_size</span>
+                    <span class="ow">and</span> <span class="n">file_size</span> <span class="o">!=</span> <span class="mi">0</span>
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="n">actual_record</span><span class="p">[</span><span class="s2">&quot;size&quot;</span><span class="p">]</span>
+                    <span class="ow">and</span> <span class="n">actual_record</span><span class="p">[</span><span class="s2">&quot;size&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span>
+                <span class="p">):</span>
+                    <span class="c1"># actual and expected are both either empty string or None</span>
+                    <span class="c1"># so even though they&#39;re not equal, they represent null value so</span>
+                    <span class="c1"># we don&#39;t need to consider this an error in validation</span>
+                    <span class="k">pass</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">output</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">|file_size|expected </span><span class="si">{</span><span class="n">file_size</span><span class="si">}</span><span class="s2">|actual </span><span class="si">{</span><span class="n">actual_record</span><span class="p">[</span><span class="s1">&#39;size&#39;</span><span class="p">]</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">md5</span> <span class="o">!=</span> <span class="n">actual_record</span><span class="p">[</span><span class="s2">&quot;hashes&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;md5&quot;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="ow">not</span> <span class="n">md5</span>
+                    <span class="ow">and</span> <span class="n">md5</span> <span class="o">!=</span> <span class="mi">0</span>
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="n">actual_record</span><span class="p">[</span><span class="s2">&quot;hashes&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;md5&quot;</span><span class="p">)</span>
+                    <span class="ow">and</span> <span class="n">actual_record</span><span class="p">[</span><span class="s2">&quot;hashes&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;md5&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span>
+                <span class="p">):</span>
+                    <span class="c1"># actual and expected are both either empty string or None</span>
+                    <span class="c1"># so even though they&#39;re not equal, they represent null value so</span>
+                    <span class="c1"># we don&#39;t need to consider this an error in validation</span>
+                    <span class="k">pass</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">output</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">|md5|expected </span><span class="si">{</span><span class="n">md5</span><span class="si">}</span><span class="s2">|actual </span><span class="si">{</span><span class="n">actual_record</span><span class="p">[</span><span class="s1">&#39;hashes&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;md5&#39;</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">urls</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">actual_record</span><span class="p">[</span><span class="s2">&quot;urls&quot;</span><span class="p">]):</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">|urls|expected </span><span class="si">{</span><span class="n">urls</span><span class="si">}</span><span class="s2">|actual </span><span class="si">{</span><span class="n">actual_record</span><span class="p">[</span><span class="s1">&#39;urls&#39;</span><span class="p">]</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">actual_record</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">file_name</span><span class="p">:</span>
+                <span class="c1"># if the actual record name is &quot;&quot; or None but something was specified</span>
+                <span class="c1"># in the manifest, we have a problem</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">|file_name|expected </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">|actual </span><span class="si">{</span><span class="n">actual_record</span><span class="p">[</span><span class="s1">&#39;file_name&#39;</span><span class="p">]</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+
+        <span class="n">row</span> <span class="o">=</span> <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">_get_record_from_indexd</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">lock</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Gets a semaphore then requests a record for the given guid</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        guid (str): indexd record globally unique id</span>
+<span class="sd">        commons_url (str): root domain for commons where indexd lives</span>
+<span class="sd">        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http</span>
+<span class="sd">            connections</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">Gen3Index</span><span class="p">(</span><span class="n">commons_url</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">lock</span><span class="p">:</span>
+        <span class="c1"># default ssl handling unless it&#39;s explicitly http://</span>
+        <span class="n">ssl</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="s2">&quot;https&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">commons_url</span><span class="p">:</span>
+            <span class="n">ssl</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="k">await</span> <span class="n">index</span><span class="o">.</span><span class="n">async_get_record</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="n">ssl</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="s2">&quot;output.log&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">))</span>
+    <span class="n">verify_manifest_against_indexd</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Gen3 SDK</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=uc-cdis&repo=gen3sdk-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../auth.html">Gen3 Auth Helper</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../file.html">Gen3 File Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../submission.html">Gen3 Submission Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../tools.html">Gen3 Tools</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Center for Translational Data Science.
+      
+    </div>
+
+    
+    <a href="https://github.com/uc-cdis/gen3sdk-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
