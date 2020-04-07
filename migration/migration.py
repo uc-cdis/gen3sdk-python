@@ -380,21 +380,22 @@ class Gen3Migration:
         print("\tTotal of {} missing visit links created for this batch.".format(total))
         return df
 
-    def move_props(self,project_id,old_node,new_node,props,dd,parent_node=None,required_props=None,name='temp'):
+
+    def move_prop(self,project_id,old_node,new_node,prop,dd,parent_node=None,required_props=None,name='temp',warn=True):
         """
         This function takes a node with props to be moved (from_node) and moves those props/data to a new node (to_node).
         Fxn also checks whether the data for props to be moved actually has non-null data. If all data are null, no new records are created.
         Args:
-            from_node(str): Node TSV to copy data from.
-            to_node(str): Node TSV to add copied data to.
+            old_node(str): Node TSV to copy data from.
+            new_node(str): Node TSV to add copied data to.
             props(list): List of column headers containing data to copy.
-            parent_node(str): The parent node that links the from_node to the to_node, e.g., 'visit' or 'case'.
-            required_props(dict): If the to_node has additional required props, enter the value all records should get for each key.
+            parent_node(str): The parent node that links the old_node to the new_node, e.g., 'visit' or 'case'.
+            required_props(dict): If the new_node has additional required props, enter the value all records should get for each key.
         Example:
             This moves the prop 'military_status' from 'demographic' node to 'military_history' node, which should link to the same parent node 'case'.
-            move_props(from_node='demographic',to_node='military_history',props=['military_status'],parent_node='case')
+            move_prop(from_node='demographic',to_node='military_history',prop='military_status',parent_node='case')
         """
-        print("\tMoving {} from '{}' to '{}'.".format(props,from_node,to_node))
+        print("\tMoving {} from '{}' to '{}'.".format(props,old_node,new_node))
 
         odf = self.read_tsv(project_id,old_node)
 
@@ -407,48 +408,43 @@ class Gen3Migration:
             print("\tNo '{}' TSV found. Creating new TSV for data to be moved.".format(new_node))
             new_file = True
 
-        # Check that the data to move is not entirely null. If it is, then give warning and quit.
-        proceed = False
-        exists = False
 
-        for prop in props:
-            if len(df_from.loc[df_from[prop].notnull()]) > 0:
-                proceed = True
-            if prop in list(df_to.columns):
-                exists = True
+        # Check that the data to move is not entirely null. If there is no non-null data, then there is no reason to move the TSV header.
+        nn = odf.loc[odf[prop].notnull()]
+        if len(nn) == 0:
+            print("\tNo non-null '{}' data found in '{}' records. No TSVs changed.".format(new_node,old_node))
+            return odf
 
-        if not proceed:
-            print("\tNo non-null '{}' data found in '{}' records. No TSVs changed.".format(to_node,from_node))
-            return
-
-        if exists:
-            print("\tprops {} already exist in '{}' node.".format(props,to_node))
-            return
+        # Check that prop isn't already in the new_node with non-null data. If it is and 'warn' isn't set to False, then stop.
+        if prop in ndf:
+            nn = ndf.loc[ndf[prop].notnull()]
+            if len(nn) > 0 and warn is True:
+                print("\n\n\t\tWARNING! prop '{}' already exists in '{}' with {} non-null records.".format(prop,new_node,len(nn)))
+                return ndf
+            else:
+                ndf.drop(columns=[prop],inplace=True)
 
         if parent_node is not None:
             parent_link = "{}s.submitter_id".format(parent_node)
-            from_no_link = df_from.loc[df_from[parent_link].isnull()] # from_node records with no link to parent_node
-            if not from_no_link.empty: # if there are records with no links to parent node
+            no_link = odf.loc[odf[parent_link].isnull()] # from_node records with no link to parent_node
+            if not no_link.empty: # if there are records with no links to parent node
                 print("\tWarning: there are {} '{}' records with no links to parent '{}' node!".format(len(from_no_link),from_node,parent_node))
-                return
+                return odf
         else:
-            parent_link = "{}s.submitter_id".format(to_node)
-            # note this only works if the backref is not
-        # keep records only if they have some non-null value in "props"
-        all_props = [parent_link] + props
-        new_to = df_from[all_props] #demo_case = demo[['cases.submitter_id']+static_case]
-        new_to = new_to[all_props].dropna(thresh=2) # drops any rows where there aren't at least 2 non-null values (1 of them is submitter_id)
+            parent_link = "{}s.submitter_id".format(new_node)
 
-        if to_node is 'case':
-            new_to.rename(columns={parent_link:'submitter_id'},inplace=True)
-            headers = list(new_to)
+        pdf = odf[[parent_link,prop]] # prop dataframe
+
+        if new_node is 'case':
+            pdf.rename(columns={parent_link:'submitter_id'},inplace=True)
+            headers = list(pdf)
             case_data = pd.DataFrame(columns=headers)
-            case_ids = list(new_to['submitter_id'].unique())
+            case_ids = list(pdf['submitter_id'].unique())
             case_data['submitter_id'] = case_ids
             count = 1
             for case_id in case_ids:
                 print("\tGathering unique data for case '{}' ({}/{})".format(case_id,count,len(case_ids)))
-                df1 = new_to.loc[new_to['submitter_id']==case_id]
+                df1 = pdf.loc[pdf['submitter_id']==case_id]
                 for header in headers:
                     vals = list(set(df1.loc[df1[header].notnull()][header].unique()))
                     if len(vals) == 1:
@@ -460,35 +456,41 @@ class Gen3Migration:
                             print("\tSelecting lowest value '{}' from {}.".format(lowest_val,vals))
                             case_data.loc[case_data['submitter_id']==case_id,header] = lowest_val
                 count += 1
-            all_to = pd.merge(df_to,case_data,on='submitter_id', how='left')
-        else:
-            new_to['type'] = to_node
-            new_to['project_id'] = project_id
-            new_to['submitter_id'] = df_from['submitter_id'] + "_{}".format(to_node)
+            df = pd.merge(pdf,case_data,on='submitter_id', how='left')
+
+        elif parent_node == 'case':
+            #cdf = self.read_tsv(project_id,'case')
+            #cids = list(cdf['submitter_id'])
+            df = pd.merge(ndf,pdf,on='cases.submitter_id')
+
+        else: # neither new_node nor parent_node are 'case'
+            df['type'] = new_node
+            df['project_id'] = project_id
+            df['submitter_id'] = odf['submitter_id'] + "_{}".format(new_node)
             #only write new_to records if submitter_ids don't already exist in df_to:
-            add_to = new_to.loc[~new_to['submitter_id'].isin(list(df_to.submitter_id))]
-            all_to = pd.concat([df_to,add_to],ignore_index=True,sort=False)
+            df = df.loc[~df['submitter_id'].isin(list(ndf.submitter_id))]
+            df = pd.concat([ndf,df],ignore_index=True,sort=False)
 
         # add any missing required props to new DF
-        to_required = list(set(list(dd[to_node]['required'])).difference(list(all_to)))
+        new_required = list(set(list(dd[new_node]['required'])).difference(list(df)))
         link_target = None
-        for link in list(dd[to_node]['links']):
-            if link['name'] in to_required:
+        for link in list(dd[new_node]['links']):
+            if link['name'] in new_required:
                 link_target = link['target_type']
-                to_required.remove(link['name'])
+                new_required.remove(link['name'])
 
         if required_props is not None:
-            for prop in to_required:
+            for prop in new_required:
                 if prop in list(required_props.keys()):
-                    all_to[prop] = required_props[prop]
-                    print("\tMissing required prop '{}' added to new '{}' TSV with all {} values.".format(prop,to_node,required_props[prop]))
+                    df[prop] = required_props[prop]
+                    print("\tMissing required prop '{}' added to new '{}' TSV with all {} values.".format(prop,new_node,required_props[prop]))
                 else:
-                    all_to[prop] = np.nan
-                    print("\tMissing required prop '{}' added to new '{}' TSV with all null values.".format(prop,to_node))
+                    df[prop] = np.nan
+                    print("\tMissing required prop '{}' added to new '{}' TSV with all null values.".format(prop,new_node))
 
-        all_to.to_csv(to_name,sep='\t',index=False,encoding='utf-8')
-        print("\tprops moved to '{}' node from '{}'. Data saved in file:\n\t{}".format(to_node,from_node,to_name))
-        return all_to
+        self.write_tsv(df,project_id,node)
+        print("\tprops moved to '{0}' node from '{1}'".format(new_node,old_node))
+        return df
 
     def add_prop(self,project_id,node,props):
 
@@ -511,6 +513,18 @@ class Gen3Migration:
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         nn = df.loc[df[prop].notnull()]
         return nn
+
+
+    def check_non_null(self,project_id,node,props,name='temp'):
+        non_null = {}
+        df = self.read_tsv(project_id=project_id,node=node,name=name)
+        for prop in props:
+            if prop in df:
+                nn = df.loc[df[prop].notnull()]
+                non_null[prop] = len(nn)
+            else:
+                non_null[prop] = 'NA'
+        return non_null
 
 
     def change_prop_name(self,project_id,node,props,name='temp',force=False):
@@ -556,7 +570,7 @@ class Gen3Migration:
 
         return df
 
-    def drop_props(self,project_id,node,props,name='temp',check_null=True):
+    def drop_props(self,project_id,node,props,name='temp'):
         """
         Function drops the list of props from column headers of a node TSV.
         Args:
