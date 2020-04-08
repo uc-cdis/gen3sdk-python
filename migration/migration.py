@@ -395,9 +395,16 @@ class Gen3Migration:
             This moves the prop 'military_status' from 'demographic' node to 'military_history' node, which should link to the same parent node 'case'.
             move_prop(from_node='demographic',to_node='military_history',prop='military_status',parent_node='case')
         """
-        print("\tMoving {} from '{}' to '{}'.".format(props,old_node,new_node))
+        print("\tMoving prop '{}' from node '{}' to '{}'.".format(prop,old_node,new_node))
 
         odf = self.read_tsv(project_id,old_node)
+
+        # drop prop from old TSV
+        try:
+            self.write_tsv(odf.drop(columns=[prop]),project_id,old_node)
+            print("\t\tDropped '{}' from '{}' TSV.".format(prop,old_node))
+        except Exception as e:
+            print(type(e),e)
 
         try: # if the new node TSV already exists, read it in, if not, create a new df
             ndf = self.read_tsv(project_id,new_node)
@@ -412,7 +419,7 @@ class Gen3Migration:
         # Check that the data to move is not entirely null. If there is no non-null data, then there is no reason to move the TSV header.
         nn = odf.loc[odf[prop].notnull()]
         if len(nn) == 0:
-            print("\tNo non-null '{}' data found in '{}' records. No TSVs changed.".format(new_node,old_node))
+            print("\tNo non-null '{0}' records found in '{1}' TSV. '{2}' TSV unchanged.".format(prop,old_node,new_node))
             return odf
 
         # Check that prop isn't already in the new_node with non-null data. If it is and 'warn' isn't set to False, then stop.
@@ -472,14 +479,13 @@ class Gen3Migration:
             df = pd.concat([ndf,df],ignore_index=True,sort=False)
 
         # add any missing required props to new DF
-        new_required = list(set(list(dd[new_node]['required'])).difference(list(df)))
-        link_target = None
-        for link in list(dd[new_node]['links']):
-            if link['name'] in new_required:
-                link_target = link['target_type']
-                new_required.remove(link['name'])
-
         if required_props is not None:
+            new_required = list(set(list(dd[new_node]['required'])).difference(list(df)))
+            link_target = None
+            for link in list(dd[new_node]['links']):
+                if link['name'] in new_required:
+                    link_target = link['target_type']
+                    new_required.remove(link['name'])
             for prop in new_required:
                 if prop in list(required_props.keys()):
                     df[prop] = required_props[prop]
@@ -488,8 +494,9 @@ class Gen3Migration:
                     df[prop] = np.nan
                     print("\tMissing required prop '{}' added to new '{}' TSV with all null values.".format(prop,new_node))
 
-        self.write_tsv(df,project_id,node)
-        print("\tprops moved to '{0}' node from '{1}'".format(new_node,old_node))
+        self.write_tsv(df,project_id,new_node)
+        print("\t\tMoved '{0}' to '{1}' from '{2}'.".format(prop,new_node,old_node))
+
         return df
 
     def add_prop(self,project_id,node,props):
@@ -516,15 +523,109 @@ class Gen3Migration:
 
 
     def check_non_null(self,project_id,node,props,name='temp'):
+
         non_null = {}
         df = self.read_tsv(project_id=project_id,node=node,name=name)
+
+        if df is not None:
+            print("\tChecking data in '{}' TSV of project '{}'".format(node,project_id))
+
         for prop in props:
-            if prop in df:
-                nn = df.loc[df[prop].notnull()]
-                non_null[prop] = len(nn)
+            if df is not None:
+                if prop in df:
+                    nn = df.loc[df[prop].notnull()]
+                    non_null[prop] = len(nn)
+                    print("\t\tprop '{}' has '{}' non-null records".format(prop,len(nn)))
+                else:
+                    non_null[prop] = 'NO_PROP'
+                    print("\t\tprop '{}' not found in TSV".format(prop))
             else:
-                non_null[prop] = 'NA'
+                non_null[prop] = 'NO_TSV'
         return non_null
+
+
+    def check_props_data(self,tsv_dir,props,project_ids='all',name='temp',compare=False):
+        """ if compare is True, will print a report of comparisons
+        """
+        try:
+            os.chdir(tsv_dir)
+        except Exception as e:
+            print("Couldn't locate TSV dir ({}): {}".format(tsv_dir,e))
+
+        if project_ids == 'all':
+            pattern = "*_tsvs"
+            project_dirs = glob.glob(pattern)
+        else:
+            project_dirs = [pdir+'_tsvs' for pdir in project_ids]
+
+        proj_regex = re.compile("(.+)_tsvs")
+        projects = {proj_regex.match(project_dir).groups()[0]: project_dir for project_dir in project_dirs}
+
+        data = {}
+        nodes = list(props)
+
+        for project_id in list(projects):
+
+            pdir = "{}/{}".format(tsv_dir,projects[project_id])
+            os.chdir(pdir)
+            data[project_id] = {}
+
+            for node in nodes:
+
+                data[project_id][node] = {}
+
+                df = self.read_tsv(project_id=project_id,node=node,name=name)
+
+                if df is not None:
+                    print("\tChecking data in '{}' TSV of project '{}'".format(node,project_id))
+
+                node_props = props[node]
+                for prop in node_props:
+
+                    if df is not None:
+                        if prop in df:
+                            nn = df.loc[df[prop].notnull()]
+                            data[project_id][node][prop] = len(nn)
+                            print("\t\tprop '{}' has '{}' non-null records".format(prop,len(nn)))
+                        else:
+                            data[project_id][node][prop] = 'NO_PROP'
+                            print("\t\tprop '{}' not found in TSV".format(prop))
+                    else:
+                        data[project_id][node][prop] = 'NO_TSV'
+
+        os.chdir(tsv_dir)
+
+        c = {'project_id':[],'old_node':[],'old_prop':[],'new_node':[],'new_prop':[],'old_count':[],'new_count':[],'conflict':[]}
+        if compare is not False:
+            for pair in compare:
+                for project_id in list(projects):
+                    ((old_node,old_prop),(new_node,new_prop)) = pair
+                    old_count = data[project_id][old_node][old_prop]
+                    new_count = data[project_id][new_node][new_prop]
+                    c['project_id'].append(project_id)
+                    c['old_node'].append(old_node)
+                    c['old_prop'].append(old_prop)
+                    c['old_count'].append(old_count)
+                    c['new_node'].append(new_node)
+                    c['new_prop'].append(new_prop)
+                    c['new_count'].append(new_count)
+                    if old_count != 'NO_TSV' and old_count != 0 and old_count != 'NO_PROP': # data exists in old_prop
+                        if new_count != 'NO_TSV' and new_count != 0 and new_count != 'NO_PROP': # data exists in new_prop
+                            conflict = True
+                    else:
+                        conflict = False
+                    c['conflict'].append(conflict)
+
+            cdf = pd.DataFrame(c)
+            cdf.to_csv('compare_props.tsv',sep='\t',index=False)
+
+            if not cdf.loc[cdf['conflict']==True].empty:
+                display(cdf.loc[cdf['conflict']==True])
+
+            return cdf
+
+        return data
+
 
 
     def change_prop_name(self,project_id,node,props,name='temp',force=False):
