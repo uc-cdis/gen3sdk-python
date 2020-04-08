@@ -399,14 +399,15 @@ class Gen3Migration:
 
         odf = self.read_tsv(project_id,old_node)
 
-        # drop prop from old TSV
+        # drop old prop from old node TSV
         try:
             self.write_tsv(odf.drop(columns=[prop]),project_id,old_node)
             print("\t\tDropped '{}' from '{}' TSV.".format(prop,old_node))
         except Exception as e:
             print(type(e),e)
 
-        try: # if the new node TSV already exists, read it in, if not, create a new df
+        # if the new node TSV already exists, read it in, if not, create a new df
+        try:
             ndf = self.read_tsv(project_id,new_node)
             print("\t'{}' TSV already exists with {} records.".format(new_node,len(ndf)))
             new_file = False
@@ -415,11 +416,14 @@ class Gen3Migration:
             print("\tNo '{}' TSV found. Creating new TSV for data to be moved.".format(new_node))
             new_file = True
 
-
         # Check that the data to move is not entirely null. If there is no non-null data, then there is no reason to move the TSV header.
-        nn = odf.loc[odf[prop].notnull()]
-        if len(nn) == 0:
-            print("\tNo non-null '{0}' records found in '{1}' TSV. '{2}' TSV unchanged.".format(prop,old_node,new_node))
+        if prop in odf:
+            onn = odf.loc[odf[prop].notnull()]
+            if len(onn) == 0:
+                print("\tNo non-null '{0}' records found in '{1}' TSV. '{2}' TSV unchanged.".format(prop,old_node,new_node))
+                return odf
+        else:
+            print("'{}' not found in '{}' TSV. Nothing changed.".format(prop,old_node))
             return odf
 
         # Check that prop isn't already in the new_node with non-null data. If it is and 'warn' isn't set to False, then stop.
@@ -430,6 +434,7 @@ class Gen3Migration:
                 return ndf
             else:
                 ndf.drop(columns=[prop],inplace=True)
+                print("\t\t'{}' already found in '{}' TSV with all null data; dropping column from TSV.".format(prop,new_node))
 
         if parent_node is not None:
             parent_link = "{}s.submitter_id".format(parent_node)
@@ -495,7 +500,7 @@ class Gen3Migration:
                     print("\tMissing required prop '{}' added to new '{}' TSV with all null values.".format(prop,new_node))
 
         self.write_tsv(df,project_id,new_node)
-        print("\t\tMoved '{0}' to '{1}' from '{2}'.".format(prop,new_node,old_node))
+        print("\t\tMoved {0} non-null '{1}' records from node '{2}' to '{3}'.".format(len(onn),prop,old_node,new_node))
 
         return df
 
@@ -655,10 +660,11 @@ class Gen3Migration:
         if new_prop in df:
             ndf = df.loc[df[new_prop].notnull()]
             if len(ndf) > 0:
-                print("\t\tExisting new prop '{0}' data found in TSV: {1} non-null records! \n\n\nCheck '{}' data before using this script!!!".format(new_prop,len(ndf),props))
+                print("\t\tExisting '{0}' data found in TSV: {1} non-null records! \n\n\nCheck '{2}' data before using this script!!!".format(new_prop,len(ndf),props))
                 return df
             else: # if all data is null, drop the column
                 df.drop(columns=[new_prop],inplace=True)
+                print("\t\tProperty '{0}' already in TSV with all null records. Dropping empty column from TSV.".format(new_prop))
 
         try:
             df.rename(columns=props,inplace = True)
