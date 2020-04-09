@@ -1,4 +1,5 @@
 import os, os.path, sys, subprocess, glob, json, re, operator, requests, datetime
+import os.path
 import fnmatch, sys, ntpath, copy
 from shutil import copyfile
 import numpy as np
@@ -49,17 +50,30 @@ class Gen3Migration:
         self.sub = Gen3Submission(endpoint, auth_provider)
         self.exp = Gen3Expansion(endpoint, auth_provider)
 
-    def read_tsv(self,project_id,node,name='temp'):
+    def read_tsv(self,project_id,node,name='temp',strip=True):
+
         if name is not None:
             filename = "{}_{}_{}.tsv".format(name,project_id,node)
         else:
             filename = "{}_{}.tsv".format(project_id,node)
+
         try:
             df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
+            if strip is True:
+                df.columns = df.columns.str.replace("#[0-9]+", "")
+
         except FileNotFoundError as e:
             print("\tNo '{}' TSV found.".format(filename))
             return
+
+        #warn if there are duplicate submitter_ids:
+        if 'submitter_id' in df:
+            sids = list(df['submitter_id'])
+            if len(sids) != len(set(sids)):
+                print("\n\n\n\t\tWARNING!! This TSV contains duplicate submitter_ids:\n\n\t\t\t\t{}".format(filename))
+
         return df
+
 
     def write_tsv(self,df,project_id,node,name='temp'):
         if name is not None:
@@ -68,7 +82,7 @@ class Gen3Migration:
             outname = "{0}_{1}.tsv".format(project_id,node)
         try:
             df.to_csv(outname, sep='\t', index=False, encoding='utf-8')
-            print("\tTotal of {} records written to node '{}' in file:\n\t\t{}.".format(len(df),node,outname))
+            print("\t\tTotal of {} records written to node '{}' in file: {}.".format(len(df),node,outname))
         except Exception as e:
             print("\tError writing TSV file: {}".format(e))
         return df
@@ -399,32 +413,36 @@ class Gen3Migration:
 
         odf = self.read_tsv(project_id,old_node)
 
+        if odf is None:
+            print("\t\tNo '{0}' TSV found in project '{1}'. Nothing changed.".format(old_node,project_id))
+            return
+
+        # Check that the data column to move exists and is not entirely null. # If there are no non-null data, then there is no reason to move the TSV header.
+        if prop not in odf:
+            print("\t\t'{}' not found in '{}' TSV. Nothing changed.".format(prop,old_node))
+            return odf
+
+        else:
+            onn = odf.loc[odf[prop].notnull()]
+            if len(onn) == 0:
+                print("\t\tAll null records for '{0}' in '{1}' TSV.".format(prop,old_node,new_node))
+
         # drop old prop from old node TSV
         try:
-            self.write_tsv(odf.drop(columns=[prop]),project_id,old_node)
             print("\t\tDropped '{}' from '{}' TSV.".format(prop,old_node))
+            self.write_tsv(odf.drop(columns=[prop]),project_id,old_node)
         except Exception as e:
             print(type(e),e)
 
         # if the new node TSV already exists, read it in, if not, create a new df
         try:
             ndf = self.read_tsv(project_id,new_node)
-            print("\t'{}' TSV already exists with {} records.".format(new_node,len(ndf)))
+            print("\t\t'{}' TSV already exists with {} records.".format(new_node,len(ndf)))
             new_file = False
         except FileNotFoundError as e:
             ndf = pd.DataFrame(columns=['submitter_id'])
-            print("\tNo '{}' TSV found. Creating new TSV for data to be moved.".format(new_node))
+            print("\t\tNo '{}' TSV found. Creating new TSV for data to be moved.".format(new_node))
             new_file = True
-
-        # Check that the data to move is not entirely null. If there is no non-null data, then there is no reason to move the TSV header.
-        if prop in odf:
-            onn = odf.loc[odf[prop].notnull()]
-            if len(onn) == 0:
-                print("\tNo non-null '{0}' records found in '{1}' TSV. '{2}' TSV unchanged.".format(prop,old_node,new_node))
-                return odf
-        else:
-            print("'{}' not found in '{}' TSV. Nothing changed.".format(prop,old_node))
-            return odf
 
         # Check that prop isn't already in the new_node with non-null data. If it is and 'warn' isn't set to False, then stop.
         if prop in ndf:
@@ -499,8 +517,8 @@ class Gen3Migration:
                     df[prop] = np.nan
                     print("\tMissing required prop '{}' added to new '{}' TSV with all null values.".format(prop,new_node))
 
-        self.write_tsv(df,project_id,new_node)
         print("\t\tMoved {0} non-null '{1}' records from node '{2}' to '{3}'.".format(len(onn),prop,old_node,new_node))
+        self.write_tsv(df,project_id,new_node)
 
         return df
 
@@ -647,8 +665,12 @@ class Gen3Migration:
             change_prop_name(project_id='P001',node='surgery',props={'time_of_surgery':'hour_of_surgery'})
         """
 
-        print("\tAttempting to change prop names in {} node:\n\t\t{}".format(node,props))
+        print("\tAttempting to change prop names in node '{0}': {1}".format(node,props))
         df = self.read_tsv(project_id=project_id,node=node,name=name)
+
+        if df is None:
+            print("\t\tNo '{0}' TSV found in project '{1}'. Nothing changed.".format(node,project_id))
+            return
 
         old_prop = list(props)[0]
         new_prop = props[old_prop]
@@ -658,26 +680,26 @@ class Gen3Migration:
             return df
 
         if new_prop in df:
-            ndf = df.loc[df[new_prop].notnull()]
-            if len(ndf) > 0:
-                print("\t\tExisting '{0}' data found in TSV: {1} non-null records! \n\n\nCheck '{2}' data before using this script!!!".format(new_prop,len(ndf),props))
+            nn = df.loc[df[new_prop].notnull()]
+            if len(nn) > 0:
+                print("\t\tExisting '{0}' data found in TSV: {1} non-null records! \n\n\nCheck '{2}' data before using this script!!!".format(new_prop,len(nn),props))
                 return df
             else: # if all data is null, drop the column
                 df.drop(columns=[new_prop],inplace=True)
                 print("\t\tProperty '{0}' already in TSV with all null records. Dropping empty column from TSV.".format(new_prop))
 
         try:
-            df.rename(columns=props,inplace = True)
+            nn = df.loc[df[old_prop].notnull()]
+            print("\t\tProp name changed from '{}' to '{}' in '{}' TSV with {} non-null records.".format(old_prop,new_prop,node,len(nn)))
+            df.rename(columns=props,inplace=True)
             df = self.write_tsv(df,project_id,node,name=name)
-            ndf = df.loc[df[new_prop].notnull()]
-            print("\t\tProp name changed from '{}' to '{}' in '{}' TSV with {} non-null records.".format(old_prop,new_prop,node,len(ndf)))
 
         except Exception as e:
             print("\tCouldn't change prop names: {}".format(e))
 
         return df
 
-    def drop_props(self,project_id,node,props,name='temp'):
+    def drop_props(self,project_id,node,props,name='temp',warn=True):
         """
         Function drops the list of props from column headers of a node TSV.
         Args:
@@ -693,22 +715,32 @@ class Gen3Migration:
             else:
                 print("\tPlease provide props to drop as a list or string:\n\t{}".format(props))
 
-        print("\t{}:\n\t\tDropping props {}.".format(node,props))
+        print("\tAttempting to drop props from '{0}':".format(node))
 
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         filename = "{}_{}_{}.tsv".format(name,project_id,node)
 
+        if df is None:
+            print("\t\tNo '{0}' TSV found in project '{1}'. Nothing changed.".format(node,project_id))
+            return
+
         dropped = []
         for prop in props:
+            if prop in df:
+                nn = df.loc[df[prop].notnull()]
+                if not nn.empty:
+                    print("\n\nWarning!\n\t\tFound {0} non-null records for '{}' in '{}' TSV. Existing data not dropped!".format(len(nn),prop,node))
+                    if warn is True:
+                        return df
             try:
                 df = df.drop(columns=[prop])
                 dropped.append(prop)
             except Exception as e:
-                print("\tCouldn't drop prop '{}' from '{}' TSV:\n\t\t{}".format(prop,node,e))
+                print("\t\tCouldn't drop prop '{}' from '{}' TSV: {}".format(prop,node,e))
                 continue
 
         if len(dropped) > 0:
-            print("\tprops {} dropped from '{}' and data written to TSV:\n\t{}".format(dropped,node,filename))
+            print("\t\tprops dropped from '{}' and data written to TSV '{}':\n\t\t\t{}".format(node,filename,dropped))
             df = self.write_tsv(df,project_id,node)
             return df
         else:
@@ -1343,11 +1375,10 @@ class Gen3Migration:
                             valid_but_failed.append(sid)
                         else:  # invalid and failed
                             message = str(entity["errors"])
+                            print(message)
                             results["invalid"][sid] = message
                             invalid.append(sid)
-                    print(
-                        "\tInvalid records in this chunk: {}".format(str(len(invalid)))
-                    )
+                    print("\tInvalid records in this chunk: {}".format(len(invalid)))
 
                 elif json_res["code"] == 500:  # internal server error
 
@@ -1414,6 +1445,7 @@ class Gen3Migration:
         try:
             ndf.rename(columns=props,inplace=True)
             n = pd.merge(ndf,v,on='visit_id')
+            n.drop(columns=['visits.id'],inplace=True)
             self.write_tsv(df=n,project_id=project_id,node=node,name='temp')
             return n
         except Exception as e:
@@ -1424,7 +1456,7 @@ class Gen3Migration:
         """ Change links to visit for every node in a project_tsvs directory.
         """
         # find temp_files with visits.id prop
-        print("Changing visit links for TSVs in {}".format(project_id))
+        print("\tChanging visit links for TSVs in {}".format(project_id))
         grep_cmd = 'grep -rl . -e "visits.id"'
         vfiles = subprocess.check_output(grep_cmd, shell=True).decode("utf-8").split('\n')
         vfiles = [vfile for vfile in vfiles if re.search("^./{}_".format(name),vfile)]
@@ -1434,3 +1466,139 @@ class Gen3Migration:
 
         for node in nodes:
             self.change_visit_links(project_id=project_id,node=node,name='temp')
+
+
+    def delete_node(self,project_id,node,name='temp'):
+        """ Delete a node TSV from a project
+        """
+        print("\tAttempting to delete TSV for node '{}' in project '{}'.".format(node,project_id))
+        filename = "{0}_{1}_{2}.tsv".format(name,project_id,node)
+        if os.path.isfile(filename):
+            try:
+                os.remove(filename)
+                print("\t\tTSV deleted: '{}'".format(filename))
+            except Exception as e:
+                print("\t\tCouldn't delete '{}': {}".format(filename,e))
+        else:
+            print("\t\tNo TSV found: '{}'".format(filename))
+
+
+    def add_case_ids(self,project_id,dd,nodes='all',name='temp'):
+        """ Add case_ids to a list of nodes
+
+            Usage:
+            mig.add_case_ids(project_id=project_id, dd=prep_dd)
+        """
+
+        pattern = '{}_{}_*.tsv'.format(name,project_id)
+        tsvs = glob.glob(pattern)
+
+        node_regex = re.compile('^{}_{}_([a-z0-9_]+)\.tsv'.format(name,project_id))
+        all_nodes = [node_regex.match(tsv).groups()[0] for tsv in tsvs]
+
+        if nodes == 'all':
+            nodes = all_nodes
+        elif isinstance(nodes,str):
+            nodes = [nodes]
+
+        print("\tAdding case_ids to nodes in project '{}':\n\t\t{}".format(project_id,nodes))
+        for node in nodes:
+            print("\t{}".format(node.upper()))
+            df = self.read_tsv(project_id,node)
+
+            if 'case_submitter_id' in df:
+                csi = df.loc[df['case_submitter_id'].notnull()]
+                if csi.empty:
+                    df.drop(columns=['case_submitter_id'],inplace=True)
+                    print("\t\tDropped 'case_submitter_id' from '{}' TSV; all null values.".format(node))
+                else:
+                    print("\t\tFound '{}' records in {} with non-null case_submitter_id.".format(len(csi),node))
+                    df.rename(columns={'case_submitter_id':'case_ids'},inplace=True)
+                    self.write_tsv(df,project_id,node)
+
+            links = self.find_df_links(df=df,dd=dd)
+
+            if node == 'case':
+                df['case_ids'] = df['submitter_id']
+                try:
+                    print("\t\tAdded case_ids to 'case' node.")
+                    self.write_tsv(df,project_id,node)
+                except Exception as e:
+                    print("\t\tCouldn't add case_ids to 'case' node.")
+
+            elif 'case' in links:
+                df['case_ids'] = df['cases.submitter_id']
+                try:
+                    print("\t\tAdded 'case_ids' to '{}' TSV in project '{}'".format(node,project_id))
+                    self.write_tsv(df,project_id,node)
+                except Exception as e:
+                    print("\t\tCouldn't add case_ids to '{}' node.".format(node))
+
+            elif 'project' in links:
+                cdf = self.read_tsv(project_id,'case')
+                cids = list(set(cdf.submitter_id))
+                case_ids = ','.join(cids)
+                df['case_ids'] = case_ids
+                try:
+                    print("\t\tAdded 'case_ids' to '{}' TSV in project '{}'".format(node,project_id))
+                    self.write_tsv(df,project_id,node)
+                except Exception as e:
+                    print("\t\tCouldn't add case_ids to '{}'".format(node))
+
+            else:
+                while 'case' not in links:
+                    #print("\t{}:".format(node))
+                    if len(links) > 1:
+                        print("\n\n\nLinks greater than one! '{}'".format(node))
+
+                    for l in links:
+                        ldf = self.read_tsv(project_id,l)
+                        ldf['{}.submitter_id'.format(links[l])] = ldf['submitter_id']
+
+                        if 'cases.submitter_id' in ldf:
+                            df = pd.merge(df,ldf[['{}.submitter_id'.format(links[l]),'cases.submitter_id']],on='{}.submitter_id'.format(links[l]))
+                            df.rename(columns={'cases.submitter_id':'case_ids'},inplace=True)
+                            try:
+                                print("\t\tAdded case_ids to '{}' TSV.".format(node))
+                                self.write_tsv(df,project_id,node)
+                            except Exception as e:
+                                print("\t\tCouldn't add case_ids to '{}'".format(node))
+                        else:
+                            print("\n\n\nDidn't find link to case in '{}' TSV!".format(l))
+
+                    links = self.find_df_links(df=ldf,dd=dd)
+
+        return nodes
+
+    def find_df_links(self,df,dd,name='temp'):
+        """ Get a list of valid links given a data dictionary and a list of
+        """
+
+        node = list(set(df['type']))[0]
+        project_id = list(set(df['project_id']))[0]
+
+        link_regex = re.compile('(.+)\.submitter_id')
+        df_links = [link_regex.match(header).groups()[0] for header in list(df) if link_regex.match(header) is not None]
+        # don't include empty links
+        df_links = [df_link for df_link in df_links if not df.loc[df['{}.submitter_id'.format(df_link)].notnull()].empty]
+
+        if 'projects.code' in df:
+            df_links += ['projects']
+
+        pattern = '{}_{}_*.tsv'.format(name,project_id)
+        tsvs = glob.glob(pattern)
+        node_regex = re.compile('^{}_{}_([a-z0-9_]+)\.tsv'.format(name,project_id))
+        nodes = [node_regex.match(tsv).groups()[0] for tsv in tsvs]
+
+        links = {}
+        for link_def in dd[node]['links']:
+
+            link_node = link_def['target_type']
+            link_backref = link_def['name']
+
+            if link_node in nodes and link_backref in df_links or link_node == 'project':
+                links[link_node] = link_backref
+            else:
+                print("Can't find link '{}.submitter_id' or '{}.submitter_id#1' in '{}' TSV: {}".format(link_backref,link_backref,node,list(df)))
+
+        return links
