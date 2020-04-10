@@ -1,13 +1,42 @@
+
+'''
 from IPython.display import display, HTML
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-from pandas.tools.plotting import table
+from pandas_datareader import data #BB need: pip install pandas_datareader
+
+#from pandas.tools.plotting import table
+
+#BB added 
+# import numpy 
+# import scipy 
+# import scikit-learn //Machine Learning and Data Mining
+# import tensorflow //machine learning 
 
 import gen3
 from gen3.submission import Gen3Submission
 
-import json, requests, os, collections
+import json
+import requests
+import os
+'''
+
+import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy, re, operator
+import pandas as pd
+from os import path
+from pandas.io.json import json_normalize
+from collections import Counter
+from statistics import mean
+
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+
+import gen3
+from gen3.auth import Gen3Auth
+from gen3.submission import Gen3Submission
+from gen3.file import Gen3File
 
 class Gen3Error(Exception):
     pass
@@ -46,7 +75,8 @@ class Gen3Analysis(Gen3Submission):
         outfile.close
         print("\nOutput written to file: "+filename)
 
-    def plot_categorical_property(self, property, df):
+#original 
+    def plot_categorical_property(self, property,df):
         #plot a bar graph of categorical variable counts in a dataframe
         df = df[df[property].notnull()]
         N = len(df)
@@ -61,7 +91,25 @@ class Gen3Analysis(Gen3Submission):
         #add N for each bar
         plt.show()
 
-    def plot_numeric_property(self, property, df, by_project=False):
+
+#BB works
+    def plot_categorical_property_vc(self, property,df): #took out self
+        #plot a bar graph of categorical variable counts in a dataframe
+        df = df[df[property].notnull()]
+        N = len(df)
+        categories, counts = zip(*df[property].value_counts().items())  #valuecounts orders it from largest to smallest 
+        y_pos = np.arange(len(categories))
+        plt.bar(y_pos, counts, align='center', alpha=0.5)
+        #plt.figtext(.8, .8, 'N = '+str(N))
+        plt.xticks(y_pos, categories)
+        plt.ylabel('Counts')
+        plt.title(str('Counts by '+property+' (N = '+str(N)+')'))
+        plt.xticks(rotation=90, horizontalalignment='center')
+        #add N for each bar
+        plt.show()
+
+#BB Doesn't work
+    def plot_numeric_property(self, property,df,by_project=False):
         #plot a histogram of numeric variable in a dataframe
         df = df[df[property].notnull()]
         data = list(df[property])
@@ -90,6 +138,55 @@ class Gen3Analysis(Gen3Submission):
                 plt.title("PDF for "+property+' in ' + project+' (N = '+str(N)+')') # You can comment this line out if you don't need title
                 plt.show(fig)
 
+#BB works
+    def plot_numeric_property_bb(self, property,df,by_project=False):
+        #plot a histogram of numeric variable in a dataframe       #BB: columns with numeric and strings show up as object instead of float
+        df[property] = pd.to_numeric(df[property],errors='coerce') #BB: this line changes object into float 
+        df = df[df[property].notnull()]
+        data = list(df[property])
+        N = len(data)
+        fig = sns.distplot(data, hist=False, kde=True,
+                 bins=int(180/5), color = 'darkblue',
+                 kde_kws={'linewidth': 2})
+        plt.figtext(.8, .8, 'N = '+str(N))
+        plt.xlabel(property)
+        plt.ylabel("Probability")
+        plt.title("PDF for all projects "+property+' (N = '+str(N)+')') # You can comment this line out if you don't need title
+        plt.show(fig)
+
+        if by_project is True:
+            projects = list(set(df['project_id']))
+            for project in projects:
+                proj_df = df[df['project_id']==project]
+                data = list(proj_df[property])
+                N = len(data)
+                fig = sns.distplot(data, hist=False, kde=True,
+                         bins=int(180/5), color = 'darkblue',
+                         kde_kws={'linewidth': 2})
+                plt.figtext(.8, .8, 'N = '+str(N))
+                plt.xlabel(property)
+                plt.ylabel("Probability")
+                plt.title("PDF for "+property+' in ' + project+' (N = '+str(N)+')') # You can comment this line out if you don't need title
+                plt.show(fig)
+
+    def plot_numeric_property_by_categorical_property(self, df, numeric_property, categorical_property):
+        #plot a histogram of numeric variable in a dataframe       #BB: columns with numeric and strings show up as object instead of float
+        df[numeric_property] = pd.to_numeric(df[numeric_property],errors='coerce') #BB: this line changes object into float 
+        df = df[df[numeric_property].notnull()]
+        projects = list(set(df['categorical_property']))
+        for project in projects:
+            proj_df = df[df['categorical_property']==project]
+            data = list(proj_df[numeric_property])
+            N = len(data)
+            fig = sns.distplot(data, hist=False, kde=True,
+                     bins=int(180/5), color = 'darkblue',
+                     kde_kws={'linewidth': 2})
+            plt.figtext(.8, .8, 'N = '+str(N))
+            plt.xlabel(numeric_property)
+            plt.ylabel("Probability")
+            plt.title("PDF for "+numeric_property+' in ' + project+' (N = '+str(N)+')') # You can comment this line out if you don't need title
+            plt.show(fig)
+
     def node_record_counts(self, project_id):
         query_txt = """{node (first:-1, project_id:"%s"){type}}""" % (project_id)
         res = Gen3Submission.query(query_txt)
@@ -102,13 +199,10 @@ class Gen3Analysis(Gen3Submission):
     def property_counts_table(self, prop, df):
         df = df[df[prop].notnull()]
         counts = Counter(df[prop])
-        if len(counts) > 0:
-            df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
-            df1 = df1.rename(columns={'index':prop, 0:'count'}).sort_values(by='count', ascending=False)
-            with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-                display(df1)
-        else:
-            print("Length of DataFrame is zero.")
+        df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
+        df1 = df1.rename(columns={'index':prop, 0:'count'}).sort_values(by='count', ascending=False)
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+            display(df1)
 
     def property_counts_by_project(self, prop, df):
         df = df[df[prop].notnull()]
