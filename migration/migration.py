@@ -501,7 +501,7 @@ class Gen3Migration:
             #     ndf.at[ndf['cases.submitter_id']==case_id,prop] = p[case_id]
             if 'visit_id' in ndf and 'visit_id' in odf:
                 if len(list(set(ndf.visit_id))) == len(ndf) and len(list(set(odf.visit_id))) == len(odf):
-                    print("\t\t\tAll records in old/new nodes '{}'/'{}' have a unique visit_id, merging '{}' into new_node on 'visit_id'.".format(old_node,new_node,prop))
+                    print("\t\t\tMerging on visit_id: All '{}' records in old/new nodes '{}'/'{}' have unique visit_ids.".format(prop,old_node,new_node))
                     pdf = odf[['visit_id',prop]] # prop dataframe
                     df = pd.merge(left=ndf, right=pdf, how='left', left_on='visit_id', right_on='visit_id')
             else:
@@ -717,7 +717,7 @@ class Gen3Migration:
 
         return df
 
-    def drop_props(self,project_id,node,props,name='temp',warn=True):
+    def drop_props(self,project_id,node,props,name='temp',drop_nn=True):
         """
         Function drops the list of props from column headers of a node TSV.
         Args:
@@ -742,32 +742,37 @@ class Gen3Migration:
             print("\t\tNo '{0}' TSV found in project '{1}'. Nothing changed.".format(node,project_id))
             return
 
-        not_dropped,dropped = [],[]
+        dropped,not_found,not_dropped,errors = [],[],[],[]
 
         for prop in props:
             if prop in df:
                 nn = df.loc[df[prop].notnull()]
                 if not nn.empty:
-                    if warn is True:
-                        print("\n\nWarning!\n\t\tFound {0} non-null records for '{1}' in '{2}' TSV. Existing data not dropped!".format(len(nn),prop,node))
+                    print("\n\nWarning!\n\t\tFound {0} non-null records for '{1}' in '{2}' TSV!".format(len(nn),prop,node))
+                    if drop_nn is not True:
+                        print("\t\tExisting '{}' data not dropped from '{}' TSV!\n\n\t\tSet 'drop_nn' to True to override this warning.")
                         return df
-                    else:
-                        print("\n\nWarning!\n\t\tFound {0} non-null records for '{1}' in '{2}' TSV. Existing data not dropped!".format(len(nn),prop,node))
-            try:
-                df = df.drop(columns=[prop])
-                dropped.append(prop)
-            except Exception as e:
-                not_dropped.append(prop)
-                continue
+                try:
+                    df = df.drop(columns=[prop],errors='raise')
+                    dropped.append(prop)
+                except Exception as e:
+                    not_dropped.append(prop)
+                    errors.append(e)
+                    continue
+            else:
+                not_found.append(prop)
+
+        if len(not_found) > 0:
+            print("\t\tWarning: These props were not found in the '{}' TSV: {}".format(node,not_dropped))
 
         if len(not_dropped) > 0:
-            print("\t\tWarning! Some props were NOT dropped from '{}' TSV:\n\t\t{}".format(node,not_dropped))
+            print("\t\tWarning! Some props were NOT dropped from '{}' TSV: {} {}".format(node,not_dropped,list(set(errors))))
 
         if len(dropped) > 0:
-            print("\t\tprops dropped from '{}' and data written to TSV '{}':\n\t\t{}".format(node,filename,dropped))
+            print("\t\tprops dropped from '{}' and data written to '{}' TSV: {}".format(node,node,dropped))
             df = self.write_tsv(df,project_id,node)
         else:
-            print("\tNo props dropped. '{}' TSV unchanged.".format(node))
+            print("\t\tNo props dropped. '{}' TSV unchanged.".format(node))
 
         return df
 
@@ -787,8 +792,17 @@ class Gen3Migration:
 
         df = self.read_tsv(project_id,node,name)
 
+        if df is None:
+            print("\t\tNo '{}' TSV found in project '{}'. No TSVs changed.".format(node,project_id))
+            return
+
         if prop not in df:
             print("\t\t'{}' not found in '{}' TSV! Nothing changed.".format(prop,node))
+            return df
+
+        nn = df.loc[df[prop].notnull()]
+        if nn.empty:
+            print("\t\tAll null '{}' enum values in '{}' TSV! Nothing changed.".format(prop,node))
             return df
 
         changed,not_changed = [],[]
@@ -799,7 +813,7 @@ class Gen3Migration:
             old_total = len(df.loc[df[prop]==old_enum])
 
             if old_total == 0:
-                print("\t\tNo records found with prop '{}' equal to '{}'. Values in TSV include: '{}'".format(prop,old_enum,df[prop].value_counts()))
+                print("\t\tNo records found with prop '{}' equal to '{}'; '{}' TSV unchanged. Values include: '{}'".format(prop,old_enum,node,df[prop].value_counts()))
                 continue
 
             if new_enum == 'null':
@@ -824,8 +838,7 @@ class Gen3Migration:
             print("\t\tEnum values NOT changed in '{}' TSV: {}".format(node,not_changed))
 
         if len(changed) > 0:
-            df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
-            print("\t\tEnum values changed in '{}' node and TSV written to file '{}': {}".format(node,filename,changed))
+            self.write_tsv(df,project_id,node,name)
 
         else:
             print("\t\tNo enum values were changed in '{}' node. No TSVs changed.".format(node))
@@ -1123,7 +1136,7 @@ class Gen3Migration:
         print("\tSubmission Order: \n\t\t{}".format(suborder))
         return suborder
 
-    def submit_tsvs(self,project_id,suborder,check_done=False,rm_temp=False,drop_ids=False,name='temp'):
+    def submit_tsvs(self,project_id,suborder,check_done=False,remove_done=False,drop_ids=False,name='temp'):
         """
         Submits all the TSVs in 'suborder' dictionary obtained by running, e.g.:
         suborder = stag_mig.get_submission_order(stag_dd,project_id,name='temp',suffix='tsv')
@@ -1184,7 +1197,7 @@ class Gen3Migration:
                         print("\t{}".format(e))
                 else:
                     print("\tPreviously submitted file already exists in done directory:\n\t\t{}\n".format(done_file))
-                    if rm_temp is True:
+                    if remove_done is True:
                         rm_cmd = ['rm',filename]
                         try:
                             output = subprocess.check_output(rm_cmd, stderr=subprocess.STDOUT).decode('UTF-8')
