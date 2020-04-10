@@ -70,7 +70,7 @@ class Gen3Migration:
         if 'submitter_id' in df:
             sids = list(df['submitter_id'])
             if len(sids) != len(set(sids)):
-                print("\n\n\n\t\tWARNING!! This TSV contains duplicate submitter_ids:\n\n\t\t\t\t{}".format(filename))
+                print("\n\n\n\t\tWARNING!! This TSV contains duplicate submitter_ids: {}".format(filename))
 
         return df
 
@@ -422,24 +422,22 @@ class Gen3Migration:
             print("\t\t'{}' not found in '{}' TSV. Nothing changed.".format(prop,old_node))
             return odf
 
-        else:
-            onn = odf.loc[odf[prop].notnull()]
-            if len(onn) == 0:
-                print("\t\tAll null records for '{0}' in '{1}' TSV.".format(prop,old_node,new_node))
+
+        onn = odf.loc[odf[prop].notnull()]
 
         # drop old prop from old node TSV
         try:
-            print("\t\tDropped '{}' from '{}' TSV.".format(prop,old_node))
+            print("\t\tDropped '{}' from old_node: '{}' TSV.".format(prop,old_node))
             self.write_tsv(odf.drop(columns=[prop]),project_id,old_node)
         except Exception as e:
             print(type(e),e)
 
         # if the new node TSV already exists, read it in, if not, create a new df
-        try:
-            ndf = self.read_tsv(project_id,new_node)
+        ndf = self.read_tsv(project_id,new_node)
+        if ndf is not None:
             print("\t\t'{}' TSV already exists with {} records.".format(new_node,len(ndf)))
             new_file = False
-        except FileNotFoundError as e:
+        else:
             ndf = pd.DataFrame(columns=['submitter_id'])
             print("\t\tNo '{}' TSV found. Creating new TSV for data to be moved.".format(new_node))
             new_file = True
@@ -447,11 +445,11 @@ class Gen3Migration:
         # Check that prop isn't already in the new_node with non-null data. If it is and 'warn' isn't set to False, then stop.
         if prop in ndf:
             nn = ndf.loc[ndf[prop].notnull()]
-            if len(nn) > 0 and warn is True:
+            if not nn.empty and warn is True:
                 print("\n\n\t\tWARNING! prop '{}' already exists in '{}' with {} non-null records.".format(prop,new_node,len(nn)))
                 return ndf
             else:
-                ndf.drop(columns=[prop],inplace=True)
+                ndf.drop(columns=[prop],inplace=True,errors='raise')
                 print("\t\t'{}' already found in '{}' TSV with all null data; dropping column from TSV.".format(prop,new_node))
 
         if parent_node is not None:
@@ -463,10 +461,17 @@ class Gen3Migration:
         else:
             parent_link = "{}s.submitter_id".format(new_node)
 
-        pdf = odf[[parent_link,prop]] # prop dataframe
+        #p = dict(zip(odf[parent_link],odf[prop]))
+
+        submitter_ids = list(set(odf['submitter_id']))
+        parent_links = list(set(odf['cases.submitter_id']))
+        if len(submitter_ids) > len(parent_links):
+            print("\t\tMany-to-one relationship detected for old_node '{}' submitter_ids ({}) and parent_link '{}' ({})".format(old_node,len(submitter_ids),parent_link,len(parent_links)))
 
         if new_node is 'case':
-            pdf.rename(columns={parent_link:'submitter_id'},inplace=True)
+            pdf = odf[[parent_link,prop]] # prop dataframe
+            pdf.drop_duplicates(subset=None, keep='first', inplace=True)
+            pdf.rename(columns={parent_link:'submitter_id'},inplace=True,errors='raise')
             headers = list(pdf)
             case_data = pd.DataFrame(columns=headers)
             case_ids = list(pdf['submitter_id'].unique())
@@ -491,7 +496,19 @@ class Gen3Migration:
         elif parent_node == 'case':
             #cdf = self.read_tsv(project_id,'case')
             #cids = list(cdf['submitter_id'])
-            df = pd.merge(ndf,pdf,on='cases.submitter_id')
+            #df = pd.merge(ndf,pdf,on='cases.submitter_id')
+            # for case_id in list(p):
+            #     ndf.at[ndf['cases.submitter_id']==case_id,prop] = p[case_id]
+            if 'visit_id' in ndf and 'visit_id' in odf:
+                if len(list(set(ndf.visit_id))) == len(ndf) and len(list(set(odf.visit_id))) == len(odf):
+                    print("\t\t\tAll records in old/new nodes '{}'/'{}' have a unique visit_id, merging '{}' into new_node on 'visit_id'.".format(old_node,new_node,prop))
+                    pdf = odf[['visit_id',prop]] # prop dataframe
+                    df = pd.merge(left=ndf, right=pdf, how='left', left_on='visit_id', right_on='visit_id')
+            else:
+                print("\t\t\tMerging old/new nodes '{}'/'{}' on parent_link '{}'.".format(old_node,new_node,parent_link))
+                pdf = odf[[parent_link,prop]] # prop dataframe
+                pdf.drop_duplicates(subset=None, keep='first', inplace=True)
+                df = pd.merge(left=ndf, right=pdf, how='left', left_on=parent_link, right_on=parent_link)
 
         else: # neither new_node nor parent_node are 'case'
             df['type'] = new_node
@@ -691,7 +708,8 @@ class Gen3Migration:
         try:
             nn = df.loc[df[old_prop].notnull()]
             print("\t\tProp name changed from '{}' to '{}' in '{}' TSV with {} non-null records.".format(old_prop,new_prop,node,len(nn)))
-            df.rename(columns=props,inplace=True)
+            df[new_prop] = df[old_prop]
+            df.drop(columns=[old_prop],inplace=True,errors='raise')
             df = self.write_tsv(df,project_id,node,name=name)
 
         except Exception as e:
@@ -724,28 +742,34 @@ class Gen3Migration:
             print("\t\tNo '{0}' TSV found in project '{1}'. Nothing changed.".format(node,project_id))
             return
 
-        dropped = []
+        not_dropped,dropped = [],[]
+
         for prop in props:
             if prop in df:
                 nn = df.loc[df[prop].notnull()]
                 if not nn.empty:
-                    print("\n\nWarning!\n\t\tFound {0} non-null records for '{}' in '{}' TSV. Existing data not dropped!".format(len(nn),prop,node))
                     if warn is True:
+                        print("\n\nWarning!\n\t\tFound {0} non-null records for '{1}' in '{2}' TSV. Existing data not dropped!".format(len(nn),prop,node))
                         return df
+                    else:
+                        print("\n\nWarning!\n\t\tFound {0} non-null records for '{1}' in '{2}' TSV. Existing data not dropped!".format(len(nn),prop,node))
             try:
                 df = df.drop(columns=[prop])
                 dropped.append(prop)
             except Exception as e:
-                print("\t\tCouldn't drop prop '{}' from '{}' TSV: {}".format(prop,node,e))
+                not_dropped.append(prop)
                 continue
 
+        if len(not_dropped) > 0:
+            print("\t\tWarning! Some props were NOT dropped from '{}' TSV:\n\t\t{}".format(node,not_dropped))
+
         if len(dropped) > 0:
-            print("\t\tprops dropped from '{}' and data written to TSV '{}':\n\t\t\t{}".format(node,filename,dropped))
+            print("\t\tprops dropped from '{}' and data written to TSV '{}':\n\t\t{}".format(node,filename,dropped))
             df = self.write_tsv(df,project_id,node)
-            return df
         else:
-            print("\tNo props dropped from '{}'. No TSV written.".format(node))
-            return df
+            print("\tNo props dropped. '{}' TSV unchanged.".format(node))
+
+        return df
 
     def change_enum(self,project_id,node,prop,enums,name='temp'):
         """
@@ -759,39 +783,55 @@ class Gen3Migration:
             This changes all 'Percent' to 'Pct' in prop 'test_units' of node 'lab_test'
             change_enum(project_id=project_id,node='lab_test',prop='test_units',enums={'Percent':'Pct'})
         """
-        print("\t{}:\n\t\tChanging values for prop '{}'".format(node,prop))
-        filename = "{}_{}_{}.tsv".format(name,project_id,node)
-        try:
-            df = pd.read_csv(filename,sep='\t',header=0,dtype=str)
-            success = 0
-            for key in list(enums.keys()):
-                value = enums[key]
-                total = len(df.loc[df[prop]==key])
-                if total == 0:
-                    print("\tNo records found with prop '{}' equal to '{}'. Values in TSV include:\n\t\t{}".format(prop,key,set(list(df[prop]))))
-                    continue
-                if value == 'null':
-                    try:
-                        df.at[df[prop]==key,prop] = np.nan
-                        success += 1
-                        print("\tChanged {} enum values from '{}' to 'NaN' for prop '{}'".format(total,key,prop))
-                    except Exception as e:
-                        print("\tCouldn't change enum value from '{}' to 'NaN' for prop '{}'".format(key,prop))
-                else:
-                    try:
-                        df.at[df[prop]==key,prop] = value
-                        success += 1
-                        print("\tChanged {} enum values from '{}' to '{}' for prop '{}'".format(total,key,value,prop))
-                    except Exception as e:
-                        print("\tCouldn't change enum value '{}' to '{}' for prop '{}'".format(key,value,prop))
-            if success > 0:
-                df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
-                print("\tEnum values changed in '{}' node and TSV written to file: \n\t\t{}".format(node,filename))
-            else:
-                print("\tNo enum values were changed in '{}' node. No TSVs changed.".format(node))
+        print("\tChanging enum values for '{}' in '{}' TSV: {}".format(prop,node,enums))
+
+        df = self.read_tsv(project_id,node,name)
+
+        if prop not in df:
+            print("\t\t'{}' not found in '{}' TSV! Nothing changed.".format(prop,node))
             return df
-        except FileNotFoundError as e:
-            print("\tNo TSV found for node '{}'.".format(node))
+
+        changed,not_changed = [],[]
+
+        for old_enum in list(enums.keys()):
+
+            new_enum = enums[old_enum]
+            old_total = len(df.loc[df[prop]==old_enum])
+
+            if old_total == 0:
+                print("\t\tNo records found with prop '{}' equal to '{}'. Values in TSV include: '{}'".format(prop,old_enum,df[prop].value_counts()))
+                continue
+
+            if new_enum == 'null':
+                try:
+                    df.at[df[prop]==old_enum,prop] = np.nan
+                    changed.append(prop)
+                    print("\tChanged {} enum values from '{}' to 'NaN' for prop '{}'".format(old_total,old_enum,prop))
+                except Exception as e:
+                    not_changed.append(prop)
+                    print("\tCouldn't change enum value from '{}' to 'NaN' for prop '{}': {}".format(old_enum,prop,e))
+            else:
+                try:
+                    df.at[df[prop]==old_enum,prop] = new_enum
+                    changed.append(prop)
+                    new_total = len(df.loc[df[prop]==new_enum])
+                    print("\t\tChanged {} enum values from '{}' to '{}' for prop '{}'".format(new_total,old_enum,new_enum,prop))
+                except Exception as e:
+                    not_changed.append(prop)
+                    print("\tCouldn't change enum value '{}' to '{}' for prop '{}': {}".format(old_enum,new_enum,prop,e))
+
+        if len(not_changed) > 0:
+            print("\t\tEnum values NOT changed in '{}' TSV: {}".format(node,not_changed))
+
+        if len(changed) > 0:
+            df.to_csv(filename,sep='\t',index=False,encoding='utf-8')
+            print("\t\tEnum values changed in '{}' node and TSV written to file '{}': {}".format(node,filename,changed))
+
+        else:
+            print("\t\tNo enum values were changed in '{}' node. No TSVs changed.".format(node))
+
+        return df
+
 
     def drop_links(self,project_id,node,links,name='temp'):
         """
@@ -1006,7 +1046,7 @@ class Gen3Migration:
         print("\tTrailing '.0' decimals removed from: {}".format(filename))
         return df
 
-    def get_submission_order(self,dd,project_id,name='temp',suffix='tsv',missing_nodes=['project','study','case','visit']):
+    def get_submission_order(self,dd,project_id,name='temp',suffix='tsv',missing_nodes=['project','study','case','visit'],check_done=True):
         """
         Gets the submission order for a directory full of TSV data templates.
         Example:
@@ -1015,6 +1055,13 @@ class Gen3Migration:
 
         pattern = "{}*{}".format(name,suffix)
         filenames = glob.glob(pattern)
+
+        if check_done is True:
+            if os.path.exists('done'):
+                done_files = glob.glob("done/{}".format(pattern))
+                filenames += done_files
+            else:
+                print("\tNo files found in 'done' directory for '{}' project.".format(project_id))
 
         all_nodes = []
         suborder = {}
@@ -1105,6 +1152,7 @@ class Gen3Migration:
                     try:
                         print(str(datetime.datetime.now()))
                         logfile.write(str(datetime.datetime.now()))
+                        print("Submitting '{}' '{}' TSV".format(project_id,node))
                         data = self.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
                         #print("data: {}".format(data)) #for trouble-shooting
                         logfile.write(filename + '\n' + json.dumps(data)+'\n\n') #put in log file
@@ -1188,13 +1236,6 @@ class Gen3Migration:
 
         return output
 
-    def add_case_submitter_id():
-
-        temp_files = self.make_temp_files(prefix,suffix,name='temp',overwrite=False)
-        for temp_file in temp_files:
-            df = self.read_tsv(temp_file)
-
-        return
 
     def required_not_reported(self,project_id,node,prop,name='temp',replace_value='Not Reported'):
         """ Change null values for a required prop to "Not Reported".
@@ -1238,23 +1279,17 @@ class Gen3Migration:
             xl = pd.ExcelFile(filename)  # load excel file
             sheet = xl.sheet_names[0]  # sheetname
             df = xl.parse(sheet)  # save sheet as dataframe
-            converters = {
-                col: str for col in list(df)
-            }  # make sure int isn't converted to float
+            converters = {col: str for col in list(df)}  # make sure int isn't converted to float
             df = pd.read_excel(filename, converters=converters).fillna("")  # remove nan
         elif filename.lower().endswith((".tsv", ".txt")):
             df = pd.read_csv(filename, header=0, sep="\t", dtype=str).fillna("")
         else:
             raise Gen3UserError("Please upload a file in CSV, TSV, or XLSX format.")
-        df.rename(
-            columns={c: c.lstrip("*") for c in df.columns}, inplace=True
-        )  # remove any leading asterisks in the DataFrame column names
+        df.rename(columns={c: c.lstrip("*") for c in df.columns}, inplace=True)  # remove any leading asterisks in the DataFrame column names
 
         # Check uniqueness of submitter_ids:
         if len(list(df.submitter_id)) != len(list(df.submitter_id.unique())):
-            raise Gen3Error(
-                "Warning: file contains duplicate submitter_ids. \nNote: submitter_ids must be unique within a node!"
-            )
+            raise Gen3Error("Warning: file contains duplicate submitter_ids. \nNote: submitter_ids must be unique within a node!")
 
         # Chunk the file
         print("\nSubmitting {} with {} records.".format(filename, str(len(df))))
@@ -1283,33 +1318,16 @@ class Gen3Migration:
             valid_but_failed = []
             invalid = []
             count += 1
-            print(
-                "Chunk {} (chunk size: {}, submitted: {} of {})".format(
-                    str(count),
-                    str(chunk_size),
-                    str(len(results["succeeded"]) + len(results["invalid"])),
-                    str(len(df)),
-                )
-            )
+            print("Chunk {} (chunk size: {}, submitted: {} of {})".format(str(count),str(chunk_size),str(len(results["succeeded"]) + len(results["invalid"])),str(len(df))))
 
             try:
-                response = requests.put(
-                    api_url,
-                    auth=self._auth_provider,
-                    data=chunk.to_csv(sep="\t", index=False),
-                    headers=headers,
-                ).text
+                response = requests.put(api_url,auth=self._auth_provider,data=chunk.to_csv(sep="\t", index=False),headers=headers,).text
             except requests.exceptions.ConnectionError as e:
                 results["details"].append(e.message)
                 continue
 
-            # Handle the API response
-            if (
-                "Request Timeout" in response
-                or "413 Request Entity Too Large" in response
-                or "Connection aborted." in response
-                or "service failure - try again later" in response
-            ):  # time-out, response is not valid JSON at the moment
+
+            if ("Request Timeout" in response or "413 Request Entity Too Large" in response or "Connection aborted." in response or "service failure - try again later" in response):  # time-out, response is not valid JSON at the moment
 
                 print("\t Reducing Chunk Size: {}".format(response))
                 results["responses"].append("Reducing Chunk Size: {}".format(response))
@@ -1319,61 +1337,40 @@ class Gen3Migration:
                 try:
                     json_res = json.loads(response)
                 except ValueError as e:
-                    print(response)
-                    print(str(e))
-                    raise Gen3Error("Unable to parse API response as JSON!")
+                    raise Gen3Error("Unable to parse API response as JSON!\n\t{}: {}".format(response,e))
 
                 if "message" in json_res and "code" not in json_res:
-                    print(
-                        "\t No code in the API response for Chunk {}: {}".format(
-                            str(count), json_res.get("message")
-                        )
-                    )
-                    print("\t {}".format(str(json_res.get("transactional_errors"))))
+                    print("\t No code in the API response for Chunk {}: {}\n\t {}".format(str(count), json_res.get("message"),json_res.get("transactional_errors")))
                     results["responses"].append(
-                        "Error Chunk {}: {}".format(str(count), json_res.get("message"))
-                    )
+                        "Error Chunk {}: {}".format(str(count), json_res.get("message")))
                     results["other"].append(json_res.get("transactional_errors"))
 
                 elif "code" not in json_res:
                     print("\t Unhandled API-response: {}".format(response))
-                    results["responses"].append(
-                        "Unhandled API response: {}".format(response)
-                    )
+                    results["responses"].append("Unhandled API response: {}".format(response))
 
-                elif json_res["code"] == 200:  # success
-
+                elif json_res["code"] == 200:
+                    # success
                     entities = json_res.get("entities", [])
                     print("\t Succeeded: {} entities.".format(str(len(entities))))
-                    results["responses"].append(
-                        "Chunk {} Succeeded: {} entities.".format(
-                            str(count), str(len(entities))
-                        )
-                    )
+                    results["responses"].append("Chunk {} Succeeded: {} entities.".format(str(count), str(len(entities))))
 
                     for entity in entities:
                         sid = entity["unique_keys"][0]["submitter_id"]
                         results["succeeded"].append(sid)
 
-                elif (
-                    json_res["code"] == 400
-                    or json_res["code"] == 403
-                    or json_res["code"] == 404
-                ):  # failure
-
+                elif (json_res["code"] == 400 or json_res["code"] == 403 or json_res["code"] == 404):
+                    # failure
                     entities = json_res.get("entities", [])
                     print("\tChunk Failed: {} entities.".format(str(len(entities))))
-                    results["responses"].append(
-                        "Chunk {} Failed: {} entities.".format(
-                            str(count), str(len(entities))
-                        )
-                    )
+                    results["responses"].append("Chunk {} Failed: {} entities.".format(str(count), str(len(entities))))
 
                     for entity in entities:
                         sid = entity["unique_keys"][0]["submitter_id"]
                         if entity["valid"]:  # valid but failed
                             valid_but_failed.append(sid)
                         else:  # invalid and failed
+
                             message = str(entity["errors"])
                             print(message)
                             results["invalid"][sid] = message
@@ -1381,30 +1378,15 @@ class Gen3Migration:
                     print("\tInvalid records in this chunk: {}".format(len(invalid)))
 
                 elif json_res["code"] == 500:  # internal server error
-
                     print("\t Internal Server Error: {}".format(response))
-                    results["responses"].append(
-                        "Internal Server Error: {}".format(response)
-                    )
+                    results["responses"].append("Internal Server Error: {}".format(response))
 
-            if (
-                len(valid_but_failed) > 0 and len(invalid) > 0
-            ):  # if valid entities failed bc grouped with invalid, retry submission
-                chunk = chunk.loc[
-                    df["submitter_id"].isin(valid_but_failed)
-                ]  # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
-                print(
-                    "Retrying submission of valid entities from failed chunk: {} valid entities.".format(
-                        str(len(chunk))
-                    )
-                )
+            if (len(valid_but_failed) > 0 and len(invalid) > 0):  # if valid entities failed bc grouped with invalid, submission fails, move file to done
+                chunk = chunk.loc[df["submitter_id"].isin(valid_but_failed)]  # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
+                print("Retrying submission of valid entities from failed chunk: {} valid entities.".format(str(len(chunk))))
 
-            elif (
-                len(valid_but_failed) > 0 and len(invalid) == 0
-            ):  # if all entities are valid but submission still failed, probably due to duplicate submitter_ids. Can remove this section once the API response is fixed: https://ctds-planx.atlassian.net/browse/PXP-3065
-                raise Gen3Error(
-                    "Please check your data for correct file encoding, special characters, or duplicate submitter_ids or ids."
-                )
+            elif (len(valid_but_failed) > 0 and len(invalid) == 0):  # if all entities are valid but submission still failed, probably due to duplicate submitter_ids. Can remove this section once the API response is fixed: https://ctds-planx.atlassian.net/browse/PXP-3065
+                raise Gen3Error("Please check your data for correct file encoding, special characters, or duplicate submitter_ids or ids.")
 
             elif timeout is False:  # get new chunk if didn't timeout
                 start += chunk_size
@@ -1416,16 +1398,10 @@ class Gen3Migration:
                     chunk_size = int(chunk_size / 2)
                     end = start + chunk_size
                     chunk = df[start:end]
-                    print(
-                        "Retrying Chunk with reduced chunk_size: {}".format(
-                            str(chunk_size)
-                        )
-                    )
+                    print("Retrying Chunk with reduced chunk_size: {}".format(str(chunk_size)))
                     timeout = False
                 else:
-                    raise Gen3SubmissionError(
-                        "Submission is timing out. Please contact the Helpdesk."
-                    )
+                    raise Gen3SubmissionError("Submission is timing out. Please contact the Helpdesk.")
 
         print("Finished data submission.")
         print("Successful records: {}".format(str(len(set(results["succeeded"])))))
@@ -1433,24 +1409,6 @@ class Gen3Migration:
 
         return results
 
-    def change_visit_links(self,project_id,node,name='temp'):
-        """ for DM v2.2 change: change visits.submitter_id to visit_id and add links to case
-        """
-        vdf = self.read_tsv(project_id=project_id,node='visit')
-        vdf.rename(columns={'submitter_id':'visit_id'},inplace=True)
-        v = vdf[['visit_id','cases.submitter_id']]
-
-        ndf = self.read_tsv(project_id=project_id,node=node)
-        props = {"visits.submitter_id":"visit_id"}
-        try:
-            ndf.rename(columns=props,inplace=True)
-            n = pd.merge(ndf,v,on='visit_id')
-            n.drop(columns=['visits.id'],inplace=True)
-            self.write_tsv(df=n,project_id=project_id,node=node,name='temp')
-            return n
-        except Exception as e:
-            print(e)
-        ### Add "cases.submitter_id" to TSVs with new "visit_ids"
 
     def change_all_visits(self,project_id,name='temp'):
         """ Change links to visit for every node in a project_tsvs directory.
@@ -1467,6 +1425,34 @@ class Gen3Migration:
         for node in nodes:
             self.change_visit_links(project_id=project_id,node=node,name='temp')
 
+
+    def change_visit_links(self,project_id,node,name='temp'):
+        """ for DM v2.2 change: change visits.submitter_id to visit_id and add links to case
+        """
+
+        # read the visit TSV
+        vdf = self.read_tsv(project_id=project_id,node='visit')
+
+        if vdf is not None:
+            vdf.rename(columns={'submitter_id':'visit_id'},inplace=True)
+            v = vdf[['visit_id','cases.submitter_id']]
+
+            ndf = self.read_tsv(project_id=project_id,node=node)
+            props = {"visits.submitter_id":"visit_id"}
+            try:
+                ndf.rename(columns=props,inplace=True)
+                n = pd.merge(ndf,v,on='visit_id')
+                n.drop(columns=['visits.id'],inplace=True)
+                self.write_tsv(df=n,project_id=project_id,node=node,name='temp')
+                return n
+            except Exception as e:
+                print(e)
+            ### Add "cases.submitter_id" to TSVs with new "visit_ids"
+        else:
+            ndf = self.read_tsv(project_id=project_id,node=node)
+            n = ndf.drop(columns=['visits.id','visits.submitter_id'])
+            self.write_tsv(df=n,project_id=project_id,node=node,name='temp')
+            print("\t\tNo visit TSV found in project '{}'; dropping links to visit.".format(project_id))
 
     def delete_node(self,project_id,node,name='temp'):
         """ Delete a node TSV from a project
@@ -1500,6 +1486,10 @@ class Gen3Migration:
             nodes = all_nodes
         elif isinstance(nodes,str):
             nodes = [nodes]
+
+        if 'case' not in nodes:
+            print("\t\tNo 'case' TSV found in project '{}': {}".format(project_id,nodes))
+            return
 
         print("\tAdding case_ids to nodes in project '{}':\n\t\t{}".format(project_id,nodes))
         for node in nodes:
@@ -1536,15 +1526,17 @@ class Gen3Migration:
 
             elif 'project' in links:
                 cdf = self.read_tsv(project_id,'case')
-                cids = list(set(cdf.submitter_id))
-                case_ids = ','.join(cids)
-                df['case_ids'] = case_ids
-                try:
-                    print("\t\tAdded 'case_ids' to '{}' TSV in project '{}'".format(node,project_id))
-                    self.write_tsv(df,project_id,node)
-                except Exception as e:
-                    print("\t\tCouldn't add case_ids to '{}'".format(node))
-
+                if cdf is not None:
+                    cids = list(set(cdf.submitter_id))
+                    case_ids = ','.join(cids)
+                    df['case_ids'] = case_ids
+                    try:
+                        print("\t\tAdded 'case_ids' to '{}' TSV in project '{}'".format(node,project_id))
+                        self.write_tsv(df,project_id,node)
+                    except Exception as e:
+                        print("\t\tCouldn't add case_ids to '{}'".format(node))
+                else:
+                    print("\t\tNo 'case' TSV found in project '{}'".format(project_id))
             else:
                 while 'case' not in links:
                     #print("\t{}:".format(node))
@@ -1592,13 +1584,19 @@ class Gen3Migration:
 
         links = {}
         for link_def in dd[node]['links']:
+            #link_def = dd[node]['links'][0]
+            if 'target_type' in link_def:
+                link_node = link_def['target_type']
+                link_backref = link_def['name']
+                if link_node in nodes and link_backref in df_links or link_node == 'project':
+                    links[link_node] = link_backref
 
-            link_node = link_def['target_type']
-            link_backref = link_def['name']
+            elif 'subgroup' in link_def:
+                link_nodes = [link['target_type'] for link in link_def['subgroup'] if link['target_type'] in nodes]
+                link_backrefs = [link['name'] for link in link_def['subgroup']]
+                links = dict(zip(link_nodes,link_backrefs))
 
-            if link_node in nodes and link_backref in df_links or link_node == 'project':
-                links[link_node] = link_backref
             else:
-                print("Can't find link '{}.submitter_id' or '{}.submitter_id#1' in '{}' TSV: {}".format(link_backref,link_backref,node,list(df)))
+                print("Can't find link '{}.submitter_id' or '{}.submitter_id#1' in '{}' TSV: {}".format(link_def))
 
         return links
