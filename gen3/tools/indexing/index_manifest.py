@@ -155,7 +155,7 @@ def _get_and_verify_fileinfos_from_tsv_manifest(
                     fieldnames[fieldnames.index(key)] = "acl"
                     standardized_key = "acl"
                     if not _verify_format(row[key], ACL_FORMAT):
-                        row[key] = "[{}]".format(row[key]) if row[key] != "" else None
+                        row[key] = "[{}]".format(row[key])
                 elif key.lower() in URLS:
                     fieldnames[fieldnames.index(key)] = "url"
                     standardized_key = "url"
@@ -168,10 +168,10 @@ def _get_and_verify_fileinfos_from_tsv_manifest(
                         row[key] = "[{}]".format(row[key])
 
                 if standardized_key:
-                    standardized_dict[standardized_key] = row[key].strip()
+                    standardized_dict[standardized_key] = row[key]
 
-                elif key in SIZE:
-                    standardized_dict["size"] = int(row["size"].strip())
+                elif key.lower() in SIZE:
+                    standardized_dict["size"] = int(row[key]) if row[key] else None
 
             files.append(standardized_dict)
 
