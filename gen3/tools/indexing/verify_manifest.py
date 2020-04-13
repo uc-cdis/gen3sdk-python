@@ -40,15 +40,10 @@ Attributes:
         processes/threads
 """
 import asyncio
-import click
-import time
 import csv
-import glob
 import logging
 import os
-import sys
-import shutil
-import math
+import time
 
 from gen3.index import Gen3Index
 
@@ -410,9 +405,3 @@ async def _get_record_from_indexd(guid, commons_url, lock):
             ssl = False
 
         return await index.async_get_record(guid, _ssl=ssl)
-
-
-if __name__ == "__main__":
-    logging.basicConfig(filename="output.log", level=logging.DEBUG)
-    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
-    verify_manifest_against_indexd()

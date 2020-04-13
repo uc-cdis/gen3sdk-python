@@ -148,9 +148,7 @@ async def _write_all_index_records_to_file(
         os.unlink(output_filename)
 
     with open(output_filename, "wb") as outfile:
-        outfile.write(
-            "guid, urls, authz, acl, md5, file_size, file_name\n".encode("utf8")
-        )
+        outfile.write("guid,urls,authz,acl,md5,file_size,file_name\n".encode("utf8"))
         for filename in glob.glob(TMP_FOLDER + "*"):
             if output_filename == filename:
                 # don't want to copy the output into the output
