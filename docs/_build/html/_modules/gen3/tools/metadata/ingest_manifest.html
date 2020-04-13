@@ -328,9 +328,9 @@
     <span class="n">queue</span><span class="p">,</span> <span class="n">lock</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">output_queue</span><span class="p">,</span> <span class="n">auth</span><span class="p">,</span> <span class="n">get_guid_from_file</span><span class="p">,</span> <span class="n">metadata_source</span>
 <span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Keep getting items from the queue and checking if indexd contains a record with</span>
-<span class="sd">    that guid. Then create/update metadta for that GUID in the metadata service.</span>
-<span class="sd">    Also log to output queue. Return when nothing is left in the queue.</span>
+<span class="sd">    Keep getting items from the queue and verifying that indexd contains the expected</span>
+<span class="sd">    fields from that row. If there are any issues, log errors into an error queue. Return</span>
+<span class="sd">    when nothing is left in the queue.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        queue (asyncio.Queue): queue to read metadata from</span>
