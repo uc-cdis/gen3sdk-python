@@ -1,7 +1,7 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
     <title>gen3.tools.metadata.ingest_manifest &#8212; Gen3 SDK  documentation</title>
@@ -109,6 +109,7 @@
 <span class="sd">        row (dict): column_name:row_value</span>
 <span class="sd">        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http</span>
 <span class="sd">            connections</span>
+<span class="sd">        output_queue (asyncio.Queue): queue for logging output</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        str: guid or None</span>
@@ -336,7 +337,7 @@
 <span class="sd">        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http</span>
 <span class="sd">            connections</span>
 <span class="sd">        commons_url (str): root domain for commons where mds lives</span>
-<span class="sd">        output_queue (asyncio.Queue): queue for output</span>
+<span class="sd">        output_queue (asyncio.Queue): queue for logging output</span>
 <span class="sd">        auth (Gen3Auth): Gen3 auth or tuple with basic auth name and password</span>
 <span class="sd">        get_guid_from_file (bool): whether or not to get the guid for metadata from file</span>
 <span class="sd">            NOTE: When this is True, will use the function in</span>
@@ -345,8 +346,6 @@
 <span class="sd">        metadata_source (str): the name of the source of metadata (used to namespace</span>
 <span class="sd">            in the metadata service) ex: dbgap</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_event_loop</span><span class="p">()</span>
-
     <span class="k">while</span> <span class="ow">not</span> <span class="n">queue</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
         <span class="n">row</span> <span class="o">=</span> <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
 
@@ -413,7 +412,8 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;Did not add a metadata object for row because an invalid &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;GUID was parsed: </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">.</span><span class="se">\n</span><span class="s2">Row: </span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;GUID was parsed or no record with this GUID was found in &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;indexd: </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">.</span><span class="se">\n</span><span class="s2">Row: </span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="p">)</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
             <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
