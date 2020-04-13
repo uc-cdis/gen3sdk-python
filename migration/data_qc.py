@@ -519,6 +519,12 @@ def summarize_tsvs(commons,prefix='',report=True,outlier_threshold=3,omit_props=
                                 # make a list of the data values as floats (converted from strings)
                                 d = list(df[df[prop].notnull()][prop].astype(float))
 
+                                # calculate summary stats using the float list d
+                                mn = statistics.mean(d)
+                                md = statistics.median(d)
+                                minimum = min(d)
+                                maximum = max(d)
+
                                 if len(d) == 1: # if only one value, no stdev and no outliers
                                     std = "NA"
                                     outliers = []
@@ -528,12 +534,6 @@ def summarize_tsvs(commons,prefix='',report=True,outlier_threshold=3,omit_props=
                                     cutoff = std * outlier_threshold # three times the standard deviation is default
                                     lower, upper = mn - cutoff, mn + cutoff # cut-offs for outliers is 3 times the stdev below and above the mean
                                     outliers = sorted(list(set([x for x in d if x < lower or x > upper])))
-
-                                # calculate summary stats using the float list d
-                                mn = statistics.mean(d)
-                                md = statistics.median(d)
-                                minimum = min(d)
-                                maximum = max(d)
 
                                 # if property type is 'integer', change min, max, median to int type
                                 if ptype == 'integer':

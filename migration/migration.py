@@ -584,7 +584,7 @@ class Gen3Migration:
         return non_null
 
 
-    def check_props_data(self,tsv_dir,props,project_ids='all',name='temp',compare=False):
+    def check_props_data(self,tsv_dir,props,compare=False,project_ids='all',name='temp',outname='prod'):
         """ if compare is True, will print a report of comparisons
         """
         try:
@@ -657,7 +657,8 @@ class Gen3Migration:
                     c['conflict'].append(conflict)
 
             cdf = pd.DataFrame(c)
-            cdf.to_csv('compare_props.tsv',sep='\t',index=False)
+            compare_name = '{}_check_props_data.tsv'.format(outname)
+            cdf.to_csv(compare_name,sep='\t',index=False)
 
             if not cdf.loc[cdf['conflict']==True].empty:
                 display(cdf.loc[cdf['conflict']==True])
@@ -1161,14 +1162,14 @@ class Gen3Migration:
                 failed_file = Path("failed/{}".format(filename))
                 if not done_file.is_file() or check_done is False:
                     if drop_ids is True:
-                        data = self.drop_ids(project_id=project_id,node=node)
+                        data = self.drop_ids(project_id=project_id,node=node,name=name)
                     try:
                         print(str(datetime.datetime.now()))
                         logfile.write(str(datetime.datetime.now()))
                         print("Submitting '{}' '{}' TSV".format(project_id,node))
                         data = self.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
                         #print("data: {}".format(data)) #for trouble-shooting
-                        logfile.write(filename + '\n' + json.dumps(data)+'\n\n') #put in log file
+                        logfile.write("{}\n{}\n\n".format(filename,json.dumps(data))) #put in log file
 
                         if len(data['invalid']) == 0 and len(data['succeeded']) > 0:
                             mv_done_cmd = ['mv',filename,'done']
@@ -1178,6 +1179,7 @@ class Gen3Migration:
                             except Exception as e:
                                 output = e.output.decode('UTF-8')
                                 print("ERROR:" + output)
+
                         else:
                             if len(data['invalid'])>0:
                                 invalid_records = list(data['invalid'].keys())[0:10]

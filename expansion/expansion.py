@@ -599,7 +599,8 @@ class Gen3Expansion:
                             retry.append(entity['id'])
                         else:
                             errors.append(entity['errors'][0]['message'])
-                            failure = list(set(failure.append(entity['id'])))
+                            failure.append(entity['id'])
+                            failure = list(set(failure))
                     for error in list(set(errors)):
                         print("Error message for {} records: {}".format(errors.count(error),error))
 
