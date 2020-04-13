@@ -56,7 +56,9 @@ def _get_guid_for_row(commons_url, row, lock):
     return row.get(COLUMN_TO_USE_AS_GUID)
 
 
-async def _query_for_associated_indexd_record_guid(commons_url, row, lock):
+async def _query_for_associated_indexd_record_guid(
+    commons_url, row, lock, output_queue
+):
     """
     Given a row from the manifest, return the guid for the related indexd record.
 
@@ -74,6 +76,7 @@ async def _query_for_associated_indexd_record_guid(commons_url, row, lock):
         row (dict): column_name:row_value
         lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
             connections
+        output_queue (asyncio.Queue): queue for logging output
 
     Returns:
         str: guid or None
@@ -94,6 +97,7 @@ async def _query_for_associated_indexd_record_guid(commons_url, row, lock):
             f"\nYou provided mapping: {mapping}"
         )
         logging.error(msg)
+        await output_queue.put(msg)
         raise Exception(msg)
 
     # special query endpoint for matching url patterns, other fields
@@ -119,6 +123,7 @@ async def _query_for_associated_indexd_record_guid(commons_url, row, lock):
             f"{records}"
         )
         logging.warning(msg)
+        await output_queue.put(msg)
         records = []
 
     guid = None
@@ -163,9 +168,6 @@ async def async_ingest_metadata_manifest(
                   manifest_row_parsers["guid_for_row"] to determine the GUID
                   (usually just a specific column in the file row like "guid")
     """
-    start_time = time.perf_counter()
-    logging.info(f"start time: {start_time}")
-
     # if delimter not specified, try to get based on file ext
     if not manifest_file_delimiter:
         file_ext = os.path.splitext(manifest_file)
@@ -186,10 +188,6 @@ async def async_ingest_metadata_manifest(
         get_guid_from_file,
     )
 
-    end_time = time.perf_counter()
-    logging.info(f"end time: {end_time}")
-    logging.info(f"run time: {end_time-start_time}")
-
 
 async def _ingest_all_metadata_in_file(
     commons_url,
@@ -202,14 +200,13 @@ async def _ingest_all_metadata_in_file(
     get_guid_from_file,
 ):
     """
-    Getting metadata and writing to a file. This function
+    Ingest metadata from file into metadata service. This function
     creates semaphores to limit the number of concurrent http connections that
     get opened to send requests to mds.
 
     It then uses asyncio to start a number of coroutines. Steps:
         1) reads given metadata file (writes resulting rows to a queue)
-        2) puts final "DONE"s in the queue to stop coroutine that will read from queue
-        3) posts/puts to mds to write metadata for rows
+        2) posts/puts to mds to write metadata for rows
 
     Args:
         commons_url (str): root domain for commons where mds lives
@@ -231,6 +228,11 @@ async def _ingest_all_metadata_in_file(
     queue = asyncio.Queue()
     output_queue = asyncio.Queue()
 
+    start_time = time.perf_counter()
+    msg = f"start time: {start_time}"
+    logging.info(msg)
+    await output_queue.put(msg)
+
     with open(manifest_file, encoding="utf-8-sig") as manifest:
         reader = csv.DictReader(manifest, delimiter=manifest_file_delimiter)
         for row in reader:
@@ -245,9 +247,6 @@ async def _ingest_all_metadata_in_file(
                     value = value.strip().strip("'").strip('"').replace("''", "'")
                 new_row[key.strip()] = value
             await queue.put(new_row)
-
-    for _ in range(0, int(max_concurrent_requests + (max_concurrent_requests / 4))):
-        await queue.put("DONE")
 
     await asyncio.gather(
         *(
@@ -266,6 +265,15 @@ async def _ingest_all_metadata_in_file(
         )
     )
 
+    end_time = time.perf_counter()
+    msg = f"end time: {end_time}"
+    logging.info(msg)
+    await output_queue.put(msg)
+
+    msg = f"run time: {end_time-start_time}"
+    logging.info(msg)
+    await output_queue.put(msg)
+
     output_filename = os.path.abspath(output_filename)
     logging.info(
         f"done processing, writing output queue to single file {output_filename}"
@@ -278,7 +286,7 @@ async def _ingest_all_metadata_in_file(
     with open(output_filename, "w") as outfile:
         while not output_queue.empty():
             line = await output_queue.get()
-            outfile.write(line)
+            outfile.write(line + "\n")
 
     logging.info(f"done writing output to file {output_filename}")
 
@@ -296,7 +304,7 @@ async def _parse_from_queue(
         lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
             connections
         commons_url (str): root domain for commons where mds lives
-        output_queue (asyncio.Queue): queue for output
+        output_queue (asyncio.Queue): queue for logging output
         auth (Gen3Auth): Gen3 auth or tuple with basic auth name and password
         get_guid_from_file (bool): whether or not to get the guid for metadata from file
             NOTE: When this is True, will use the function in
@@ -305,11 +313,9 @@ async def _parse_from_queue(
         metadata_source (str): the name of the source of metadata (used to namespace
             in the metadata service) ex: dbgap
     """
-    loop = asyncio.get_event_loop()
+    while not queue.empty():
+        row = await queue.get()
 
-    row = await queue.get()
-
-    while row != "DONE":
         if get_guid_from_file:
             guid = manifest_row_parsers["guid_for_row"](commons_url, row, lock)
             is_indexed_file_object = await _is_indexed_file_object(
@@ -317,7 +323,7 @@ async def _parse_from_queue(
             )
         else:
             guid = await manifest_row_parsers["indexed_file_object_guid"](
-                commons_url, row, lock
+                commons_url, row, lock, output_queue
             )
             is_indexed_file_object = True
 
@@ -331,15 +337,18 @@ async def _parse_from_queue(
                     new_value = json.loads(value)
                 except json.decoder.JSONDecodeError as exc:
                     if "}" in value or "{" in value or "[" in value or "]" in value:
-                        logging.warning(
+                        msg = (
                             f"Unable to json.loads a string that looks like json: {value}. "
                             f"adding as a string instead of nested json. Exception: {exc}"
                         )
+                        logging.warning(msg)
+                        await output_queue.put(msg)
                     new_value = value
 
                 metadata_from_file[key] = new_value
 
-            del metadata_from_file[COLUMN_TO_USE_AS_GUID]
+            if COLUMN_TO_USE_AS_GUID in metadata_from_file.keys():
+                del metadata_from_file[COLUMN_TO_USE_AS_GUID]
 
             logging.debug(f"metadata from file: {metadata_from_file}")
 
@@ -356,20 +365,25 @@ async def _parse_from_queue(
 
             try:
                 await _create_metadata(guid, metadata, auth, commons_url, lock)
-                logging.info(f"Successfully created {guid}")
+                msg = f"Successfully created {guid}"
+                logging.info(msg)
+                await output_queue.put(msg)
             except Exception as exc:
-                logging.info(
+                logging.debug(
                     f"Got conflict for {guid}. Let's update instead of create..."
                 )
                 await _update_metadata(guid, metadata, auth, commons_url, lock)
-                logging.info(f"Successfully updated {guid}")
+                msg = f"Successfully updated {guid}"
+                logging.info(msg)
+                await output_queue.put(msg)
         else:
-            logging.warning(
+            msg = (
                 f"Did not add a metadata object for row because an invalid "
-                f"GUID was parsed: {guid}.\nRow: {row}"
+                f"GUID was parsed or no record with this GUID was found in "
+                f"indexd: {guid}.\nRow: {row}"
             )
-
-        row = await queue.get()
+            logging.warning(msg)
+            await output_queue.put(msg)
 
 
 async def _create_metadata(guid, metadata, auth, commons_url, lock):
@@ -435,11 +449,13 @@ async def _is_indexed_file_object(guid, commons_url, lock):
         if "https" not in commons_url:
             ssl = False
 
-        try
+        try:
             record = await index.async_get_record(guid, _ssl=ssl)
-            return bool(record)
-        except Exception:
+        except Exception as exc:
+            # if error, assume it does not exist
             return False
+
+        return bool(record)
 
 
 async def async_query_urls_from_indexd(pattern, commons_url, lock):
