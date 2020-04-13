@@ -322,7 +322,7 @@ class Gen3Metadata:
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    async def async_update(self, guid, metadata, overwrite=False, _ssl=None, **kwargs):
+    async def async_update(self, guid, metadata, _ssl=None, **kwargs):
         """
         Asynchronous function to update metadata
 
@@ -330,12 +330,11 @@ class Gen3Metadata:
             guid (str): guid to use
             metadata (Dict): dictionary representing what will end up a JSON blob
                 attached to the provided GUID as metadata
-            overwrite (bool, optional): whether or not to overwrite existing data
             _ssl (None, optional): whether or not to use ssl
         """
         async with aiohttp.ClientSession() as session:
             url = self.admin_endpoint + f"/metadata/{guid}"
-            url_with_params = append_query_params(url, overwrite=overwrite, **kwargs)
+            url_with_params = append_query_params(url, **kwargs)
 
             # aiohttp only allows basic auth with their built in auth, so we
             # need to manually add JWT auth header

@@ -533,7 +533,7 @@ def main():
     metadata_source = "dbgap"
 
     # (optional) override default indexd querying (NOTE: must be async)
-    async def _custom_query_for_associated_indexd_record_guid(commons_url, row, lock):
+    async def _custom_query_for_associated_indexd_record_guid(commons_url, row, lock, output_queue):
         """
         Given a row from the manifest, return the guid for the related indexd record.
 
@@ -545,6 +545,7 @@ def main():
             row (dict): column_name:row_value
             lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
                 connections
+            output_queue (asyncio.Queue): queue for logging output
 
         Returns:
             str: guid or None

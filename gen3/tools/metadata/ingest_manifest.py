@@ -76,6 +76,7 @@ async def _query_for_associated_indexd_record_guid(
         row (dict): column_name:row_value
         lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
             connections
+        output_queue (asyncio.Queue): queue for logging output
 
     Returns:
         str: guid or None
@@ -303,7 +304,7 @@ async def _parse_from_queue(
         lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
             connections
         commons_url (str): root domain for commons where mds lives
-        output_queue (asyncio.Queue): queue for output
+        output_queue (asyncio.Queue): queue for logging output
         auth (Gen3Auth): Gen3 auth or tuple with basic auth name and password
         get_guid_from_file (bool): whether or not to get the guid for metadata from file
             NOTE: When this is True, will use the function in
@@ -312,8 +313,6 @@ async def _parse_from_queue(
         metadata_source (str): the name of the source of metadata (used to namespace
             in the metadata service) ex: dbgap
     """
-    loop = asyncio.get_event_loop()
-
     while not queue.empty():
         row = await queue.get()
 
@@ -380,7 +379,8 @@ async def _parse_from_queue(
         else:
             msg = (
                 f"Did not add a metadata object for row because an invalid "
-                f"GUID was parsed: {guid}.\nRow: {row}"
+                f"GUID was parsed or no record with this GUID was found in "
+                f"indexd: {guid}.\nRow: {row}"
             )
             logging.warning(msg)
             await output_queue.put(msg)

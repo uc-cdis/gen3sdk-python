@@ -77,10 +77,14 @@ def log_backoff_giveup(details):
 
 
 def exception_do_not_retry(error):
-    if (
-        str(getattr(error, "code", None)) == "409"
-        or str(getattr(error, "status_code", None)) == "409"
-    ):
+    def _is_status(code):
+        return (
+            str(getattr(error, "code", None)) == code
+            or str(getattr(error, "status", None)) == code
+            or str(getattr(error, "status_code", None)) == code
+        )
+
+    if _is_status("409") or _is_status("404"):
         return True
 
     return False
