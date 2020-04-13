@@ -61,7 +61,7 @@ class Gen3Metadata:
 
     def is_healthy(self):
         """
-        Return if indexd is healthy or not
+        Return if is healthy or not
 
         Returns:
             bool: True if healthy
@@ -80,10 +80,10 @@ class Gen3Metadata:
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def get_version(self):
         """
-        Return the version of indexd
+        Return the version
 
         Returns:
-            str: the version of indexd
+            str: the version
         """
         response = requests.get(self.endpoint + "/version", auth=self._auth_provider)
         response.raise_for_status()

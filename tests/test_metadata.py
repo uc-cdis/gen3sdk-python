@@ -251,6 +251,8 @@ def test_query(requests_mock):
 
     def _mock_request(url, **kwargs):
         assert f"/metadata" in url
+        assert f"foo.bar=fizzbuzz" in url
+        assert f"data=False" in url
 
         mocked_response = MagicMock(requests.Response)
         mocked_response.status_code = 200
@@ -272,7 +274,6 @@ def test_query_full_metadata(requests_mock):
     Test querying for guids with full data
     """
     metadata = Gen3Metadata("https://example.com")
-    guid = "1cfd6767-7775-4e0d-a4a7-d0fc9db02e1d"
     expected_response = {
         "1cfd6767-7775-4e0d-a4a7-d0fc9db02e1d": {
             "dbgap": {
@@ -311,6 +312,8 @@ def test_query_full_metadata(requests_mock):
 
     def _mock_request(url, **kwargs):
         assert f"/metadata" in url
+        assert f"foo.bar=fizzbuzz" in url
+        assert f"data=True" in url
 
         mocked_response = MagicMock(requests.Response)
         mocked_response.status_code = 200
