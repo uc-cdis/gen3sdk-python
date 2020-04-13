@@ -1776,14 +1776,80 @@ class Gen3Expansion:
                 outfile.write(json.dumps(all_records))
         return all_records
 
-    def get_urls(self, guids, api):
+
+    def query_indexd(self, limit=100, page=0):
+        """ Queries indexd with given records limit and page number.
+            For example:
+                records = query_indexd(api='https://icgc.bionimbus.org/',limit=1000,page=0)
+                https://icgc.bionimbus.org/index/index/?limit=1000&page=0
+        """
+        data,records = {},[]
+        index_url = "{}/index/index/?limit={}&page={}".format(self._endpoint,limit,page)
+
+        try:
+            response = requests.get(index_url).text
+            data = json.loads(response)
+        except Exception as e:
+            print("\tUnable to parse indexd response as JSON!\n\t\t{} {}".format(type(e),e))
+
+        if 'records' in data:
+            records = data['records']
+        else:
+            print("\tNo records found in data from '{}':\n\t\t{}".format(index_url,data))
+
+        return records
+
+
+    def get_indexd(self, limit=100, page=0, outfile=True):
+        """ get all the records in indexd
+            api = "https://icgc.bionimbus.org/"
+            args = lambda: None
+            setattr(args, 'api', api)
+            setattr(args, 'limit', 100)
+            page = 0
+
+        Usage:
+            exp.get_index()
+        """
+
+        print("Getting indexd from '{}' (pagination limit set to: {})".format(self._endpoint,limit))
+
+        all_records = []
+
+        done = False
+        while done is False:
+
+            records = query_indexd(api=self._endpoint,limit=limit,page=page)
+            all_records.extend(records)
+
+            if len(records) != limit:
+                print("\tLength of returned records ({}) does not equal limit ({}).".format(len(records),limit))
+                if len(records) == 0:
+                    done = True
+
+            print("\tPage {}: {} records ({} total)".format(page,len(records),len(all_records)))
+            page += 1
+
+        print("\t\tScript finished. Total records retrieved: {}".format(len(all_records)))
+
+        if outfile:
+            dc_regex = re.compile(r'https:\/\/(.+)\/')
+            dc = dc_regex.match(self._endpoint).groups()[0]
+            outname = "{}_indexd_records.txt".format(dc)
+            with open(outname, 'w') as output:
+                output.write(json.dumps(all_records))
+
+        return all_records
+
+
+    def get_urls(self, guids):
         # Get URLs for a list of GUIDs
         if isinstance(guids, str):
             guids = [guids]
         if isinstance(guids, list):
             urls = {}
             for guid in guids:
-                index_url = "{}/index/{}".format(api, guid)
+                index_url = "{}/index/{}".format(self._endpoint, guid)
                 output = requests.get(index_url, auth=self._auth_provider).text
                 guid_index = json.loads(output)
                 url = guid_index['urls'][0]
@@ -1869,14 +1935,14 @@ class Gen3Expansion:
 
         return index_records
 
-    def get_index_for_url(self, url, api):
+    def get_index_for_url(self, url):
         """ Returns the indexd record for a file's storage location URL ('urls' in indexd)
             Example:
                 api='https://icgc.bionimbus.org/'
                 url='s3://pcawg-tcga-sarc-us/2720a2b8-3f4e-5b6e-9f74-1067a068462a'
-                exp.get_record_for_url(url=url,api=api)
+                exp.get_index_for_url(url=url,api=api)
         """
-        indexd_endpoint = "{}/index/index/".format(api)
+        indexd_endpoint = "{}/index/index/".format(self._endpoint)
         indexd_query = "{}?url={}".format(indexd_endpoint,url)
         output = requests.get(indexd_query, auth=self._auth_provider).text
         response = json.loads(output)
@@ -1902,14 +1968,14 @@ class Gen3Expansion:
 # failed = [irec for irec in irecs if irec['size'] is None]
 # failed_guids = [irec['did'] for irec in failed]
 
-    def get_guid_for_url(self, url, api):
+    def get_guid_for_url(self, url):
         """Return the GUID for a file's URL in indexd
             Example:
                 api='https://icgc.bionimbus.org/'
                 url='s3://pcawg-tcga-sarc-us/2720a2b8-3f4e-5b6e-9f74-1067a068462a'
                 exp.get_guid_for_url(url=url,api=api)
         """
-        index_records = self.get_record_for_url(url=url,api=api)
+        index_records = self.get_index_for_url(url=url)
         if len(index_records) == 1:
             guid = index_records[0]['did']
             return guid

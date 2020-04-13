@@ -101,7 +101,7 @@ def query_indexd(api,limit=100,page=0):
 
     return records
 
-def get_indexd(limit=100,outfile=True):
+def get_indexd(limit=100,outfile=True,page=0):
     """ get all the records in indexd
         api = "https://icgc.bionimbus.org/"
         args = lambda: None
@@ -110,7 +110,7 @@ def get_indexd(limit=100,outfile=True):
 
     """
 
-    print("Getting indexd from '{}' (pagination limit set to: {})".format(args.api,args.limit))
+    print("Getting indexd from '{}' (pagination limit set to: {}, starting at page {})".format(args.api,args.limit,page))
 
     all_records = []
 
@@ -129,22 +129,6 @@ def get_indexd(limit=100,outfile=True):
         page += 1
 
     print("\t\tScript finished. Total records retrieved: {}".format(len(all_records)))
-    return all_records
-
-
-
-
-
-    response = requests.get(indexd_url)
-    records = response.json().get("records")
-    all_records.extend(records)
-
-    print("\tRetrieved {} records from indexd.".format(len(all_records)))
-
-    page = 0
-
-
-
 
     if outfile:
         dc_regex = re.compile(r'https:\/\/(.+)\/')
