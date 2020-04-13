@@ -48,6 +48,7 @@ def get_indexd_old_pagination(outfile=True):
         api = "https://icgc.bionimbus.org/"
         args = lambda: None
         setattr(args, 'api', api)
+        setattr(args, 'limit', 100)
     """
 #    headers = {'Authorization': 'bearer ' + get_token()}
     all_records = []
@@ -110,7 +111,15 @@ def get_indexd(limit=100,outfile=True,page=0):
 
     """
 
-    print("Getting indexd from '{}' (pagination limit set to: {}, starting at page {})".format(args.api,args.limit,page))
+    stats_url = "{}/index/_stats".format(args.api)
+    try:
+        response = requests.get(stats_url).text
+        stats = json.loads(response)
+        print("Stats for '{}': {}".format(args.api,stats))
+    except Exception as e:
+        print("\tUnable to parse indexd response as JSON!\n\t\t{} {}".format(type(e),e))
+
+    print("Getting all records in indexd (limit: {}, starting at page: {})".format(args.limit,page))
 
     all_records = []
 
