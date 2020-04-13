@@ -43,8 +43,11 @@ def parse_args():
 #     token = resp.json()['access_token']
 #     return token
 
-def get_indexd(outfile=True):
+def get_indexd_old_pagination(outfile=True):
     """ get all the records in indexd
+        api = "https://icgc.bionimbus.org/"
+        args = lambda: None
+        setattr(args, 'api', api)
     """
 #    headers = {'Authorization': 'bearer ' + get_token()}
     all_records = []
@@ -75,6 +78,83 @@ def get_indexd(outfile=True):
         with open(outname, 'w') as output:
             output.write(json.dumps(all_records))
     return all_records
+
+def query_indexd(api,limit=100,page=0):
+    """ Queries indexd with given records limit and page number.
+        For example:
+            records = query_indexd(api='https://icgc.bionimbus.org/',limit=1000,page=0)
+            https://icgc.bionimbus.org/index/index/?limit=1000&page=0
+    """
+    data,records = {},[]
+    index_url = "{}/index/index/?limit={}&page={}".format(api,limit,page)
+
+    try:
+        response = requests.get(index_url).text
+        data = json.loads(response)
+    except Exception as e:
+        print("\tUnable to parse indexd response as JSON!\n\t\t{} {}".format(type(e),e))
+
+    if 'records' in data:
+        records = data['records']
+    else:
+        print("\tNo records found in data from '{}':\n\t\t{}".format(index_url,data))
+
+    return records
+
+def get_indexd(limit=100,outfile=True):
+    """ get all the records in indexd
+        api = "https://icgc.bionimbus.org/"
+        args = lambda: None
+        setattr(args, 'api', api)
+        setattr(args, 'limit', 100)
+
+    """
+
+    print("Getting indexd from '{}' (pagination limit set to: {})".format(args.api,args.limit))
+
+    all_records = []
+
+    done = False
+    while done is False:
+
+        records = query_indexd(api=args.api,limit=args.limit,page=page)
+        all_records.extend(records)
+
+        if len(records) != args.limit:
+            print("\tLength of returned records ({}) does not equal limit ({}).".format(len(records),args.limit))
+            if len(records) == 0:
+                done = True
+
+        print("\tPage {}: {} records ({} total)".format(page,len(records),len(all_records)))
+        page += 1
+
+    print("\t\tScript finished. Total records retrieved: {}".format(len(all_records)))
+    return all_records
+
+
+
+
+
+    response = requests.get(indexd_url)
+    records = response.json().get("records")
+    all_records.extend(records)
+
+    print("\tRetrieved {} records from indexd.".format(len(all_records)))
+
+    page = 0
+
+
+
+
+    if outfile:
+        dc_regex = re.compile(r'https:\/\/(.+)\/')
+        dc = dc_regex.match(args.api).groups()[0]
+        outname = "{}_indexd_records.txt".format(dc)
+        with open(outname, 'w') as output:
+            output.write(json.dumps(all_records))
+
+    return all_records
+
 
 def read_dcc_manifest():
 
