@@ -295,9 +295,9 @@ async def _parse_from_queue(
     queue, lock, commons_url, output_queue, auth, get_guid_from_file, metadata_source
 ):
     """
-    Keep getting items from the queue and verifying that indexd contains the expected
-    fields from that row. If there are any issues, log errors into an error queue. Return
-    when nothing is left in the queue.
+    Keep getting items from the queue and checking if indexd contains a record with
+    that guid. Then create/update metadta for that GUID in the metadata service.
+    Also log to output queue. Return when nothing is left in the queue.
 
     Args:
         queue (asyncio.Queue): queue to read metadata from
