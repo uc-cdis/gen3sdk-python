@@ -187,3 +187,10 @@ except Exception as e:
 # from gen3.submission import Gen3Submission
 # from gen3.file import Gen3File
 #
+
+export http_proxy=http://cloud-proxy.internal.io:3128
+export https_proxy=http://cloud-proxy.internal.io:3128
+
+curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*linux |  cut -d '"' -f 4 | wget -qi -
+unzip dataclient_linux.zip
+rm dataclient_linux.zip

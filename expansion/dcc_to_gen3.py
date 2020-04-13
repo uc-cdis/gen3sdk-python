@@ -27,58 +27,9 @@ def parse_args():
     parser.add_argument("-m", "--manifest", required=True, help="The manifest downloaded from DCC portal.",default="dcc_manifest.pdc.1581529402015.sh")
     parser.add_argument("-a", "--api", required=False, help="The data commons URL.",default="https://icgc.bionimbus.org/")
     parser.add_argument("-i", "--indexd", required=False, help="If a file already exists with the data commons indexd records, provide the path to that file.",default=False) # default="icgc.bionimbus.org_indexd_records.txt"
-#    parser.add_argument("-c", "--cred", required=False, help="The location of the credentails.json file containing the user's API keys downloaded from the /profile page of the commons (https://icgc.bionimbus.org/identity)", default="/Users/christopher/Downloads/icgc-credentials.json")
     args = parser.parse_args()
     return args
 
-# def get_token():
-#     """ get your temporary access token using your credentials downloaded from the data portal
-#     """
-#     with open (args.cred, 'r') as f:
-#         credentials = json.load(f)
-#     token_url = "{}/user/credentials/api/access_token".format(args.api)
-#     resp = requests.post(token_url, json=credentials)
-#     if (resp.status_code != 200):
-#         raise(Exception(resp.reason))
-#     token = resp.json()['access_token']
-#     return token
-
-def get_indexd_old_pagination(outfile=True):
-    """ get all the records in indexd
-        api = "https://icgc.bionimbus.org/"
-        args = lambda: None
-        setattr(args, 'api', api)
-        setattr(args, 'limit', 100)
-    """
-#    headers = {'Authorization': 'bearer ' + get_token()}
-    all_records = []
-    indexd_url = "{}/index/index".format(args.api)
-#    response = requests.get(indexd_url, headers=headers) #response = requests.get(indexd_url, auth=auth)
-    response = requests.get(indexd_url) #response = requests.get(indexd_url, auth=auth)
-    records = response.json().get("records")
-    all_records.extend(records)
-    print("\tRetrieved {} records from indexd.".format(len(all_records)))
-
-    previous_did = None
-    start_did = records[-1].get("did")
-
-    while start_did != previous_did:
-        previous_did = start_did
-        next_url = "{}?start={}".format(indexd_url,start_did)
-#        response = requests.get(next_url, headers=headers) #response = requests.get(next_url, auth=auth)
-        response = requests.get(next_url) #response = requests.get(next_url, auth=auth)
-        records = response.json().get("records")
-        all_records.extend(records)
-        print("\tRetrieved {} records from indexd.".format(len(all_records)))
-        if records:
-            start_did = response.json().get("records")[-1].get("did")
-    if outfile:
-        dc_regex = re.compile(r'https:\/\/(.+)\/')
-        dc = dc_regex.match(args.api).groups()[0]
-        outname = "{}_indexd_records.txt".format(dc)
-        with open(outname, 'w') as output:
-            output.write(json.dumps(all_records))
-    return all_records
 
 def query_indexd(api,limit=100,page=0):
     """ Queries indexd with given records limit and page number.
@@ -108,7 +59,7 @@ def get_indexd(limit=100,outfile=True,page=0):
         args = lambda: None
         setattr(args, 'api', api)
         setattr(args, 'limit', 100)
-
+        i = get_indexd()
     """
 
     stats_url = "{}/index/_stats".format(args.api)

@@ -1744,7 +1744,7 @@ class Gen3Expansion:
 
 # indexd functions:
 
-    def get_indexd(self,api,outfile=None):
+    def get_indexd_old(self,api,outfile=None):
         """ get all the records in indexd
             Example:
             exp.get_indexd(api='https://icgc.bionimbus.org/',outfile=True)
@@ -1812,7 +1812,15 @@ class Gen3Expansion:
             exp.get_index()
         """
 
-        print("Getting indexd from '{}' (pagination limit set to: {})".format(self._endpoint,limit))
+        stats_url = "{}/index/_stats".format(self._endpoint)
+        try:
+            response = requests.get(stats_url).text
+            stats = json.loads(response)
+            print("Stats for '{}': {}".format(self._endpoint,stats))
+        except Exception as e:
+            print("\tUnable to parse indexd response as JSON!\n\t\t{} {}".format(type(e),e))
+
+        print("Getting all records in indexd (limit: {}, starting at page: {})".format(limit,page))
 
         all_records = []
 
@@ -2121,3 +2129,15 @@ class Gen3Expansion:
 # ## Add a check authentication command to Gen3sdk:
 #
 # user_endpoint = api + '/user/user/'
+
+# def get_token():
+#     """ get your temporary access token using your credentials downloaded from the data portal
+#     """
+#     with open (args.cred, 'r') as f:
+#         credentials = json.load(f)
+#     token_url = "{}/user/credentials/api/access_token".format(args.api)
+#     resp = requests.post(token_url, json=credentials)
+#     if (resp.status_code != 200):
+#         raise(Exception(resp.reason))
+#     token = resp.json()['access_token']
+#     return token
