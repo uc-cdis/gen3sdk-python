@@ -422,7 +422,6 @@ class Gen3Migration:
             print("\t\t'{}' not found in '{}' TSV. Nothing changed.".format(prop,old_node))
             return odf
 
-
         onn = odf.loc[odf[prop].notnull()]
 
         # if the new node TSV already exists, read it in, if not, create a new df
@@ -462,6 +461,11 @@ class Gen3Migration:
         parent_links = list(set(odf['cases.submitter_id']))
         if len(submitter_ids) > len(parent_links):
             print("\t\tMany-to-one relationship detected for old_node '{}' submitter_ids ({}) and parent_link '{}' ({})".format(old_node,len(submitter_ids),parent_link,len(parent_links)))
+            multiplicity = 'many'
+            parent = 'visit_id'
+        else:
+            multiplicity = 'one'
+            parent = parent_link
 
         if new_node is 'case':
             pdf = odf[[parent_link,prop]] # prop dataframe
@@ -492,26 +496,40 @@ class Gen3Migration:
 
             old_links = list(set(odf[parent_link]))
             new_links = list(set(ndf[parent_link]))
-            matching_links = set(old_links).intersection(new_links)
+            matching_links = list(set(old_links).intersection(new_links))
+            missing_links = list(set(old_links).difference(new_links))
 
-            if len(matching_links) > 0:
-                pdf = odf.loc[odf[prop].notnull()][[parent_link,prop]] # prop dataframe
+            if 'visit_id' in onn and 'visit_id' in ndf and multiplicity is 'many':
+                pdf = onn[[parent_link,prop,'visit_id']] # prop dataframe
+                pdf.drop_duplicates(subset=None, keep='first', inplace=True)
+                old_visits = list(set(onn['visit_id']))
+                new_visits = list(set(ndf['visit_id']))
+                matching_visits = list(set(old_visits).intersection(new_visits))
+                missing_visits = list(set(old_visits).difference(new_visits))
+
+                if len(missing_visits) > 0:
+                    print("\t\tFound {} visit_ids in old node '{}' missing from new node '{}'. Creating new '{}' records for these data.".format(len(missing_visits),old_node,new_node,new_node))
+                    mdf = pdf.loc[pdf['visit_id'].isin(missing_visits)]
+                    pdf = pdf.loc[pdf['visit_id'].isin(matching_visits)]
+                    # create some new records in ndf for mdf
+
+                if len(matching_visits) == len(pdf): # every prop value has a unique visit_id
+                    print("\t\t\tMerging {} non-null '{}' records from '{}' into '{}' on {} matching visit_ids.".format(len(pdf),prop,old_node,new_node,len(matching_visits)))
+                    pdf = onn[['visit_id',prop]] # prop dataframe
+                    pdf.drop_duplicates(subset=None, keep='first', inplace=True)
+                    df = pd.merge(left=ndf, right=pdf, how='left', left_on='visit_id', right_on='visit_id')
+
+                else:
+                    print("\t\t\tCouldn't merge {} non-null '{}' records from '{}' into '{}' on 'visit_id'!".format(len(pdf),prop,old_node,new_node,parent_link))
+
+            elif 'multiplicity' is 'one': # prop has one value per parent_link
+                pdf = onn[[parent_link,prop]] # prop dataframe
                 pdf.drop_duplicates(subset=None, keep='first', inplace=True)
                 df = pd.merge(left=ndf, right=pdf, how='left', left_on=parent_link, right_on=parent_link)
                 print("\t\tMerging {} non-null '{}' records into '{}' TSV on parent_link '{}'.".format(len(pdf),prop,new_node,parent_link))
 
-            elif 'visit_id' in ndf and 'visit_id' in odf:
-                old_visits = list(set(odf['visit_id']))
-                new_visits = list(set(ndf['visit_id']))
-                matching_visits = set(old_visits).intersection(new_visits)
-                if len(matching_visits) > 0:
-                    print("\t\t\tMerging {} '{}' records from '{}' into '{}' on {} matching visit_ids.".format(len(pdf),prop,old_node,new_node,len(matching_visits)))
-                    pdf = odf[['visit_id',prop]] # prop dataframe
-                    pdf.drop_duplicates(subset=None, keep='first', inplace=True)
-                    df = pd.merge(left=ndf, right=pdf, how='left', left_on='visit_id', right_on='visit_id')
-
             else:
-                print("\t\t\tCouldn't merge {} non-null '{}' records from '{}' into '{}' on '{}' or 'visit_id'!".format(len(pdf),prop,old_node,new_node,parent_link))
+                print("\t\t\tCouldn't merge {} non-null '{}' records from '{}' into '{}' on parent_link '{}' or 'visit_id'!".format(len(pdf),prop,old_node,new_node,parent_link))
 
         else: # neither new_node nor parent_node are 'case'
             df['type'] = new_node
@@ -545,6 +563,15 @@ class Gen3Migration:
 
         except Exception as e:
             print(type(e),e)
+
+        # check the migration
+        null = df.loc[df[prop].isnull()]
+        null_parents = list(set(null[parent]))
+        nn_parents = list(set(onn[parent]))
+        missed = set(null_parents).intersection(nn_parents)
+        nn = df.loc[df[prop].notnull()]
+        if len(nn) != len(onn) or len(missed) > 0:
+            print("\t\t\t\n\nWARNING! It appears some data in old node '{}' ({} non-null records) was not properly migrated to new node '{}' ({} non-null records)!\n\n".format(old_node,len(onn),new_node,len(nn)))
 
         return df
 
@@ -703,7 +730,11 @@ class Gen3Migration:
         new_prop = props[old_prop]
 
         if old_prop not in df: # old property not in TSV, fail
-            print("\t\tOld prop name '{0}' not found in the TSV. Nothing changed.".format(old_prop))
+            if new_prop in df:
+                nn = df.loc[df[new_prop].notnull()]
+                print("\t\tOld prop name '{}' not found in the '{}' TSV. New prop name '{}' already in TSV with {} non-null records!".format(old_prop,node,new_prop,len(nn)))
+            else:
+                print("\t\tNeither old prop name '{}' nor new prop name '{}' found in the '{}' TSV. Nothing changed.".format(old_prop,new_prop,node))
             return df
 
         if new_prop in df:
@@ -1295,6 +1326,14 @@ class Gen3Migration:
             >>> Gen3Submission.submit_file("DCF-CCLE","data_spreadsheet.tsv")
 
         """
+        results = {
+            "invalid": {},  # these are invalid records
+            "other": [],  # any unhandled API responses
+            "details": [],  # entire API response details
+            "succeeded": [],  # list of submitter_ids that were successfully updated/created
+            "responses": [],  # list of API response codes
+        }
+
         # Read the file in as a pandas DataFrame
         f = os.path.basename(filename)
         if f.lower().endswith(".csv"):
@@ -1313,7 +1352,9 @@ class Gen3Migration:
 
         # Check uniqueness of submitter_ids:
         if len(list(df.submitter_id)) != len(list(df.submitter_id.unique())):
-            raise Gen3Error("Warning: file contains duplicate submitter_ids. \nNote: submitter_ids must be unique within a node!")
+            print("\n\n\tWarning: file contains duplicate submitter_ids. \n\tNote: submitter_ids must be unique within a node!\n\n")
+            results['invalid'][filename] = 'duplicate submitter_ids in file!'
+            return results
 
         # Chunk the file
         print("\nSubmitting {} with {} records.".format(filename, str(len(df))))
@@ -1326,14 +1367,6 @@ class Gen3Migration:
         chunk = df[start:end]
 
         count = 0
-
-        results = {
-            "invalid": {},  # these are invalid records
-            "other": [],  # any unhandled API responses
-            "details": [],  # entire API response details
-            "succeeded": [],  # list of submitter_ids that were successfully updated/created
-            "responses": [],  # list of API response codes
-        }
 
         # Start the chunking loop:
         while (start + len(chunk)) <= len(df):
