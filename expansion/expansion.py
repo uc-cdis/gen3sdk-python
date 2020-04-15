@@ -2092,8 +2092,48 @@ class Gen3Expansion:
             return records
 
 
+    # Guppy funcs
+    def guppy_download(self):
+        api_url = url + "guppy/download"
+        query = {
+            "type": "location",
+            "fields": [
+                "country_region",
+                "date",
+                "confirmed",
+                "deaths"
+            ]
+        }
+        response = requests.post(
+            api_url,
+            json=query,
+            headers=headers,
+        )
+        try:
+            return json.loads(response.text)
+        except:
+
+            print("Error querying Guppy")
+            return response.text
+
+
+        print(download())
+        return download
+
+
 ## To do
 #
+#
+# def get_token():
+#     with open("credentials.json", "r") as f:
+#         creds = json.load(f)
+#     token_url = url + "user/credentials/api/access_token"
+#     token = requests.post(token_url, json=creds).json()["access_token"]
+#     return token
+# headers = {"Authorization": "bearer " + get_token()}
+#
+#
+
 # filter indexd by project:
 # https://data.braincommons.org/index/index/?acl=Project1
 # https://data.braincommons.org/index/index/?acl=Program1

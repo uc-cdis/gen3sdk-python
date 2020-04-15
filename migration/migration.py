@@ -494,21 +494,28 @@ class Gen3Migration:
             df = pd.merge(pdf,case_data,on='submitter_id', how='left')
 
         elif parent_node == 'case':
-            #cdf = self.read_tsv(project_id,'case')
-            #cids = list(cdf['submitter_id'])
-            #df = pd.merge(ndf,pdf,on='cases.submitter_id')
-            # for case_id in list(p):
-            #     ndf.at[ndf['cases.submitter_id']==case_id,prop] = p[case_id]
-            if 'visit_id' in ndf and 'visit_id' in odf:
-                if len(list(set(ndf.visit_id))) == len(ndf) and len(list(set(odf.visit_id))) == len(odf):
+
+            old_links = list(set(pdf[parent_link]))
+            new_links = list(set(ndf[parent_link]))
+            matching_links = set(old_links).intersection(new_links)
+
+            if len(matching_links) > 0:
+                pdf = odf.loc[odf[prop].notnull()][[parent_link,prop]] # prop dataframe
+                pdf.drop_duplicates(subset=None, keep='first', inplace=True)
+                df = pd.merge(left=ndf, right=pdf, how='left', left_on=parent_link, right_on=parent_link)
+                print("\t\t\tMerged {} non-null '{}' records into '{}' TSV on parent_link '{}'.".format(len(pdf),prop,new_node,parent_link))
+
+            elif 'visit_id' in ndf and 'visit_id' in odf:
+                old_visits = list(set(odf['visit_id']))
+                new_visits = list(set(ndf['visit_id']))
+                matching_visits = set(old_visits).intersection(new_visits)
+                if matching_visits > 0:
                     print("\t\t\tMerging on visit_id: All '{}' records in old/new nodes '{}'/'{}' have unique visit_ids.".format(prop,old_node,new_node))
                     pdf = odf[['visit_id',prop]] # prop dataframe
                     df = pd.merge(left=ndf, right=pdf, how='left', left_on='visit_id', right_on='visit_id')
+
             else:
-                print("\t\t\tMerging old/new nodes '{}'/'{}' on parent_link '{}'.".format(old_node,new_node,parent_link))
-                pdf = odf[[parent_link,prop]] # prop dataframe
-                pdf.drop_duplicates(subset=None, keep='first', inplace=True)
-                df = pd.merge(left=ndf, right=pdf, how='left', left_on=parent_link, right_on=parent_link)
+                "\t\t\tCouldn't merge {} non-null '{}' records from '{}' into '{}' on 'visit_id' or {}!".format(len(pdf),prop,old_node,new_node,parent_link))
 
         else: # neither new_node nor parent_node are 'case'
             df['type'] = new_node
@@ -1268,8 +1275,8 @@ class Gen3Migration:
             df = self.write_tsv(df,project_id,node)
             print("\t{} missing (NaN) value(s) for required prop '{}' in '{}' node changed to '{}'.".format(replace_count,prop,node,replace_value))
 
-        except FileNotFoundError as e:
-            print("\tNo TSV found for node '{}'.".format(node))
+        except Exception as e:
+            print("\tNo TSV found for node '{}': {} {}.".format(node,type(e),e))
 
     def submit_file(self, project_id, filename, chunk_size=30, row_offset=0):
         """Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.
