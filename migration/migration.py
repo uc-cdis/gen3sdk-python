@@ -82,9 +82,9 @@ class Gen3Migration:
             outname = "{0}_{1}.tsv".format(project_id,node)
         try:
             df.to_csv(outname, sep='\t', index=False, encoding='utf-8')
-            print("\t\tTotal of {} records written to node '{}' in file: {}.".format(len(df),node,outname))
+            print("\t\t\tTotal of {} records written to node '{}' in file: {}.".format(len(df),node,outname))
         except Exception as e:
-            print("\tError writing TSV file: {}".format(e))
+            print("\t\t\tError writing TSV file: {}".format(e))
         return df
 
     def make_temp_files(self,prefix,suffix,name='temp',overwrite=True,nodes=['all']):
@@ -425,13 +425,6 @@ class Gen3Migration:
 
         onn = odf.loc[odf[prop].notnull()]
 
-        # drop old prop from old node TSV
-        try:
-            print("\t\tDropped '{}' from old_node: '{}' TSV.".format(prop,old_node))
-            self.write_tsv(odf.drop(columns=[prop]),project_id,old_node)
-        except Exception as e:
-            print(type(e),e)
-
         # if the new node TSV already exists, read it in, if not, create a new df
         ndf = self.read_tsv(project_id,new_node)
         if ndf is not None:
@@ -446,11 +439,13 @@ class Gen3Migration:
         if prop in ndf:
             nn = ndf.loc[ndf[prop].notnull()]
             if not nn.empty and warn is True:
-                print("\n\n\t\tWARNING! prop '{}' already exists in '{}' with {} non-null records.".format(prop,new_node,len(nn)))
+                print("\n\n\t\t\tWARNING! prop '{}' already exists in '{}' with {} non-null records.".format(prop,new_node,len(nn)))
                 return ndf
             else:
                 ndf.drop(columns=[prop],inplace=True,errors='raise')
-                print("\t\t'{}' already found in '{}' TSV with all null data; dropping column from TSV.".format(prop,new_node))
+                print("\t\t\t'{}' already found in '{}' TSV with all null data; dropping column from TSV.".format(prop,new_node))
+        else:
+            print("\t\t\tProp '{}' not in original '{}' TSV. Adding now.".format(prop,new_node))
 
         if parent_node is not None:
             parent_link = "{}s.submitter_id".format(parent_node)
@@ -495,7 +490,7 @@ class Gen3Migration:
 
         elif parent_node == 'case':
 
-            old_links = list(set(pdf[parent_link]))
+            old_links = list(set(odf[parent_link]))
             new_links = list(set(ndf[parent_link]))
             matching_links = set(old_links).intersection(new_links)
 
@@ -503,19 +498,20 @@ class Gen3Migration:
                 pdf = odf.loc[odf[prop].notnull()][[parent_link,prop]] # prop dataframe
                 pdf.drop_duplicates(subset=None, keep='first', inplace=True)
                 df = pd.merge(left=ndf, right=pdf, how='left', left_on=parent_link, right_on=parent_link)
-                print("\t\t\tMerged {} non-null '{}' records into '{}' TSV on parent_link '{}'.".format(len(pdf),prop,new_node,parent_link))
+                print("\t\tMerging {} non-null '{}' records into '{}' TSV on parent_link '{}'.".format(len(pdf),prop,new_node,parent_link))
 
             elif 'visit_id' in ndf and 'visit_id' in odf:
                 old_visits = list(set(odf['visit_id']))
                 new_visits = list(set(ndf['visit_id']))
                 matching_visits = set(old_visits).intersection(new_visits)
-                if matching_visits > 0:
-                    print("\t\t\tMerging on visit_id: All '{}' records in old/new nodes '{}'/'{}' have unique visit_ids.".format(prop,old_node,new_node))
+                if len(matching_visits) > 0:
+                    print("\t\t\tMerging {} '{}' records from '{}' into '{}' on {} matching visit_ids.".format(len(pdf),prop,old_node,new_node,len(matching_visits)))
                     pdf = odf[['visit_id',prop]] # prop dataframe
+                    pdf.drop_duplicates(subset=None, keep='first', inplace=True)
                     df = pd.merge(left=ndf, right=pdf, how='left', left_on='visit_id', right_on='visit_id')
 
             else:
-                "\t\t\tCouldn't merge {} non-null '{}' records from '{}' into '{}' on 'visit_id' or {}!".format(len(pdf),prop,old_node,new_node,parent_link))
+                print("\t\t\tCouldn't merge {} non-null '{}' records from '{}' into '{}' on '{}' or 'visit_id'!".format(len(pdf),prop,old_node,new_node,parent_link))
 
         else: # neither new_node nor parent_node are 'case'
             df['type'] = new_node
@@ -541,8 +537,14 @@ class Gen3Migration:
                     df[prop] = np.nan
                     print("\tMissing required prop '{}' added to new '{}' TSV with all null values.".format(prop,new_node))
 
-        print("\t\tMoved {0} non-null '{1}' records from node '{2}' to '{3}'.".format(len(onn),prop,old_node,new_node))
-        self.write_tsv(df,project_id,new_node)
+        try:
+            print("\t\tDropped '{}' from old_node: '{}' TSV.".format(prop,old_node))
+            self.write_tsv(odf.drop(columns=[prop]),project_id,old_node)
+            print("\t\tMoved prop '{}' with {} non-null records from '{}' TSV to '{}'.".format(prop,len(onn),old_node,new_node))
+            self.write_tsv(df,project_id,new_node)
+
+        except Exception as e:
+            print(type(e),e)
 
         return df
 
@@ -771,7 +773,7 @@ class Gen3Migration:
                 not_found.append(prop)
 
         if len(not_found) > 0:
-            print("\t\tWarning: These props were not found in the '{}' TSV: {}".format(node,not_dropped))
+            print("\t\tWarning: These props were not found in the '{}' TSV: {}".format(node,not_found))
 
         if len(not_dropped) > 0:
             print("\t\tWarning! Some props were NOT dropped from '{}' TSV: {} {}".format(node,not_dropped,list(set(errors))))
