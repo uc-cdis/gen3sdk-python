@@ -658,32 +658,75 @@ class Gen3Migration:
             data[project_id] = {}
 
             for node in nodes:
-
                 data[project_id][node] = {}
-
                 df = self.read_tsv(project_id=project_id,node=node,name=name)
-
                 if df is not None:
                     print("\tChecking data in '{}' TSV of project '{}'".format(node,project_id))
-
                 node_props = props[node]
                 for prop in node_props:
-
-                    if df is not None:
-                        if prop in df:
-                            nn = df.loc[df[prop].notnull()]
-                            data[project_id][node][prop] = len(nn)
-                            print("\t\tprop '{}' has '{}' non-null records".format(prop,len(nn)))
-                        else:
-                            data[project_id][node][prop] = 'NO_PROP'
-                            print("\t\tprop '{}' not found in TSV".format(prop))
+                    data[project_id][node][prop] = {}
+                    if df is None:
+                        missing = 'NO_TSV'
+                        print("\t\tTSV '{}' not found in {}".format(node,pdir))
                     else:
-                        data[project_id][node][prop] = 'NO_TSV'
+                        if prop not in df:
+                            missing = 'NO_PROP'
+                            print("\t\tprop '{}' not found in TSV".format(prop))
+                        else:
+                            missing = False
+                    data[project_id][node][prop]['missing'] = missing
+
+                    # if prop is missing, all values get 0
+                    if missing is 'NO_PROP' or missing is 'NO_TSV':
+                        data[project_id][node][prop]['N'] = 0
+                        data[project_id][node][prop]['nn'] = 0
+                        data[project_id][node][prop]['null'] = 0
+                        data[project_id][node][prop]['value_count'] = 0
+
+                    else:
+                        data[project_id][node][prop]['N'] = len(df)
+                        nn = df.loc[df[prop].notnull()]
+                        data[project_id][node][prop]['nn'] = len(nn)
+                        null = df.loc[df[prop].isnull()]
+                        data[project_id][node][prop]['null'] = len(null)
+                        if nn.empty:
+                            value_count = 0
+                        else:
+                            values = list(set(nn[prop]))
+                            value_count = len(values)
+                        data[project_id][node][prop]['value_count'] = value_count
+
+                        print("\t\tprop '{}' has {} total, {} non-null, {} null records, and {} unique values.".format(prop,len(df),len(nn),len(null),value_count))
 
         os.chdir(tsv_dir)
 
-        c = {'project_id':[],'old_node':[],'old_prop':[],'new_node':[],'new_prop':[],'old_count':[],'new_count':[],'conflict':[]}
-        if compare is not False:
+        if compare is False:
+
+            c = {'project_id':[],'node':[],'prop':[],
+                'missing':[],'N':[],
+                'null':[],'nn':[],'value_count':[]}
+
+            for node in nodes:
+                node_props = props[node]
+                for prop in node_props:
+                    for project_id in list(projects):
+                        missing = data[project_id][node][prop]['missing']
+                        N = data[project_id][node][prop]['N']
+                        null = data[project_id][node][prop]['null']
+                        nn = data[project_id][node][prop]['nn']
+                        value_count = data[project_id][node][prop]['value_count']
+                        c['project_id'].append(project_id)
+                        c['node'].append(node)
+                        c['prop'].append(prop)
+                        c['missing'].append(missing)
+                        c['N'].append(N)
+                        c['null'].append(null)
+                        c['nn'].append(nn)
+                        c['value_count'].append(value_count)
+            outfile = 'check_props_data_{}.tsv'.format(outname)
+
+        else: #if compare is True:
+            c = {'project_id':[],'old_node':[],'old_prop':[],'new_node':[],'new_prop':[],'old_count':[],'new_count':[],'conflict':[]}
             for pair in compare:
                 for project_id in list(projects):
                     ((old_node,old_prop),(new_node,new_prop)) = pair
@@ -703,17 +746,20 @@ class Gen3Migration:
                         conflict = False
                     c['conflict'].append(conflict)
 
+            conflicts = cdf.loc[cdf['conflict']==True]
+            if not conflicts.empty:
+                print("\n\n\n{} conflicts found in data!\n".format(len(conflicts)))
+                display(conflicts)
+            outfile = '{}_compare_props_data.tsv'.format(outname)
+
+        try:
             cdf = pd.DataFrame(c)
-            compare_name = '{}_check_props_data.tsv'.format(outname)
-            cdf.to_csv(compare_name,sep='\t',index=False)
-
-            if not cdf.loc[cdf['conflict']==True].empty:
-                display(cdf.loc[cdf['conflict']==True])
-
+            cdf.to_csv(outfile,sep='\t',index=False)
             return cdf
-
-        return data
-
+        except Exception as e:
+            print("\t\t{}: {}".format(type(e),e))
+            print("\n\t\tc = '{}'".format(c))
+            return c
 
 
     def change_prop_name(self,project_id,node,props,name='temp',force=False):
