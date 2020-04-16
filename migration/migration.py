@@ -424,6 +424,12 @@ class Gen3Migration:
 
         onn = odf.loc[odf[prop].notnull()]
 
+        if len(onn) == 0:
+            print("\t\tAll null data in '{}' node for '{}' prop. No data to migrate; '{}' TSV unchanged.".format(old_node,prop,new_node))
+            print("\t\tDropping '{}' from old_node: '{}' TSV.".format(prop,old_node))
+            self.write_tsv(odf.drop(columns=[prop]),project_id,old_node)
+            return odf
+
         # if the new node TSV already exists, read it in, if not, create a new df
         ndf = self.read_tsv(project_id,new_node)
         if ndf is not None:
@@ -446,26 +452,51 @@ class Gen3Migration:
         else:
             print("\t\t\tProp '{}' not in original '{}' TSV. Adding now.".format(prop,new_node))
 
+        # set the parent_link and check for records with no link
         if parent_node is not None:
             parent_link = "{}s.submitter_id".format(parent_node)
-            no_link = odf.loc[odf[parent_link].isnull()] # from_node records with no link to parent_node
-            if not no_link.empty: # if there are records with no links to parent node
-                print("\tWarning: there are {} '{}' records with no links to parent '{}' node!".format(len(from_no_link),from_node,parent_node))
-                return odf
         else:
             parent_link = "{}s.submitter_id".format(new_node)
 
+        no_link = odf.loc[odf[parent_link].isnull()] # from_node records with no link to parent_node
+        if not no_link.empty: # if there are records with no links to parent node
+            print("\tWarning: there are {} '{}' records with no links to parent '{}' node!".format(len(from_no_link),from_node,parent_node))
+            return odf
+
         #p = dict(zip(odf[parent_link],odf[prop]))
 
+        # Determine which header to merge data on (usually link to the parent node, but in some cases use visit_id (dm 2.2.))
         submitter_ids = list(set(odf['submitter_id']))
-        parent_links = list(set(odf['cases.submitter_id']))
+        parent_links = list(set(odf[parent_link]))
         if len(submitter_ids) > len(parent_links):
             print("\t\tMany-to-one relationship detected for old_node '{}' submitter_ids ({}) and parent_link '{}' ({})".format(old_node,len(submitter_ids),parent_link,len(parent_links)))
             multiplicity = 'many'
-            parent = 'visit_id'
+            old_visits = list(set(onn['visit_id']))
+            new_visits = list(set(ndf['visit_id']))
+            matching_visits = list(set(old_visits).intersection(new_visits))
+            missing_visits = list(set(old_visits).difference(new_visits))
+            if len(matching_visits) == len(old_visits): # formerly "if len(matching_visits) > 0"
+                merge_on = 'visit_id'
+                print("\t\t\tFound {} matching visit_ids between records in '{}' and '{}' TSVs. Merging '{}' into '{}' on 'visit_id'.".format(len(matching_visits),old_node,new_node,prop,new_node))
+            elif len(matching_visits) == 0:
+                merge_on = parent_link
+                print("\t\t\tFound no matching visit_ids between records in '{}' and '{}' TSVs. Merging '{}' into '{}' on '{}'.".format(old_node,new_node,prop,new_node,parent_link))
+
+            else: #len(matching_visits) > 0 and len(matching_visits) != len(old_visits)
+                merge_on = parent_link
+                print("\n\n\n\n\t\t\tWARNING! Found partially matching visit_ids between records in '{}' and '{}' TSVs. MAY WANT TO LOOK INTO THIS!\n\n\n\n".format(old_node,new_node,prop,new_node,parent_link))
         else:
             multiplicity = 'one'
-            parent = parent_link
+            merge_on = parent_link
+
+        if merge_on is parent_link:
+            # make sure parent_links match
+            old_links = list(set(onn[parent_link]))
+            new_links = list(set(ndf[parent_link]))
+            matching_links = list(set(old_links).intersection(new_links))
+            missing_links = list(set(old_links).difference(new_links))
+            if len(matching_links) != len(old_links):
+                print("\n\n\n\n\t\t\tWARNING! Found only {} matches in {} '{}' links in '{}' and '{}' TSVs. \n\n\n\t\t\tMAY WANT TO LOOK INTO THIS!\n\n\n\n".format(len(matching_links),len(old_links),parent_link,old_node,new_node,prop,new_node,parent_link))
 
         if new_node is 'case':
             pdf = odf[[parent_link,prop]] # prop dataframe
@@ -492,23 +523,24 @@ class Gen3Migration:
                 count += 1
             df = pd.merge(pdf,case_data,on='submitter_id', how='left')
 
-        elif parent_node == 'case':
+        elif parent_node is 'case':
 
-            old_links = list(set(odf[parent_link]))
-            new_links = list(set(ndf[parent_link]))
-            matching_links = list(set(old_links).intersection(new_links))
-            missing_links = list(set(old_links).difference(new_links))
-
-            if 'visit_id' in onn and 'visit_id' in ndf and multiplicity is 'many':
-                pdf = onn[[parent_link,prop,'visit_id']] # prop dataframe
+            if merge_on is parent_link:
+                pdf = onn[[parent_link,prop]] # prop dataframe
                 pdf.drop_duplicates(subset=None, keep='first', inplace=True)
-                old_visits = list(set(onn['visit_id']))
-                new_visits = list(set(ndf['visit_id']))
-                matching_visits = list(set(old_visits).intersection(new_visits))
-                missing_visits = list(set(old_visits).difference(new_visits))
+                df = pd.merge(left=ndf, right=pdf, how='left', left_on=parent_link, right_on=parent_link)
+                print("\t\tMerging {} non-null '{}' records into '{}' TSV on parent_link '{}'.".format(len(pdf),prop,new_node,parent_link))
+
+            if merge_on is 'visit_id':
+
+                pdf = onn[[prop,'visit_id']] # prop dataframe
+                pdf.drop_duplicates(subset=None, keep='first', inplace=True)
+
+                if len(matching_visits) == 0:
+                    print("This aint gonna work!")
 
                 if len(missing_visits) > 0:
-                    print("\t\tFound {} visit_ids in old node '{}' missing from new node '{}'. Creating new '{}' records for these data.".format(len(missing_visits),old_node,new_node,new_node))
+                    print("\n\n\n\t\tFound {} visit_ids in old node '{}' missing from new node '{}'. Creating new '{}' records for these data.\n\n\n".format(len(missing_visits),old_node,new_node,new_node))
                     mdf = pdf.loc[pdf['visit_id'].isin(missing_visits)]
                     pdf = pdf.loc[pdf['visit_id'].isin(matching_visits)]
                     # create some new records in ndf for mdf
@@ -522,20 +554,10 @@ class Gen3Migration:
                 else:
                     print("\t\t\tCouldn't merge {} non-null '{}' records from '{}' into '{}' on 'visit_id'!".format(len(pdf),prop,old_node,new_node,parent_link))
 
-            elif 'multiplicity' is 'one': # prop has one value per parent_link
-                pdf = onn[[parent_link,prop]] # prop dataframe
-                pdf.drop_duplicates(subset=None, keep='first', inplace=True)
-                df = pd.merge(left=ndf, right=pdf, how='left', left_on=parent_link, right_on=parent_link)
-                print("\t\tMerging {} non-null '{}' records into '{}' TSV on parent_link '{}'.".format(len(pdf),prop,new_node,parent_link))
-
-            else:
-                print("\t\t\tCouldn't merge {} non-null '{}' records from '{}' into '{}' on parent_link '{}' or 'visit_id'!".format(len(pdf),prop,old_node,new_node,parent_link))
-
         else: # neither new_node nor parent_node are 'case'
+            df['submitter_id'] = odf['submitter_id'] + "_{}".format(new_node)
             df['type'] = new_node
             df['project_id'] = project_id
-            df['submitter_id'] = odf['submitter_id'] + "_{}".format(new_node)
-            #only write new_to records if submitter_ids don't already exist in df_to:
             df = df.loc[~df['submitter_id'].isin(list(ndf.submitter_id))]
             df = pd.concat([ndf,df],ignore_index=True,sort=False)
 
@@ -555,6 +577,17 @@ class Gen3Migration:
                     df[prop] = np.nan
                     print("\tMissing required prop '{}' added to new '{}' TSV with all null values.".format(prop,new_node))
 
+        # CHECK the migration!
+        null = df.loc[df[prop].isnull()]
+        null_parents = list(set(null[merge_on]))
+        onn_parents = list(set(onn[merge_on]))
+        missed = list(set(null_parents).intersection(onn_parents)) #list of ids (type of id is 'merge_on') for records in df where there is a value in old TSV but not in new TSV
+        nn = df.loc[df[prop].notnull()][[merge_on,prop]]
+        nn.drop_duplicates(subset=None, keep='first', inplace=True)
+
+        if len(nn) != len(onn) or len(missed) > 0:
+            print("\t\t\t\n\nWARNING! It appears some data in old node '{}' ({} non-null records) was not properly migrated to new node '{}' ({} non-null records)!\n\n".format(old_node,len(onn),new_node,len(nn)))
+
         try:
             print("\t\tDropped '{}' from old_node: '{}' TSV.".format(prop,old_node))
             self.write_tsv(odf.drop(columns=[prop]),project_id,old_node)
@@ -564,16 +597,11 @@ class Gen3Migration:
         except Exception as e:
             print(type(e),e)
 
-        # check the migration
-        null = df.loc[df[prop].isnull()]
-        null_parents = list(set(null[parent]))
-        nn_parents = list(set(onn[parent]))
-        missed = set(null_parents).intersection(nn_parents)
-        nn = df.loc[df[prop].notnull()]
-        if len(nn) != len(onn) or len(missed) > 0:
-            print("\t\t\t\n\nWARNING! It appears some data in old node '{}' ({} non-null records) was not properly migrated to new node '{}' ({} non-null records)!\n\n".format(old_node,len(onn),new_node,len(nn)))
-
         return df
+
+
+
+
 
     def add_prop(self,project_id,node,props):
 
