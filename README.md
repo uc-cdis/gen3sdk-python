@@ -657,7 +657,6 @@ logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 COMMONS = "https://{{insert-commons-here}}/"
 
-
 def main():
     indexing_manifest = (
         "/path/to/indexing_manifest.csv"
@@ -667,17 +666,16 @@ def main():
     )
 
     # what column to use as the final GUID for metadata (this MUST exist in the
-    # smaller file, which is expected to be the indexing file)
+    # indexing file)
     manifests_mapping_config["guid_column_name"] = "guid"
 
     # what column from the "metadata file" to use for mapping
     manifests_mapping_config["row_column_name"] = "submitted_sample_id"
 
-    # smaller file by default is expected to be the "indexing file"
     # this configuration tells the function to use the "sample_id" column
     # from the "indexing file" to map to the metadata column configured above
     # (and these should match EXACTLY, 1:1)
-    manifests_mapping_config["smaller_file_column_name"] = "sample_id"
+    manifests_mapping_config["indexing_manifest_column_name"] = "sample_id"
 
     output_filename = "metadata-manifest.tsv"
 
@@ -727,7 +725,7 @@ from gen3.tools.merge import (
     merge_guids_into_metadata,
     manifest_row_parsers,
     manifests_mapping_config,
-    get_guids_for_row_partial_match,
+    get_guids_for_manifest_row_partial_match,
 )
 
 
@@ -745,22 +743,21 @@ def main():
         "/path/to/metadata_extract.tsv"
     )
     # what column to use as the final GUID for metadata (this MUST exist in the
-    # smaller file, which is expected to be the indexing file)
+    # indexing file)
     manifests_mapping_config["guid_column_name"] = "guid"
 
     # what column from the "metadata file" to use for mapping
     manifests_mapping_config["row_column_name"] = "submitted_sample_id"
 
-    # smaller file by default is expected to be the "indexing file"
     # this configuration tells the function to use the "gcp_uri" column
     # from the "indexing file" to map to the metadata column configured above
     # (for partial matching the metdata data column to this column )
-    manifests_mapping_config["smaller_file_column_name"] = "gcp_uri"
+    manifests_mapping_config["indexing_manifest_column_name"] = "gcp_uri"
 
     # by default, the functions for parsing the manifests and rows assumes a 1:1
     # mapping. There is an additional function provided for partial string matching
     # which we can use here.
-    manifest_row_parsers["guids_for_row"] = get_guids_for_row_partial_match
+    manifest_row_parsers["guids_for_manifest_row"] = get_guids_for_manifest_row_partial_match
 
     output_filename = "metadata-manifest-partial.tsv"
 
