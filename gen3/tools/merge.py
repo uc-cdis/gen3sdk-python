@@ -49,6 +49,10 @@ def get_guids_for_manifest_row_partial_match(
     WARNING: This iterates over the entire data_from_indexing_manifest dict EVERY TIME
              IT'S CALLED. So this is O(n2).
 
+    ANOTHER WARNING: This does not support GUIDs matching multiple rows
+                     of metadata, it only supports metadata matching multiple
+                     GUIDs.
+
     Example:
         row = {"submitted_sample_id": "123", "foo": "bar", "fizz": "buzz"}
         data_from_indexing_manifest = {
@@ -62,7 +66,7 @@ def get_guids_for_manifest_row_partial_match(
     # the name of column to return that exists as a value in the data_from_indexing_manifest
     guid_column_name = config.get("guid_column_name")
 
-    # the key from the row to use for the exact match against the keys in
+    # the key from the row to use for the partial match against the keys in
     # data_from_indexing_manifest
     row_key = config.get("row_column_name")
     key_from_row = row.get(row_key).strip()
@@ -186,7 +190,6 @@ def merge_guids_into_metadata(
 
             if not guids:
                 # warning but write to output anyway
-                # TODO should we not write to output?
                 logging.warning(f"could not find matching guid for row: {row}")
             else:
                 logging.debug(f"found guids {guids} matching row: {row}")

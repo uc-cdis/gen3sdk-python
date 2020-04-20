@@ -622,9 +622,13 @@ The script is also fairly configurable depending on how you need to map between 
 
 The ideal scenario is when you can map column to column between your _metadata manifest_ and _indexing manifest_ (e.g. what's in indexd).
 
-The non-ideal scenario is if you need something for partially matching one column to another. For example: if one of the indexed URLs will contain `submitted_sample_id` somewhere in the filename. In this case, the efficiency of the script becomes O(n2). If you can reliably parse out the section of the URL to match that could improve this. *tl;dr* Depending on your logic and number of rows in both files, this could be very very slow.
+The non-ideal scenario is if you need something for partially matching one column to another. For example: if one of the indexed URLs will contain `submitted_sample_id` somewhere in the filename. In this case, the efficiency of the script becomes O(n^2). If you can reliably parse out the section of the URL to match that could improve this. *tl;dr* Depending on your logic and number of rows in both files, this could be very very slow.
 
-> NOTE: By default this merge can match multiple GUIDs with the same metadata (depending on the configuration). This supports situations where there may exist metadata that applies to multiple files. For example: dbGaP sample metadata applied to both CRAM and CRAI genomic files.
+By default this merge can match multiple GUIDs with the same metadata (depending on the configuration). This supports situations where there may exist metadata that applies to multiple files. For example: dbGaP sample metadata applied to both CRAM and CRAI genomic files.
+
+So while this supports metadata matching multiple GUIDs, it does *not* support GUIDs matching multiple sets of metadata.
+
+> IMPORTANT NOTE: The tool will log warnings about unmatched records but it will not halt execution, so be sure to check logs when using these tools.
 
 #### Ideal Scenario (Column to Column Match, Indexing:Metadata Manifest Rows)
 
@@ -752,7 +756,7 @@ def main():
     # this configuration tells the function to use the "gcp_uri" column
     # from the "indexing file" to map to the metadata column configured above
     # (for partial matching the metdata data column to this column )
-    manifests_mapping_config["indexing_manifest_column_name"] = "gcp_uri"
+    manifests_mapping_config["indexing_manifest_column_name"] = "urls"
 
     # by default, the functions for parsing the manifests and rows assumes a 1:1
     # mapping. There is an additional function provided for partial string matching
