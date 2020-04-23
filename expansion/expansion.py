@@ -217,8 +217,10 @@ class Gen3Expansion:
                 prog,proj = project.split('-',1)
                 self.sub.export_node(prog,proj,node,'tsv',filename)
             df1 = pd.read_csv(filename, sep='\t', header=0, index_col=False)
-            dfs.append(df1)
             df_len+=len(df1)
+            if not df1.empty:
+                dfs.append(df1)
+
             print(filename +' has '+str(len(df1))+' records.')
 
             if remove_empty is True:
@@ -231,7 +233,7 @@ class Gen3Expansion:
                         output = e.output.decode('UTF-8')
                         print("ERROR deleting file: " + output)
 
-        all_data = pd.concat(dfs, ignore_index=True)
+        all_data = pd.concat(dfs, ignore_index=True, sort = False)
         print('length of all dfs: ' +str(df_len))
         nodefile = str('master_'+node+'.tsv')
         all_data.to_csv(str(mydir+'/'+nodefile),sep='\t',index=False)
@@ -701,6 +703,7 @@ class Gen3Expansion:
         df1 = df1.rename(columns={'index':prop, 0:'count'}).sort_values(by='count', ascending=False)
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
             display(df1)
+        return df1
 
     def property_counts_by_project(self, prop, df):
         df = df[df[prop].notnull()]
@@ -811,6 +814,27 @@ class Gen3Expansion:
 
         plt.title(numeric_property+' by ' + category_property +' (N = '+str(N)+')') # You can comment this line out if you don't need title
         plt.show(fig)
+
+
+    def plot_category_by_category(self, prop1, prop2, df):
+        sns.set(style="darkgrid")
+        categories, counts = zip(*Counter(df[prop1]).items())
+        N = 0
+
+        for category in categories:
+            subset = df[df[prop1] == category]
+            N += len(subset)
+            data = subset[prop2].dropna().astype(str)
+
+            y_pos = np.arange(len(categories))
+            plt.bar(y_pos, counts, align='center', alpha=0.5)
+            plt.xticks(y_pos, categories)
+            plt.ylabel('Counts')
+            plt.xticks(rotation=90, horizontalalignment='center')
+
+        plt.title("{} by {} (N = {})".format(prop1,prop2,N))
+        plt.show()
+
 
     def plot_top10_numeric_by_category(self, numeric_property, category_property, df):
         sns.set(style="darkgrid")

@@ -40,6 +40,10 @@ profile = 'stage'
 api = 'https://gen3.datastage.io/' # STAGE (old "DCP")
 creds = '/Users/christopher/Downloads/stage-credentials.json'
 
+profile = 'acct'
+api = 'https://acct.bionimbus.org/'
+creds = '/Users/christopher/Downloads/acct-credentials.json'
+
 # api = 'https://dcf-interop.kidsfirstdrc.org/' #Kids First
 
 

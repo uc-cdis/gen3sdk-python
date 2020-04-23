@@ -797,8 +797,15 @@ class Gen3Migration:
         if new_prop in df:
             nn = df.loc[df[new_prop].notnull()]
             if len(nn) > 0:
-                print("\t\tExisting '{0}' data found in TSV: {1} non-null records! \n\n\nCheck '{2}' data before using this script!!!".format(new_prop,len(nn),props))
-                return df
+                print("\t\tExisting '{0}' data found in TSV: {1} non-null records!".format(new_prop,len(nn)))
+                onn = df.loc[df[old_prop].notnull()]
+                if len(onn) == 0:
+                    print("\t\t\tNo non-null data in old_prop '{}'. Keeping existing data in new_prop '{}'.".format(old_prop,new_prop))
+                    df.drop(columns=[old_prop],inplace=True)
+                    return df
+                else:
+                    print("\t\t\t{} non-null old_prop '{}' records found and {} non-null new_prop '{}' records found. \n\n\n\n\nCheck existing '{}' data before running this script!!!\n\n\n\n\n.".format(len(onn),old_prop,len(nn),new_prop,project_id))
+                    return df
             else: # if all data is null, drop the column
                 df.drop(columns=[new_prop],inplace=True)
                 print("\t\tProperty '{0}' already in TSV with all null records. Dropping empty column from TSV.".format(new_prop))
