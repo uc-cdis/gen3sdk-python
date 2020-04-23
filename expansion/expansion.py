@@ -2310,7 +2310,7 @@ class Gen3Expansion:
                         null = df.loc[df[prop].isnull()]
                         nn = df.loc[df[prop].notnull()]
 
-                        ptype = get_prop_type(node,prop,dd)
+                        ptype = self.get_prop_type(node,prop,dd)
 
                         data[project_id]['nodes'][node][prop]["N"] = len(df)
                         data[project_id]['nodes'][node][prop]["null"] = len(null)
@@ -2450,7 +2450,7 @@ class Gen3Expansion:
 
         i = 0
 
-        project_ids = list(s['data'])
+        project_ids = list(summary['data'])
 
         for project_id in project_ids: #project_id=project_ids[0]
             print("Reporting '{}' data:".format(project_id))
@@ -2507,8 +2507,8 @@ class Gen3Expansion:
 
         if write_report is True:
             os.chdir(tsv_dir)
-            create_output_dir(outdir=outdir)
-            outname = get_output_name(name=tsv_dir, extension='tsv', outdir=outdir)
+            self.create_output_dir(outdir=outdir)
+            outname = self.get_output_name(name=tsv_dir, extension='tsv', outdir=outdir)
             report.to_csv(outname, sep='\t', index=False, encoding='utf-8')
             print("\nReport written to file:\n\t{}".format(outname))
 
@@ -2614,7 +2614,7 @@ class Gen3Expansion:
         if write_report is True:
 
             os.chdir(home_dir)
-            create_output_dir(outdir)
+            self.create_output_dir(outdir)
 
             outname = "{}/comparison_{}_{}.tsv".format(outdir,dc0,dc1)
             comparison.to_csv(outname, sep='\t', index=False, encoding='utf-8')
