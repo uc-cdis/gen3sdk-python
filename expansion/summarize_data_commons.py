@@ -24,9 +24,9 @@
 # Setup using local SDK files cloned from GitHub:
 # in git_dir, do "git clone git@github.com:cgmeyer/gen3sdk-python.git"
 
-profile = 'acct'
-api = 'https://acct.bionimbus.org/'
-creds = '/Users/christopher/Downloads/acct-credentials.json'
+profile = 'bc'
+api = 'https://data.braincommons.org/'
+creds = '/Users/christopher/Downloads/bc-credentials.json'
 
 import pandas as pd
 import sys
@@ -45,8 +45,14 @@ sub = Gen3Submission(api, auth) # Initialize an instance this class, using your 
 %run /Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/expansion/expansion.py # Some additional functions in Gen3Expansion class
 exp = Gen3Expansion(api, auth) # Initialize an instance, using its functions like exp.get_project_tsvs()
 
+
+## Get all the data you have access to:
+#tsv_dir = '/Users/christopher/Documents/Notes/BHC/data_qc/dm2.2_QC/prod_tsvs_04232020'
+#data = exp.get_project_tsvs(outdir=tsv_dir)
+
 """
 
+## these packages should all be imported after importing the Gen3SDK. But if you're not using it, you'll need some of these packages:
 # import os, os.path, sys, subprocess, glob, json, datetime, collections
 # import fnmatch, sys, ntpath, copy, re, operator, requests, statistics
 # from shutil import copyfile
@@ -65,9 +71,6 @@ exp = Gen3Expansion(api, auth) # Initialize an instance, using its functions lik
 #     from StringIO import StringIO
 # else:
 #     from io import StringIO
-
-
-import statistics
 
 def t(var):
     vtype = type(var)
@@ -357,14 +360,14 @@ def summarize_tsvs(tsv_dir,dd,prefix='',outlier_threshold=3,omit_props=['project
 ########################################################################################################################
 ########################################################################################################################
 
-def write_commons_report(summary,tsv_dir,outdir='.',bin_limit=False,create_report=True,report_null=True):
+def write_commons_report(summary,tsv_dir,outdir='.',bin_limit=False,write_report=True,report_null=True):
     """ Converts the summarize_tsvs() dictionary into a pandas DataFrame and writes it to a file.
     Args:
         summary(dict): the dict returned from running 'summarize_tsvs()' script.
         tsv_dir(str): the directory where project TSV folders and 'outdir' are.
         outdir(str): Directory to write the report file to.
         bin_limit(int): limits the number of bins written to the report for enums, strings, and booleans. If bin_limit=3, only the largest 3 bins will be reported.
-        create_report(bool): whether to write a TSV report to the outdir
+        write_report(bool): whether to write a TSV report to the outdir
         report_null(bool): if False, properties in TSVs with entirely null data will be excluded from the report.
 
     Example:
@@ -372,7 +375,7 @@ def write_commons_report(summary,tsv_dir,outdir='.',bin_limit=False,create_repor
             tsv_dir = '/Users/christopher/Documents/Notes/BHC/data_migration/v2.2/prod_tsvs_04112020',
             outdir = '.'
             bin_limit = False,
-            create_report = True,
+            write_report = True,
             report_null = True)
 
     """
@@ -443,7 +446,7 @@ def write_commons_report(summary,tsv_dir,outdir='.',bin_limit=False,create_repor
                     print("\t'{}' written to report ({} total, {} null, {} non-null).".format(prop_id,stats['N'],stats['null'],stats['nn']))
                     i += 1
 
-    if create_report is True:
+    if write_report is True:
         os.chdir(tsv_dir)
         create_output_dir(outdir=outdir)
         outname = get_output_name(name=tsv_dir, extension='tsv', outdir=outdir)
@@ -458,67 +461,82 @@ def write_commons_report(summary,tsv_dir,outdir='.',bin_limit=False,create_repor
 #tsv_dir = '/Users/christopher/Documents/Notes/ACCT/tsvs/project_tsvs_04222020/'
 #
 #tsv_dir = '/Users/christopher/Documents/Notes/BHC/data_qc/dm2.2_QC/prep_tsvs_04152020'
-#report = write_commons_report(summary=s, outdir='.', tsv_dir=tsv_dir)
+#report = write_commons_report(summary=s, tsv_dir=tsv_dir, outdir='.')
 
 
 ########################################################################################################################
 ########################################################################################################################
 
-def compare_commons(report,commons,stats = ['total_records','null_count','N','min','max','mean','median','stdev','bin_number','bins'],create_report=True,home_dir='.',outdir='data_summary_reports'):
-    """ Takes the pandas DataFrame returned from 'write_commons_report'
-        where at least 2 data commons are summarized from 'summarize_data_commons'.
+def compare_commons(reports, stats = ['property_type','all_null','N','null','nn','min','max','mean','median','stdev','bin_number','bins','outliers'], write_report=True, home_dir='.', outdir='.'):
+    """ Takes two data summary reports (output of "self.write_commons_report" func), and compares the data in each.
+        Comparisons are between matching project/node/property combos (aka "prop_id") in each report.
     Args:
-        report(dataframe): a pandas dataframe generated from a summary of TSV data; obtained by running write_summary_report() on the result of summarize_tsv_data()
-        commons(dict): The data commons to summarize. Keys should be the names of the data commons.
+        reports(dict): a dict of two "commons_name" : "report", where report is a pandas dataframe generated from a summary of TSV data; obtained by running write_summary_report() on the result of summarize_tsv_data().
         stats(list): the list of statistics to compare between data commons for each node/property combination
         outdir(str): directory within home_dir to save output files to.
         home_dir(str): directory within which to create the outdir directory for reports.
-        create_report(boolean): If True, reports are written to files in the outdir.
+        write_report(boolean): If True, reports are written to files in the outdir.
+
+    Example:
+        reports = {"prod": report_0, "prep": report_1}
+        c = compare_commons(reports)
+
     """
-    # This script only compares the first two data commons in a report
-    dcs = list(set(list(report['commons'])))[:2]
-    report = report.loc[report['commons'].isin(dcs)]
 
-    # create prop_ids for comparing project data per property in each node from two data commons
-    prop_ids = sorted(list(set(report['prop_id'])))
-    total = len(prop_ids)
+    dc0,dc1 = list(reports)
+    r0 = copy.deepcopy(reports[dc0])
+    r1 = copy.deepcopy(reports[dc1])
 
-    # initialize results dictionary
+    r0.insert(loc=0, column='commons', value=dc0)
+    r1.insert(loc=0, column='commons', value=dc1)
+    report = pd.concat([r0,r1], ignore_index=True, sort=False)
+
     cols = list(report)
-    #all_data = pd.DataFrame(index=range(0,total),columns=cols)
-    unclassified = pd.DataFrame(columns=cols)
-    identical = pd.DataFrame(columns=cols)
-    different = pd.DataFrame(columns=cols)
-    unique = pd.DataFrame(columns=cols)
+    p0 = list(r0['prop_id'])
+    p1 = list(r1['prop_id'])
+    prop_ids = list(set(p0 + p1))
+    total = len(prop_ids)
 
     dcs_stats = []
     for stat in stats:
-        for dc in dcs:
+        for dc in list(reports):
             dcs_stats.append(dc + '_' + stat)
-    comparison_cols = ['project_id','node','property','prop_id'] + dcs_stats
+
+    common_cols = [col for col in cols if col not in stats + ['commons']]
+    comparison_cols = ['comparison'] + common_cols + dcs_stats
     comparison = pd.DataFrame(columns=comparison_cols, index=prop_ids)
 
-    i = 1 # to track the progress of the script in print statement below
-    for prop_id in prop_ids: # prop_id = prop_ids[0]
+    prop_count = 1
 
-        print("({} of {} prop_ids) Comparing stats for '{}'".format(i,total,prop_id))
-        i += 1
+    for prop_id in prop_ids:
+        print("({} of {} prop_ids) Comparing stats: '{}'".format(prop_count,total,prop_id))
+        prop_count += 1
 
         project_id,node,prop = prop_id.split('.')
+
+        comparison['prop_id'][prop_id] = prop_id
         comparison['project_id'][prop_id] = project_id
         comparison['node'][prop_id] = node
         comparison['property'][prop_id] = prop
-        comparison['prop_id'][prop_id] = prop_id
 
         df = report.loc[report['prop_id']==prop_id].reset_index(drop=True)
 
-        if len(df) == 1: # if only one instance of the project-node-property in the report, put in unique df
-            unique = pd.concat([unique,df],ignore_index=True, sort=False)
-            #print("\tUnique".format(prop_id))
+        if len(df) == 1:
+            comparison['comparison'][prop_id] = 'unique'
+            dc = df['commons'][0]
+            for stat in stats:
+                col = "{}_{}".format(dc,stat)
+                comparison[col][prop_id] = df[stat][0]
 
-        elif len(df) == 2: # do the comparison and save results to comparison, then also to different or identical
+        elif len(df) == 2: #just a check that there should be 2 rows in the df (comparing prop_id stats between two different commons)
             same = []
             for stat in stats: # first, check whether any of the stats are different bw commons
+
+                col0 = dc0+'_'+stat #column name for first commons
+                col1 = dc1+'_'+stat #column name for second commons
+                comparison[col0][prop_id] = df.loc[df['commons']==dc0].iloc[0][stat]
+                comparison[col1][prop_id] = df.loc[df['commons']==dc1].iloc[0][stat]
+
                 if df[stat][0] != df[stat][1]: # Note: if both values are "NaN" this is True; because NaN != NaN
                     if list(df[stat].isna())[0] is True and list(df[stat].isna())[1] is True:# if stats are both "NaN", data are identical
                         same.append(True)
@@ -528,57 +546,40 @@ def compare_commons(report,commons,stats = ['total_records','null_count','N','mi
                     same.append(True)
 
             if False in same: # if any of the stats are different bw commons, add to different df and comparison df
-                different = pd.concat([different,df],ignore_index=True, sort=False)
-                for stat in stats: #stat=stats[0]
-
-                    col0 = dcs[0]+'_'+stat #column name for first commons
-                    col1 = dcs[1]+'_'+stat #column name for second commons
-                    comparison[col0][prop_id] = df.loc[df['commons']==dcs[0]].iloc[0][stat]
-                    comparison[col1][prop_id] = df.loc[df['commons']==dcs[1]].iloc[0][stat]
-
+                comparison['comparison'][prop_id] = 'different'
             else:
-                identical = pd.concat([identical,df],ignore_index=True, sort=False)
+                comparison['comparison'][prop_id] = 'identical'
 
         else:
-            print("\n\nThe number of instances of this project-node-property '{}' is not 1 or 2!\n{}\n\n".format(prop_id,df))
-            unclassified = pd.concat([unclassified,df],ignore_index=True, sort=False)
-
-    # drop all prop_ids that don't have different data (comparison columns only get filled if stats are different)
-    comparison = comparison[list(comparison)].dropna(thresh=5) # only the project,node,property, and prop_id columns have non-null values if stats aren't different, so thresh=5 gets rid of prop_ids with unique/identical data
+            print("\n\nThe number of instances of this prop_id '{}' is not 2!\n{}\n\n".format(prop_id,df))
+            return
 
     # check total
-    if len(report) == len(identical) + len(different) + len(unique): #len(report) == len(comparison['identical']) + len(comparison['different'])
-        print("All {} properties in the report (instances of {} unique prop_ids) were classified as having unique, identical or different data between data commons: {}.".format(len(report),total,dcs))
+    identical = comparison.loc[comparison['comparison']=='identical']
+    different = comparison.loc[comparison['comparison']=='different']
+    unique = comparison.loc[comparison['comparison']=='unique']
+
+    if len(prop_ids) == len(identical) + len(different) + len(unique):
+        print("All {} prop_ids in the reports were classified as having unique, identical or different data between data commons: {}.".format(len(prop_ids),list(reports)))
     else:
         print("Some properties in the report were not classified!")
 
-    if create_report is True:
+    if write_report is True:
 
         os.chdir(home_dir)
         create_output_dir(outdir)
 
-        comp_name = get_output_name("comparison","tsv",commons,outdir=outdir)
-        comparison.to_csv(comp_name, sep='\t', index=False, encoding='utf-8')
+        outname = "{}/comparison_{}_{}.tsv".format(outdir,dc0,dc1)
+        comparison.to_csv(outname, sep='\t', index=False, encoding='utf-8')
 
-        diff_name = get_output_name("different","tsv",commons,outdir=outdir)
-        different.to_csv(diff_name, sep='\t', index=False, encoding='utf-8')
-
-        identical_name = get_output_name("identical","tsv",commons,outdir=outdir)
-        identical.to_csv(identical_name, sep='\t', index=False, encoding='utf-8')
-
-        unique_name = get_output_name("unique","tsv",commons,outdir=outdir)
-        unique.to_csv(unique_name, sep='\t', index=False, encoding='utf-8')
-
-    dfs = {"comparison":comparison,
-        "different":different,
-        "identical":identical,
-        "unclassified":unclassified,
-        "unique":unique}
-
-    return dfs
+    return comparison
 
 ########################################################################################################################
 ########################################################################################################################
-#c = compare_commons_reports(report,stats = ['total_records','null_count','N','min','max','mean','median','stdev','bin_number','bins'],outdir='reports',home_dir='/Users/christopher/Documents/Notes/BHC/data_qc/',create_report=True)
+#c = compare_commons_reports(report,stats = ['total_records','null_count','N','min','max','mean','median','stdev','bin_number','bins'],outdir='reports',home_dir='/Users/christopher/Documents/Notes/BHC/data_qc/',write_report=True)
+
+#reports = {"prod": report_0, "prep": report_1}
+#c = compare_commons(reports)
+
 
 ########################################################################################################################
