@@ -2599,7 +2599,7 @@ class Gen3Expansion:
 
             else:
                 print("\n\nThe number of instances of this prop_id '{}' is not 2!\n{}\n\n".format(prop_id,df))
-                return
+                return df
 
         # check total
         identical = comparison.loc[comparison['comparison']=='identical']
