@@ -243,9 +243,9 @@ async def _ingest_all_metadata_in_file(
                 # Basically make sure the resulting column is something that we can
                 # later json.loads().
                 # remove redudant quoting
-                new_row[key.strip()] = (
-                    value.strip().strip("'").strip('"').replace("''", "'")
-                )
+                if value:
+                    value = value.strip().strip("'").strip('"').replace("''", "'")
+                new_row[key.strip()] = value
             await queue.put(new_row)
 
     await asyncio.gather(
