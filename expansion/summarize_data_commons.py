@@ -455,8 +455,10 @@ def write_commons_report(summary,tsv_dir,outdir='.',bin_limit=False,create_repor
 
 ########################################################################################################################
 
-tsv_dir = '/Users/christopher/Documents/Notes/ACCT/tsvs/project_tsvs_04222020/'
-report = write_commons_report(summary=s, outdir='.', tsv_dir=tsv_dir)
+#tsv_dir = '/Users/christopher/Documents/Notes/ACCT/tsvs/project_tsvs_04222020/'
+#
+#tsv_dir = '/Users/christopher/Documents/Notes/BHC/data_qc/dm2.2_QC/prep_tsvs_04152020'
+#report = write_commons_report(summary=s, outdir='.', tsv_dir=tsv_dir)
 
 
 ########################################################################################################################
