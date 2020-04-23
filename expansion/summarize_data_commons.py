@@ -445,8 +445,8 @@ def write_commons_report(summary,tsv_dir,outdir='.',bin_limit=False,create_repor
 
     if create_report is True:
         os.chdir(tsv_dir)
-        create_output_dir(outdir='data_summary_reports')
-        outname = get_output_name(name=tsv_dir,extension='tsv',outdir='data_summary_reports')
+        create_output_dir(outdir=outdir)
+        outname = get_output_name(name=tsv_dir, extension='tsv', outdir=outdir)
         report.to_csv(outname, sep='\t', index=False, encoding='utf-8')
         print("\nReport written to file:\n\t{}".format(outname))
 
