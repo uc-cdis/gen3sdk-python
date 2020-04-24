@@ -145,7 +145,7 @@ class Gen3Expansion:
             Example:
                 get_project_ids()
                 get_project_ids(node='demographic')
-                get_project_ids(node='program',name='training')
+                get_project_ids(node='program',name=['training','internal'])
                 get_project_ids(node='case',name='case-01')
         """
         project_ids = []
