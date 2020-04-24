@@ -2345,8 +2345,13 @@ class Gen3Expansion:
                                 print("\t\t'{}.{}.{}': {}".format(project_id,node,prop,data[project_id]['nodes'][node][prop]))
 
                                 # make a list of the data values as floats (converted from strings)
-                                d = list(nn[prop].astype(float))
-
+                                nn_all = nn[prop]
+                                nn_num = pd.to_numeric(nn[prop], errors='coerce').dropna()
+                                d_all = list(nn0)
+                                d_num = list(nn1)
+                                if len(d_all) > len(d_num):
+                                    non_numbers = [element for element in d_all if element not in list(map(str,d_num))]
+                                    print("\t\tFound {} string values among the {} records of prop '{}' with value(s): {}. Calculating stats only for the {} numeric values.".format(len(non_numbers),len(nn),prop,list(set(non_numbers)),len(d_num)))
                                 # calculate summary stats using the float list d
                                 mean = statistics.mean(d)
                                 median = statistics.median(d)
