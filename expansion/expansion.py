@@ -2231,7 +2231,7 @@ class Gen3Expansion:
 
 
 
-    def summarize_tsvs(self, tsv_dir, dd, prefix='', outlier_threshold=3, omit_props=['project_id','type','id','submitter_id','case_submitter_id','case_ids','visit_id','sample_id','md5sum','file_name','object_id'], omit_nodes=['metaschema','root','program','project','data_release'], outdir='.', bin_limit=False, write_report=True, report_null=True):
+    def summarize_tsvs(self, tsv_dir, dd, prefix='', outlier_threshold=10, omit_props=['project_id','type','id','submitter_id','case_submitter_id','case_ids','visit_id','sample_id','md5sum','file_name','object_id'], omit_nodes=['metaschema','root','program','project','data_release'], outdir='.', bin_limit=False, write_report=True, report_null=True):
         """
         Returns a nested dictionary of summarized TSV data per project, node, and property.
         For each property in each project, the total, non-null and null counts are returned.
@@ -2330,6 +2330,7 @@ class Gen3Expansion:
 
                             # Get stats for strings
                             if ptype in ['string','enum','boolean','date','array']:
+                                print("\t\t'{}.{}.{}': {}".format(project_id,node,prop,data[project_id]['nodes'][node][prop]))
 
                                 counts = Counter(nn[prop])
                                 df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
@@ -2338,10 +2339,10 @@ class Gen3Expansion:
 
                                 data[project_id]['nodes'][node][prop]['bins'] = bins
                                 data[project_id]['nodes'][node][prop]['bin_number'] = len(bins)
-                                print("\t\t'{}.{}.{}': {}".format(project_id,node,prop,data[project_id]['nodes'][node][prop]))
 
                             # Get stats for numbers
                             elif ptype in ['number','integer']: #prop='concentration'
+                                print("\t\t'{}.{}.{}': {}".format(project_id,node,prop,data[project_id]['nodes'][node][prop]))
 
                                 # make a list of the data values as floats (converted from strings)
                                 d = list(nn[prop].astype(float))
@@ -2375,8 +2376,6 @@ class Gen3Expansion:
                                 data[project_id]['nodes'][node][prop]['min'] = minimum
                                 data[project_id]['nodes'][node][prop]['max'] = maximum
                                 data[project_id]['nodes'][node][prop]['outliers'] = outliers
-
-                                print("\t\t'{}.{}.{}': {}".format(project_id,node,prop,data[project_id]['nodes'][node][prop]))
 
                             else: # If its not in the list of ptypes, exit. Need to add array handling.
                                 print("\t\tUnhandled property type {}: {}".format(prop,ptype))

@@ -353,7 +353,7 @@ def summarize_tsvs(tsv_dir,dd,prefix='',outlier_threshold=3,omit_props=['project
 #
 # tsv_dir = '/Users/christopher/Documents/Notes/BHC/data_qc/dm2.2_QC/prep_tsvs_04152020'
 # prep_dd = prep_sub.get_dictionary_all()
-#s = summarize_tsvs(tsv_dir,dd)
+# s = summarize_tsvs(tsv_dir,dd)
 
 
 ########################################################################################################################
