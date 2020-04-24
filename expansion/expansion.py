@@ -2531,6 +2531,8 @@ class Gen3Expansion:
                         print("\t'{}' written to report ({} total, {} null, {} non-null).".format(prop_id,stats['N'],stats['null'],stats['nn']))
                         i += 1
 
+        # strip the col names so we can sort the report
+        report.columns = report.columns.str.strip()
         report.sort_values(by=['all_null'],inplace=True)
 
         if write_report is True:
