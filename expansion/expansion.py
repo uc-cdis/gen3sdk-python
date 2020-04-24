@@ -2348,11 +2348,14 @@ class Gen3Expansion:
                                 nn_all = nn[prop]
                                 d_all = list(nn_all)
 
-                                nn_num = pd.to_numeric(nn[prop], errors='coerce').dropna()
+                                nn_num = nn[prop].astype(float, copy=True).fillna(np.nan).dropna()
+                                #nn_num = pd.to_numeric(nn[prop], errors='coerce').dropna()
+                                #df.a.astype(float).fillna(0.0)
+                                #nn_num = rows in nn not in d_all or whatev
                                 d = list(nn_num)
-                                non_numbers = [element for element in d_all if element not in list(map(str,d))]
 
                                 nn_string = nn.loc[~nn[prop].isin(list(map(str,d)))]
+                                non_numbers = list(nn_string[prop])
 
                                 if len(d) > 0: # if there are numbers in the data, calculate numeric stats
 
@@ -2398,7 +2401,7 @@ class Gen3Expansion:
                                     data[project_id]['nodes'][node][prop]['bin_number'] = len(bins)
 
                             else: # If its not in the list of ptypes, exit. Need to add array handling.
-                                print("\t\tUnhandled property type {}: {}".format(prop,ptype))
+                                print("\t\tUnhandled property type '{}': {}".format(prop_id,ptype))
                                 exit()
 
         summary['data'] = data
