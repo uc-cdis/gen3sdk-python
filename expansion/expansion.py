@@ -2531,6 +2531,8 @@ class Gen3Expansion:
                         print("\t'{}' written to report ({} total, {} null, {} non-null).".format(prop_id,stats['N'],stats['null'],stats['nn']))
                         i += 1
 
+        report.sort_values(by=['all_null'],inplace=True)
+
         if write_report is True:
             os.chdir(tsv_dir)
             self.create_output_dir(outdir=outdir)
