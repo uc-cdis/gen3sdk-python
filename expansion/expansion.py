@@ -2402,6 +2402,7 @@ class Gen3Expansion:
 
                                 if len(d_all) > len(d): # property is mixed type: numeric/string values; non-standard, but can happen
                                     print("\t\tFound {} string values among the {} records of prop '{}' with value(s): {}. Calculating stats only for the {} numeric values.".format(len(non_numbers),len(nn),prop,list(set(non_numbers)),len(d)))
+                                    data[project_id]['nodes'][node][prop]["type"] = "mixed {},string".format(ptype)
 
                                     counts = Counter(nn_string[prop])
                                     df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
@@ -2533,7 +2534,7 @@ class Gen3Expansion:
 
         # strip the col names so we can sort the report
         report.columns = report.columns.str.strip()
-        report.sort_values(by=['all_null'],inplace=True)
+        report.sort_values(by=['all_null','node','property'],inplace=True)
 
         if write_report is True:
             os.chdir(tsv_dir)
