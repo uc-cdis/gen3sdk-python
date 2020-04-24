@@ -2304,22 +2304,21 @@ class Gen3Expansion:
 
                     for prop in props: #prop=props[0]
 
-                        data[project_id]['nodes'][node][prop] = {}
+                        prop_name = "{}.{}".format(node,prop)
+                        prop_id = "{}.{}".format(project_id,prop_name)
 
                         # because of sheepdog bug, need to inclue "None" in "null" (:facepalm:) https://ctds-planx.atlassian.net/browse/PXP-5663
                         df.at[df[prop] == 'None',prop] = np.nan
                         null = df.loc[df[prop].isnull()]
                         nn = df.loc[df[prop].notnull()]
-
                         ptype = self.get_prop_type(node,prop,dd)
 
+
+                        data[project_id]['nodes'][node][prop] = {}
                         data[project_id]['nodes'][node][prop]["N"] = len(df)
                         data[project_id]['nodes'][node][prop]["null"] = len(null)
                         data[project_id]['nodes'][node][prop]["nn"] = len(nn)
                         data[project_id]['nodes'][node][prop]["type"] = ptype
-
-                        prop_name = "{}.{}".format(node,prop)
-                        prop_id = "{}.{}".format(project_id,prop_name)
 
                         # set each of stats to 'NA', to be replaced for stats
                         data[project_id]['nodes'][node][prop]['stdev'] = np.nan
