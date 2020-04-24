@@ -2283,6 +2283,7 @@ class Gen3Expansion:
                 node_regex = r"^" + re.escape(project_id) + r"_([a-zA-Z0-9_]+)\.tsv$" #node = re.search(r'^([a-zA-Z0-9_]+)-([a-zA-Z0-9]+)_([a-zA-Z0-9_]+)\.tsv$',fname).group(3)
 
                 try: # extract the node name from the filename
+                    #fname = "{}_{}.tsv".format(project_id,node)
                     node = re.search(node_regex, fname, re.IGNORECASE).group(1)
                     df = pd.read_csv(fname, sep='\t', header=0, dtype=str)
                 except Exception as e:
@@ -2295,7 +2296,7 @@ class Gen3Expansion:
                     nn_nodes.append(node)
                     prop_regex = re.compile(r'^[A-Za-z0-9_]*[^.]$') #drop the links, e.g., cases.submitter_id or diagnoses.id (matches all properties with no ".")
                     props = list(filter(prop_regex.match, list(df))) #properties in this TSV to summarize
-                    props = [prop for prop in props if prop not in omit_props]
+                    props = [prop for prop in props if prop not in omit_props] #omit_props=['project_id','type','id','submitter_id','case_submitter_id','case_ids','visit_id','sample_id','md5sum','file_name','object_id']
 
                     print("\t\tTotal of {} records in '{}' TSV with {} properties.".format(len(df),node,len(props)))
 
@@ -2348,7 +2349,8 @@ class Gen3Expansion:
                                 nn_all = nn[prop]
                                 d_all = list(nn_all)
 
-                                nn_num = nn[prop].astype(float, copy=True).fillna(np.nan).dropna()
+                                nn_num = nn[prop].apply(pd.to_numeric, errors='coerce').dropna()
+                                #nn_num = nn[prop].astype(float, copy=True).fillna(np.nan).dropna()
                                 #nn_num = pd.to_numeric(nn[prop], errors='coerce').dropna()
                                 #df.a.astype(float).fillna(0.0)
                                 #nn_num = rows in nn not in d_all or whatev
