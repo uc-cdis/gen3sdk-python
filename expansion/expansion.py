@@ -2330,7 +2330,7 @@ class Gen3Expansion:
 
                             # Get stats for strings
                             if ptype in ['string','enum','boolean','date','array']:
-                                print("\t\t'{}.{}.{}': {}".format(project_id,node,prop,data[project_id]['nodes'][node][prop]))
+                                print("\t\t'{}': {}".format(prop_id,data[project_id]['nodes'][node][prop]))
 
                                 counts = Counter(nn[prop])
                                 df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
@@ -2342,7 +2342,7 @@ class Gen3Expansion:
 
                             # Get stats for numbers
                             elif ptype in ['number','integer']: #prop='concentration'
-                                print("\t\t'{}.{}.{}': {}".format(project_id,node,prop,data[project_id]['nodes'][node][prop]))
+                                print("\t\t'{}': {}".format(prop_id,data[project_id]['nodes'][node][prop]))
 
                                 # make a list of the data values as floats (converted from strings)
                                 nn_all = nn[prop]
