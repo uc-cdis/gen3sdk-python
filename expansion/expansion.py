@@ -2321,6 +2321,16 @@ class Gen3Expansion:
                         prop_name = "{}.{}".format(node,prop)
                         prop_id = "{}.{}".format(project_id,prop_name)
 
+                        # set each of stats to 'NA', to be replaced for stats
+                        data[project_id]['nodes'][node][prop]['stdev'] = np.nan
+                        data[project_id]['nodes'][node][prop]['mean'] = np.nan
+                        data[project_id]['nodes'][node][prop]['median'] = np.nan
+                        data[project_id]['nodes'][node][prop]['min'] = np.nan
+                        data[project_id]['nodes'][node][prop]['max'] = np.nan
+                        data[project_id]['nodes'][node][prop]['outliers'] = np.nan
+                        data[project_id]['nodes'][node][prop]['bins'] = np.nan
+                        data[project_id]['nodes'][node][prop]['bin_number'] = np.nan
+
                         if nn.empty:
                             #print("\t\tAll null data for '{}' in this TSV.".format(prop))
                             null_props.append(prop_name)
@@ -2500,31 +2510,24 @@ class Gen3Expansion:
                         report['nn'][i] = stats['nn']
                         report['null'][i] = stats['null']
                         report['property_type'][i] = stats['type']
+                        report['min'][i] = stats['min']
+                        report['max'][i] = stats['max']
+                        report['mean'][i] = stats['mean']
+                        report['median'][i] = stats['median']
+                        report['stdev'][i] = stats['stdev']
+                        report['outliers'][i] = stats['outliers']
+                        report['bin_number'][i] = stats['bin_number']
+                        bins = stats['bins']
+
+                        if not bin_limit is False and stats['bin_number'] > bin_limit:
+                            report['bins'][i] = stats['bins'][:bin_limit]
+                        else:
+                            report['bins'][i] = stats['bins']
 
                         if stats['nn'] == 0:
                             report['all_null'][i] = True
                         else:
                             report['all_null'][i] = False
-
-                            if stats['type'] in ['string','enum','boolean','array']:
-                                report['bin_number'][i] = stats['bin_number']
-
-                                bins = stats['bins']
-                                if not bin_limit is False and stats['bin_number'] > bin_limit:
-                                    report['bins'][i] = stats['bins'][:bin_limit]
-                                else:
-                                    report['bins'][i] = stats['bins']
-
-                            elif stats['type'] in ['integer','number']:
-                                report['min'][i] = stats['min']
-                                report['max'][i] = stats['max']
-                                report['mean'][i] = stats['mean']
-                                report['median'][i] = stats['median']
-                                report['stdev'][i] = stats['stdev']
-                                report['outliers'][i] = stats['outliers']
-
-                            else:
-                                print("Unhandled property: '{}' of type '{}'!".format(prop_id,stats['type']))
 
                         print("\t'{}' written to report ({} total, {} null, {} non-null).".format(prop_id,stats['N'],stats['null'],stats['nn']))
                         i += 1
