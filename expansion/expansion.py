@@ -2346,43 +2346,56 @@ class Gen3Expansion:
 
                                 # make a list of the data values as floats (converted from strings)
                                 nn_all = nn[prop]
-                                nn_num = pd.to_numeric(nn[prop], errors='coerce').dropna()
                                 d_all = list(nn_all)
-                                d_num = list(nn_num)
-                                if len(d_all) > len(d_num):
-                                    non_numbers = [element for element in d_all if element not in list(map(str,d_num))]
-                                    print("\t\tFound {} string values among the {} records of prop '{}' with value(s): {}. Calculating stats only for the {} numeric values.".format(len(non_numbers),len(nn),prop,list(set(non_numbers)),len(d_num)))
 
-                                # calculate summary stats using the float list d
-                                d = d_num
-                                mean = statistics.mean(d)
-                                median = statistics.median(d)
-                                minimum = min(d)
-                                maximum = max(d)
+                                nn_num = pd.to_numeric(nn[prop], errors='coerce').dropna()
+                                d = list(nn_num)
+                                non_numbers = [element for element in d_all if element not in list(map(str,d))]
 
-                                if len(d) == 1: # if only one value, no stdev and no outliers
-                                    std = "NA"
-                                    outliers = []
-                                else:
-                                    std = statistics.stdev(d)
-                                    # Get outliers by mean +/- outlier_threshold * stdev
-                                    cutoff = std * outlier_threshold # three times the standard deviation is default
-                                    lower, upper = mean - cutoff, mean + cutoff # cut-offs for outliers is 3 times the stdev below and above the mean
-                                    outliers = sorted(list(set([x for x in d if x < lower or x > upper])))
+                                nn_string = nn.loc[~nn[prop].isin(list(map(str,d)))]
 
-                                # if property type is 'integer', change min, max, median to int type
-                                if ptype == 'integer':
-                                    median = int(median) # median
-                                    minimum = int(minimum) # min
-                                    maximum = int(maximum) # max
-                                    outliers = [int(i) for i in outliers] # convert outliers from float to int
+                                if len(d) > 0: # if there are numbers in the data, calculate numeric stats
 
-                                data[project_id]['nodes'][node][prop]['stdev'] = std
-                                data[project_id]['nodes'][node][prop]['mean'] = mean
-                                data[project_id]['nodes'][node][prop]['median'] = median
-                                data[project_id]['nodes'][node][prop]['min'] = minimum
-                                data[project_id]['nodes'][node][prop]['max'] = maximum
-                                data[project_id]['nodes'][node][prop]['outliers'] = outliers
+                                    # calculate summary stats using the float list d
+                                    mean = statistics.mean(d)
+                                    median = statistics.median(d)
+                                    minimum = min(d)
+                                    maximum = max(d)
+
+                                    if len(d) == 1: # if only one value, no stdev and no outliers
+                                        std = "NA"
+                                        outliers = []
+                                    else:
+                                        std = statistics.stdev(d)
+                                        # Get outliers by mean +/- outlier_threshold * stdev
+                                        cutoff = std * outlier_threshold # three times the standard deviation is default
+                                        lower, upper = mean - cutoff, mean + cutoff # cut-offs for outliers is 3 times the stdev below and above the mean
+                                        outliers = sorted(list(set([x for x in d if x < lower or x > upper])))
+
+                                    # if property type is 'integer', change min, max, median to int type
+                                    if ptype == 'integer':
+                                        median = int(median) # median
+                                        minimum = int(minimum) # min
+                                        maximum = int(maximum) # max
+                                        outliers = [int(i) for i in outliers] # convert outliers from float to int
+
+                                    data[project_id]['nodes'][node][prop]['stdev'] = std
+                                    data[project_id]['nodes'][node][prop]['mean'] = mean
+                                    data[project_id]['nodes'][node][prop]['median'] = median
+                                    data[project_id]['nodes'][node][prop]['min'] = minimum
+                                    data[project_id]['nodes'][node][prop]['max'] = maximum
+                                    data[project_id]['nodes'][node][prop]['outliers'] = outliers
+
+                                if len(d_all) > len(d): # property is mixed type: numeric/string values; non-standard, but can happen
+                                    print("\t\tFound {} string values among the {} records of prop '{}' with value(s): {}. Calculating stats only for the {} numeric values.".format(len(non_numbers),len(nn),prop,list(set(non_numbers)),len(d)))
+
+                                    counts = Counter(nn_string[prop])
+                                    df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
+                                    bins = [tuple(x) for x in df1.values]
+                                    bins = sorted(sorted(bins,key=lambda x: (x[0])),key=lambda x: (x[1]),reverse=True)
+
+                                    data[project_id]['nodes'][node][prop]['bins'] = bins
+                                    data[project_id]['nodes'][node][prop]['bin_number'] = len(bins)
 
                             else: # If its not in the list of ptypes, exit. Need to add array handling.
                                 print("\t\tUnhandled property type {}: {}".format(prop,ptype))
