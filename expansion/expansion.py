@@ -2252,7 +2252,7 @@ class Gen3Expansion:
         for project_dir in project_dirs: # project_dir=project_dirs[0]
 
             try:
-                project_id = re.search(r'^(.+)_tsvs$', project_dir).group(1)
+                project_id = re.search(r'^{}(.+)_tsvs$'.format(tsv_dir), project_dir).group(1)
             except:
                 print("Couldn't extract the project_id from {}!".format(project_dir))
 
@@ -2260,7 +2260,7 @@ class Gen3Expansion:
             print("\tSummarizing data in project '{}'".format(project_id))
 
             fpattern = "{}*{}".format(prefix,'.tsv')
-            fnames = glob.glob("{}/{}/{}".format(tsv_dir,project_dir,fpattern))
+            fnames = glob.glob("{}/{}".format(project_dir,fpattern))
             print("\t\tFound the following {} TSVs: {}".format(len(fnames),fnames))
 
             data[project_id] = {}
@@ -2268,12 +2268,11 @@ class Gen3Expansion:
 
             for fname in fnames: # Each node with data in the project is in one TSV file so len(fnames) is the number of nodes in the project with data.
 
-                node_regex = r"^" + re.escape(project_id) + r"_([a-zA-Z0-9_]+)\.tsv$" #node = re.search(r'^([a-zA-Z0-9_]+)-([a-zA-Z0-9]+)_([a-zA-Z0-9_]+)\.tsv$',fname).group(3)
+                node_regex = re.escape(project_id) + r"_([a-zA-Z0-9_]+)\.tsv$" #node = re.search(r'^([a-zA-Z0-9_]+)-([a-zA-Z0-9]+)_([a-zA-Z0-9_]+)\.tsv$',fname).group(3)
 
                 try:
                     node = re.search(node_regex, fname, re.IGNORECASE).group(1)
-                    filename = "{}/{}/{}".format(tsv_dir,project_dir,fname)
-                    df = pd.read_csv(filename, sep='\t', header=0, dtype=str)
+                    df = pd.read_csv(fname, sep='\t', header=0, dtype=str)
 
                 except Exception as e:
                     print("\nCouldn't find a '{}' TSV file:\n\t'{}'\n".format(node,e))
