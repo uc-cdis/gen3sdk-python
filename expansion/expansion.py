@@ -2244,6 +2244,7 @@ class Gen3Expansion:
             s = summarize_tsvs(tsv_dir='project_tsvs/',
                 dd=dd)
         """
+
         summary = {}
 
         report = pd.DataFrame(columns=['prop_id','project_id','node','property','type',
@@ -2331,7 +2332,6 @@ class Gen3Expansion:
                             'bins':np.nan}
 
                         if nn.empty:
-                            #print("\t\tAll null data for '{}' in this TSV.".format(prop))
                             null_props.append(prop_name)
                             prop_stats['all_null'] = True
 
@@ -2340,7 +2340,6 @@ class Gen3Expansion:
                             all_prop_ids.append(prop_id)
                             prop_stats['all_null'] = False
 
-                            #print("\t\t'{}': {}".format(prop_id,data[project_id]['nodes'][node][prop]))
                             msg = "\t'{}'".format(prop_id)
                             sys.stdout.write("\r"+str(msg).ljust(110,' '))
 
@@ -2495,7 +2494,7 @@ class Gen3Expansion:
         total_props = len(summary['all_prop_ids'])
 
         report = pd.DataFrame(index=range(0,total_props),
-            columns=['prop_id','project_id','node','property','property_type',
+            columns=['prop_id','project_id','node','property','type',
                     'N','nn','null','all_null',
                     'min','max','median','mean','stdev','outliers',
                     'bin_number','bins'])
@@ -2535,7 +2534,7 @@ class Gen3Expansion:
                         report['N'][i] = stats['N']
                         report['nn'][i] = stats['nn']
                         report['null'][i] = stats['null']
-                        report['property_type'][i] = stats['type']
+                        report['type'][i] = stats['type']
                         report['min'][i] = stats['min']
                         report['max'][i] = stats['max']
                         report['mean'][i] = stats['mean']
@@ -2585,7 +2584,7 @@ class Gen3Expansion:
         return report
 
 
-    def compare_commons(self, reports, stats = ['property_type','all_null','N','null','nn','min','max','mean','median','stdev','bin_number','bins','outliers'], write_report=True, outdir='.'):
+    def compare_commons(self, reports, stats = ['type','all_null','N','null','nn','min','max','mean','median','stdev','bin_number','bins','outliers'], write_report=True, outdir='.'):
         """ Takes two data summary reports (output of "self.write_commons_report" func), and compares the data in each.
             Comparisons are between matching project/node/property combos (aka "prop_id") in each report.
         Args:
@@ -2749,19 +2748,16 @@ class Gen3Expansion:
                     df = pd.read_csv(fname, sep='\t', header=0, dtype=str)
 
                 except Exception as e:
-                    print("\nCouldn't find a '{}' TSV file:\n\t'{}'\n".format(node,e))
+                    print("\nCouldn't get node from '{}':\n\t'{}'\n".format(fname,e))
 
                 if df.empty:
-                    print("\t\t'{}' TSV is empty. No data to summarize.\n".format(node))
+                    print("\t\t\t'{}' TSV is empty. No data to summarize.\n".format(node))
 
                 else:
                     nn_nodes.append(node)
                     prop_regex = re.compile(r'^[A-Za-z0-9_]*[^.]$') #drop the links, e.g., cases.submitter_id or diagnoses.id (matches all properties with no ".")
                     props = list(filter(prop_regex.match, list(df))) #properties in this TSV to summarize
                     props = [prop for prop in props if prop not in omit_props] #omit_props=['project_id','type','id','submitter_id','case_submitter_id','case_ids','visit_id','sample_id','md5sum','file_name','object_id']
-
-                    #msg = "\t\tTotal of {} records in '{}' TSV with {} properties.".format(len(df),node,len(props))
-                    #sys.stdout.write("\r"+str(msg))
 
                     data[project_id]['nodes'][node] = {}
 
