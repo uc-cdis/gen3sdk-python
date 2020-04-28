@@ -2413,6 +2413,9 @@ class Gen3Expansion:
                                 print("\t\t\n\n\n\nUnhandled property type!\n\n '{}': {}\n\n\n\n".format(prop_id,ptype))
                                 exit()
 
+                        if bin_limit != False:
+                            prop_stats['bins'] = prop_stats['bins'][:bin_limit]
+
                         report = report.append(prop_stats, ignore_index=True)
 
         if report_null == False:
@@ -2464,7 +2467,12 @@ class Gen3Expansion:
         return summary
 
 
-    def compare_commons(self, reports, stats = ['type','all_null','N','null','nn','min','max','mean','median','stdev','bin_number','bins','outliers'], write_report=True, outdir='.'):
+    def compare_commons(self,reports,
+        stats = ['type','all_null','N','null','nn',
+                'min','max','mean','median','stdev',
+                'bin_number','bins','outliers'],
+        write_report=True,outdir='.'):
+
         """ Takes two data summary reports (output of "self.write_commons_report" func), and compares the data in each.
             Comparisons are between matching project/node/property combos (aka "prop_id") in each report.
         Args:
