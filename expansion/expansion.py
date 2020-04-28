@@ -2338,9 +2338,12 @@ class Gen3Expansion:
                             nn_props.append(prop_name)
                             all_prop_ids.append(prop_id)
 
+                            pmsg = "\t\t'{}': {}".format(prop_id,data[project_id]['nodes'][node][prop])
+                            sys.stdout.write('\r'+str(pmsg))
+                            print("\t\t'{}': {}".format(prop_id,data[project_id]['nodes'][node][prop]))
+
                             # Get stats for strings
                             if ptype in ['string','enum','boolean','date','array']:
-                                print("\t\t'{}': {}".format(prop_id,data[project_id]['nodes'][node][prop]))
 
                                 counts = Counter(nn[prop])
                                 df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
@@ -2352,17 +2355,12 @@ class Gen3Expansion:
 
                             # Get stats for numbers
                             elif ptype in ['number','integer']: #prop='concentration'
-                                print("\t\t'{}': {}".format(prop_id,data[project_id]['nodes'][node][prop]))
 
                                 # make a list of the data values as floats (converted from strings)
                                 nn_all = nn[prop]
                                 d_all = list(nn_all)
 
                                 nn_num = nn[prop].apply(pd.to_numeric, errors='coerce').dropna()
-                                #nn_num = nn[prop].astype(float, copy=True).fillna(np.nan).dropna()
-                                #nn_num = pd.to_numeric(nn[prop], errors='coerce').dropna()
-                                #df.a.astype(float).fillna(0.0)
-                                #nn_num = rows in nn not in d_all or whatev
                                 d = list(nn_num)
 
                                 nn_string = nn.loc[~nn[prop].isin(list(map(str,d)))]
