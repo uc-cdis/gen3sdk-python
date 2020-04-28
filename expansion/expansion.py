@@ -2255,7 +2255,7 @@ class Gen3Expansion:
         dir_pattern = "{}*{}".format(prefix,'tsvs')
         project_dirs = glob.glob("{}/{}".format(tsv_dir,dir_pattern))
 
-        data,nn_nodes,nn_props,null_nodes,null_props,all_prop_ids = {},[],[],[],[],[]
+        nn_nodes,nn_props,null_nodes,null_props,all_prop_ids = [],[],[],[],[]
 
         msg = "Summarizing TSVs in '{}':\n".format(tsv_dir)
         print("\n\n{}".format(msg))
@@ -2272,9 +2272,6 @@ class Gen3Expansion:
 
             #msg = "\t\tFound the following {} TSVs: {}".format(len(fnames),fnames)
             #sys.stdout.write("\r" + str(msg))
-
-            data[project_id] = {}
-            data[project_id]['nodes'] = {} # currently 'nodes' is the only key in a project's dictionary, but leaving it for now in case I want to add other project specific stats
 
             for fname in fnames: # Each node with data in the project is in one TSV file so len(fnames) is the number of nodes in the project with data.
 
@@ -2298,8 +2295,6 @@ class Gen3Expansion:
 
                     #msg = "\t\tTotal of {} records in '{}' TSV with {} properties.".format(len(df),node,len(props))
                     #sys.stdout.write("\r"+str(msg))
-
-                    data[project_id]['nodes'][node] = {}
 
                     for prop in props: #prop=props[0]
 
