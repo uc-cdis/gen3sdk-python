@@ -2432,6 +2432,8 @@ class Gen3Expansion:
                 write_report=write_report,
                 report_null=report_null)
 
+            summary['report'] = report
+
         return summary
 
 
