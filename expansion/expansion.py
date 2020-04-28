@@ -2574,6 +2574,10 @@ class Gen3Expansion:
             msg = "Comparison report written to file: {}".format(outname)
             print(msg)
 
+        # strip the col names so we can sort the report
+        comparison.columns = comparison.columns.str.strip()
+        comparison.sort_values(by=['comparison','node','property'],inplace=True)
+
         return comparison
 
 
