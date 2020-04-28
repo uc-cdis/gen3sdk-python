@@ -2255,7 +2255,7 @@ class Gen3Expansion:
                 print("Couldn't extract the project_id from {}!".format(project_dir))
 
             msg = "Summarizing data in project '{}':\n".format(project_id)
-            print(msg)
+            print("\n\n{}".format(msg))
             #sys.stdout.write("\r" + str(msg))
 
             fpattern = "{}*{}".format(prefix,'.tsv')
