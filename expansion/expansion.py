@@ -2154,17 +2154,6 @@ class Gen3Expansion:
         if vtype in [str,int,float]:
             print("{}".format(var))
 
-
-    def get_output_name(self, name, extension='tsv', outdir='data_summary_reports'):
-        names = name.split('/')
-        names = [name for name in names if name != '']
-        basename = names[-1]
-        outname = "data_summary_{}".format(basename)
-        outname += '.{}'.format(extension)
-        outname = "{}/{}".format(outdir,outname)# data_summary_reports/summary_staging_prod.tsv
-        return outname
-
-
     def create_output_dir(self, outdir='data_summary_reports'):
         cmd = ['mkdir','-p',outdir]
         try:
@@ -2230,7 +2219,6 @@ class Gen3Expansion:
         return dds
 
 
-
     def summarize_tsvs(self, tsv_dir, dd, prefix='', outlier_threshold=10, omit_props=['project_id','type','id','submitter_id','case_submitter_id','case_ids','visit_id','sample_id','md5sum','file_name','object_id'], omit_nodes=['metaschema','root','program','project','data_release'], outdir='.', bin_limit=False, write_report=True, report_null=True):
         """
         Returns a nested dictionary of summarized TSV data per project, node, and property.
@@ -2254,10 +2242,10 @@ class Gen3Expansion:
         """
         summary = {}
 
-        os.chdir(tsv_dir)
-        print(os.getcwd())
+        #os.chdir(tsv_dir)
+        #print(os.getcwd())
         dir_pattern = "{}*{}".format(prefix,'tsvs')
-        project_dirs = glob.glob(dir_pattern)
+        project_dirs = glob.glob("{}/{}".format(tsv_dir,dir_pattern))
 
         data,nn_nodes,nn_props,null_nodes,null_props,all_prop_ids = {},[],[],[],[],[]
 
@@ -2268,11 +2256,11 @@ class Gen3Expansion:
             except:
                 print("Couldn't extract the project_id from {}!".format(project_dir))
 
-            os.chdir("{}/{}".format(tsv_dir,project_dir))
+            #os.chdir("{}/{}".format(tsv_dir,project_dir))
             print("\tSummarizing data in project '{}'".format(project_id))
 
             fpattern = "{}*{}".format(prefix,'.tsv')
-            fnames = glob.glob(fpattern)
+            fnames = glob.glob("{}/{}/{}".format(tsv_dir,project_dir,fpattern))
             print("\t\tFound the following {} TSVs: {}".format(len(fnames),fnames))
 
             data[project_id] = {}
@@ -2282,10 +2270,11 @@ class Gen3Expansion:
 
                 node_regex = r"^" + re.escape(project_id) + r"_([a-zA-Z0-9_]+)\.tsv$" #node = re.search(r'^([a-zA-Z0-9_]+)-([a-zA-Z0-9]+)_([a-zA-Z0-9_]+)\.tsv$',fname).group(3)
 
-                try: # extract the node name from the filename
-                    #fname = "{}_{}.tsv".format(project_id,node)
+                try:
                     node = re.search(node_regex, fname, re.IGNORECASE).group(1)
-                    df = pd.read_csv(fname, sep='\t', header=0, dtype=str)
+                    filename = "{}/{}/{}".format(tsv_dir,project_dir,fname)
+                    df = pd.read_csv(filename, sep='\t', header=0, dtype=str)
+
                 except Exception as e:
                     print("\nCouldn't find a '{}' TSV file:\n\t'{}'\n".format(node,e))
 
@@ -2339,8 +2328,8 @@ class Gen3Expansion:
                             all_prop_ids.append(prop_id)
 
                             pmsg = "\t\t'{}': {}".format(prop_id,data[project_id]['nodes'][node][prop])
-                            sys.stdout.write('\r'+str(pmsg))
-                            print("\t\t'{}': {}".format(prop_id,data[project_id]['nodes'][node][prop]))
+                            sys.stdout.write("\r"+str(pmsg))
+                            #print("\t\t'{}': {}".format(prop_id,data[project_id]['nodes'][node][prop]))
 
                             # Get stats for strings
                             if ptype in ['string','enum','boolean','date','array']:
@@ -2434,8 +2423,6 @@ class Gen3Expansion:
         null_nodes = [node for node in dd_nodes if node not in nn_nodes]
 
         summary['null_nodes'] = null_nodes
-
-        os.chdir(tsv_dir)
 
         if write_report is True:
 
@@ -2531,23 +2518,32 @@ class Gen3Expansion:
         report.sort_values(by=['all_null','node','property'],inplace=True)
 
         if write_report is True:
-            os.chdir(tsv_dir)
+
             self.create_output_dir(outdir=outdir)
-            outname = self.get_output_name(name=tsv_dir, extension='tsv', outdir=outdir)
+
+            if '/' in tsv_dir:
+                names = tsv_dir.split('/')
+                names = [name for name in names if name != '']
+                name = names[-1]
+            else:
+                name = tsv_dir
+
+            outname = "data_summary_{}.tsv".format(name)
+            outname = "{}/{}".format(outdir,outname) # ./data_summary_prod_tsvs_04272020.tsv
+
             report.to_csv(outname, sep='\t', index=False, encoding='utf-8')
             print("\nReport written to file:\n\t{}".format(outname))
 
         return report
 
 
-    def compare_commons(self, reports, stats = ['property_type','all_null','N','null','nn','min','max','mean','median','stdev','bin_number','bins','outliers'], write_report=True, home_dir='.', outdir='.'):
+    def compare_commons(self, reports, stats = ['property_type','all_null','N','null','nn','min','max','mean','median','stdev','bin_number','bins','outliers'], write_report=True, outdir='.'):
         """ Takes two data summary reports (output of "self.write_commons_report" func), and compares the data in each.
             Comparisons are between matching project/node/property combos (aka "prop_id") in each report.
         Args:
             reports(dict): a dict of two "commons_name" : "report", where report is a pandas dataframe generated from a summary of TSV data; obtained by running write_summary_report() on the result of summarize_tsv_data().
             stats(list): the list of statistics to compare between data commons for each node/property combination
-            outdir(str): directory within home_dir to save output files to.
-            home_dir(str): directory within which to create the outdir directory for reports.
+            outdir(str): directory name to save output files to, defaults to the current working dir
             write_report(boolean): If True, reports are written to files in the outdir.
 
         Example:
@@ -2637,10 +2633,7 @@ class Gen3Expansion:
             print("Some properties in the report were not classified!")
 
         if write_report is True:
-
-            os.chdir(home_dir)
             self.create_output_dir(outdir)
-
             outname = "{}/comparison_{}_{}.tsv".format(outdir,dc0,dc1)
             comparison.to_csv(outname, sep='\t', index=False, encoding='utf-8')
 
