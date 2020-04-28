@@ -2330,7 +2330,7 @@ class Gen3Expansion:
                             #print("\t\t'{}': {}".format(prop_id,data[project_id]['nodes'][node][prop]))
                             #msg = "\t'{}': {}".format(prop_id,data[project_id]['nodes'][node][prop])
                             msg = "\t'{}'".format(prop_id)
-                            sys.stdout.write("\r"+str(msg).ljust(100,' '))
+                            sys.stdout.write("\r"+str(msg).ljust(110,' '))
                             sys.stdout.flush()
 
                             # Get stats for strings
