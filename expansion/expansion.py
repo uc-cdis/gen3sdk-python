@@ -2332,6 +2332,7 @@ class Gen3Expansion:
                             #msg = "\t'{}': {}".format(prop_id,data[project_id]['nodes'][node][prop])
                             msg = "\t'{}'".format(prop_id)
                             sys.stdout.write("\r"+str(msg).ljust(10,' '))
+                            sys.stdout.flush()
 
                             # Get stats for strings
                             if ptype in ['string','enum','boolean','date','array']:
