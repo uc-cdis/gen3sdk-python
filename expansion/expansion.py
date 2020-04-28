@@ -2446,11 +2446,7 @@ class Gen3Expansion:
                 write_report=write_report,
                 report_null=report_null)
 
-            return report
-
-        else:
-
-            return summary
+        return summary
 
 
 
