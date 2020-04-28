@@ -2444,9 +2444,9 @@ class Gen3Expansion:
             report = self.write_commons_report(summary=summary,
                 tsv_dir=tsv_dir,
                 outdir=outdir,
-                bin_limit=False,
-                write_report=True,
-                report_null=True,)
+                bin_limit=bin_limit,
+                write_report=write_report,
+                report_null=report_null)
 
             return report
 
