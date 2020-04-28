@@ -2247,16 +2247,15 @@ class Gen3Expansion:
 
         data,nn_nodes,nn_props,null_nodes,null_props,all_prop_ids = {},[],[],[],[],[]
 
+        msg = "Summarizing TSVs in '{}':\n".format(tsv_dir)
+        print("\n\n{}".format(msg))
+
         for project_dir in project_dirs: # project_dir=project_dirs[0]
 
             try:
                 project_id = re.search(r'^{}(.+)_tsvs$'.format(tsv_dir), project_dir).group(1)
             except:
                 print("Couldn't extract the project_id from {}!".format(project_dir))
-
-            msg = "Summarizing data in project '{}':\n".format(project_id)
-            print("\n\n{}".format(msg))
-            #sys.stdout.write("\r" + str(msg))
 
             fpattern = "{}*{}".format(prefix,'.tsv')
             fnames = glob.glob("{}/{}".format(project_dir,fpattern))
