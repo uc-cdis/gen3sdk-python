@@ -397,26 +397,29 @@ class Gen3Expansion:
 
     def paginate_query(self, node, project_id=None, props=[], args=None, chunk_size=5000, offset=0, format='json'):
         """Function to paginate a query to avoid time-outs.
-        Returns a json of all the records in the node.
-
-        Args:
-            node (str): The node to query.
-            project_id(str): The project_id to limit the query to. Default is None.
-            props(list): A list of properties in the node to return.
-            chunk_size(int): The number of records to return per query. Default is 10000.
-            args(str): Put graphQL arguments here. For example, 'with_path_to:{type:"case",submitter_id:"case-01"}', etc. Don't enclose in parentheses.
-        Example:
-            paginate_query('demographic')
+            Returns a json of all the records in the node.
+            Args:
+                node (str): The node to query.
+                project_id(str): The project_id to limit the query to. Default is None.
+                props(list): A list of properties in the node to return.
+                args(str): Put graphQL arguments here. For example, 'with_path_to:{type:"case",submitter_id:"case-01"}', etc. Don't enclose in parentheses.
+                chunk_size(int): The number of records to return per query. Default is 10000.
+                offset(int): Return results with an offset; setting offset=10 will skip first 10 records.
+                format(str): 'json' or 'tsv'. If set to 'tsv', function will return DataFrame and create a TSV file from it.
+            Example:
+                paginate_query('demographic')
         """
         props = list(set(['id','submitter_id']+props))
         properties = ' '.join(map(str,props))
 
         if project_id is not None:
+            outname = "query_{}_{}.tsv".format(project_id, node)
             if args is None:
                 query_txt = """{%s (first: %s, offset: %s, project_id:"%s"){%s}}""" % (node, chunk_size, offset, project_id, properties)
             else:
                 query_txt = """{%s (first: %s, offset: %s, project_id:"%s", %s){%s}}""" % (node, chunk_size, offset, project_id, args, properties)
         else:
+            outname = "query_{}.tsv".format(node)
             if args is None:
                 query_txt = """{%s (first: %s, offset: %s){%s}}""" % (node, chunk_size, offset, properties)
             else:
@@ -452,6 +455,7 @@ class Gen3Expansion:
 
         if format is 'tsv':
             df = json_normalize(total['data'][node])
+            df.to_csv(outname,sep='\t',index=False)
             return df
         else:
             return total
@@ -2414,7 +2418,7 @@ class Gen3Expansion:
                                 exit()
 
                         if bin_limit != False:
-                            prop_stats['bins'] = prop_stats['bins'][:bin_limit]
+                            prop_stats['bins'] = prop_stats['bins'][:int(bin_limit)]
 
                         report = report.append(prop_stats, ignore_index=True)
 
@@ -2461,8 +2465,8 @@ class Gen3Expansion:
             outname = "{}/{}".format(outdir,outname) # ./data_summary_prod_tsvs_04272020.tsv
 
             report.to_csv(outname, sep='\t', index=False, encoding='utf-8')
-            msg = "Report written to file:\n\t{}".format(outname)
-            sys.stdout.write("\r"+str(msg).ljust(200,' '))
+            sys.stdout.write("\rReport written to file:".ljust(200,' '))
+            print("\t{}".format(outname))
 
         return summary
 
