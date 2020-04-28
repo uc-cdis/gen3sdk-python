@@ -2254,16 +2254,15 @@ class Gen3Expansion:
             except:
                 print("Couldn't extract the project_id from {}!".format(project_dir))
 
-            #print("\tSummarizing data in project '{}'".format(project_id))
-            msg = "\tSummarizing data in project '{}'".format(project_id)
-            sys.stdout.write("\r" + str(msg))
+            msg = "Summarizing data in project '{}':\n".format(project_id)
+            print(msg)
+            #sys.stdout.write("\r" + str(msg))
 
             fpattern = "{}*{}".format(prefix,'.tsv')
             fnames = glob.glob("{}/{}".format(project_dir,fpattern))
 
-            #print("\t\tFound the following {} TSVs: {}".format(len(fnames),fnames))
-            msg = "\t\tFound the following {} TSVs: {}".format(len(fnames),fnames)
-            sys.stdout.write("\r" + str(msg))
+            #msg = "\t\tFound the following {} TSVs: {}".format(len(fnames),fnames)
+            #sys.stdout.write("\r" + str(msg))
 
             data[project_id] = {}
             data[project_id]['nodes'] = {} # currently 'nodes' is the only key in a project's dictionary, but leaving it for now in case I want to add other project specific stats
@@ -2280,7 +2279,7 @@ class Gen3Expansion:
                     print("\nCouldn't find a '{}' TSV file:\n\t'{}'\n".format(node,e))
 
                 if df.empty:
-                    print("\t\t'{}' TSV is empty. No data to summarize.".format(node))
+                    print("\t\t'{}' TSV is empty. No data to summarize.\n".format(node))
 
                 else:
                     nn_nodes.append(node)
@@ -2288,9 +2287,8 @@ class Gen3Expansion:
                     props = list(filter(prop_regex.match, list(df))) #properties in this TSV to summarize
                     props = [prop for prop in props if prop not in omit_props] #omit_props=['project_id','type','id','submitter_id','case_submitter_id','case_ids','visit_id','sample_id','md5sum','file_name','object_id']
 
-                    #print("\t\tTotal of {} records in '{}' TSV with {} properties.".format(len(df),node,len(props)))
-                    msg = "\t\tTotal of {} records in '{}' TSV with {} properties.".format(len(df),node,len(props))
-                    sys.stdout.write("\r"+str(msg))
+                    #msg = "\t\tTotal of {} records in '{}' TSV with {} properties.".format(len(df),node,len(props))
+                    #sys.stdout.write("\r"+str(msg))
 
                     data[project_id]['nodes'][node] = {}
 
@@ -2331,7 +2329,8 @@ class Gen3Expansion:
                             all_prop_ids.append(prop_id)
 
                             #print("\t\t'{}': {}".format(prop_id,data[project_id]['nodes'][node][prop]))
-                            msg = "\t\t'{}': {}".format(prop_id,data[project_id]['nodes'][node][prop])
+                            #msg = "\t'{}': {}".format(prop_id,data[project_id]['nodes'][node][prop])
+                            msg = "\t'{}'".format(prop_id)
                             sys.stdout.write("\r"+str(msg))
 
                             # Get stats for strings
@@ -2391,9 +2390,10 @@ class Gen3Expansion:
                                     data[project_id]['nodes'][node][prop]['outliers'] = outliers
 
                                 if len(d_all) > len(d): # property is mixed type: numeric/string values; non-standard, but can happen
-                                    #print("\t\tFound {} string values among the {} records of prop '{}' with value(s): {}. Calculating stats only for the {} numeric values.".format(len(non_numbers),len(nn),prop,list(set(non_numbers)),len(d)))
+
                                     msg = "\t\tFound {} string values among the {} records of prop '{}' with value(s): {}. Calculating stats only for the {} numeric values.".format(len(non_numbers),len(nn),prop,list(set(non_numbers)),len(d))
-                                    sys.stdout.write("\r" + str(msg))
+                                    print("\n\t{}\n".format(msg))
+                                    #sys.stdout.write("\r" + str(msg))
 
                                     data[project_id]['nodes'][node][prop]["type"] = "mixed {},string".format(ptype)
 
@@ -2477,9 +2477,10 @@ class Gen3Expansion:
 
         for project_id in project_ids: #project_id=project_ids[0]
 
-            #print("Reporting '{}' data:".format(project_id))
             msg = "Reporting '{}' data:".format(project_id)
-            sys.stdout.write("\r" + str(msg))
+            print(msg)
+            #sys.stdout.write("\r" + str(msg))
+
 
             nodes = list(summary['data'][project_id]['nodes'])
             for node in nodes: #node=nodes[0]
@@ -2492,7 +2493,8 @@ class Gen3Expansion:
                     if stats['null'] == stats['N'] and report_null is False:
                         #print("\t'{}' not written to report. All records are null and 'report_null' option is set to 'False'!".format(prop_id))
                         msg = "\t'{}' not written to report. All records are null and 'report_null' option is set to 'False'!".format(prop_id)
-                        sys.stdout.write("\r" + str(msg))
+                        #sys.stdout.write("\r" + str(msg))
+                        print(msg)
 
                     else:
 
@@ -2525,7 +2527,7 @@ class Gen3Expansion:
                             report['all_null'][i] = False
 
                         #print("\t'{}' written to report ({} total, {} null, {} non-null).".format(prop_id,stats['N'],stats['null'],stats['nn']))
-                        msg = "\t'{}' written to report ({} total, {} null, {} non-null).".format(prop_id,stats['N'],stats['null'],stats['nn'])
+                        msg = "\t'{}': ({} total, {} null, {} non-null).".format(prop_id,stats['N'],stats['null'],stats['nn'])
                         sys.stdout.write("\r" + str(msg))
 
                         i += 1
