@@ -2283,10 +2283,12 @@ class Gen3Expansion:
 
                 try:
                     node = re.search(node_regex, fname, re.IGNORECASE).group(1)
-                    df = pd.read_csv(fname, sep='\t', header=0, dtype=str)
 
                 except Exception as e:
-                    print("\nCouldn't find a '{}' TSV file:\n\t'{}'\n".format(node,e))
+                    print("\n\nCouldn't set node with node_regex on '{}':\n\t{}".format(fname,e))
+                    node = fname
+
+                df = pd.read_csv(fname, sep='\t', header=0, dtype=str)
 
                 if df.empty:
                     print("\t\t'{}' TSV is empty. No data to summarize.\n".format(node))
