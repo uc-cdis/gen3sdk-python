@@ -16,6 +16,7 @@ The docs here contain general descriptions of the different pieces of the SDK an
     - [Gen3Auth](#gen3auth)
     - [Gen3Index](#gen3index)
     - [Gen3Submission](#gen3submission)
+    - [Gen3Jobs](#gen3jobs)
 - [Indexing Tools](#indexing-tools)
     - [Download Manifest](#download-manifest)
     - [Verify Manifest](#verify-manifest)
@@ -26,6 +27,7 @@ The docs here contain general descriptions of the different pieces of the SDK an
     - [Manifest Merge](#manifest-merge)
         - [Ideal Scenario \(Column to Column Match, Indexing:Metadata Manifest Rows\)](#ideal-scenario-column-to-column-match-indexingmetadata-manifest-rows)
         - [Non-Ideal Scenario \(Partial URL Matching\)](#non-ideal-scenario-partial-url-matching)
+    - [Using Gen3 Jobs](#using-gen3-jobs)
 
 ---
 
@@ -133,6 +135,158 @@ This is the client for interacting with the Indexd service for GUID brokering an
 ### Gen3Submission
 
 This is the client for interacting with the Gen3 submission service including GraphQL queries.
+
+### Gen3Jobs
+
+This is client for interacting with Gen3's job dispatching service. A complex example script which calls a job that combines dbGaP data with indexed file objects can be seen below:
+
+
+```python
+import sys
+import logging
+import asyncio
+
+from gen3.index import Gen3Index
+from gen3.auth import Gen3Auth
+from gen3.jobs import Gen3Jobs, DBGAP_METADATA_JOB, INGEST_METADATA_JOB
+
+# Gen3 Commons URL
+# COMMONS = "https://caninedc.org/"
+COMMONS = "https://avantol.planx-pla.net/"
+
+# An API Key downloaded from the above commons' "Profile" page
+API_KEY_FILEPATH = "credentials.json"
+
+logging.basicConfig(filename="output.log", level=logging.INFO)
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
+
+def metadata_ingest():
+    auth = Gen3Auth(COMMONS, refresh_file=API_KEY_FILEPATH)
+    jobs = Gen3Jobs(COMMONS, auth_provider=auth)
+
+    job_input = {
+        "URL": "https://cdistest-public-test-bucket.s3.amazonaws.com/04_28_20_21_55_13_merged_metadata_manifest.tsv",
+        "metadata_source": "dbgaptest",
+    }
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    job_output = loop.run_until_complete(
+        jobs.async_run_job_and_wait(job_name=INGEST_METADATA_JOB, job_input=job_input)
+    )
+    print(job_output)
+
+
+def main():
+    auth = Gen3Auth(COMMONS, refresh_file=API_KEY_FILEPATH)
+    jobs = Gen3Jobs(COMMONS, auth_provider=auth)
+
+    job_input = {
+        "phsid_list": "phs000920 phs000921 phs000946 phs000951 phs000954 phs000956 phs000964 phs000972 phs000974 phs000988 phs000993 phs000997 phs001024 phs001032 phs001040 phs001062 phs001143 phs001189 phs001207 phs001211 phs001215 phs001217 phs001218 phs001237 phs001293 phs001345 phs001359 phs001368 phs001387 phs001402 phs001412 phs001416",
+        "indexing_manifest_url": "https://cdistest-public-test-bucket.s3.amazonaws.com/release_manifest_no_dbgap_no_sample.csv",
+        "manifests_mapping_config": {
+            "guid_column_name": "guid",
+            "row_column_name": "submitted_sample_id",
+            "indexing_manifest_column_name": "gcp_uri",
+        },
+        "partial_match_or_exact_match": "partial_match",
+    }
+
+    # job_input = {
+    #     "phsid_list": "phs000956 phs000920",
+    #     "indexing_manifest_url": "https://gist.githubusercontent.com/Avantol13/3343f914e6f6c639900b76d577737ca3/raw/40bfb20a4ddc3716bd1481ac84aad1d68b05a76f/public_indexing_manifest.csv",
+    #     "manifests_mapping_config": {
+    #         "guid_column_name": "guid",
+    #         "row_column_name": "submitted_sample_id",
+    #         "indexing_manifest_column_name": "urls",
+    #     },
+    #     "partial_match_or_exact_match": "partial_match",
+    # }
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    job_output = loop.run_until_complete(
+        jobs.async_run_job_and_wait(job_name=DBGAP_METADATA_JOB, job_input=job_input)
+    )
+    print(job_output)
+
+
+if __name__ == "__main__":
+    metadata_ingest()
+
+```
+
+```python
+import sys
+import logging
+import asyncio
+
+from gen3.auth import Gen3Auth
+from gen3.jobs import Gen3Jobs, DBGAP_METADATA_JOB
+
+# Gen3 Commons URL
+# COMMONS = "https://caninedc.org/"
+COMMONS = "https://avantol.planx-pla.net/"
+
+# An API Key downloaded from the above commons' "Profile" page
+API_KEY_FILEPATH = "credentials.json"
+
+logging.basicConfig(filename="output.log", level=logging.INFO)
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
+# NOTE: The indexing_manifest_url must exist and be publically accessible
+JOB_INPUT = {
+    "phsid_list": "phs000956 phs000920",
+    "indexing_manifest_url": "https://example.com/public_indexing_manifest.csv",
+    "manifests_mapping_config": {
+        "guid_column_name": "guid",
+        "row_column_name": "submitted_sample_id",
+        "indexing_manifest_column_name": "urls",
+    },
+    "partial_match_or_exact_match": "partial_match",
+}
+
+
+def example_async_run_job():
+    auth = Gen3Auth(COMMONS, refresh_file=API_KEY_FILEPATH)
+    jobs = Gen3Jobs(COMMONS, auth_provider=auth)
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    job_output = loop.run_until_complete(
+        jobs.async_run_job_and_wait(job_name=DBGAP_METADATA_JOB, job_input=JOB_INPUT)
+    )
+    print(job_output)
+
+def example_non_async_run_job():
+    auth = Gen3Auth(COMMONS, refresh_file=API_KEY_FILEPATH)
+    jobs = Gen3Jobs(COMMONS, auth_provider=auth)
+
+    is_healthy = jobs.is_healthy()
+    print(is_healthy)
+
+    version = jobs.get_version()
+    print(version)
+
+    create_job = jobs.create_job(job_name=DBGAP_METADATA_JOB, job_input=JOB_INPUT)
+    print(create_job)
+
+    status = "Running"
+    while status == "Running":
+        status = jobs.get_status(create_job.get("uid")).get("status")
+        print(status)
+
+    get_output = jobs.get_output(create_job.get("uid"))
+    print(get_output)
+
+
+if __name__ == "__main__":
+    example_async_run_job()
+```
 
 ## Metadata
 
@@ -786,4 +940,98 @@ The final output file will contain all the columns from the metadata manifest in
 
 ```
 guid, submitted_sample_id, dbgap_subject_id, consent_short_name, body_site, ....
+```
+
+### Using Gen3 Jobs
+
+There are some Gen3 jobs that were tailored for metadata ingestions and getting metadata from a public dbGaP API. The following are some example scripts that could be useful for utilizing those new jobs:
+
+> NOTE: All of these jobs require specific permissions in the Gen3 environment
+
+```python
+import sys
+import logging
+import asyncio
+
+from gen3.index import Gen3Index
+from gen3.auth import Gen3Auth
+from gen3.jobs import Gen3Jobs, DBGAP_METADATA_JOB, INGEST_METADATA_JOB
+
+# Gen3 Commons URL
+COMMONS = "https://example.net/"
+
+# An API Key downloaded from the above commons' "Profile" page
+API_KEY_FILEPATH = "credentials.json"
+
+logging.basicConfig(filename="output.log", level=logging.INFO)
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
+def get_dbgap_merged_metadata_manifest():
+    auth = Gen3Auth(COMMONS, refresh_file=API_KEY_FILEPATH)
+    jobs = Gen3Jobs(COMMONS, auth_provider=auth)
+
+    # this configuration tells the job to pull sample information from the public dbgap
+    # api for the list of dbgap phsids (AKA study accession numbers) provided.
+    #
+    # The indexing_manifest_url is a publically available indexing manifest with at
+    # a minimum columns to represent the GUID and some other field we can map to
+    # a field from dbgap, in this example, we're doing a partial string match of
+    # "submitted_sample_id" from dbgap to the indexing manifest's "urls" column
+    #
+    # If there is an exact match available, you can set "partial_match_or_exact_match"
+    # to "exact_match" and this will perform the merging MUCH faster
+    job_input = {
+        "phsid_list": "phs000920 phs000921 phs000946 phs000951 phs000954 phs000956 phs000964 phs000972 phs000974 phs000988 phs000993 phs000997 phs001024 phs001032 phs001040 phs001062 phs001143 phs001189 phs001207 phs001211 phs001215 phs001217 phs001218 phs001237 phs001293 phs001345 phs001359 phs001368 phs001387 phs001402 phs001412 phs001416",
+        "indexing_manifest_url": "https://example-test-bucket.s3.amazonaws.com/indexing_manifest_with_guids.csv",
+        "manifests_mapping_config": {
+            "guid_column_name": "guid",
+            "row_column_name": "submitted_sample_id",
+            "indexing_manifest_column_name": "urls",
+        },
+        "partial_match_or_exact_match": "partial_match",
+    }
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    job_output = loop.run_until_complete(
+        jobs.async_run_job_and_wait(job_name=DBGAP_METADATA_JOB, job_input=job_input)
+    )
+
+    # output contains signed URLs to download the new merged metadata manifest
+    print(job_output)
+
+
+def metadata_ingest():
+    auth = Gen3Auth(COMMONS, refresh_file=API_KEY_FILEPATH)
+    jobs = Gen3Jobs(COMMONS, auth_provider=auth)
+
+    # provide a URL for a manifest that contains a GUID column along with arbitrary
+    # other columns to add to the metadata service. The "metadata_source" namespaces
+    # this data in the metadata service to support multiple different sources of metadata
+    #
+    # For example, this will create a metadata blob like:
+    # {"dbgap": {"colA": "valA", "colB": valB}}
+    job_input = {
+        "URL": "https://example-bucket/merged_metadata_manifest.tsv",
+        "metadata_source": "dbgap",
+    }
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    job_output = loop.run_until_complete(
+        jobs.async_run_job_and_wait(job_name=INGEST_METADATA_JOB, job_input=job_input)
+    )
+    print(job_output)
+
+
+if __name__ == "__main__":
+    get_dbgap_merged_metadata_manifest()
+
+    # TODO: QA the manifest from the above step, make it available to the next job for
+    #       actual ingestion into the metadat service
+
+    metadata_ingest()
+
 ```
