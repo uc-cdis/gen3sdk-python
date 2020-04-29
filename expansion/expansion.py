@@ -2267,9 +2267,9 @@ class Gen3Expansion:
         for project_dir in project_dirs: # project_dir=project_dirs[0]
 
             try:
-                project_id = re.search(r'^{}/([A-Za-z0-9_-]+)_tsvs$'.format(tsv_dir), project_dir).group(1)
+                project_id = re.search(r'^{}/?([A-Za-z0-9_-]+)_tsvs$'.format(tsv_dir), project_dir).group(1)
             except:
-                print("Couldn't extract the project_id from {}!".format(project_dir))
+                print("Couldn't extract the project_id from project_dir '{}'!".format(project_dir))
 
             fpattern = "{}*{}".format(prefix,'.tsv')
             fnames = glob.glob("{}/{}".format(project_dir,fpattern))
