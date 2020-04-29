@@ -228,8 +228,7 @@ from gen3.auth import Gen3Auth
 from gen3.jobs import Gen3Jobs, DBGAP_METADATA_JOB
 
 # Gen3 Commons URL
-# COMMONS = "https://caninedc.org/"
-COMMONS = "https://avantol.planx-pla.net/"
+COMMONS = "https://example.net/"
 
 # An API Key downloaded from the above commons' "Profile" page
 API_KEY_FILEPATH = "credentials.json"
