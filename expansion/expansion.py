@@ -2419,7 +2419,7 @@ class Gen3Expansion:
                                 print("\t\t\n\n\n\nUnhandled property type!\n\n '{}': {}\n\n\n\n".format(prop_id,ptype))
                                 exit()
 
-                        if bin_limit != False:
+                        if bin_limit != False and isinstance(prop_stats['bins'],list):
                             prop_stats['bins'] = prop_stats['bins'][:int(bin_limit)]
 
                         report = report.append(prop_stats, ignore_index=True)
