@@ -2233,7 +2233,7 @@ class Gen3Expansion:
         For each property in each project, the total, non-null and null counts are returned.
         For string, enumeration and boolean properties, bins and the number of unique bins are returned.
         For integers and numbers, the mean, median, min, max, and stdev are returned.
-        Outliers in numeric data are identified using "+/- stdev". The cut-off for outlier identification can be changed by raising or lowering the outlier_threshold (default=3).
+        Outliers in numeric data are identified using "+/- stdev". The cut-off for outlier identification can be changed by raising or lowering the outlier_threshold (common setting is ~3).
 
         Args:
             tsv_dir(str): project_tsvs directory
