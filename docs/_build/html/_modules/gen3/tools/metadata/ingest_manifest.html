@@ -1,0 +1,608 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>gen3.tools.metadata.ingest_manifest &#8212; Gen3 SDK  documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for gen3.tools.metadata.ingest_manifest</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Tools for ingesting a CSV/TSV metadata manifest into the Metdata Service.</span>
+
+<span class="sd">Attributes:</span>
+<span class="sd">    COLUMN_TO_USE_AS_GUID (str): file column containing guid to use</span>
+<span class="sd">    GUID_TYPE_FOR_INDEXED_FILE_OBJECT (str): type to populate in mds when guid exists</span>
+<span class="sd">        in indexd</span>
+<span class="sd">    GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT (str): type to populate in mds when guid does</span>
+<span class="sd">        NOT exist in indexd</span>
+<span class="sd">    manifest_row_parsers (Dict{str: function}): functions for parsing, users can override</span>
+<span class="sd">        manifest_row_parsers = {</span>
+<span class="sd">            &quot;guid_from_file&quot;: _get_guid_for_row,</span>
+<span class="sd">            &quot;indexed_file_object_guid&quot;: _query_for_associated_indexd_record_guid,</span>
+<span class="sd">        }</span>
+
+<span class="sd">        &quot;guid_for_row&quot; is the function to retrieve the guid from the given file</span>
+<span class="sd">        &quot;indexed_file_object_guid&quot; is the function to retrieve the guid from elsewhere,</span>
+<span class="sd">            like indexd (by querying)</span>
+
+<span class="sd">    MAX_CONCURRENT_REQUESTS (int): Maximum concurrent requests to mds for ingestion</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">aiohttp</span>
+<span class="kn">import</span> <span class="nn">asyncio</span>
+<span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">urllib.parse</span>
+
+<span class="kn">from</span> <span class="nn">gen3.index</span> <span class="kn">import</span> <span class="n">Gen3Index</span>
+<span class="kn">from</span> <span class="nn">gen3.metadata</span> <span class="kn">import</span> <span class="n">Gen3Metadata</span>
+
+<span class="n">TMP_FOLDER</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="s2">&quot;./tmp&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span>
+<span class="n">CURRENT_DIR</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+
+<span class="n">MAX_CONCURRENT_REQUESTS</span> <span class="o">=</span> <span class="mi">24</span>
+<span class="n">COLUMN_TO_USE_AS_GUID</span> <span class="o">=</span> <span class="s2">&quot;guid&quot;</span>
+<span class="n">GUID_TYPE_FOR_INDEXED_FILE_OBJECT</span> <span class="o">=</span> <span class="s2">&quot;indexed_file_object&quot;</span>
+<span class="n">GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT</span> <span class="o">=</span> <span class="s2">&quot;metadata_object&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">_get_guid_for_row</span><span class="p">(</span><span class="n">commons_url</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">lock</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given a row from the manifest, return the guid to use for the metadata object.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        commons_url (str): root domain for commons where mds lives</span>
+<span class="sd">        row (dict): column_name:row_value</span>
+<span class="sd">        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http</span>
+<span class="sd">            connections</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: guid</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">COLUMN_TO_USE_AS_GUID</span><span class="p">)</span>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">_query_for_associated_indexd_record_guid</span><span class="p">(</span>
+    <span class="n">commons_url</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">lock</span><span class="p">,</span> <span class="n">output_queue</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given a row from the manifest, return the guid for the related indexd record.</span>
+
+<span class="sd">    By default attempts to use a column &quot;submitted_sample_id&quot; to pattern match</span>
+<span class="sd">    URLs in indexd records to find a single match.</span>
+
+<span class="sd">    For example:</span>
+<span class="sd">        &quot;NWD12345&quot; would match a record with url: &quot;s3://some-bucket/file_NWD12345.cram&quot;</span>
+
+<span class="sd">    WARNING: The query endpoint this uses in indexd is incredibly slow when there are</span>
+<span class="sd">             lots of indexd records.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        commons_url (str): root domain for commons where mds lives</span>
+<span class="sd">        row (dict): column_name:row_value</span>
+<span class="sd">        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http</span>
+<span class="sd">            connections</span>
+<span class="sd">        output_queue (asyncio.Queue): queue for logging output</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: guid or None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mapping</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;urls&quot;</span><span class="p">:</span> <span class="s2">&quot;submitted_sample_id&quot;</span><span class="p">}</span>
+    <span class="c1"># Alternate example:</span>
+    <span class="c1">#</span>
+    <span class="c1"># mapping = {</span>
+    <span class="c1">#     &quot;acl&quot;: &quot;study_with_consent&quot;,</span>
+    <span class="c1">#     &quot;size&quot;: &quot;file_size&quot;,</span>
+    <span class="c1"># }</span>
+
+    <span class="k">if</span> <span class="s2">&quot;urls&quot;</span> <span class="ow">in</span> <span class="n">mapping</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">mapping</span><span class="o">.</span><span class="n">items</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;You cannot pattern match &#39;urls&#39; and exact match other fields for mapping &quot;</span>
+            <span class="s2">&quot;from indexd record to metadata columns. You can match by URL pattern &quot;</span>
+            <span class="s2">&quot;*OR* match exact record fields like size, hash, uploader, url, acl, authz.&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">You provided mapping: </span><span class="si">{</span><span class="n">mapping</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="c1"># special query endpoint for matching url patterns, other fields</span>
+    <span class="c1"># just use get with params</span>
+    <span class="k">if</span> <span class="s2">&quot;urls&quot;</span> <span class="ow">in</span> <span class="n">mapping</span><span class="p">:</span>
+        <span class="n">pattern</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">mapping</span><span class="p">[</span><span class="s2">&quot;urls&quot;</span><span class="p">])</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;trying to find matching record matching url pattern: </span><span class="si">{</span><span class="n">pattern</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">records</span> <span class="o">=</span> <span class="k">await</span> <span class="n">async_query_urls_from_indexd</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">lock</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">mapping_key</span><span class="p">:</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">mapping_value</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">mapping_key</span><span class="p">,</span> <span class="n">mapping_value</span> <span class="ow">in</span> <span class="n">mapping</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">}</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;trying to find matching record matching params: </span><span class="si">{</span><span class="n">params</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">records</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_get_with_params_from_indexd</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">lock</span><span class="p">)</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;matching record(s): </span><span class="si">{</span><span class="n">records</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">records</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;Multiple records were found with the given search criteria, this is assumed &quot;</span>
+            <span class="s2">&quot;to be unintentional so the metadata will NOT be linked to these records:</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">records</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">records</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">guid</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">records</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">guid</span> <span class="o">=</span> <span class="n">records</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;did&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">guid</span>
+
+
+<span class="n">manifest_row_parsers</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;guid_for_row&quot;</span><span class="p">:</span> <span class="n">_get_guid_for_row</span><span class="p">,</span>
+    <span class="s2">&quot;indexed_file_object_guid&quot;</span><span class="p">:</span> <span class="n">_query_for_associated_indexd_record_guid</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="async_ingest_metadata_manifest"><a class="viewcode-back" href="../../../../tools/metadata.html#gen3.tools.metadata.ingest_manifest.async_ingest_metadata_manifest">[docs]</a><span class="k">async</span> <span class="k">def</span> <span class="nf">async_ingest_metadata_manifest</span><span class="p">(</span>
+    <span class="n">commons_url</span><span class="p">,</span>
+    <span class="n">manifest_file</span><span class="p">,</span>
+    <span class="n">metadata_source</span><span class="p">,</span>
+    <span class="n">auth</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">max_concurrent_requests</span><span class="o">=</span><span class="n">MAX_CONCURRENT_REQUESTS</span><span class="p">,</span>
+    <span class="n">manifest_row_parsers</span><span class="o">=</span><span class="n">manifest_row_parsers</span><span class="p">,</span>
+    <span class="n">manifest_file_delimiter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">output_filename</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;ingest-metadata-manifest-errors-</span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="si">}</span><span class="s2">.log&quot;</span><span class="p">,</span>
+    <span class="n">get_guid_from_file</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Ingest all metadata records into a manifest csv</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        commons_url (str): root domain for commons where mds lives</span>
+<span class="sd">        manifest_file (str): the file to ingest against</span>
+<span class="sd">        metadata_source (str): the name of the source of metadata (used to namespace</span>
+<span class="sd">            in the metadata service) ex: dbgap</span>
+<span class="sd">        auth (Gen3Auth): Gen3 auth or tuple with basic auth name and password</span>
+<span class="sd">        max_concurrent_requests (int): the maximum number of concurrent requests allowed</span>
+<span class="sd">        manifest_row_parsers (Dict{indexd_field:func_to_parse_row}): Row parsers</span>
+<span class="sd">        manifest_file_delimiter (str): delimeter in manifest_file</span>
+<span class="sd">        output_filename (str): filename for output logs</span>
+<span class="sd">        get_guid_from_file (bool): whether or not to get the guid for metadata from file</span>
+<span class="sd">            NOTE: When this is True, will use the function in</span>
+<span class="sd">                  manifest_row_parsers[&quot;guid_for_row&quot;] to determine the GUID</span>
+<span class="sd">                  (usually just a specific column in the file row like &quot;guid&quot;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># if delimter not specified, try to get based on file ext</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">manifest_file_delimiter</span><span class="p">:</span>
+        <span class="n">file_ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">file_ext</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.tsv&quot;</span><span class="p">:</span>
+            <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># default, assume CSV</span>
+            <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span>
+
+    <span class="k">await</span> <span class="n">_ingest_all_metadata_in_file</span><span class="p">(</span>
+        <span class="n">commons_url</span><span class="p">,</span>
+        <span class="n">manifest_file</span><span class="p">,</span>
+        <span class="n">metadata_source</span><span class="p">,</span>
+        <span class="n">auth</span><span class="p">,</span>
+        <span class="n">manifest_file_delimiter</span><span class="p">,</span>
+        <span class="n">max_concurrent_requests</span><span class="p">,</span>
+        <span class="n">output_filename</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">get_guid_from_file</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">_ingest_all_metadata_in_file</span><span class="p">(</span>
+    <span class="n">commons_url</span><span class="p">,</span>
+    <span class="n">manifest_file</span><span class="p">,</span>
+    <span class="n">metadata_source</span><span class="p">,</span>
+    <span class="n">auth</span><span class="p">,</span>
+    <span class="n">manifest_file_delimiter</span><span class="p">,</span>
+    <span class="n">max_concurrent_requests</span><span class="p">,</span>
+    <span class="n">output_filename</span><span class="p">,</span>
+    <span class="n">get_guid_from_file</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Ingest metadata from file into metadata service. This function</span>
+<span class="sd">    creates semaphores to limit the number of concurrent http connections that</span>
+<span class="sd">    get opened to send requests to mds.</span>
+
+<span class="sd">    It then uses asyncio to start a number of coroutines. Steps:</span>
+<span class="sd">        1) reads given metadata file (writes resulting rows to a queue)</span>
+<span class="sd">        2) posts/puts to mds to write metadata for rows</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        commons_url (str): root domain for commons where mds lives</span>
+<span class="sd">        manifest_file (str): the file to ingest against</span>
+<span class="sd">        metadata_source (str): the name of the source of metadata (used to namespace</span>
+<span class="sd">            in the metadata service) ex: dbgap</span>
+<span class="sd">        auth (Gen3Auth): Gen3 auth or tuple with basic auth name and password</span>
+<span class="sd">        max_concurrent_requests (int): the maximum number of concurrent requests allowed</span>
+<span class="sd">        manifest_file_delimiter (str): delimeter in manifest_file</span>
+<span class="sd">        output_filename (str): filename for output logs</span>
+<span class="sd">        get_guid_from_file (bool): whether or not to get the guid for metadata from file</span>
+<span class="sd">            NOTE: When this is True, will use the function in</span>
+<span class="sd">                  manifest_row_parsers[&quot;guid_for_row&quot;] to determine the GUID</span>
+<span class="sd">                  (usually just a specific column in the file row like &quot;guid&quot;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">max_requests</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">max_concurrent_requests</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;max concurrent requests: </span><span class="si">{</span><span class="n">max_requests</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">lock</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Semaphore</span><span class="p">(</span><span class="n">max_requests</span><span class="p">)</span>
+    <span class="n">queue</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+    <span class="n">output_queue</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;start time: </span><span class="si">{</span><span class="n">start_time</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8-sig&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">manifest</span><span class="p">:</span>
+        <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">manifest_file_delimiter</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">reader</span><span class="p">:</span>
+            <span class="n">new_row</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">row</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="c1"># I know this looks crazy, DictReader is doing goofy things when</span>
+                <span class="c1"># column contains a JSON-like string so we&#39;re trying to fix it here</span>
+                <span class="c1"># Basically make sure the resulting column is something that we can</span>
+                <span class="c1"># later json.loads().</span>
+                <span class="c1"># remove redudant quoting</span>
+                <span class="k">if</span> <span class="n">value</span><span class="p">:</span>
+                    <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&#39;&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;&#39;&quot;</span><span class="p">)</span>
+                <span class="n">new_row</span><span class="p">[</span><span class="n">key</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">new_row</span><span class="p">)</span>
+
+    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span>
+        <span class="o">*</span><span class="p">(</span>
+            <span class="n">_parse_from_queue</span><span class="p">(</span>
+                <span class="n">queue</span><span class="p">,</span>
+                <span class="n">lock</span><span class="p">,</span>
+                <span class="n">commons_url</span><span class="p">,</span>
+                <span class="n">output_queue</span><span class="p">,</span>
+                <span class="n">auth</span><span class="p">,</span>
+                <span class="n">get_guid_from_file</span><span class="p">,</span>
+                <span class="n">metadata_source</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span>
+                <span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">max_concurrent_requests</span> <span class="o">+</span> <span class="p">(</span><span class="n">max_concurrent_requests</span> <span class="o">/</span> <span class="mi">4</span><span class="p">))</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;end time: </span><span class="si">{</span><span class="n">end_time</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;run time: </span><span class="si">{</span><span class="n">end_time</span><span class="o">-</span><span class="n">start_time</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="n">output_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;done processing, writing output queue to single file </span><span class="si">{</span><span class="n">output_filename</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+
+    <span class="c1"># remove existing output if it exists</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">output_filename</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_filename</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">outfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;done writing output to file </span><span class="si">{</span><span class="n">output_filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">_parse_from_queue</span><span class="p">(</span>
+    <span class="n">queue</span><span class="p">,</span> <span class="n">lock</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">output_queue</span><span class="p">,</span> <span class="n">auth</span><span class="p">,</span> <span class="n">get_guid_from_file</span><span class="p">,</span> <span class="n">metadata_source</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Keep getting items from the queue and checking if indexd contains a record with</span>
+<span class="sd">    that guid. Then create/update metadta for that GUID in the metadata service.</span>
+<span class="sd">    Also log to output queue. Return when nothing is left in the queue.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        queue (asyncio.Queue): queue to read metadata from</span>
+<span class="sd">        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http</span>
+<span class="sd">            connections</span>
+<span class="sd">        commons_url (str): root domain for commons where mds lives</span>
+<span class="sd">        output_queue (asyncio.Queue): queue for logging output</span>
+<span class="sd">        auth (Gen3Auth): Gen3 auth or tuple with basic auth name and password</span>
+<span class="sd">        get_guid_from_file (bool): whether or not to get the guid for metadata from file</span>
+<span class="sd">            NOTE: When this is True, will use the function in</span>
+<span class="sd">                  manifest_row_parsers[&quot;guid_for_row&quot;] to determine the GUID</span>
+<span class="sd">                  (usually just a specific column in the file row like &quot;guid&quot;)</span>
+<span class="sd">        metadata_source (str): the name of the source of metadata (used to namespace</span>
+<span class="sd">            in the metadata service) ex: dbgap</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">queue</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">get_guid_from_file</span><span class="p">:</span>
+            <span class="n">guid</span> <span class="o">=</span> <span class="n">manifest_row_parsers</span><span class="p">[</span><span class="s2">&quot;guid_for_row&quot;</span><span class="p">](</span><span class="n">commons_url</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">lock</span><span class="p">)</span>
+            <span class="n">is_indexed_file_object</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_is_indexed_file_object</span><span class="p">(</span>
+                <span class="n">guid</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">lock</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">guid</span> <span class="o">=</span> <span class="k">await</span> <span class="n">manifest_row_parsers</span><span class="p">[</span><span class="s2">&quot;indexed_file_object_guid&quot;</span><span class="p">](</span>
+                <span class="n">commons_url</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">lock</span><span class="p">,</span> <span class="n">output_queue</span>
+            <span class="p">)</span>
+            <span class="n">is_indexed_file_object</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">if</span> <span class="n">guid</span><span class="p">:</span>
+            <span class="c1"># construct metadata from rows, don&#39;t include redundant guid column</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;row: </span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">metadata_from_file</span> <span class="o">=</span> <span class="p">{}</span>
+
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">row</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">new_value</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                <span class="k">except</span> <span class="n">json</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">JSONDecodeError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="s2">&quot;}&quot;</span> <span class="ow">in</span> <span class="n">value</span> <span class="ow">or</span> <span class="s2">&quot;{&quot;</span> <span class="ow">in</span> <span class="n">value</span> <span class="ow">or</span> <span class="s2">&quot;[&quot;</span> <span class="ow">in</span> <span class="n">value</span> <span class="ow">or</span> <span class="s2">&quot;]&quot;</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+                        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;Unable to json.loads a string that looks like json: </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">. &quot;</span>
+                            <span class="sa">f</span><span class="s2">&quot;adding as a string instead of nested json. Exception: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="p">)</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                        <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                    <span class="n">new_value</span> <span class="o">=</span> <span class="n">value</span>
+
+                <span class="n">metadata_from_file</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_value</span>
+
+            <span class="k">if</span> <span class="n">COLUMN_TO_USE_AS_GUID</span> <span class="ow">in</span> <span class="n">metadata_from_file</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">del</span> <span class="n">metadata_from_file</span><span class="p">[</span><span class="n">COLUMN_TO_USE_AS_GUID</span><span class="p">]</span>
+
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;metadata from file: </span><span class="si">{</span><span class="n">metadata_from_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="c1"># namespace by metadata source</span>
+            <span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span><span class="n">metadata_source</span><span class="p">:</span> <span class="n">metadata_from_file</span><span class="p">}</span>
+
+            <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;_guid_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">GUID_TYPE_FOR_INDEXED_FILE_OBJECT</span>
+                <span class="k">if</span> <span class="n">is_indexed_file_object</span>
+                <span class="k">else</span> <span class="n">GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT</span>
+            <span class="p">)</span>
+
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;metadata: </span><span class="si">{</span><span class="n">metadata</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">await</span> <span class="n">_create_metadata</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">auth</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">lock</span><span class="p">)</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Successfully created </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Got conflict for </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">. Let&#39;s update instead of create...&quot;</span>
+                <span class="p">)</span>
+                <span class="k">await</span> <span class="n">_update_metadata</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">auth</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">lock</span><span class="p">)</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Successfully updated </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Did not add a metadata object for row because an invalid &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;GUID was parsed or no record with this GUID was found in &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;indexd: </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">.</span><span class="se">\n</span><span class="s2">Row: </span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="k">await</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">_create_metadata</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">auth</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">lock</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Gets a semaphore then creates metadata for guid</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        guid (str): indexd record globally unique id</span>
+<span class="sd">        metadata (str): the metadata to add</span>
+<span class="sd">        auth (Gen3Auth): Gen3 auth or tuple with basic auth name and password</span>
+<span class="sd">        commons_url (str): root domain for commons where metadata service lives</span>
+<span class="sd">        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http</span>
+<span class="sd">            connections</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mds</span> <span class="o">=</span> <span class="n">Gen3Metadata</span><span class="p">(</span><span class="n">commons_url</span><span class="p">,</span> <span class="n">auth_provider</span><span class="o">=</span><span class="n">auth</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">lock</span><span class="p">:</span>
+        <span class="c1"># default ssl handling unless it&#39;s explicitly http://</span>
+        <span class="n">ssl</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="s2">&quot;https&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">commons_url</span><span class="p">:</span>
+            <span class="n">ssl</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">mds</span><span class="o">.</span><span class="n">async_create</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="n">ssl</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">response</span>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">_update_metadata</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">auth</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">lock</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Gets a semaphore then updates metadata for guid</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        guid (str): indexd record globally unique id</span>
+<span class="sd">        metadata (str): the metadata to add</span>
+<span class="sd">        auth (Gen3Auth): Gen3 auth or tuple with basic auth name and password</span>
+<span class="sd">        commons_url (str): root domain for commons where metadata service lives</span>
+<span class="sd">        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http</span>
+<span class="sd">            connections</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mds</span> <span class="o">=</span> <span class="n">Gen3Metadata</span><span class="p">(</span><span class="n">commons_url</span><span class="p">,</span> <span class="n">auth_provider</span><span class="o">=</span><span class="n">auth</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">lock</span><span class="p">:</span>
+        <span class="c1"># default ssl handling unless it&#39;s explicitly http://</span>
+        <span class="n">ssl</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="s2">&quot;https&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">commons_url</span><span class="p">:</span>
+            <span class="n">ssl</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">mds</span><span class="o">.</span><span class="n">async_update</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="n">ssl</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">response</span>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">_is_indexed_file_object</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">lock</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Gets a semaphore then requests a record for the given guid</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        guid (str): indexd record globally unique id</span>
+<span class="sd">        commons_url (str): root domain for commons where mds lives</span>
+<span class="sd">        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http</span>
+<span class="sd">            connections</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">Gen3Index</span><span class="p">(</span><span class="n">commons_url</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">lock</span><span class="p">:</span>
+        <span class="c1"># default ssl handling unless it&#39;s explicitly http://</span>
+        <span class="n">ssl</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="s2">&quot;https&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">commons_url</span><span class="p">:</span>
+            <span class="n">ssl</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">record</span> <span class="o">=</span> <span class="k">await</span> <span class="n">index</span><span class="o">.</span><span class="n">async_get_record</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="n">ssl</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="c1"># if error, assume it does not exist</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="async_query_urls_from_indexd"><a class="viewcode-back" href="../../../../tools/metadata.html#gen3.tools.metadata.ingest_manifest.async_query_urls_from_indexd">[docs]</a><span class="k">async</span> <span class="k">def</span> <span class="nf">async_query_urls_from_indexd</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">lock</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Gets a semaphore then requests a record for the given pattern</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        pattern (str): url pattern to match</span>
+<span class="sd">        commons_url (str): root domain for commons where mds lives</span>
+<span class="sd">        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http</span>
+<span class="sd">            connections</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">Gen3Index</span><span class="p">(</span><span class="n">commons_url</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">lock</span><span class="p">:</span>
+        <span class="c1"># default ssl handling unless it&#39;s explicitly http://</span>
+        <span class="n">ssl</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="s2">&quot;https&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">commons_url</span><span class="p">:</span>
+            <span class="n">ssl</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="k">await</span> <span class="n">index</span><span class="o">.</span><span class="n">async_query_urls</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="n">ssl</span><span class="p">)</span></div>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">_get_with_params_from_indexd</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">lock</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Gets a semaphore then requests a record for the given params</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        params (str): params to match</span>
+<span class="sd">        commons_url (str): root domain for commons where mds lives</span>
+<span class="sd">        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http</span>
+<span class="sd">            connections</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">Gen3Index</span><span class="p">(</span><span class="n">commons_url</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">lock</span><span class="p">:</span>
+        <span class="c1"># default ssl handling unless it&#39;s explicitly http://</span>
+        <span class="n">ssl</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="s2">&quot;https&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">commons_url</span><span class="p">:</span>
+            <span class="n">ssl</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="k">await</span> <span class="n">index</span><span class="o">.</span><span class="n">async_get_with_params</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="n">ssl</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Gen3 SDK</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=uc-cdis&repo=gen3sdk-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../auth.html">Gen3 Auth Helper</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../file.html">Gen3 File Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../submission.html">Gen3 Submission Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../tools.html">Gen3 Tools</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Center for Translational Data Science.
+      
+    </div>
+
+    
+    <a href="https://github.com/uc-cdis/gen3sdk-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

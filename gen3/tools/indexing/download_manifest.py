@@ -15,7 +15,7 @@ Attributes:
     MAX_CONCURRENT_REQUESTS (int): maximum number of desired concurrent requests across
         processes/threads
     TMP_FOLDER (str): Folder directory for placing temporary files
-        NOTE: We have to use a temporary folder b/c Python's file writing is not
+        NOTE - We have to use a temporary folder b/c Python's file writing is not
               thread-safe so we can't have all processes writing to the same file.
               To workaround this, we have each process write to a file and concat
               them all post-processing.
@@ -148,9 +148,7 @@ async def _write_all_index_records_to_file(
         os.unlink(output_filename)
 
     with open(output_filename, "wb") as outfile:
-        outfile.write(
-            "guid, urls, authz, acl, md5, file_size, file_name\n".encode("utf8")
-        )
+        outfile.write("guid,urls,authz,acl,md5,file_size,file_name\n".encode("utf8"))
         for filename in glob.glob(TMP_FOLDER + "*"):
             if output_filename == filename:
                 # don't want to copy the output into the output

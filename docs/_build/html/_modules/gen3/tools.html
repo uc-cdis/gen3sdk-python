@@ -1,0 +1,407 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>gen3.tools &#8212; Gen3 SDK  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for gen3.tools</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">base64</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+
+<span class="k">def</span> <span class="nf">_get_guids_for_row</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">data_from_smaller_file</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given a row from the manifest, return the guids that match it.</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">        row = {&quot;submitted_sample_id&quot;: &quot;123&quot;, &quot;foo&quot;: &quot;bar&quot;, &quot;fizz&quot;: &quot;buzz&quot;}</span>
+<span class="sd">        data_from_smaller_file = {</span>
+<span class="sd">            &quot;123&quot;: {&quot;guid&quot;: &quot;aefdf8f2-9e96-4601-a8b9-c3f661b27bc8&quot;},</span>
+<span class="sd">            &quot;456&quot;: {&quot;guid&quot;: &quot;56e908b2-12df-434e-be9b-023edf66814b&quot;}</span>
+<span class="sd">        }</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List: guids</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># the name of column to return that exists as a value in the data_from_smaller_file</span>
+    <span class="n">guid_column_name</span> <span class="o">=</span> <span class="s2">&quot;guid&quot;</span>
+
+    <span class="c1"># the key from the row to use for the exact match against the keys in</span>
+    <span class="c1"># data_from_smaller_file</span>
+    <span class="n">key_id_from_row</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;submitted_sample_id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="p">[</span>
+        <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">guid_column_name</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">data_from_smaller_file</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key_id_from_row</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="k">if</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">guid_column_name</span><span class="p">)</span>
+    <span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">_get_guids_for_row_partial_match</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">data_from_smaller_file</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given a row from the manifest, return the guid to use for the metadata object by</span>
+<span class="sd">    partially matching against the keys.</span>
+
+<span class="sd">    WARNING: This iterates over the entire data_from_smaller_file dict EVERY TIME</span>
+<span class="sd">             IT&#39;S CALLED. So this is O(n2).</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">        row = {&quot;submitted_sample_id&quot;: &quot;123&quot;, &quot;foo&quot;: &quot;bar&quot;, &quot;fizz&quot;: &quot;buzz&quot;}</span>
+<span class="sd">        data_from_smaller_file = {</span>
+<span class="sd">            &quot;123&quot;: {&quot;guid&quot;: &quot;aefdf8f2-9e96-4601-a8b9-c3f661b27bc8&quot;},</span>
+<span class="sd">            &quot;456&quot;: {&quot;guid&quot;: &quot;56e908b2-12df-434e-be9b-023edf66814b&quot;}</span>
+<span class="sd">        }</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List: guids</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># the name of column to return that exists as a value in the data_from_smaller_file</span>
+    <span class="n">guid_column_name</span> <span class="o">=</span> <span class="s2">&quot;guid&quot;</span>
+
+    <span class="c1"># the key from the row to use for the exact match against the keys in</span>
+    <span class="c1"># data_from_smaller_file</span>
+    <span class="n">key_from_row</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;submitted_sample_id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+    <span class="n">matching_guids</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">matching_keys</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">data_from_smaller_file</span><span class="p">)</span><span class="si">}</span><span class="s2"> unmatched records remaining in smaller file.&quot;</span>
+    <span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">matching_rows</span> <span class="ow">in</span> <span class="n">data_from_smaller_file</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">key_from_row</span> <span class="ow">in</span> <span class="n">key</span> <span class="ow">and</span> <span class="n">matching_rows</span><span class="p">:</span>
+            <span class="n">matching_keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="n">matching_guids</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">guid_column_name</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">matching_rows</span>
+                    <span class="k">if</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">guid_column_name</span><span class="p">)</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+
+    <span class="c1"># no need to search already matched records</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">matching_keys</span><span class="p">:</span>
+        <span class="k">del</span> <span class="n">data_from_smaller_file</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">matching_guids</span>
+
+
+<span class="k">def</span> <span class="nf">_get_data_from_smaller_file</span><span class="p">(</span>
+    <span class="n">manifest_file</span><span class="p">,</span> <span class="n">key_column_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">value_column_names</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create an OrderedDictionary mapping some key to a list of matching records with some</span>
+<span class="sd">    field to use as a GUID.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        manifest_file (string)</span>
+<span class="sd">        delimiter (string): delimiter used to separate entries in the file. for a tsv,</span>
+<span class="sd">            this is \t</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        column_to_matching_rows (dict): maps a key to a list and appends data from rows</span>
+<span class="sd">            with matching columns</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># key_column_name = key_column_name or &quot;sample_id&quot;</span>
+    <span class="c1"># value_column_names = value_column_names or [&quot;guid&quot;]</span>
+
+    <span class="c1"># key_column_name = &quot;sample_id&quot;</span>
+    <span class="c1"># value_column_names = [&quot;guid&quot;]</span>
+    <span class="n">key_column_name</span> <span class="o">=</span> <span class="s2">&quot;gcp_uri&quot;</span>
+    <span class="n">value_column_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;guid&quot;</span><span class="p">]</span>
+
+    <span class="n">column_to_matching_rows</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">,</span> <span class="s2">&quot;rt&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvfile</span><span class="p">:</span>
+        <span class="n">csvReader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">csvfile</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">delimiter</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">csvReader</span><span class="p">:</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">key_column_name</span><span class="p">])</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="n">column_to_matching_rows</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">{</span><span class="n">item</span><span class="p">:</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">value_column_names</span><span class="p">}</span>
+            <span class="p">)</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;sample data from smaller file: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">column_to_matching_rows</span><span class="p">)[:</span><span class="mi">250</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">column_to_matching_rows</span>
+
+
+<span class="n">manifest_row_parsers</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;guids_for_row&quot;</span><span class="p">:</span> <span class="n">_get_guids_for_row_partial_match</span><span class="p">,</span>
+    <span class="s2">&quot;get_data_from_smaller_file&quot;</span><span class="p">:</span> <span class="n">_get_data_from_smaller_file</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span> <span class="nf">merge_guids_into_metadata</span><span class="p">(</span>
+    <span class="n">indexing_manifest</span><span class="p">,</span>
+    <span class="n">metadata_manifest</span><span class="p">,</span>
+    <span class="n">is_indexing_file_smaller</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">indexing_manifest_file_delimiter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">metadata_manifest_file_delimiter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">manifest_row_parsers</span><span class="o">=</span><span class="n">manifest_row_parsers</span><span class="p">,</span>
+    <span class="n">output_filename</span><span class="o">=</span><span class="s2">&quot;merged-metadata-manifest.tsv&quot;</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;start time: </span><span class="si">{</span><span class="n">start_time</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># if delimter not specified, try to get based on file ext</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">indexing_manifest_file_delimiter</span><span class="p">:</span>
+        <span class="n">indexing_manifest_file_delimiter</span> <span class="o">=</span> <span class="n">_get_delimiter_from_extension</span><span class="p">(</span>
+            <span class="n">indexing_manifest</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">metadata_manifest_file_delimiter</span><span class="p">:</span>
+        <span class="n">metadata_manifest_file_delimiter</span> <span class="o">=</span> <span class="n">_get_delimiter_from_extension</span><span class="p">(</span>
+            <span class="n">metadata_manifest</span>
+        <span class="p">)</span>
+
+    <span class="c1"># determine filenames and delimiters based on flag</span>
+    <span class="n">expected_smallest_file</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">indexing_manifest</span> <span class="k">if</span> <span class="n">is_indexing_file_smaller</span> <span class="k">else</span> <span class="n">metadata_manifest</span>
+    <span class="p">)</span>
+    <span class="n">expected_smallest_file_delimiter</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">indexing_manifest_file_delimiter</span>
+        <span class="k">if</span> <span class="n">is_indexing_file_smaller</span>
+        <span class="k">else</span> <span class="n">metadata_manifest_file_delimiter</span>
+    <span class="p">)</span>
+    <span class="n">other_file</span> <span class="o">=</span> <span class="n">metadata_manifest</span> <span class="k">if</span> <span class="n">is_indexing_file_smaller</span> <span class="k">else</span> <span class="n">indexing_manifest</span>
+    <span class="n">other_file_delimiter</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">metadata_manifest_file_delimiter</span>
+        <span class="k">if</span> <span class="n">is_indexing_file_smaller</span>
+        <span class="k">else</span> <span class="n">indexing_manifest_file_delimiter</span>
+    <span class="p">)</span>
+
+    <span class="n">_warn_if_input_is_not_memory_efficient</span><span class="p">(</span>
+        <span class="n">indexing_manifest</span><span class="p">,</span>
+        <span class="n">metadata_manifest</span><span class="p">,</span>
+        <span class="n">is_indexing_file_smaller</span><span class="p">,</span>
+        <span class="n">expected_smallest_file</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Getting data from </span><span class="si">{</span><span class="n">expected_smallest_file</span><span class="si">}</span><span class="s2"> and loading into dict.&quot;</span><span class="p">)</span>
+    <span class="n">data_from_smaller_file</span> <span class="o">=</span> <span class="n">manifest_row_parsers</span><span class="p">[</span><span class="s2">&quot;get_data_from_smaller_file&quot;</span><span class="p">](</span>
+        <span class="n">expected_smallest_file</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">expected_smallest_file_delimiter</span>
+    <span class="p">)</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Iterating over </span><span class="si">{</span><span class="n">other_file</span><span class="si">}</span><span class="s2"> and finding guid using dict created &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;from </span><span class="si">{</span><span class="n">expected_smallest_file</span><span class="si">}</span><span class="s2">.&quot;</span>
+    <span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">other_file</span><span class="p">,</span> <span class="s2">&quot;rt&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">other_file_delimiter</span><span class="p">)</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;guid&quot;</span><span class="p">]</span>
+        <span class="n">headers</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">reader</span><span class="o">.</span><span class="n">fieldnames</span><span class="p">)</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;writing headers to </span><span class="si">{</span><span class="n">output_filename</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">headers</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">write_header_to_file</span><span class="p">(</span>
+            <span class="n">filename</span><span class="o">=</span><span class="n">output_filename</span><span class="p">,</span> <span class="n">fieldnames</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;beginning iteration over rows in </span><span class="si">{</span><span class="n">other_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">reader</span><span class="p">:</span>
+            <span class="n">guids</span> <span class="o">=</span> <span class="n">manifest_row_parsers</span><span class="p">[</span><span class="s2">&quot;guids_for_row&quot;</span><span class="p">](</span><span class="n">row</span><span class="p">,</span> <span class="n">data_from_smaller_file</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">guids</span><span class="p">:</span>
+                <span class="c1"># warning but write to output anyway</span>
+                <span class="c1"># TODO should we not write to output?</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;could not find matching guid for row: </span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;found guids </span><span class="si">{</span><span class="n">guids</span><span class="si">}</span><span class="s2"> matching row: </span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">guid</span> <span class="ow">in</span> <span class="n">guids</span><span class="p">:</span>
+                <span class="n">row</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;guid&quot;</span><span class="p">:</span> <span class="n">guid</span><span class="p">})</span>
+                <span class="n">append_row_to_file</span><span class="p">(</span>
+                    <span class="n">filename</span><span class="o">=</span><span class="n">output_filename</span><span class="p">,</span>
+                    <span class="n">row</span><span class="o">=</span><span class="n">row</span><span class="p">,</span>
+                    <span class="n">fieldnames</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
+                    <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+
+    <span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;end time: </span><span class="si">{</span><span class="n">end_time</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;run time: </span><span class="si">{</span><span class="n">end_time</span><span class="o">-</span><span class="n">start_time</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_warn_if_input_is_not_memory_efficient</span><span class="p">(</span>
+    <span class="n">indexing_manifest</span><span class="p">,</span>
+    <span class="n">metadata_manifest</span><span class="p">,</span>
+    <span class="n">is_indexing_file_smaller</span><span class="p">,</span>
+    <span class="n">expected_smallest_file</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Warn user if their input isn&#39;t the most memory efficient configuration.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        expected_smallest_file (str): filename of file expected to be the smallest</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># determine the smallest file, we&#39;ll load this one into a python dict (in memory)</span>
+    <span class="c1"># and iterate over the other one line by line to save memory</span>
+    <span class="n">indexing_file_size</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">indexing_manifest</span><span class="p">)</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span><span class="o">.</span><span class="n">st_size</span>
+    <span class="n">metadata_file_size</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">metadata_manifest</span><span class="p">)</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span><span class="o">.</span><span class="n">st_size</span>
+
+    <span class="n">smallest_file</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">metadata_manifest</span>
+        <span class="k">if</span> <span class="nb">min</span><span class="p">(</span><span class="n">indexing_file_size</span><span class="p">,</span> <span class="n">metadata_file_size</span><span class="p">)</span> <span class="o">==</span> <span class="n">indexing_file_size</span>
+        <span class="k">else</span> <span class="n">indexing_manifest</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">smallest_file</span> <span class="o">!=</span> <span class="n">expected_smallest_file</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Warning: memory may be used inefficiently.</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;The script expected </span><span class="si">{</span><span class="n">expected_smallest_file</span><span class="si">}</span><span class="s2"> to be a smaller file.</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">indexing_manifest</span><span class="si">}</span><span class="s2"> size: </span><span class="si">{</span><span class="n">indexing_file_size</span><span class="si">}</span><span class="s2">.</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">metadata_manifest</span><span class="si">}</span><span class="s2"> size: </span><span class="si">{</span><span class="n">indexing_file_size</span><span class="si">}</span><span class="s2">.</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;is_indexing_file_smaller set to </span><span class="si">{</span><span class="n">is_indexing_file_smaller</span><span class="si">}</span><span class="s2">.</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Consider setting that to the opposite. Script</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;will be loading </span><span class="si">{</span><span class="n">expected_smallest_file</span><span class="si">}</span><span class="s2"> fully into memory.&quot;</span>
+        <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_get_delimiter_from_extension</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+    <span class="n">file_ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">file_ext</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.tsv&quot;</span><span class="p">:</span>
+        <span class="n">file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># default, assume CSV</span>
+        <span class="n">file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span>
+    <span class="k">return</span> <span class="n">file_delimiter</span>
+
+
+<div class="viewcode-block" id="write_header_to_file"><a class="viewcode-back" href="../../tools.html#gen3.tools.write_header_to_file">[docs]</a><span class="k">def</span> <span class="nf">write_header_to_file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">fieldnames</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Writes to a file in TSV format.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
+        <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictWriter</span><span class="p">(</span>
+            <span class="n">outfile</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">delimiter</span><span class="p">,</span> <span class="n">fieldnames</span><span class="o">=</span><span class="n">fieldnames</span><span class="p">,</span> <span class="n">extrasaction</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span>
+        <span class="p">)</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">writeheader</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="append_row_to_file"><a class="viewcode-back" href="../../tools.html#gen3.tools.append_row_to_file">[docs]</a><span class="k">def</span> <span class="nf">append_row_to_file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">fieldnames</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Appends to a file in TSV format.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;a&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
+        <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictWriter</span><span class="p">(</span>
+            <span class="n">outfile</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">delimiter</span><span class="p">,</span> <span class="n">fieldnames</span><span class="o">=</span><span class="n">fieldnames</span><span class="p">,</span> <span class="n">extrasaction</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span>
+        <span class="p">)</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">row</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Gen3 SDK</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=uc-cdis&repo=gen3sdk-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../auth.html">Gen3 Auth Helper</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../file.html">Gen3 File Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../indexing.html">Gen3 Index Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../metadata.html">Gen3 Metadata Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../submission.html">Gen3 Submission Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools.html">Gen3 Tools</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  <li><a href="../gen3.html">gen3</a><ul>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Center for Translational Data Science.
+      
+    </div>
+
+    
+    <a href="https://github.com/uc-cdis/gen3sdk-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
