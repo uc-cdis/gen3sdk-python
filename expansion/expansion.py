@@ -2468,7 +2468,7 @@ class Gen3Expansion:
 
             report.to_csv(outname, sep='\t', index=False, encoding='utf-8')
             sys.stdout.write("\rReport written to file:".ljust(200,' '))
-            print("\t{}".format(outname))
+            print("\n\t{}".format(outname))
 
         return summary
 
