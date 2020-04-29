@@ -2578,6 +2578,10 @@ class Gen3Expansion:
         else:
             print("\nSome properties in the report were not classified!")
 
+        # strip the col names so we can sort the report
+        comparison.columns = comparison.columns.str.strip()
+        comparison.sort_values(by=['comparison','node','property'],inplace=True)
+
         if write_report is True:
 
             self.create_output_dir(outdir)
@@ -2587,10 +2591,6 @@ class Gen3Expansion:
 
             msg = "Comparison report written to file: {}".format(outname)
             print(msg)
-
-        # strip the col names so we can sort the report
-        comparison.columns = comparison.columns.str.strip()
-        comparison.sort_values(by=['comparison','node','property'],inplace=True)
 
         return comparison
 
