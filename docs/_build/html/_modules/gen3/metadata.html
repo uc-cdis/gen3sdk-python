@@ -1,7 +1,7 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
     <title>gen3.metadata &#8212; Gen3 SDK  documentation</title>
@@ -94,7 +94,7 @@
 
 <div class="viewcode-block" id="Gen3Metadata.is_healthy"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.is_healthy">[docs]</a>    <span class="k">def</span> <span class="nf">is_healthy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Return if indexd is healthy or not</span>
+<span class="sd">        Return if is healthy or not</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            bool: True if healthy</span>
@@ -113,10 +113,10 @@
 <div class="viewcode-block" id="Gen3Metadata.get_version"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.get_version">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">get_version</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Return the version of indexd</span>
+<span class="sd">        Return the version</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            str: the version of indexd</span>
+<span class="sd">            str: the version</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/version&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
         <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
@@ -355,7 +355,7 @@
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Gen3Metadata.async_update"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.async_update">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
-    <span class="k">async</span> <span class="k">def</span> <span class="nf">async_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">async_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Asynchronous function to update metadata</span>
 
@@ -363,12 +363,11 @@
 <span class="sd">            guid (str): guid to use</span>
 <span class="sd">            metadata (Dict): dictionary representing what will end up a JSON blob</span>
 <span class="sd">                attached to the provided GUID as metadata</span>
-<span class="sd">            overwrite (bool, optional): whether or not to overwrite existing data</span>
 <span class="sd">            _ssl (None, optional): whether or not to use ssl</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">async</span> <span class="k">with</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
             <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/metadata/</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="n">overwrite</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
             <span class="c1"># aiohttp only allows basic auth with their built in auth, so we</span>
             <span class="c1"># need to manually add JWT auth header</span>
@@ -427,6 +426,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../auth.html">Gen3 Auth Helper</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../file.html">Gen3 File Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../indexing.html">Gen3 Index Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../jobs.html">Gen3 Jobs Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../metadata.html">Gen3 Metadata Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../submission.html">Gen3 Submission Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../tools.html">Gen3 Tools</a></li>
@@ -437,8 +437,6 @@
 <ul>
   <li><a href="../../index.html">Documentation overview</a><ul>
   <li><a href="../index.html">Module code</a><ul>
-  <li><a href="../gen3.html">gen3</a><ul>
-  </ul></li>
   </ul></li>
   </ul></li>
 </ul>

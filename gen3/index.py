@@ -396,6 +396,75 @@ class Gen3Index:
         return rec.to_json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    async def async_create_record(
+        self,
+        hashes,
+        size,
+        did=None,
+        urls=None,
+        file_name=None,
+        metadata=None,
+        baseid=None,
+        acl=None,
+        urls_metadata=None,
+        version=None,
+        authz=None,
+        _ssl=None,
+    ):
+        """
+        Asynchronous function to create a record in indexd.
+
+        Args:
+            hashes (dict): {hash type: hash value,}
+                eg ``hashes={'md5': ab167e49d25b488939b1ede42752458b'}``
+            size (int): file size metadata associated with a given uuid
+            did (str): provide a UUID for the new indexd to be made
+            urls (list): list of URLs where you can download the UUID
+            acl (list): access control list
+            authz (str): RBAC string
+            file_name (str): name of the file associated with a given UUID
+            metadata (dict): additional key value metadata for this entry
+            urls_metadata (dict): metadata attached to each url
+            baseid (str): optional baseid to group with previous entries versions
+            version (str): entry version string
+
+        Returns:
+            Document: json representation of an entry in indexd
+        """
+        async with aiohttp.ClientSession() as session:
+            if urls is None:
+                urls = []
+
+            json = {
+                "urls": urls,
+                "form": "object",
+                "hashes": hashes,
+                "size": size,
+                "file_name": file_name,
+                "metadata": metadata,
+                "urls_metadata": urls_metadata,
+                "baseid": baseid,
+                "acl": acl,
+                "authz": authz,
+                "version": version,
+            }
+
+            if did:
+                json["did"] = did
+
+            async with session.post(
+                f"{self.client.url}/index/",
+                json=json,
+                headers={"content-type": "application/json"},
+                ssl=_ssl,
+                auth=self.client.auth,
+            ) as response:
+                response.raise_for_status()
+                response = await response.json()
+
+        return response
+
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def create_blank(self, uploader, file_name=None):
         """
 
@@ -592,6 +661,57 @@ class Gen3Index:
                 exec(f"rec.{k} = v")
         rec.patch()
         return rec.to_json()
+
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    async def async_update_record(
+        self,
+        guid,
+        file_name=None,
+        urls=None,
+        version=None,
+        metadata=None,
+        acl=None,
+        authz=None,
+        urls_metadata=None,
+    ):
+        """
+        Asynchronous function to update a record in indexd.
+
+        Args:
+             guid: string
+                 - record id
+             body: json/dictionary format
+                 - index record information that needs to be updated.
+                 - can not update size or hash, use new version for that
+        """
+        async with aiohttp.ClientSession() as session:
+            updatable_attrs = {
+                "file_name": file_name,
+                "urls": urls,
+                "version": version,
+                "metadata": metadata,
+                "acl": acl,
+                "authz": authz,
+                "urls_metadata": urls_metadata,
+            }
+            record = await async_get_record(guid)
+            revision = record.get("rev")
+
+            for key, value in updatable_attrs.items():
+                if value is not None:
+                    record[key] = value
+
+            async with session.put(
+                f"{self.client.url}/index/{guid}/rev={revision}",
+                json=record,
+                headers={"content-type": "application/json"},
+                ssl=_ssl,
+                auth=self.client.auth,
+            ) as response:
+                response.raise_for_status()
+                response = await response.json()
+
+        return response
 
     ### Delete Requests
 
