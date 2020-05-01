@@ -151,8 +151,7 @@ from gen3.auth import Gen3Auth
 from gen3.jobs import Gen3Jobs, DBGAP_METADATA_JOB, INGEST_METADATA_JOB
 
 # Gen3 Commons URL
-# COMMONS = "https://caninedc.org/"
-COMMONS = "https://avantol.planx-pla.net/"
+COMMONS = "https://example.org/"
 
 # An API Key downloaded from the above commons' "Profile" page
 API_KEY_FILEPATH = "credentials.json"
@@ -193,17 +192,6 @@ def main():
         },
         "partial_match_or_exact_match": "partial_match",
     }
-
-    # job_input = {
-    #     "phsid_list": "phs000956 phs000920",
-    #     "indexing_manifest_url": "https://gist.githubusercontent.com/Avantol13/3343f914e6f6c639900b76d577737ca3/raw/40bfb20a4ddc3716bd1481ac84aad1d68b05a76f/public_indexing_manifest.csv",
-    #     "manifests_mapping_config": {
-    #         "guid_column_name": "guid",
-    #         "row_column_name": "submitted_sample_id",
-    #         "indexing_manifest_column_name": "urls",
-    #     },
-    #     "partial_match_or_exact_match": "partial_match",
-    # }
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
