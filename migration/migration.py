@@ -62,8 +62,8 @@ class Gen3Migration:
             if strip is True:
                 df.columns = df.columns.str.replace("#[0-9]+", "")
 
-        except FileNotFoundError as e:
-            print("\tNo '{}' TSV found.".format(filename))
+        except Exception as e:
+            print("\tError reading '{}' TSV: {}".format(filename,e))
             return
 
         #warn if there are duplicate submitter_ids:
@@ -179,8 +179,8 @@ class Gen3Migration:
                 df1 = pd.read_csv(filename,sep='\t', header=0, dtype=str)
                 dfs.append(df1)
                 print("\t{} node found with {} records.".format(node,len(df1)))
-            except IOError as e:
-                print("\tCan't read file {}".format(filename))
+            except Exception as e:
+                print("\tCan't read file {}: {}".format(filename,e))
                 pass
         if len(dfs) == 0:
             print("\tNo nodes were found to merge.")
@@ -288,9 +288,9 @@ class Gen3Migration:
             else:
                 print("\t\tAll {} records in '{}' node have existing links to '{}'. No new records added.".format(len(df),node,link))
                 return link_df.loc[link_df['submitter_id'].isin(link_names)]
-        except FileNotFoundError as e:
+        except Exception as e:
             link_df = pd.DataFrame()
-            print("\t\tNo '{}' TSV found. Creating new TSV for links.".format(link))
+            print("\t\tCouldn't read '{}' TSV: {}\nCreating new TSV for links.".format(link,e))
             missing = link_names
         parent_link = "{}.submitter_id".format(old_parent)
         if parent_link in list(df):
@@ -310,8 +310,8 @@ class Gen3Migration:
             old_name = "{}_{}_{}.tsv".format(name,project_id,old_node)
             try:
                 odf = pd.read_csv(old_name,sep='\t',header=0,dtype=str)
-            except FileNotFoundError as e:
-                print("\t\tNo existing '{}' TSV found. Skipping...".format(node))
+            except Exception as e:
+                print("\t\tCouldn't read '{}' TSV: '{}'. Skipping...".format(node,e))
                 return
             # df1 = df_no_link.loc[df_no_link[old_link].notnull()]
             # if len(df1) > 0:
@@ -329,8 +329,8 @@ class Gen3Migration:
                 old_name2 = "{}_{}_{}.tsv".format(name,project_id,old_node2)
                 try:
                     odf1 = pd.read_csv(old_name2,sep='\t',header=0,dtype=str)
-                except FileNotFoundError as e:
-                    print("\tNo existing '{}' TSV found. Skipping...".format(node))
+                except Exception as e:
+                    print("\tCouldn't read '{}' TSV: '{}'. Skipping...".format(node,e))
                     return
                 odf[parent_link] = odf.submitter_id
                 old_parent_link = "{}.submitter_id".format(old_backref)
@@ -1241,7 +1241,7 @@ class Gen3Migration:
         print("\tSubmission Order: \n\t\t{}".format(suborder))
         return suborder
 
-    def submit_tsvs(self,project_id,suborder,check_done=False,remove_done=False,drop_ids=False,name='temp'):
+    def submit_tsvs(self,project_id,suborder,check_done=False,remove_done=False,drop_ids=False,name='temp',chunk_size=1000):
         """
         Submits all the TSVs in 'suborder' dictionary obtained by running, e.g.:
         suborder = stag_mig.get_submission_order(stag_dd,project_id,name='temp',suffix='tsv')
@@ -1260,47 +1260,56 @@ class Gen3Migration:
             print("ERROR:" + output)
 
         with open(logname, 'w') as logfile:
+
             for node in suborder:
                 filename="{}_{}_{}.tsv".format(name,project_id,node)
                 done_file = Path("done/{}".format(filename))
                 failed_file = Path("failed/{}".format(filename))
+
                 if not done_file.is_file() or check_done is False:
+
                     if drop_ids is True:
                         data = self.drop_ids(project_id=project_id,node=node,name=name)
+
+                    print(str(datetime.datetime.now()))
+                    logfile.write(str(datetime.datetime.now()) + " Submitting '{}'.".format(filename))
+
                     try:
-                        print(str(datetime.datetime.now()))
-                        logfile.write(str(datetime.datetime.now()))
-                        #print("Submitting '{}' '{}' TSV".format(project_id,node))
-                        data = self.submit_file(project_id=project_id,filename=filename,chunk_size=1000)
-                        #print("data: {}".format(data)) #for trouble-shooting
-                        logfile.write("{}\n{}\n\n".format(filename,json.dumps(data))) #put in log file
-
-                        if len(data['invalid']) == 0 and len(data['succeeded']) > 0:
-                            mv_done_cmd = ['mv',filename,'done']
-                            try:
-                                output = subprocess.check_output(mv_done_cmd, stderr=subprocess.STDOUT).decode('UTF-8')
-                                print("Submission successful. Moving file to done:\n\t\t{}\n\n".format(filename))
-                            except Exception as e:
-                                output = e.output.decode('UTF-8')
-                                print("ERROR:" + output)
-
-                        else:
-                            if len(data['invalid'])>0:
-                                invalid_records = list(data['invalid'].keys())[0:10]
-                                for i in invalid_records:
-                                    print("{}".format(data['invalid'][i]))
-                            print("Need to fix {} errors in '{}'".format(len(invalid_records),filename))
-
-                            mv_failed_cmd = ['mv',filename,'failed']
-                            try:
-                                output = subprocess.check_output(mv_failed_cmd, stderr=subprocess.STDOUT).decode('UTF-8')
-                                print("Submission failed. Moving file to failed:\n\t\t{}".format(filename))
-                            except Exception as e:
-                                output = e.output.decode('UTF-8')
-                                print("ERROR:" + output)
-
+                        data = self.submit_file(project_id=project_id,filename=filename,chunk_size=chunk_size)
                     except Exception as e:
-                        print("\t{}".format(e))
+                        print("\tError submitting file: {}".format(e))
+                        data = e
+                        pass
+
+                    logfile.write("{}\n{}\n\n".format(filename,json.dumps(data))) #put in log file
+                    print("Submission log written to file: '{}'.".format(logname))
+
+
+                    if len(data['invalid']) == 0 and len(data['succeeded']) > 0:
+                        mv_done_cmd = ['mv',filename,'done']
+                        try:
+                            output = subprocess.check_output(mv_done_cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+                            print("Submission successful. Moving file to done:\n\t\t{}\n\n".format(filename))
+                        except Exception as e:
+                            print("\tError moving file to 'done' dir: {}".format(e))
+                            pass
+
+                    else:
+                        if len(data['invalid'])>0:
+
+                            for i in invalid_records:
+                                print("{}".format(data['invalid'][i]))
+
+                        print("Need to fix {} errors in '{}'".format(len(invalid_records),filename))
+
+                        mv_failed_cmd = ['mv',filename,'failed']
+                        try:
+                            output = subprocess.check_output(mv_failed_cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+                            print("Submission failed. Moving file to failed:\n\t\t{}".format(filename))
+                        except Exception as e:
+                            print("Error moving file to 'failed' dir: {}".format(e))
+                            pass
+
                 else:
                     print("\tPreviously submitted file already exists in done directory:\n\t\t{}\n".format(done_file))
                     if remove_done is True:
@@ -1443,8 +1452,8 @@ class Gen3Migration:
 
             try:
                 response = requests.put(api_url,auth=self._auth_provider,data=chunk.to_csv(sep="\t", index=False),headers=headers,).text
-            except requests.exceptions.ConnectionError as e:
-                results["details"].append(e.message)
+            except Exception as e:
+                results["details"].append(e)
                 continue
 
 
@@ -1457,7 +1466,7 @@ class Gen3Migration:
             else:
                 try:
                     json_res = json.loads(response)
-                except ValueError as e:
+                except Exception as e:
                     raise Gen3Error("Unable to parse API response as JSON!\n\t{}: {}".format(response,e))
 
                 if "message" in json_res and "code" not in json_res:
