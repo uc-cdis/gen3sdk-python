@@ -387,7 +387,10 @@ class Gen3Expansion:
             else:
                 print("Query Error: "+str(res))
 
-            print("\tRecords retrieved: "+str(len(total['data'][node]))+" of "+str(qsize)+" (Query offset: "+str(offset)+", Query chunk_Size: "+str(chunk_size)+").")
+            pct = len(total['data'][node]) / qsize
+            msg = "\tRecords retrieved: {} of {} ({}%), offset: {}, chunk_size: {}.".format(len(total['data'][node]),qsize,pct,offset,chunk_size)
+            #print(msg)
+            sys.stdout.write("\r"+str(msg).ljust(200,' '))
 
         if format is 'tsv':
             df = json_normalize(total['data'][node])
