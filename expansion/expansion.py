@@ -2121,32 +2121,24 @@ class Gen3Expansion:
 
 
     # Guppy funcs
-    def guppy_download(self):
-        api_url = url + "guppy/download"
-        query = {
-            "type": "location",
-            "fields": [
-                "country_region",
-                "date",
-                "confirmed",
-                "deaths"
-            ]
-        }
-        response = requests.post(
-            api_url,
-            json=query,
-            headers=headers,
-        )
-        try:
-            return json.loads(response.text)
-        except:
+    def guppy_download(self,props):
 
+        guppy_url = "{}/guppy/download".format(self._endpoint)
+
+        query = """{
+            "type": "location",
+            "fields": %s
+        }""" % props
+
+        response = requests.post(guppy_url, json=query, auth=self._auth_provider)
+
+        try:
+            data = json.loads(response.text)
+            return data
+        except:
             print("Error querying Guppy")
             return response.text
 
-
-        print(download())
-        return download
 
     # Data commons summary functions
 
