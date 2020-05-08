@@ -1,13 +1,42 @@
+
+
 from IPython.display import display, HTML
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-from pandas.tools.plotting import table
+from pandas_datareader import data #BB need: pip install pandas_datareader
+
+#from pandas.tools.plotting import table
+
+#BB added 
+# import numpy 
+# import scipy 
+# import scikit-learn //Machine Learning and Data Mining
+# import tensorflow //machine learning 
+'''
+
+import json
+import requests
+import os
+'''
+
+import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy, re, operator
+from os import path
+from pandas.io.json import json_normalize
+from collections import Counter
+from statistics import mean
+
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+from sklearn.preprocessing import StandardScaler #for PCA 
+
+#to plot the graphs inline on jupyter notebook
 
 import gen3
+from gen3.auth import Gen3Auth
 from gen3.submission import Gen3Submission
-
-import json, requests, os, collections
+from gen3.file import Gen3File
 
 class Gen3Error(Exception):
     pass
@@ -46,7 +75,8 @@ class Gen3Analysis(Gen3Submission):
         outfile.close
         print("\nOutput written to file: "+filename)
 
-    def plot_categorical_property(self, property, df):
+
+    def plot_categorical_property(self, property,df):
         #plot a bar graph of categorical variable counts in a dataframe
         df = df[df[property].notnull()]
         N = len(df)
@@ -61,8 +91,37 @@ class Gen3Analysis(Gen3Submission):
         #add N for each bar
         plt.show()
 
-    def plot_numeric_property(self, property, df, by_project=False):
-        #plot a histogram of numeric variable in a dataframe
+
+    def plot_categorical_property_by_order(self, property,df): 
+        #plot a bar graph of categorical variable counts in a dataframe
+        df = df[df[property].notnull()]
+        N = len(df)
+        categories, counts = zip(*df[property].value_counts().items())  #valuecounts orders it from largest to smallest 
+        y_pos = np.arange(len(categories))
+        plt.bar(y_pos, counts, align='center', alpha=0.5)
+        #plt.figtext(.8, .8, 'N = '+str(N))
+        plt.xticks(y_pos, categories)
+        plt.ylabel('Counts')
+        plt.title(str('Counts by '+property+' (N = '+str(N)+')'))
+        plt.xticks(rotation=90, horizontalalignment='center')
+        #add N for each bar
+        plt.show()
+
+
+    def pie_categorical_property_count(self, property,df): 
+            #plot a bar graph of categorical variable counts in a dataframe
+            df = df[df[property].notnull()]
+            N = len(df)
+            categories, counts = zip(*df[property].value_counts().items())  #valuecounts orders it from largest to smallest 
+            y_pos = np.arange(len(categories))
+            plt.pie(y_pos, labels = categories)
+            #plt.figtext(.8, .8, 'N = '+str(N))
+            plt.title(str('Counts by '+property+' (N = '+str(N)+')'))
+            plt.show()
+
+    def plot_numeric_property(self, property,df,by_project=False):
+        #plot a histogram of numeric variable in a dataframe       #BB: columns with numeric and strings show up as object instead of float
+        df[property] = pd.to_numeric(df[property],errors='coerce') #BB: this line changes object into float 
         df = df[df[property].notnull()]
         data = list(df[property])
         N = len(data)
@@ -90,6 +149,60 @@ class Gen3Analysis(Gen3Submission):
                 plt.title("PDF for "+property+' in ' + project+' (N = '+str(N)+')') # You can comment this line out if you don't need title
                 plt.show(fig)
 
+
+    def plotviolin_numeric_property_by_categorical_property(self, df, numeric_property, categorical_property):
+        #plot a histogram of numeric variable in a dataframe       #BB: columns with numeric and strings show up as object instead of float
+        df[numeric_property] = pd.to_numeric(df[numeric_property],errors='coerce') #BB: this line changes object into float 
+        df = df[df[numeric_property].notnull()]
+        data = list(df[numeric_property])
+        N = len(data)
+
+        df[categorical_property].apply(str)
+        df = df[df[categorical_property].notnull()]
+        groups = df.groupby(categorical_property) 
+
+        for name, group in groups: 
+             plt.plot(group[numeric_property], marker="o", linestyle="", label=name) 
+        sns.violinplot(x = categorical_property, y = numeric_property, data = df)
+        plt.title("PDF for "+numeric_property+' by ' + categorical_property+' (N = '+str(N)+')') 
+        plt.show()
+
+
+    def scatter_numeric_by_numeric(self, df, numeric_property_a, numeric_property_b):
+        #plot a histogram of numeric variable in a dataframe       #BB: columns with numeric and strings show up as object instead of float
+        df[numeric_property_a] = pd.to_numeric(df[numeric_property_a],errors='coerce') #BB: this line changes object into float 
+        df = df[df[numeric_property_a].notnull()]
+
+        df[numeric_property_b] = pd.to_numeric(df[numeric_property_b],errors='coerce') #BB: this line changes object into float 
+        df = df[df[numeric_property_b].notnull()]
+        
+        data = list(df[numeric_property_a])
+        N = len(data)
+
+        plt.scatter(df[numeric_property_a], df[numeric_property_b])
+        plt.title(numeric_property_a + " vs " + numeric_property_b)
+        plt.xlabel(numeric_property_a)
+        plt.ylabel(numeric_property_b)
+        plt.show()
+
+    def scatter_lognumeric_by_lognumeric(self, df, numeric_property_a, numeric_property_b):
+        #plot a histogram of numeric variable in a dataframe       #BB: columns with numeric and strings show up as object instead of float
+        df[numeric_property_a] = pd.to_numeric(df[numeric_property_a],errors='coerce') #BB: this line changes object into float 
+        df = df[df[numeric_property_a].notnull()]
+
+        df[numeric_property_b] = pd.to_numeric(df[numeric_property_b],errors='coerce') #BB: this line changes object into float 
+        df = df[df[numeric_property_b].notnull()]
+        
+        data = list(df[numeric_property_a])
+        N = len(data)
+
+        plt.scatter(np.math.log(df[numeric_property_a], df[numeric_property_b])) #this needs work
+        plt.title(numeric_property_a + " vs " + numeric_property_b)
+        plt.xlabel(numeric_property_a)
+        plt.ylabel(numeric_property_b)
+        plt.show()
+
+#needs work 
     def node_record_counts(self, project_id):
         query_txt = """{node (first:-1, project_id:"%s"){type}}""" % (project_id)
         res = Gen3Submission.query(query_txt)
@@ -102,13 +215,10 @@ class Gen3Analysis(Gen3Submission):
     def property_counts_table(self, prop, df):
         df = df[df[prop].notnull()]
         counts = Counter(df[prop])
-        if len(counts) > 0:
-            df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
-            df1 = df1.rename(columns={'index':prop, 0:'count'}).sort_values(by='count', ascending=False)
-            with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-                display(df1)
-        else:
-            print("Length of DataFrame is zero.")
+        df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
+        df1 = df1.rename(columns={'index':prop, 0:'count'}).sort_values(by='count', ascending=False)
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+            display(df1)
 
     def property_counts_by_project(self, prop, df):
         df = df[df[prop].notnull()]
@@ -139,6 +249,7 @@ class Gen3Analysis(Gen3Submission):
         display(project_table)
         return project_table
 
+#had issue with table 
     def save_table_image(self, df,filename='mytable.png'):
         """ Saves a pandas DataFrame as a PNG image file.
         """
