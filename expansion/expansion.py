@@ -2121,14 +2121,13 @@ class Gen3Expansion:
 
 
     # Guppy funcs
-    def guppy_download(self,props):
+    def guppy_download(self,node,props):
 
         guppy_url = "{}/guppy/download".format(self._endpoint)
 
-        query = """{
-            "type": "location",
-            "fields": %s
-        }""" % props
+        query = "{{ {} {{ {} }} }}".format(node," ".join(props))
+
+        print("Requesting '{}'".format(guppy_url))
 
         response = requests.post(guppy_url, json=query, auth=self._auth_provider)
 
