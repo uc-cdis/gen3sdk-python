@@ -297,7 +297,7 @@ class Gen3Expansion:
         return output
 
 # Query Functions
-    def paginate_query_old(self, node, project_id=None, props=['id','submitter_id'], chunk_size=10000, format='json',args=None):
+    def paginate_query(self, node, project_id=None, props=['id','submitter_id'], chunk_size=2500, format='json',args=None):
         """Function to paginate a query to avoid time-outs.
         Returns a json of all the records in the node.
 
@@ -395,7 +395,7 @@ class Gen3Expansion:
         else:
             return total
 
-    def paginate_query(self, node, project_id=None, props=[], args=None, chunk_size=5000, offset=0, format='json'):
+    def paginate_query_new(self, node, project_id=None, props=[], args=None, chunk_size=5000, offset=0, format='json'):
         """Function to paginate a query to avoid time-outs.
             Returns a json of all the records in the node.
             Args:
@@ -2120,24 +2120,6 @@ class Gen3Expansion:
             return records
 
 
-    # Guppy funcs
-    def guppy_download(self,node,props):
-
-        guppy_url = "{}/guppy/download".format(self._endpoint)
-
-        query = "{{ {} {{ {} }} }}".format(node," ".join(props))
-
-        print("Requesting '{}'".format(guppy_url))
-
-        response = requests.post(guppy_url, json=query, auth=self._auth_provider)
-
-        try:
-            data = json.loads(response.text)
-            return data
-        except:
-            print("Error querying Guppy")
-            return response.text
-
 
     # Data commons summary functions
 
@@ -2586,6 +2568,59 @@ class Gen3Expansion:
         return comparison
 
 
+    def get_token(self):
+        with open(self._auth_provider._refresh_file, "r") as f:
+            creds = json.load(f)
+        token_url = "{}/user/credentials/api/access_token".format(self._endpoint)
+        token = requests.post(token_url, json=creds).json()["access_token"]
+        return token
+
+
+    # Guppy funcs
+    def guppy_query(self,node,props):
+
+        guppy_url = "{}/guppy/graphql".format(self._endpoint)
+
+        query = "{{ {} {{ {} }} }}".format(node," ".join(props))
+
+        query_json = {"query": query, "variables": None}
+
+        print("Requesting '{}': {}".format(guppy_url,query_json))
+
+        response = requests.post(guppy_url, json=query_json, auth=self._auth_provider)
+
+        try:
+            data = json.loads(response.text)
+            return data
+        except:
+            print("Error querying Guppy")
+            return response.text
+
+    # Guppy funcs
+    def guppy_download(self,node,props):
+
+        guppy_dl = "{}guppy/download".format(self._endpoint)
+
+        query_dl = "{{ 'type':'{0}' {{ 'fields': {1} }} }}".format(node,props)
+
+
+        json_dl = {"query": query_dl, "variables": None}
+
+
+        print("Requesting '{}': {}".format(guppy_dl, query_dl))
+
+        headers = {"Authorization": "bearer " + self.get_token()}
+
+        #response = requests.post(guppy_dl, json=json_dl, auth=self._auth_provider)
+        response = requests.post(guppy_dl, json=query, headers=headers)
+
+        try:
+            data = json.loads(response.text)
+            return data
+        except:
+            print("Error querying Guppy")
+            return response.text
+
 
 ## To do
 #
@@ -2597,7 +2632,7 @@ class Gen3Expansion:
 #     token = requests.post(token_url, json=creds).json()["access_token"]
 #     return token
 # headers = {"Authorization": "bearer " + get_token()}
-#
+
 #
 
 # filter indexd by project:
