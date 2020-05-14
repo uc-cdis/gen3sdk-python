@@ -291,9 +291,13 @@ async def _parse_from_queue(queue):
                 for record in list(records):
                     manifest_row = [
                         record.get("did"),
-                        " ".join(record.get("urls")),
-                        " ".join(record.get("authz")),
-                        " ".join(record.get("acl")),
+                        " ".join(
+                            [url.replace(" ", "%20") for url in record.get("urls")]
+                        ),
+                        " ".join(
+                            [auth.replace(" ", "%20") for auth in record.get("authz")]
+                        ),
+                        " ".join([a.replace(" ", "%20") for a in record.get("acl")]),
                         record.get("hashes", {}).get("md5"),
                         record.get("size"),
                         record.get("file_name"),

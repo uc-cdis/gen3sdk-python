@@ -109,6 +109,15 @@ def test_download_manifest(monkeypatch, gen3_index):
         authz=["/programs/DEV/projects/test3", "/programs/DEV/projects/test3bak"],
         urls=["gs://test/test3.txt"],
     )
+    # record with space
+    rec4 = gen3_index.create_record(
+        did="dg.TEST/a802e27d-4a5b-42e3-92b0-ba19e81b9dce",
+        hashes={"md5": "f1234567891234567890123456789012"},
+        size=345,
+        acl=["DEV", "test4"],
+        authz=["/programs/DEV/projects/test4", "/programs/DEV/projects/test4bak"],
+        urls=["gs://test/test4 space.txt", "s3://test/test4 space.txt"],
+    )
     # mock_index.return_value.get_stats.return_value = gen3_index.get("/_stats")
 
     monkeypatch.setattr(download_manifest, "INDEXD_RECORD_PAGE_SIZE", 2)
@@ -174,6 +183,12 @@ def test_download_manifest(monkeypatch, gen3_index):
     assert not records.get("dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}).get(
         "file_name"
     )
+    assert "gs://test/test4%20space.txt" in records.get(
+        "dg.TEST/a802e27d-4a5b-42e3-92b0-ba19e81b9dce", {}
+    ).get("urls", [])
+    assert "s3://test/test4%20space.txt" in records.get(
+        "dg.TEST/a802e27d-4a5b-42e3-92b0-ba19e81b9dce", {}
+    ).get("urls", [])
 
     # assert other 2 records exist
     assert "dg.TEST/ed8f4658-6acd-4f96-9dd8-3709890c959e" in records
@@ -386,7 +401,7 @@ def test_index_manifest(gen3_index, indexd_server):
     rec3 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada098c")
     rec4 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada097c")
     rec5 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada096c")
-
+    rec6 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada012c")
     assert set(rec1["urls"]) == set(
         [
             "s3://testaws/aws/test.txt",
@@ -407,6 +422,8 @@ def test_index_manifest(gen3_index, indexd_server):
     assert rec5["urls"] == ["s3://pdcdatastore/test4.raw"]
     assert rec5["acl"] == ["phs0001", "phs0002"]
     assert rec5["authz"] == ["/program/DEV/project/test"]
+    assert rec6["urls"] == ["s3://pdcdatastore/test6 space.raw"]
+    assert rec6["authz"] == ["/prog ram/DEV/project/test"]
 
 
 def test_index_manifest_with_replace_urls(gen3_index, indexd_server):

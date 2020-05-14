@@ -371,8 +371,9 @@ async def _parse_from_queue(queue, lock, commons_url, output_queue):
                     output = f"{guid}|md5|expected {md5}|actual {actual_record['hashes'].get('md5')}\n"
                     await output_queue.put(output)
                     logging.error(output)
-
-            if sorted(urls) != sorted(actual_record["urls"]):
+            if sorted([url.replace("%20", " ") for url in urls]) != sorted(
+                actual_record["urls"]
+            ):
                 output = f"{guid}|urls|expected {urls}|actual {actual_record['urls']}\n"
                 await output_queue.put(output)
                 logging.error(output)
