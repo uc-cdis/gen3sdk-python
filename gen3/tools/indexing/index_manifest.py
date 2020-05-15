@@ -234,7 +234,7 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
     try:
         urls = (
             [
-                element.strip().replace("'", "")
+                element.strip().replace("'", "").replace("%20", " ")
                 for element in _standardize_str(fi["url"]).strip()[1:-1].split(" ")
             ]
             if "url" in fi and fi["url"] != "[]"
@@ -242,7 +242,7 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
         )
         authz = (
             [
-                element.strip().replace("'", "")
+                element.strip().replace("'", "").replace("%20", " ")
                 for element in _standardize_str(fi["authz"]).strip()[1:-1].split(" ")
             ]
             if "authz" in fi and fi["authz"] != "[]"
@@ -255,7 +255,7 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
             else:
                 acl = (
                     [
-                        element.strip().replace("'", "")
+                        element.strip().replace("'", "").replace("%20", " ")
                         for element in _standardize_str(fi["acl"])
                         .strip()[1:-1]
                         .split(" ")
