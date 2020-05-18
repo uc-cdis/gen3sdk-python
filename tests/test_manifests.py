@@ -373,7 +373,7 @@ def _mock_get_records_on_page(page, limit, **kwargs):
 
 def test_read_manifest():
     files, headers = _get_and_verify_fileinfos_from_tsv_manifest("./test.tsv")
-    assert headers.index("GUID") >= 0
+    assert headers.index("guid") >= 0
     assert headers.index("md5") >= 0
     assert headers.index("url") >= 0
 
@@ -447,6 +447,6 @@ def test_index_non_guid_manifest(gen3_index, indexd_server):
         indexd_server.baseurl, "./test2.tsv", 1, ("admin", "admin"), replace_urls=True
     )
 
-    assert "testprefix" in files[0]["GUID"]
-    rec1 = gen3_index.get(files[0]["GUID"])
+    assert "testprefix" in files[0]["guid"]
+    rec1 = gen3_index.get(files[0]["guid"])
     assert rec1["urls"] == ["s3://pdcdatastore/test1.raw"]
