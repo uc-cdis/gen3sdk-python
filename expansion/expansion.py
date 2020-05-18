@@ -342,9 +342,9 @@ class Gen3Expansion:
             res = self.sub.query(query_txt)
             count_name = '_'.join(map(str,['',node,'count']))
             qsize = res['data'][count_name]
-            print("\tFound {} records in '{}' node of project '{}'. ".format(qsize,node,project_id))
+            print("\n\tFound {} records in '{}' node of project '{}'. ".format(qsize,node,project_id))
         except:
-            print("Query to get _{}_count failed! {}".format(node,query_txt))
+            print("\n\tQuery to get _{}_count failed! {}".format(node,query_txt))
 
         #Now paginate the actual query:
         properties = ' '.join(map(str,props))
@@ -387,7 +387,7 @@ class Gen3Expansion:
             else:
                 print("Query Error: "+str(res))
 
-            pct = len(total['data'][node]) / qsize
+            pct = int((len(total['data'][node]) / qsize)*100)
             msg = "\tRecords retrieved: {} of {} ({}%), offset: {}, chunk_size: {}.".format(len(total['data'][node]),qsize,pct,offset,chunk_size)
             #print(msg)
             sys.stdout.write("\r"+str(msg).ljust(200,' '))
@@ -2623,6 +2623,24 @@ class Gen3Expansion:
         except:
             print("Error querying Guppy")
             return response.text
+
+
+    def write_manifest(self,guids,manifest_name="gen3_manifest.json"):
+
+        with open(manifest_name, 'w') as mani:
+
+            mani.write("[\n  {\n")
+
+            count = 1
+            for guid in guids:
+                file_line = '    "object_id": "{}"\n'.format(guid)
+                mani.write(file_line)
+                if count == len(guids):
+                    mani.write("  }]")
+                else:
+                    mani.write("  },\n  {\n")
+                count += 1
+
 
 
 ## To do
