@@ -41,6 +41,7 @@ import re
 import uuid
 import copy
 import sys
+import traceback
 
 from gen3.auth import Gen3Auth
 import indexclient.client as client
@@ -48,7 +49,7 @@ import indexclient.client as client
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 # Pre-defined supported column names
-GUID = ["guid"]
+GUID = ["guid", "GUID"]
 FILENAME = ["filename", "file_name"]
 SIZE = ["size", "filesize", "file_size"]
 MD5 = ["md5", "md5_hash", "md5hash", "hash"]
@@ -120,7 +121,7 @@ def _get_and_verify_fileinfos_from_tsv_manifest(
         list(dict): list of file info
         [
             {
-                "GUID": "guid_example",
+                "guid": "guid_example",
                 "filename": "example",
                 "size": 100,
                 "acl": "['open']",
@@ -134,14 +135,17 @@ def _get_and_verify_fileinfos_from_tsv_manifest(
     with open(manifest_file, "r", encoding="utf-8-sig") as csvfile:
         csvReader = csv.DictReader(csvfile, delimiter=manifest_file_delimiter)
         fieldnames = csvReader.fieldnames
+
+        logging.debug(f"got fieldnames from {manifest_file}: {fieldnames}")
+
         pass_verification = True
         for row in csvReader:
             standardized_dict = {}
             for key in row.keys():
                 standardized_key = None
                 if key.lower() in GUID:
-                    fieldnames[fieldnames.index(key)] = "GUID"
-                    standardized_key = "GUID"
+                    fieldnames[fieldnames.index(key)] = "guid"
+                    standardized_key = "guid"
                 elif key.lower() in FILENAME:
                     fieldnames[fieldnames.index(key)] = "filename"
                     standardized_key = "filename"
@@ -155,17 +159,17 @@ def _get_and_verify_fileinfos_from_tsv_manifest(
                     fieldnames[fieldnames.index(key)] = "acl"
                     standardized_key = "acl"
                     if not _verify_format(row[key], ACL_FORMAT):
-                        row[key] = "[{}]".format(row[key])
+                        row[key] = "{}".format(row[key])
                 elif key.lower() in URLS:
                     fieldnames[fieldnames.index(key)] = "url"
                     standardized_key = "url"
                     if not _verify_format(row[key], URL_FORMAT):
-                        row[key] = "[{}]".format(row[key])
+                        row[key] = "{}".format(row[key])
                 elif key.lower() in AUTHZ:
                     fieldnames[fieldnames.index(key)] = "authz"
                     standardized_key = "authz"
                     if not _verify_format(row[key], AUTHZ_FORMAT):
-                        row[key] = "[{}]".format(row[key])
+                        row[key] = "{}".format(row[key])
 
                 if standardized_key:
                     standardized_dict[standardized_key] = row[key]
@@ -176,7 +180,7 @@ def _get_and_verify_fileinfos_from_tsv_manifest(
             files.append(standardized_dict)
 
     if not pass_verification:
-        logging.error("The manifest is not in the correct format!!!.")
+        logging.error("The manifest is not in the correct format!!!")
         return None, None
 
     return files, fieldnames
@@ -191,7 +195,7 @@ def _write_csv(filename, files, fieldnames=None):
         files(list(dict)): list of file info
         [
             {
-                "GUID": "guid_example",
+                "guid": "guid_example",
                 "filename": "example",
                 "size": 100,
                 "acl": "['open']",
@@ -235,17 +239,25 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
         urls = (
             [
                 element.strip().replace("'", "").replace("%20", " ")
-                for element in _standardize_str(fi["url"]).strip()[1:-1].split(" ")
+                for element in _standardize_str(fi["url"])
+                .strip()
+                .lstrip("[")
+                .rstrip("]")
+                .split(" ")
             ]
-            if "url" in fi and fi["url"] != "[]"
+            if "url" in fi and fi["url"] != "[]" and fi["url"]
             else []
         )
         authz = (
             [
                 element.strip().replace("'", "").replace("%20", " ")
-                for element in _standardize_str(fi["authz"]).strip()[1:-1].split(" ")
+                for element in _standardize_str(fi["authz"])
+                .strip()
+                .lstrip("[")
+                .rstrip("]")
+                .split(" ")
             ]
-            if "authz" in fi and fi["authz"] != "[]"
+            if "authz" in fi and fi["authz"] != "[]" and fi["authz"]
             else []
         )
 
@@ -257,10 +269,12 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
                     [
                         element.strip().replace("'", "").replace("%20", " ")
                         for element in _standardize_str(fi["acl"])
-                        .strip()[1:-1]
+                        .strip()
+                        .lstrip("[")
+                        .rstrip("]")
                         .split(" ")
                     ]
-                    if "acl" in fi and fi["acl"] != "[]"
+                    if "acl" in fi and fi["acl"] != "[]" and fi["acl"]
                     else []
                 )
         else:
@@ -268,14 +282,14 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
 
         doc = None
 
-        if fi.get("GUID"):
-            doc = indexclient.get(fi["GUID"])
+        if fi.get("guid"):
+            doc = indexclient.get(fi["guid"])
 
         if doc is not None:
             if doc.size != fi.get("size") or doc.hashes.get("md5") != fi.get("md5"):
                 logging.error(
-                    "The guid {} with different size/hash already exist. Can not index it without getting a new GUID".format(
-                        fi.get("GUID")
+                    "The guid {} with different size/hash already exist. Can not index it without getting a new guid".format(
+                        fi.get("guid")
                     )
                 )
             else:
@@ -308,27 +322,34 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
                     need_update = True
 
                 if need_update:
+                    logging.info(f"updating {doc.did} to: {doc.to_json()}")
                     doc.patch()
         else:
-            if fi.get("GUID"):
-                guid = fi.get("GUID", "").strip()
+            if fi.get("guid"):
+                guid = fi.get("guid", "").strip()
             else:
                 guid = None
-            doc = indexclient.create(
-                did=guid,
-                hashes={"md5": fi.get("md5", "").strip()},
-                size=fi.get("size", 0),
-                acl=acl,
-                authz=authz,
-                urls=urls,
-            )
-            fi["GUID"] = doc.did
+
+            record = {
+                "did": guid,
+                "hashes": {"md5": fi.get("md5", "").strip()},
+                "size": fi.get("size", 0),
+                "acl": acl,
+                "authz": authz,
+                "urls": urls,
+            }
+            logging.info(f"creating: {record}")
+            doc = indexclient.create(**record)
+
+            fi["guid"] = doc.did
 
     except Exception as e:
         # Don't break for any reason
+        exc_info = sys.exc_info()
+        traceback.print_exception(*exc_info)
         logging.error(
             "Can not update/create an indexd record with guid {}. Detail {}".format(
-                fi.get("GUID"), e
+                fi.get("guid"), e
             )
         )
 
@@ -352,6 +373,7 @@ def index_object_manifest(
     auth=None,
     replace_urls=True,
     manifest_file_delimiter=None,
+    output_filename="indexing-output-manifest.csv",
 ):
     """
     Loop through all the files in the manifest, update/create records in indexd
@@ -369,7 +391,7 @@ def index_object_manifest(
         files(list(dict)): list of file info
         [
             {
-                "GUID": "guid_example",
+                "guid": "guid_example",
                 "filename": "example",
                 "size": 100,
                 "acl": "['open']",
@@ -406,6 +428,8 @@ def index_object_manifest(
             manifest_file, manifest_file_delimiter
         )
     except Exception as e:
+        exc_info = sys.exc_info()
+        traceback.print_exception(*exc_info)
         logging.error("Can not read {}. Detail {}".format(manifest_file, e))
         return None, None
 
@@ -416,9 +440,9 @@ def index_object_manifest(
         return None, None
 
     try:
-        headers.index("GUID")
+        headers.index("guid")
     except ValueError:
-        headers.insert(0, "GUID")
+        headers.insert(0, "guid")
 
     pool = ThreadPool(thread_num)
 
@@ -433,6 +457,15 @@ def index_object_manifest(
     # close the pool and wait for the work to finish
     pool.close()
     pool.join()
+
+    output_filename = os.path.abspath(output_filename)
+    logging.info(f"Writing output to {output_filename}")
+
+    # remove existing output if it exists
+    if os.path.isfile(output_filename):
+        os.unlink(output_filename)
+
+    _write_csv(os.path.join(CURRENT_DIR, output_filename), files, headers)
 
     return files, headers
 
@@ -453,7 +486,11 @@ def index_object_manifest(
     help="string character that delimites the file (tab or comma). Defaults to tab.",
     default="\t",
 )
-@click.option("--out_manifest_file", help="The path to output manifest")
+@click.option(
+    "--out_manifest_file",
+    help="The path to output manifest",
+    default="indexing-output-manifest.csv",
+)
 def index_object_manifest_cli(
     commons_url,
     manifest_file,
@@ -493,10 +530,8 @@ def index_object_manifest_cli(
         auth,
         replace_urls,
         manifest_file_delimiter,
+        output_filename=out_manifest_file,
     )
-
-    if out_manifest_file:
-        _write_csv(os.path.join(CURRENT_DIR, out_manifest_file), files, headers)
 
 
 if __name__ == "__main__":
