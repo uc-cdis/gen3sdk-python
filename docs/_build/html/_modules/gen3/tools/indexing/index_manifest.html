@@ -195,10 +195,10 @@
                         <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;ERROR: </span><span class="si">{}</span><span class="s2"> is not in acl format&quot;</span><span class="p">,</span> <span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
                         <span class="n">pass_verification</span> <span class="o">=</span> <span class="kc">False</span>
                 <span class="k">elif</span> <span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">URLS</span><span class="p">:</span>
-                    <span class="n">fieldnames</span><span class="p">[</span><span class="n">fieldnames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;url&quot;</span>
-                    <span class="n">standardized_key</span> <span class="o">=</span> <span class="s2">&quot;url&quot;</span>
+                    <span class="n">fieldnames</span><span class="p">[</span><span class="n">fieldnames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;urls&quot;</span>
+                    <span class="n">standardized_key</span> <span class="o">=</span> <span class="s2">&quot;urls&quot;</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="n">_verify_format</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">URL_FORMAT</span><span class="p">):</span>
-                        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;ERROR: </span><span class="si">{}</span><span class="s2"> is not in url format&quot;</span><span class="p">,</span> <span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;ERROR: </span><span class="si">{}</span><span class="s2"> is not in urls format&quot;</span><span class="p">,</span> <span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
                         <span class="n">pass_verification</span> <span class="o">=</span> <span class="kc">False</span>
                 <span class="k">elif</span> <span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">AUTHZ</span><span class="p">:</span>
                     <span class="n">fieldnames</span><span class="p">[</span><span class="n">fieldnames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;authz&quot;</span>
@@ -275,13 +275,13 @@
         <span class="n">urls</span> <span class="o">=</span> <span class="p">(</span>
             <span class="p">[</span>
                 <span class="n">element</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;%20&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">_standardize_str</span><span class="p">(</span><span class="n">fi</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">])</span>
+                <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">_standardize_str</span><span class="p">(</span><span class="n">fi</span><span class="p">[</span><span class="s2">&quot;urls&quot;</span><span class="p">])</span>
                 <span class="o">.</span><span class="n">strip</span><span class="p">()</span>
                 <span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;[&quot;</span><span class="p">)</span>
                 <span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;]&quot;</span><span class="p">)</span>
                 <span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
             <span class="p">]</span>
-            <span class="k">if</span> <span class="s2">&quot;url&quot;</span> <span class="ow">in</span> <span class="n">fi</span> <span class="ow">and</span> <span class="n">fi</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;[]&quot;</span> <span class="ow">and</span> <span class="n">fi</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s2">&quot;urls&quot;</span> <span class="ow">in</span> <span class="n">fi</span> <span class="ow">and</span> <span class="n">fi</span><span class="p">[</span><span class="s2">&quot;urls&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;[]&quot;</span> <span class="ow">and</span> <span class="n">fi</span><span class="p">[</span><span class="s2">&quot;urls&quot;</span><span class="p">]</span>
             <span class="k">else</span> <span class="p">[]</span>
         <span class="p">)</span>
         <span class="n">authz</span> <span class="o">=</span> <span class="p">(</span>
@@ -470,12 +470,6 @@
         <span class="n">exc_info</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
         <span class="n">traceback</span><span class="o">.</span><span class="n">print_exception</span><span class="p">(</span><span class="o">*</span><span class="n">exc_info</span><span class="p">)</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Can not read </span><span class="si">{}</span><span class="s2">. Detail </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">,</span> <span class="n">e</span><span class="p">))</span>
-        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
-
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">headers</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">)</span>
-    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;The manifest </span><span class="si">{}</span><span class="s2"> has wrong format&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">,</span> <span class="n">e</span><span class="p">))</span>
         <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
 
     <span class="k">try</span><span class="p">:</span>
