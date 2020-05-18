@@ -162,10 +162,10 @@ def _get_and_verify_fileinfos_from_tsv_manifest(
                         logging.error("ERROR: {} is not in acl format", row[key])
                         pass_verification = False
                 elif key.lower() in URLS:
-                    fieldnames[fieldnames.index(key)] = "url"
-                    standardized_key = "url"
+                    fieldnames[fieldnames.index(key)] = "urls"
+                    standardized_key = "urls"
                     if not _verify_format(row[key], URL_FORMAT):
-                        logging.error("ERROR: {} is not in url format", row[key])
+                        logging.error("ERROR: {} is not in urls format", row[key])
                         pass_verification = False
                 elif key.lower() in AUTHZ:
                     fieldnames[fieldnames.index(key)] = "authz"
@@ -242,13 +242,13 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
         urls = (
             [
                 element.strip().replace("'", "").replace('"', "").replace("%20", " ")
-                for element in _standardize_str(fi["url"])
+                for element in _standardize_str(fi["urls"])
                 .strip()
                 .lstrip("[")
                 .rstrip("]")
                 .split(" ")
             ]
-            if "url" in fi and fi["url"] != "[]" and fi["url"]
+            if "urls" in fi and fi["urls"] != "[]" and fi["urls"]
             else []
         )
         authz = (
@@ -437,12 +437,6 @@ def index_object_manifest(
         exc_info = sys.exc_info()
         traceback.print_exception(*exc_info)
         logging.error("Can not read {}. Detail {}".format(manifest_file, e))
-        return None, None
-
-    try:
-        headers.index("url")
-    except ValueError as e:
-        logging.error("The manifest {} has wrong format".format(manifest_file, e))
         return None, None
 
     try:
