@@ -131,7 +131,7 @@ def _get_and_verify_fileinfos_from_tsv_manifest(
 
     """
     files = []
-    with open(manifest_file, "r") as csvfile:
+    with open(manifest_file, "r", encoding="utf-8-sig") as csvfile:
         csvReader = csv.DictReader(csvfile, delimiter=manifest_file_delimiter)
         fieldnames = csvReader.fieldnames
         pass_verification = True
