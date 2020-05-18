@@ -377,10 +377,11 @@ def test_read_manifest():
     assert headers.index("md5") >= 0
     assert headers.index("url") >= 0
 
-    assert files[0]["url"] == "s3://pdcdatastore/test1.raw"
+    # read in as-is, all brackets and stray quotes are cleaned up later
+    assert files[0]["url"] == "[s3://pdcdatastore/test1.raw]"
     assert files[1]["acl"] == "Open"
     assert files[1]["url"] == "s3://pdcdatastore/test2.raw"
-    assert files[3]["url"] == "'s3://pdcdatastore/test4.raw'"
+    assert files[3]["url"] == "['s3://pdcdatastore/test4.raw']"
 
 
 def test_index_manifest(gen3_index, indexd_server):

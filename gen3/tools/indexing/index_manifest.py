@@ -61,9 +61,9 @@ UUID_FORMAT = (
     r"^.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
 )
 MD5_FORMAT = r"^[a-fA-F0-9]{32}$"
-ACL_FORMAT = r"^\[.*\]$"
-URL_FORMAT = r"^\[.*\]$"
-AUTHZ_FORMAT = r"^\[.*\]$"
+ACL_FORMAT = r"^.*$"
+URL_FORMAT = r"^.*$"
+AUTHZ_FORMAT = r"^.*$"
 
 
 class ThreadControl(object):
@@ -159,17 +159,20 @@ def _get_and_verify_fileinfos_from_tsv_manifest(
                     fieldnames[fieldnames.index(key)] = "acl"
                     standardized_key = "acl"
                     if not _verify_format(row[key], ACL_FORMAT):
-                        row[key] = "{}".format(row[key])
+                        logging.error("ERROR: {} is not in acl format", row[key])
+                        pass_verification = False
                 elif key.lower() in URLS:
                     fieldnames[fieldnames.index(key)] = "url"
                     standardized_key = "url"
                     if not _verify_format(row[key], URL_FORMAT):
-                        row[key] = "{}".format(row[key])
+                        logging.error("ERROR: {} is not in url format", row[key])
+                        pass_verification = False
                 elif key.lower() in AUTHZ:
                     fieldnames[fieldnames.index(key)] = "authz"
                     standardized_key = "authz"
                     if not _verify_format(row[key], AUTHZ_FORMAT):
-                        row[key] = "{}".format(row[key])
+                        logging.error("ERROR: {} is not in authz format", row[key])
+                        pass_verification = False
 
                 if standardized_key:
                     standardized_dict[standardized_key] = row[key]
@@ -238,7 +241,7 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
     try:
         urls = (
             [
-                element.strip().replace("'", "").replace("%20", " ")
+                element.strip().replace("'", "").replace('"', "").replace("%20", " ")
                 for element in _standardize_str(fi["url"])
                 .strip()
                 .lstrip("[")
@@ -250,7 +253,7 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
         )
         authz = (
             [
-                element.strip().replace("'", "").replace("%20", " ")
+                element.strip().replace("'", "").replace('"', "").replace("%20", " ")
                 for element in _standardize_str(fi["authz"])
                 .strip()
                 .lstrip("[")
@@ -267,7 +270,10 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
             else:
                 acl = (
                     [
-                        element.strip().replace("'", "").replace("%20", " ")
+                        element.strip()
+                        .replace("'", "")
+                        .replace('"', "")
+                        .replace("%20", " ")
                         for element in _standardize_str(fi["acl"])
                         .strip()
                         .lstrip("[")
