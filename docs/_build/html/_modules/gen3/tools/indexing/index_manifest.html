@@ -207,9 +207,11 @@
                     <span class="k">if</span> <span class="ow">not</span> <span class="n">_verify_format</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">AUTHZ_FORMAT</span><span class="p">):</span>
                         <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;ERROR: </span><span class="si">{}</span><span class="s2"> is not in authz format&quot;</span><span class="p">,</span> <span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
                         <span class="n">pass_verification</span> <span class="o">=</span> <span class="kc">False</span>
-                
+
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">pass_verification</span><span class="p">:</span>
-                    <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;row </span><span class="si">{</span><span class="n">row_number</span><span class="si">}</span><span class="s2"> with values </span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2"> does not pass validation&quot;</span><span class="p">)</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;row </span><span class="si">{</span><span class="n">row_number</span><span class="si">}</span><span class="s2"> with values </span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2"> does not pass the validation&quot;</span>
+                    <span class="p">)</span>
                     <span class="k">break</span>
 
                 <span class="k">if</span> <span class="n">standardized_key</span><span class="p">:</span>
