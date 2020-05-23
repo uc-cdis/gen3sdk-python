@@ -170,11 +170,12 @@
         <span class="n">fieldnames</span> <span class="o">=</span> <span class="n">csvReader</span><span class="o">.</span><span class="n">fieldnames</span>
 
         <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;got fieldnames from </span><span class="si">{</span><span class="n">manifest_file</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">fieldnames</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
         <span class="n">pass_verification</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">row_number</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">csvReader</span><span class="p">:</span>
             <span class="n">standardized_dict</span> <span class="o">=</span> <span class="p">{}</span>
             <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">row</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">row_number</span> <span class="o">=</span> <span class="n">row_number</span> <span class="o">+</span> <span class="mi">1</span>
                 <span class="n">standardized_key</span> <span class="o">=</span> <span class="kc">None</span>
                 <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">GUID</span><span class="p">:</span>
                     <span class="n">fieldnames</span><span class="p">[</span><span class="n">fieldnames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;guid&quot;</span>
@@ -206,12 +207,19 @@
                     <span class="k">if</span> <span class="ow">not</span> <span class="n">_verify_format</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">AUTHZ_FORMAT</span><span class="p">):</span>
                         <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;ERROR: </span><span class="si">{}</span><span class="s2"> is not in authz format&quot;</span><span class="p">,</span> <span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
                         <span class="n">pass_verification</span> <span class="o">=</span> <span class="kc">False</span>
+                
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">pass_verification</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;row </span><span class="si">{</span><span class="n">row_number</span><span class="si">}</span><span class="s2"> with values </span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2"> does not pass validation&quot;</span><span class="p">)</span>
+                    <span class="k">break</span>
 
                 <span class="k">if</span> <span class="n">standardized_key</span><span class="p">:</span>
                     <span class="n">standardized_dict</span><span class="p">[</span><span class="n">standardized_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
 
                 <span class="k">elif</span> <span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">SIZE</span><span class="p">:</span>
+                    <span class="n">fieldnames</span><span class="p">[</span><span class="n">fieldnames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;size&quot;</span>
                     <span class="n">standardized_dict</span><span class="p">[</span><span class="s2">&quot;size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">])</span> <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">{</span><span class="s2">&quot;urls&quot;</span><span class="p">,</span> <span class="s2">&quot;md5&quot;</span><span class="p">,</span> <span class="s2">&quot;size&quot;</span><span class="p">}</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">standardized_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())):</span>
+                <span class="n">pass_verification</span> <span class="o">=</span> <span class="kc">False</span>
 
             <span class="n">files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">standardized_dict</span><span class="p">)</span>
 
@@ -470,6 +478,10 @@
         <span class="n">exc_info</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
         <span class="n">traceback</span><span class="o">.</span><span class="n">print_exception</span><span class="p">(</span><span class="o">*</span><span class="n">exc_info</span><span class="p">)</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Can not read </span><span class="si">{}</span><span class="s2">. Detail </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">,</span> <span class="n">e</span><span class="p">))</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="c1"># Early terminate</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">files</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
 
     <span class="k">try</span><span class="p">:</span>
