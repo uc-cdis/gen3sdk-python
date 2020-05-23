@@ -137,11 +137,12 @@ def _get_and_verify_fileinfos_from_tsv_manifest(
         fieldnames = csvReader.fieldnames
 
         logging.debug(f"got fieldnames from {manifest_file}: {fieldnames}")
-
         pass_verification = True
+        row_number = 0
         for row in csvReader:
             standardized_dict = {}
             for key in row.keys():
+                row_number = row_number + 1
                 standardized_key = None
                 if key.lower() in GUID:
                     fieldnames[fieldnames.index(key)] = "guid"
@@ -173,12 +174,19 @@ def _get_and_verify_fileinfos_from_tsv_manifest(
                     if not _verify_format(row[key], AUTHZ_FORMAT):
                         logging.error("ERROR: {} is not in authz format", row[key])
                         pass_verification = False
+                
+                if not pass_verification:
+                    logging.error(f"row {row_number} with values {row} does not pass validation")
+                    break
 
                 if standardized_key:
                     standardized_dict[standardized_key] = row[key]
 
                 elif key.lower() in SIZE:
+                    fieldnames[fieldnames.index(key)] = "size"
                     standardized_dict["size"] = int(row[key]) if row[key] else None
+            if not {"urls", "md5", "size"}.issubset(set(standardized_dict.keys())):
+                pass_verification = False
 
             files.append(standardized_dict)
 
@@ -437,6 +445,10 @@ def index_object_manifest(
         exc_info = sys.exc_info()
         traceback.print_exception(*exc_info)
         logging.error("Can not read {}. Detail {}".format(manifest_file, e))
+        return None, None
+
+    # Early terminate
+    if not files:
         return None, None
 
     try:
