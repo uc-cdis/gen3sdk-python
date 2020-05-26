@@ -175,12 +175,6 @@ def _get_and_verify_fileinfos_from_tsv_manifest(
                         logging.error("ERROR: {} is not in authz format", row[key])
                         pass_verification = False
 
-                if not pass_verification:
-                    logging.error(
-                        f"row {row_number} with values {row} does not pass the validation"
-                    )
-                    break
-
                 if standardized_key:
                     standardized_dict[standardized_key] = row[key]
 
@@ -189,6 +183,11 @@ def _get_and_verify_fileinfos_from_tsv_manifest(
                     standardized_dict["size"] = int(row[key]) if row[key] else None
             if not {"urls", "md5", "size"}.issubset(set(standardized_dict.keys())):
                 pass_verification = False
+
+            if not pass_verification:
+                logging.error(
+                    f"row {row_number} with values {row} does not pass the validation"
+                )
 
             files.append(standardized_dict)
 
