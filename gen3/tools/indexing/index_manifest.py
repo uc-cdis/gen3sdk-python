@@ -61,6 +61,7 @@ UUID_FORMAT = (
     r"^.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
 )
 MD5_FORMAT = r"^[a-fA-F0-9]{32}$"
+SIZE_FORMAT = r"^[0-9]*$"
 ACL_FORMAT = r"^.*$"
 URL_FORMAT = r"^.*$"
 AUTHZ_FORMAT = r"^.*$"
@@ -137,11 +138,12 @@ def _get_and_verify_fileinfos_from_tsv_manifest(
         fieldnames = csvReader.fieldnames
 
         logging.debug(f"got fieldnames from {manifest_file}: {fieldnames}")
-
         pass_verification = True
+        row_number = 0
         for row in csvReader:
             standardized_dict = {}
             for key in row.keys():
+                row_number = row_number + 1
                 standardized_key = None
                 if key.lower() in GUID:
                     fieldnames[fieldnames.index(key)] = "guid"
@@ -173,12 +175,31 @@ def _get_and_verify_fileinfos_from_tsv_manifest(
                     if not _verify_format(row[key], AUTHZ_FORMAT):
                         logging.error("ERROR: {} is not in authz format", row[key])
                         pass_verification = False
+                elif key.lower() in SIZE:
+                    fieldnames[fieldnames.index(key)] = "size"
+                    standardized_key = "size"
+                    if not _verify_format(row[key], SIZE_FORMAT):
+                        logging.error("ERROR: {} is not in int format", row[key])
+                        pass_verification = False
 
                 if standardized_key:
-                    standardized_dict[standardized_key] = row[key]
+                    try:
+                        standardized_dict[standardized_key] = (
+                            int(row[key])
+                            if standardized_key == "size"
+                            else row[key].strip()
+                        )
+                    except ValueError:
+                        # don't break
+                        pass
 
-                elif key.lower() in SIZE:
-                    standardized_dict["size"] = int(row[key]) if row[key] else None
+            if not {"urls", "md5", "size"}.issubset(set(standardized_dict.keys())):
+                pass_verification = False
+
+            if not pass_verification:
+                logging.error(
+                    f"row {row_number} with values {row} does not pass the validation"
+                )
 
             files.append(standardized_dict)
 
@@ -437,6 +458,10 @@ def index_object_manifest(
         exc_info = sys.exc_info()
         traceback.print_exception(*exc_info)
         logging.error("Can not read {}. Detail {}".format(manifest_file, e))
+        return None, None
+
+    # Early terminate
+    if not files:
         return None, None
 
     try:
