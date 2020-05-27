@@ -196,6 +196,30 @@ class Gen3Metadata:
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    async def async_get(self, guid, _ssl=None, **kwargs):
+        """
+        Asynchronous function to get metadata
+
+        Args:
+            guid (str): guid to use
+            _ssl (None, optional): whether or not to use ssl
+
+        Returns:
+            Dict: metadata for given guid
+        """
+        async with aiohttp.ClientSession() as session:
+            url = self.endpoint + f"/metadata/{guid}"
+            url_with_params = append_query_params(url, **kwargs)
+
+            logging.debug(f"hitting: {url_with_params}")
+
+            async with session.get(url_with_params, ssl=_ssl) as response:
+                response.raise_for_status()
+                response = await response.json()
+
+        return response
+
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def get(self, guid, **kwargs):
         """
         Get the metadata associated with the guid

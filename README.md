@@ -28,6 +28,7 @@ The docs here contain general descriptions of the different pieces of the SDK an
         - [Ideal Scenario \(Column to Column Match, Indexing:Metadata Manifest Rows\)](#ideal-scenario-column-to-column-match-indexingmetadata-manifest-rows)
         - [Non-Ideal Scenario \(Partial URL Matching\)](#non-ideal-scenario-partial-url-matching)
     - [Using Gen3 Jobs](#using-gen3-jobs)
+    - [Verify Metadata Manifest](#verify-metadata-manifest)
 
 ---
 
@@ -1021,4 +1022,41 @@ if __name__ == "__main__":
 
     metadata_ingest()
 
+```
+
+### Verify Metadata Manifest
+
+How to verify the metadata objects in metadata service against a "source of truth" manifest.
+
+In the example below we assume a manifest named `dbgap-metadata-manifest.tsv` already exists with info of what's expected in the metadata service per guid. The headers in this example `dbgap-metadata-manifest.tsv` are `guid, metadata_field_0, metadata_field_1, ...`.
+
+> NOTE: The metadata fields in the mds will be nested under a metadata *source* name. You must specify the expected source name in the verify function. In this case, we expect all this metadata to exist in a `dbgap` block in the mds.
+
+
+```python
+import sys
+import logging
+import asyncio
+
+from gen3.tools import metadata
+
+logging.basicConfig(filename="output.log", level=logging.INFO)
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
+COMMONS = "https://{{insert-commons-here}}/"
+
+
+def main():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(
+        metadata.async_verify_metadata_manifest(
+            COMMONS, manifest_file="dbgap-metadata-manifest.tsv", metadata_source="dbgap"
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()
 ```

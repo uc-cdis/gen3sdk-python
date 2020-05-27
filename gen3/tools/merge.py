@@ -112,7 +112,7 @@ def _get_data_from_indexing_manifest(manifest_file, config, delimiter="\t", **kw
     value_column_names = [config.get("guid_column_name")]
 
     column_to_matching_rows = {}
-    with open(manifest_file, "rt") as csvfile:
+    with open(manifest_file, "rt", encoding="utf-8-sig") as csvfile:
         csvReader = csv.DictReader(csvfile, delimiter=delimiter)
         for row in csvReader:
             key = str(row[key_column_name]).strip()
@@ -172,7 +172,7 @@ def merge_guids_into_metadata(
         f"Iterating over {metadata_manifest} and finding guid using dict created "
         f"from {indexing_manifest}."
     )
-    with open(metadata_manifest, "rt") as file:
+    with open(metadata_manifest, "rt", encoding="utf-8-sig") as file:
         reader = csv.DictReader(file, delimiter=metadata_manifest_file_delimiter)
         headers = ["guid"]
         headers.extend(reader.fieldnames)
@@ -227,7 +227,7 @@ def write_header_to_file(filename, fieldnames, delimiter="\t"):
     Returns:
         None
     """
-    with open(filename, mode="w+") as outfile:
+    with open(filename, mode="w+", encoding="utf-8-sig") as outfile:
         writer = csv.DictWriter(
             outfile, delimiter=delimiter, fieldnames=fieldnames, extrasaction="ignore"
         )
@@ -241,7 +241,7 @@ def append_row_to_file(filename, row, fieldnames, delimiter="\t"):
     Returns:
         None
     """
-    with open(filename, mode="a") as outfile:
+    with open(filename, mode="a", encoding="utf-8-sig") as outfile:
         writer = csv.DictWriter(
             outfile, delimiter=delimiter, fieldnames=fieldnames, extrasaction="ignore"
         )
