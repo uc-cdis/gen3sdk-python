@@ -271,6 +271,13 @@ async def _verify_all_index_records_in_file(
     await asyncio.gather(
         *(
             _parse_from_queue(queue, lock, commons_url, output_queue)
+            # why "+ (max_concurrent_requests / 4)"?
+            # This is because the max requests at any given time could be
+            # waiting for metadata responses all at once and there's processing done
+            # before that semaphore, so this just adds a few extra processes to get
+            # through the queue up to that point of metadata requests so it's ready
+            # right away when a lock is released. Not entirely necessary but speeds
+            # things up a tiny bit to always ensure something is waiting for that lock
             for x in range(
                 0, int(max_concurrent_requests + (max_concurrent_requests / 4))
             )

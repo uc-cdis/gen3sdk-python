@@ -117,7 +117,7 @@ async def async_verify_metadata_manifest(
         manifest_file,
         manifest_file_delimiter,
         max_concurrent_requests,
-        output_filename.split("/")[-1],
+        output_filename,
         metadata_source,
     )
 
@@ -169,6 +169,13 @@ async def _verify_all_metadata_records_in_file(
     await asyncio.gather(
         *(
             _parse_from_queue(queue, lock, commons_url, output_queue, metadata_source)
+            # why "+ (max_concurrent_requests / 4)"?
+            # This is because the max requests at any given time could be
+            # waiting for metadata responses all at once and there's processing done
+            # before that semaphore, so this just adds a few extra processes to get
+            # through the queue up to that point of metadata requests so it's ready
+            # right away when a lock is released. Not entirely necessary but speeds
+            # things up a tiny bit to always ensure something is waiting for that lock
             for x in range(
                 0, int(max_concurrent_requests + (max_concurrent_requests / 4))
             )
@@ -248,6 +255,9 @@ async def _parse_from_queue(queue, lock, commons_url, output_queue, metadata_sou
 
 
 def _are_matching_dicts(dict_a, dict_b):
+    if len(dict_a.keys()) != len(dict_b.keys()):
+        return False
+
     for key_a, value_a in dict_a.items():
         value_b = dict_b.get(key_a)
         if value_a != value_b:
