@@ -113,13 +113,14 @@ class Gen3Auth(AuthBase):
             err_msg = "Failed to authenticate to {}:\n{}".format(auth_url, resp.text)
             assert resp.status_code == 200, err_msg
             try:
-                self._access_token = resp.json()["access_token"]
+                json_resp = resp.json()
+                self._access_token = json_resp["access_token"]
             except ValueError:  # cannot parse JSON
                 raise Gen3AuthError(err_msg)
             except KeyError:  # no access_token in JSON response
                 raise Gen3AuthError(
                     "Failed to get access token from Fence at {}, received:\n{}".format(
-                        auth_url, resp.text
+                        auth_url, json_resp
                     )
                 )
 
