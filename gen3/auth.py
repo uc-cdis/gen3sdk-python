@@ -108,13 +108,20 @@ class Gen3Auth(AuthBase):
         """
         if not self._access_token:
             auth_url = "{}/user/credentials/cdis/access_token".format(self._endpoint)
+
+            resp = requests.post(auth_url, json=self._refresh_token)
+            err_msg = "Failed to authenticate to {}:\n{}".format(auth_url, resp.text)
+            assert resp.status_code == 200, err_msg
             try:
-                self._access_token = requests.post(
-                    auth_url, json=self._refresh_token
-                ).json()["access_token"]
-            except Exception as e:
+                json_resp = resp.json()
+                self._access_token = json_resp["access_token"]
+            except ValueError:  # cannot parse JSON
+                raise Gen3AuthError(err_msg)
+            except KeyError:  # no access_token in JSON response
                 raise Gen3AuthError(
-                    "Failed to authenticate to {}\n{}".format(auth_url, str(e))
+                    "Failed to get access token from Fence at {}, received:\n{}".format(
+                        auth_url, json_resp
+                    )
                 )
 
         return "Bearer " + self._access_token
