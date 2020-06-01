@@ -141,13 +141,20 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span><span class="p">:</span>
             <span class="n">auth_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/user/credentials/cdis/access_token&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">)</span>
+
+            <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">auth_url</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">)</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="s2">&quot;Failed to authenticate to </span><span class="si">{}</span><span class="s2">:</span><span class="se">\n</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">auth_url</span><span class="p">,</span> <span class="n">resp</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span><span class="p">,</span> <span class="n">err_msg</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
-                    <span class="n">auth_url</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span>
-                <span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s2">&quot;access_token&quot;</span><span class="p">]</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">json_resp</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span> <span class="o">=</span> <span class="n">json_resp</span><span class="p">[</span><span class="s2">&quot;access_token&quot;</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>  <span class="c1"># cannot parse JSON</span>
+                <span class="k">raise</span> <span class="n">Gen3AuthError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>  <span class="c1"># no access_token in JSON response</span>
                 <span class="k">raise</span> <span class="n">Gen3AuthError</span><span class="p">(</span>
-                    <span class="s2">&quot;Failed to authenticate to </span><span class="si">{}</span><span class="se">\n</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">auth_url</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+                    <span class="s2">&quot;Failed to get access token from Fence at </span><span class="si">{}</span><span class="s2">, received:</span><span class="se">\n</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">auth_url</span><span class="p">,</span> <span class="n">json_resp</span>
+                    <span class="p">)</span>
                 <span class="p">)</span>
 
         <span class="k">return</span> <span class="s2">&quot;Bearer &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span></div>
