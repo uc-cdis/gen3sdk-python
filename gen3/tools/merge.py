@@ -191,6 +191,13 @@ def merge_guids_into_metadata(
             if not guids:
                 # warning but write to output anyway
                 logging.warning(f"could not find matching guid for row: {row}")
+                row.update({"guid": ""})
+                append_row_to_file(
+                    filename=output_filename,
+                    row=row,
+                    fieldnames=headers,
+                    delimiter="\t",
+                )
             else:
                 logging.debug(f"found guids {guids} matching row: {row}")
 
