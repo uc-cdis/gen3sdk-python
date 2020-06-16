@@ -10,10 +10,10 @@ import scipy
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-import gen3
-from gen3.auth import Gen3Auth
-from gen3.submission import Gen3Submission
-from gen3.file import Gen3File
+# import gen3
+# from gen3.auth import Gen3Auth
+# from gen3.submission import Gen3Submission
+# from gen3.file import Gen3File
 
 class Gen3Error(Exception):
     pass
@@ -41,10 +41,10 @@ class Gen3Expansion:
 
     """
 
-    def __init__(self, endpoint, auth_provider):
+    def __init__(self, endpoint, auth_provider, submission):
         self._auth_provider = auth_provider
         self._endpoint = endpoint
-        self.sub = Gen3Submission(endpoint, auth_provider)
+        self.sub = submission # submission is Gen3Submission(endpoint, auth_provider)
 
     def __export_file(self, filename, output):
         """Writes text, e.g., an API response, to a file.

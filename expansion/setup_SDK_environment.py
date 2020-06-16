@@ -10,39 +10,44 @@ creds = '/Users/christopher/Downloads/bc-credentials.json'
 
 profile = 'qa-brain'
 api = 'https://qa-brain.planx-pla.net/'
-creds = '/Users/christopher/Downloads/qa-credentials.json'
+cred = '/Users/christopher/Downloads/qa-credentials.json'
 
 profile = 'gen3qa-brain'
 api = 'https://gen3qa.braincommons.org/' # Gen3QA for BRAIN Commons
-creds = '/Users/christopher/Downloads/gen3qa-brain-credentials.json'
+cred = '/Users/christopher/Downloads/gen3qa-brain-credentials.json'
 
 profile = 'staging'
 api = 'https://data-staging.braincommons.org/' # BRAIN Commons
-creds = '/Users/christopher/Downloads/brain-staging-credentials.json'
+cred = '/Users/christopher/Downloads/brain-staging-credentials.json'
 
 profile = 'bpa'
 api = 'https://data.bloodpac.org/' # BloodPAC
-creds = '/Users/christopher/Downloads/bpa-credentials.json'
+cred = '/Users/christopher/Downloads/bpa-credentials.json'
 
 profile = 'ndh'
 api = 'https://niaid.bionimbus.org/'
-creds = '/Users/christopher/Downloads/ndh-credentials.json'
+cred = '/Users/christopher/Downloads/ndh-credentials.json'
 
 profile = 'vpodc'
 api = 'https://vpodc.org/' #
-creds = '/Users/christopher/Downloads/vpodc-credentials.json'
+cred = '/Users/christopher/Downloads/vpodc-credentials.json'
 
 profile = 'dcf'
 api = 'https://nci-crdc-demo.datacommons.io/' # DCF  SAndbox Commons
-creds = '/Users/christopher/Downloads/dcf-credentials.json'
+cred = '/Users/christopher/Downloads/dcf-credentials.json'
 
 profile = 'stage'
 api = 'https://gen3.datastage.io/' # STAGE (old "DCP")
-creds = '/Users/christopher/Downloads/stage-credentials.json'
+cred = '/Users/christopher/Downloads/stage-credentials.json'
 
 profile = 'acct'
 api = 'https://acct.bionimbus.org/'
-creds = '/Users/christopher/Downloads/acct-credentials.json'
+cred = '/Users/christopher/Downloads/acct-credentials.json'
+
+profile = 'genomel'
+api = 'https://genomel.bionimbus.org/'
+cred = '/Users/christopher/Downloads/genomel-credentials.json'
+
 
 # api = 'https://dcf-interop.kidsfirstdrc.org/' #Kids First
 
@@ -153,10 +158,10 @@ os.system("wget https://raw.githubusercontent.com/cgmeyer/gen3sdk-python/master/
 # Set gen3-client profile name, data commons API URL, and credentials location.
 profile = 'dcf'
 api = 'https://nci-crdc-demo.datacommons.io/' # DCF  SAndbox Commons
-creds = '/Users/christopher/Downloads/dcf-credentials.json'
+cred = '/Users/christopher/Downloads/dcf-credentials.json'
 
 # Create instances of the gen3sdk classes for a data commons API and matching credentials file.
-auth = Gen3Auth(api, refresh_file=creds)
+auth = Gen3Auth(api, refresh_file=cred)
 exp = Gen3Expansion(api, auth)
 sub = Gen3Submission(api, auth)
 
