@@ -128,6 +128,11 @@ except Exception as e:
 # This version is for the Gen3 Workspace JupyterHub:
 # Run this in a Python 3 Jupyter notebook.
 
+# To install packages from the terminal, set proxies:
+# export http_proxy="http://cloud-proxy.internal.io:3128";
+# export https_proxy="http://cloud-proxy.internal.io:3128"
+# export no_proxy="localhost,127.0.0.1,*.internal.io"
+
 # Get the gen3sdk and expansion functions
 import os
 import requests, json, fnmatch, os.path, sys, subprocess, glob, ntpath, copy, re

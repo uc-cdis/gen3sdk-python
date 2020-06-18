@@ -4,6 +4,7 @@ from os import path
 from pandas.io.json import json_normalize
 from collections import Counter
 from statistics import mean
+from io import StringIO
 
 import numpy as np
 import scipy
@@ -2641,6 +2642,60 @@ class Gen3Expansion:
                     mani.write("  },\n  {\n")
                 count += 1
 
+    def list_nodes(self, excluded_schemas=['_definitions','_settings','_terms','program','project','root','data_release','metaschema']):
+        """
+        This function gets a data dictionary, and then it determines the submission order of nodes by looking at the links.
+        The reverse of this is the deletion order for deleting projects. (Must delete child nodes before parents).
+        """
+        dd = self.sub.get_dictionary_all()
+        schemas = list(dd)
+        nodes = [k for k in schemas if k not in excluded_schemas]
+        return nodes
+
+    def query_subject_ids(self, subject_id, nodes=None):
+        """
+        This function takes the submitter_id of a case or subject and checks for records in specified node(s) for matching value in the case_ids or subject_ids ubiquitous property.
+        """
+        if nodes is None:
+            nodes = self.list_nodes()
+        elif isinstance(nodes,str):
+            nodes = [nodes]
+
+        if 'case' in nodes:
+            subject_node,subject_prop  = 'case','case_ids'
+        else:
+            subject_node,subject_prop = 'subject','subject_ids'
+
+        # if projects is None: #if no projects specified, get node for all projects
+        #     projects = list(json_normalize(self.sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+        # elif isinstance(projects, str):
+        #     projects = [projects]
+
+        query_args = '{}:"{}"'.format(subject_prop,subject_id)
+        results = {}
+        for node in nodes:
+            res = self.paginate_query(node=node,props=['project_id','id','submitter_id'],args=query_args)
+            if len(res['data'][node]) > 0:
+                results[node] = res['data'][node]
+
+        data = {}
+        for node in list(results):
+            #uuids = [rec['id'] for rec in results[node]]
+            dfs = []
+            for rec in results[node]:
+                project_id = rec['project_id']
+                uuid = rec['id']
+                program,project = project_id.split('-',1)
+                rec = self.sub.export_record(program=program, project=project, uuid=uuid, fileformat='tsv', filename=None)
+                #str_list = rec.split('\r\n')
+                #headers = str_list[0].split('\t')
+                #data = str_list[1].split('\t')
+                #df = pd.DataFrame(data,columns=headers)
+                dfs.append(pd.read_csv(StringIO(rec), sep='\t', header=0))
+            df = pd.concat(dfs, ignore_index=True, sort = False)
+            data[node] = df
+
+        return data
 
 
 ## To do
