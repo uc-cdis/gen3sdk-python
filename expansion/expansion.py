@@ -2697,10 +2697,14 @@ class Gen3Expansion:
 
         return data
 
+        # visits = list(set([item for sublist in [list(set(list(df['visit_id']))) for df in data.values()] for item in sublist if not pd.isnull(item)]))
+
 
     def query_visit_ids(self, visit_ids):
         """
         This function takes visit submitter_ids and returns the visit records.
+        You can extract the visit submitter_ids from the data returned from a query_subject_ids function using the following one-liner:
+            visits = list(set([item for sublist in [list(set(list(df['visit_id']))) for df in data.values()] for item in sublist if not pd.isnull(item)]))
         """
         if isinstance(visit_ids, str):
             visit_ids = [visit_ids]
