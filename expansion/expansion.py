@@ -2698,6 +2698,33 @@ class Gen3Expansion:
         return data
 
 
+    def query_visit_ids(self, visit_ids):
+        """
+        This function takes visit submitter_ids and returns the visit records.
+        """
+        if isinstance(visit_ids, str):
+            visit_ids = [visit_ids]
+        if isinstance(visit_ids, list):
+            visit_ids = list(set(visit_ids))
+        else:
+            print("Please provide one or more visit_ids!")
+            return
+
+        dfs,visit_uuids = [],[]
+        for visit_id in visit_ids:
+            query_args = 'submitter_id:"{}"'.format(visit_id)
+            res = self.paginate_query(node='visit',props=['project_id','id'],args=query_args)
+            if len(res['data']['visit']) > 0:
+                uuid = res['data']['visit'][0]['id']
+                project_id = res['data']['visit'][0]['project_id']
+                program,project = project_id.split('-',1)
+                rec = self.sub.export_record(program=program, project=project, uuid=uuid, fileformat='tsv', filename=None)
+                dfs.append(pd.read_csv(StringIO(rec), sep='\t', header=0))
+        df = pd.concat(dfs, ignore_index=True, sort = False)
+
+        return df
+
+
 ## To do
 #
 #
