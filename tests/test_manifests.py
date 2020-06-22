@@ -421,6 +421,7 @@ def test_index_manifest(gen3_index, indexd_server):
     assert rec4["urls"] == ["s3://pdcdatastore/test3.raw"]
     assert rec4["acl"] == ["phs0001", "phs0002"]
     assert rec5["urls"] == ["s3://pdcdatastore/test4.raw"]
+    assert rec5["file_name"] == "test4_file.raw"
     assert rec5["acl"] == ["phs0001", "phs0002"]
     assert rec5["authz"] == ["/program/DEV/project/test"]
     assert rec6["urls"] == ["s3://pdcdatastore/test6 space.raw"]
