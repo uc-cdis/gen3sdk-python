@@ -11,10 +11,6 @@ import scipy
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# import gen3
-# from gen3.auth import Gen3Auth
-# from gen3.submission import Gen3Submission
-# from gen3.file import Gen3File
 
 class Gen3Error(Exception):
     pass
@@ -2326,7 +2322,7 @@ class Gen3Expansion:
                                 if ptype == 'array':
 
                                     bin_txt = nn[prop][0]
-                                    bins = sorted(val_txt.split(','))
+                                    bins = sorted(bin_txt.split(','))
 
                                 elif ptype in ['string','enum']:
 
