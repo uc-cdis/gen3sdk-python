@@ -2321,13 +2321,19 @@ class Gen3Expansion:
                             msg = "\t'{}'".format(prop_id)
                             sys.stdout.write("\r"+str(msg).ljust(200,' '))
 
-                            # Get stats for strings
-                            if ptype in ['string','enum','boolean','date','array']:
+                            if ptype in ['string','enum','array','boolean','date']:
 
-                                counts = Counter(nn[prop])
-                                df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
-                                bins = [tuple(x) for x in df1.values]
-                                bins = sorted(sorted(bins,key=lambda x: (x[0])),key=lambda x: (x[1]),reverse=True) # sort first by name, then by value. This way, names with same value are in same order.
+                                if ptype == 'array':
+
+                                    bin_txt = nn[prop][0]
+                                    bins = sorted(val_txt.split(','))
+
+                                elif ptype in ['string','enum']:
+
+                                    counts = Counter(nn[prop])
+                                    df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
+                                    bins = [tuple(x) for x in df1.values]
+                                    bins = sorted(sorted(bins,key=lambda x: (x[0])),key=lambda x: (x[1]),reverse=True) # sort first by name, then by value. This way, names with same value are in same order.
 
                                 prop_stats['bins'] = bins
                                 prop_stats['bin_number'] = len(bins)
@@ -2534,7 +2540,7 @@ class Gen3Expansion:
                     else: # if stat0 is stat1, data are identical
                         same.append(True)
 
-                if False in same: # if any of the stats are different bw commons, add to different df and comparison df
+                if False in same: # if any of the stats are different bw commons, tag as 'different', otherwise tagged as 'identical'
                     comparison['comparison'][prop_id] = 'different'
                 else:
                     comparison['comparison'][prop_id] = 'identical'
