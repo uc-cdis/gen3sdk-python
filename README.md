@@ -525,7 +525,7 @@ if __name__ == "__main__":
 
 ### Merge Bucket Manifests
 
-To merge bucket manifests with file extension `tsv` in `/input_manifests` into one output manifest on the basis of `md5`:
+To merge bucket manifests contained in `/input_manifests` into one output manifest on the basis of `md5`:
 ```
 import sys
 import logging
@@ -535,15 +535,13 @@ from gen3.tools.indexing import merge_bucket_manifests
 logging.basicConfig(filename="output.log", level=logging.DEBUG)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
-INPUT_MANIFEST_DIRECTORY = "./input_manifests/large"
+INPUT_MANIFEST_DIRECTORY = "./input_manifests"
 OUTPUT_MANIFEST = "merged-bucket-manifest.tsv"
 
 
 def main():
     merge_bucket_manifests(
         directory=INPUT_MANIFEST_DIRECTORY,
-        manifest_extension="tsv",
-        delimiter="\t",
         merge_column="md5",
         output_manifest=OUTPUT_MANIFEST,
     )

@@ -1,7 +1,4 @@
 import os
-import sys
-import glob
-
 import logging
 import csv
 
@@ -10,9 +7,8 @@ from collections import OrderedDict
 
 def merge_bucket_manifests(
     directory=".",
-    manifest_extension="tsv",
-    delimiter="\t",
     merge_column="md5",
+    output_manifest_file_delimiter=None,
     output_manifest="merged-bucket-manifest.tsv",
 ):
     """
@@ -23,12 +19,15 @@ def merge_bucket_manifests(
     record.
 
     Args:
-        directory(str): path of the directory containing the input manifests
-        manifest_extension(str): the extension for the input manifests
-        delimiter(str): the delimiter that should be used for reading the input
-        and writing the output manifests
+        directory(str): path of the directory containing the input manifests.
+        all of the manifests contained in directory are assumed to be in a
+        delimiter-separated values (DSV) format, and that there are no other
+        non-DSV files in directory.
         merge_column(str): the common hash used to merge files. it is unique
         for every file in the output manifest
+        output_manifest_file_delimiter(str): the delimiter used for writing the
+        output manifest. if not provided, the delimiter will be determined
+        based on the file extension of output_manifest
         output_manifest(str): the file to write the output manifest to
 
     Returns:
@@ -36,33 +35,33 @@ def merge_bucket_manifests(
     """
     all_rows = {}
     logging.info(f"Iterating over manifests in {directory} directory")
-    for input_manifest in glob.glob(os.path.join(directory, f"*.{manifest_extension}")):
-        with open(input_manifest) as f:
+    for input_manifest in os.listdir(directory):
+        with open(os.path.join(directory, input_manifest)) as csv_file:
+            dialect = csv.Sniffer().sniff(csv_file.readline())
+            csv_file.seek(0)
+
             logging.info(
                 f"Reading, parsing, and merging files from {input_manifest} manifest"
             )
-            total_row_count = sum(1 for row in f)
-            f.seek(0)
-
-            reader = csv.reader(f, delimiter=delimiter)
-            headers = OrderedDict([(h, i) for i, h in enumerate(next(reader))])
-            for i, row in enumerate(reader):
+            csv_reader = csv.reader(csv_file, dialect)
+            headers = OrderedDict([(h, i) for i, h in enumerate(next(csv_reader))])
+            for row in csv_reader:
                 _merge_row(all_rows, headers, row, merge_column)
-                if i % 1000 == 0 or i + 2 == total_row_count:
-                    _update_progress(i + 2, total_row_count)
-            logging.info("")
 
-    with open(output_manifest, "w") as csvfile:
+    if output_manifest_file_delimiter is None:
+        output_manifest_file_ext = os.path.splitext(output_manifest)
+        if output_manifest_file_ext[-1].lower() == ".tsv":
+            output_manifest_file_delimiter = "\t"
+        else:
+            output_manifest_file_delimiter = ","
+
+    with open(output_manifest, "w") as csv_file:
         logging.info(f"Writing merged manifest to {output_manifest}")
-        writer = csv.writer(csvfile, delimiter=delimiter)
-        writer.writerow(headers.keys())
+        csv_writer = csv.writer(csv_file, delimiter=output_manifest_file_delimiter)
+        csv_writer.writerow(headers.keys())
 
-        total_row_count = len(all_rows)
-        for i, hashh in enumerate(all_rows):
-            writer.writerow(all_rows[hashh])
-            if i % 1000 == 0 or i + 2 == total_row_count:
-                _update_progress(i + 2, total_row_count)
-        logging.info("")
+        for hash_code in all_rows:
+            csv_writer.writerow(all_rows[hash_code])
 
 
 def _merge_row(all_rows, headers, row_to_merge, merge_column):
@@ -80,40 +79,24 @@ def _merge_row(all_rows, headers, row_to_merge, merge_column):
 
     Returns:
         None
-
     """
-    hashh = row_to_merge[headers[merge_column]]
-    if hashh in all_rows:
+    hash_code = row_to_merge[headers[merge_column]]
+    if hash_code in all_rows:
         size = row_to_merge[headers["size"]]
-        if size != all_rows[hashh][headers["size"]]:
+        if size != all_rows[hash_code][headers["size"]]:
             raise csv.Error(
-                f"Could not merge file with {merge_column} equal to {hashh} while reading {input_manifest} because of size mismatch."
+                "Found two objects with the same hash but different sizes,"
+                f" could not merge. Details: object {row_to_merge} could not be"
+                f" merged with object {all_rows[hash_code]} because {size} !="
+                f" {all_rows[hash_code][headers['size']]}."
             )
 
         url = row_to_merge[headers["url"]]
-        if url not in all_rows[hashh][headers["url"]]:
-            all_rows[hashh][headers["url"]] += f" {url}"
+        if url not in all_rows[hash_code][headers["url"]]:
+            all_rows[hash_code][headers["url"]] += f" {url}"
 
         authz = row_to_merge[headers["authz"]]
-        if authz not in all_rows[hashh][headers["authz"]]:
-            all_rows[hashh][headers["authz"]] += f" {authz}"
+        if authz not in all_rows[hash_code][headers["authz"]]:
+            all_rows[hash_code][headers["authz"]] += f" {authz}"
     else:
-        all_rows[hashh] = row_to_merge
-
-
-def _update_progress(rows_read, total_row_count):
-    """
-    Print progress bar and percentage to STDOUT for how much of a file has been
-    read from or written to.
-
-    Args:
-        rows_read(int): the number of rows read so far in file
-        total_row_count(int): the total number of rows in file
-
-    Returns:
-        None
-
-    """
-    progress = int(rows_read / total_row_count * 100)
-    pound_signs = progress // 10
-    print(f"\r[{'#'*(pound_signs)}{' '*(10-pound_signs)}] {progress}%", end="")
+        all_rows[hash_code] = row_to_merge
