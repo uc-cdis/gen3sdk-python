@@ -12,7 +12,6 @@ def test_merge_bucket_manifests():
     """
     merge_bucket_manifests(
         directory="tests/merge_manifests/input_manifests/",
-        delimiter="\t",
         output_manifest="merged-output-test-manifest.tsv",
     )
     assert _get_ordered_csv_data(
