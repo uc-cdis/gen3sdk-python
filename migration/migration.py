@@ -1011,7 +1011,7 @@ class Gen3Migration:
             old_total = len(df.loc[df[prop]==old_enum])
 
             if old_total == 0:
-                print("\t\tNo records found with prop '{}' equal to '{}'; '{}' TSV unchanged. Values include: '{}'".format(prop,old_enum,node,df[prop].value_counts()))
+                print("\t\tNo records found with prop '{}' equal to '{}'; '{}' TSV unchanged. Values include: \n\n{}".format(prop,old_enum,node,df[prop].value_counts()))
                 continue
 
             if new_enum == 'null':
