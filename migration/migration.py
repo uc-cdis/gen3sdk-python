@@ -245,9 +245,10 @@ class Gen3Migration:
             merge_props(list): A list properties to merge into the destination property.
 
         Example:
-
-
+            node,dest_prop,merge_props = 'demographic','marital_or_partner_status','marital_status'
+            df = prep_mig.merge_props(project_id=project_id,node=node,dest_prop=dest_prop,merge_props=merge_props,name=name)
         """
+
         df = self.read_tsv(project_id=project_id,node=node,name=name)
 
         #check that each of the "merge_props" exists in the TSV; if not, return original dataframe
