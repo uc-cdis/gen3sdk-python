@@ -268,8 +268,8 @@ class Gen3Migration:
         nn_dfs = []
 
         # check if destination property already exists in TSV and if so, whether prop has any non-null data
-        if dest_prop in list(df): # make a series of non-null destination data, if any
-            dest_nn = df.loc[df[dest_prop].notnull()][['submitter_id',dest_prop]+merge_props]
+        if dest_prop in list(df):
+            dest_nn = df.loc[df[dest_prop].notnull()][['submitter_id',dest_prop]+merge_props] # make a series of non-null destination data, if any
             if not dest_nn.empty: #if destination property has non-null data
                 nn_dfs.append(dest_nn)
                 print("\t\t{} non-null values for destination prop '{}' in '{}' TSV.".format(len(dest_nn),dest_prop,node))
@@ -282,9 +282,6 @@ class Gen3Migration:
             print("\t\t{} non-null values out of {} total records for prop to merge '{}' in '{}' TSV of project '{}'.".format(len(merge_nn),len(df),merge_prop,node,project_id))
             if not merge_nn.empty:
                 nn_dfs.append(merge_nn)
-
-        #nn_ids = [list(df['submitter_id']) for df in nn_dfs]
-
 
         nn = pd.concat(nn_dfs,ignore_index=True,sort=False)
         conflicts = nn.loc[nn[['submitter_id']].duplicated()]
