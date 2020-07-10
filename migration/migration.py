@@ -48,7 +48,7 @@ class Gen3Migration:
         self._auth_provider = auth_provider
         self._endpoint = endpoint
         self.sub = Gen3Submission(endpoint, auth_provider)
-        self.exp = Gen3Expansion(endpoint, auth_provider)
+        self.exp = Gen3Expansion(endpoint, auth_provider, self.sub)
 
     def read_tsv(self,project_id,node,name='temp',strip=True):
 
@@ -192,22 +192,27 @@ class Gen3Migration:
             print("\tTotal of {} records written to node {} in file {}.".format(len(df),out_node,outname))
             return df
 
-    def merge_props(self,project_id,node,props,name='temp'):
+    def merge_props_old(self,project_id,node,props,name='temp'):
         """
-        This function merges a list of props into a single prop and then drops the list of props from the column headers.
+        This function merges a list of properties (column headers in a single node TSV) into one new or existing destination property.
+        The properties merged are then dropped from the TSV's column headers.
+        The fxn will check if the destination property already exists in the TSV column headers and whether any non-null data will be overwritten by merging the data.
+
         Args:
-            project_id(str): The project_id of the data.
-            node(str): The node TSV to merge props in.
-            props(dict): A dictionary of "single_prop_to_merge_into":["list","of","props","to","merge","and","drop"]
+            project_id(str): The project_id of the TSV.
+            node(str): The node TSV containing properties to merge.
+            props(dict): A dictionary of "destination_prop":["list","of","props","to","merge","and","drop"]
         """
         df = self.read_tsv(project_id=project_id,node=node,name=name)
         # filename = "{}_{}_{}.tsv".format(name,project_id,node)
 
         dropped = []
-        for prop in list(props.keys()):
-            if prop not in list(df):
+        for prop in list(props.keys()): # keys are destination props
+            if prop not in list(df): # if destination prop doesn't exist in TSV, add it with all null data
                 df[prop] = np.nan
-            old_props = props[prop]
+
+
+            old_props = props[prop] # list of properties to merge
             for old_prop in old_props:
                 if old_prop in list(df):
                     df_old = df.loc[df[old_prop].notnull()]
@@ -226,6 +231,87 @@ class Gen3Migration:
         else:
             print("\tNo props dropped from '{}'. No TSV written.".format(node))
             return
+
+    def merge_props(self,project_id,node,dest_prop,merge_props,name='temp'):
+        """
+        This function merges a list of properties (column headers in a single node TSV) into one new or existing destination property.
+        The properties merged are then dropped from the TSV's column headers.
+        The fxn will check if the destination property already exists in the TSV column headers and whether any non-null data will be overwritten by merging the data.
+
+        Args:
+            project_id(str): The project_id of the TSV.
+            node(str): The node TSV containing properties to merge.
+            dest_prop(str): The new or existing property (or TSV column header) to merge data from "merge_props" into.
+            merge_props(list): A list properties to merge into the destination property.
+
+        Example:
+
+
+        """
+        df = self.read_tsv(project_id=project_id,node=node,name=name)
+
+        #check that each of the "merge_props" exists in the TSV; if not, return original dataframe
+        if isinstance(merge_props, str):
+            merge_props = [merge_props]
+        if not isinstance(merge_props,list):
+            print("\tPlease provide a list of properties (TSV column headers) to merge into the destination property!!")
+        else:
+            for merge_prop in merge_props:
+                if not merge_prop in list(df):
+                    print("\t\tProperty to merge '{}' is not found in the '{}' TSV of project '{}'!".format(merge_prop,node,project_id))
+                    return df
+
+        # Next check for conflicts to avoid overwriting data:
+        print("\tAttempting to merge '{}' data into '{}' in '{}' TSV of project '{}'.".format(merge_props,dest_prop,node,project_id))
+
+        nn_dfs = []
+
+        # check if destination property already exists in TSV and if so, whether prop has any non-null data
+        if dest_prop in list(df): # make a series of non-null destination data, if any
+            dest_nn = df.loc[df[dest_prop].notnull()][['submitter_id',dest_prop]+merge_props]
+            if not dest_nn.empty: #if destination property has non-null data
+                nn_dfs.append(dest_nn)
+                print("\t\t{} non-null values for destination prop '{}' in '{}' TSV.".format(len(dest_nn),dest_prop,node))
+        else:
+            df[dest_prop] = np.nan # if dest_prop is not in the TSV, add it with all null values
+
+        # make series of non-null data to merge
+        for merge_prop in merge_props:
+            merge_nn = df.loc[df[merge_prop].notnull()][['submitter_id',dest_prop]+merge_props]
+            print("\t\t{} non-null values out of {} total records for prop to merge '{}' in '{}' TSV of project '{}'.".format(len(merge_nn),len(df),merge_prop,node,project_id))
+            if not merge_nn.empty:
+                nn_dfs.append(merge_nn)
+
+        #nn_ids = [list(df['submitter_id']) for df in nn_dfs]
+
+
+        nn = pd.concat(nn_dfs,ignore_index=True,sort=False)
+        conflicts = nn.loc[nn[['submitter_id']].duplicated()]
+
+        if not conflicts.empty:
+            print("\n\t\tConflicts in data! If you proceed, existing data will be overwritten!\n\n{}".format(conflicts))
+            return conflicts
+
+        # if no conflicts, then merge the data into the new prop and drop the old props
+        dropped = []
+        mdf = copy.deepcopy(df)
+        for nn_df in nn_dfs:
+            try:
+                mdf[dest_prop] = nn_df[merge_prop]
+                mdf.drop(columns=[merge_prop],inplace=True)
+                dropped.append(merge_prop)
+                print("\t\tprop '{}' merged into '{}' and dropped from '{}' TSV.".format(merge_prop,dest_prop,node))
+            except Exception as e:
+                print("\tUnable to merge '{}' prop data into '{}' prop in '{}' TSV:\n\t\t{}".format(merge_prop,dest_prop,node,e))
+
+        if len(dropped) > 0:
+            print("\t\tprops {} merged into destination prop '{}' of '{}' TSV in project '{}'.".format(dropped,dest_prop,node,project_id))
+            self.write_tsv(mdf,project_id,node)
+        else:
+            print("\t\tNo props dropped from '{}'. No TSV written.".format(node))
+
+        return mdf
+
 
     def add_missing_links(self,project_id,node,link,old_parent=None,links=None, name='temp'):
         """
@@ -397,18 +483,23 @@ class Gen3Migration:
 
     def move_prop(self,project_id,old_node,new_node,prop,dd,parent_node=None,required_props=None,name='temp',warn=True):
         """
-        This function takes a node with props to be moved (from_node) and moves those props/data to a new node (to_node).
-        Fxn also checks whether the data for props to be moved actually has non-null data. If all data are null, no new records are created.
+        This function moves a single property and its data from one node (old_node) to another node (new_node).
+        Fxn also checks whether the data to be moved actually has non-null data. If all data are null, no new records are created.
+        Fxn also checks whether the property already exists in the new_node, and if it does, fxn exits with nothing changed.
+
         Args:
             old_node(str): Node TSV to copy data from.
             new_node(str): Node TSV to add copied data to.
-            props(list): List of column headers containing data to copy.
+            prop: A property, or column header in the old_node TSV, which contains data to move to the new_node.
+            dd(dict): The data dictionary being used to determine node relationships; get it with Gen3Submission.get_dictionary_all() fxn.
             parent_node(str): The parent node that links the old_node to the new_node, e.g., 'visit' or 'case'.
             required_props(dict): If the new_node has additional required props, enter the value all records should get for each key.
+
         Example:
             This moves the prop 'military_status' from 'demographic' node to 'military_history' node, which should link to the same parent node 'case'.
             move_prop(from_node='demographic',to_node='military_history',prop='military_status',parent_node='case')
         """
+
         print("\tMoving prop '{}' from node '{}' to '{}'.".format(prop,old_node,new_node))
 
         odf = self.read_tsv(project_id,old_node)
@@ -465,7 +556,7 @@ class Gen3Migration:
 
         #p = dict(zip(odf[parent_link],odf[prop]))
 
-        # Determine which header to merge data on (usually link to the parent node, but in some cases use visit_id (dm 2.2.))
+        # Determine which header to merge data on (usually link to the parent node, but for some many-to-one relationships, may need to merge data using visit_id (dm 2.2.))
         pdf = onn[[parent_link,prop]] # prop dataframe
         pdf.drop_duplicates(subset=None, keep='first', inplace=True)
         if len(onn) != len(pdf): # if number of non-null records doesn't equal number of unique IDs for those records, then data are many-to-one with parent node. Try merging on visit_id
@@ -632,7 +723,8 @@ class Gen3Migration:
 
 
     def check_props_data(self,tsv_dir,props,compare=False,project_ids='all',name='temp',outname='prod'):
-        """ if compare is True, will print a report of comparisons
+        """ Creates a report of null and non-null data counts for a given list of properties.
+            If 'compare' is True, will print a report of comparisons
         """
         try:
             os.chdir(tsv_dir)
@@ -730,7 +822,7 @@ class Gen3Migration:
             for pair in compare:
                 for project_id in list(projects):
                     ((old_node,old_prop),(new_node,new_prop)) = pair
-                    old_count = data[project_id][old_node][old_prop]
+                    # old_count = data[project_id][old_node][old_prop]
                     new_count = data[project_id][new_node][new_prop]
                     c['project_id'].append(project_id)
                     c['old_node'].append(old_node)
@@ -746,16 +838,16 @@ class Gen3Migration:
                         conflict = False
                     c['conflict'].append(conflict)
 
+        try:
+            outfile = '{}_compare_props_data.tsv'.format(outname)
+            cdf = pd.DataFrame(c)
+            cdf.to_csv(outfile,sep='\t',index=False)
             conflicts = cdf.loc[cdf['conflict']==True]
             if not conflicts.empty:
                 print("\n\n\n{} conflicts found in data!\n".format(len(conflicts)))
                 display(conflicts)
-            outfile = '{}_compare_props_data.tsv'.format(outname)
-
-        try:
-            cdf = pd.DataFrame(c)
-            cdf.to_csv(outfile,sep='\t',index=False)
             return cdf
+
         except Exception as e:
             print("\t\t{}: {}".format(type(e),e))
             print("\n\t\tc = '{}'".format(c))
@@ -771,6 +863,7 @@ class Gen3Migration:
             project_id(str): The project_id of the TSVs.
             node(str): The name of the node TSV to change column names in.
             props(dict): A dict with keys of old prop names to change with values as new names. {'old_prop':'new_prop'}
+
         Example:
             This changes the column header "time_of_surgery" to "hour_of_surgery" in the surgery TSV.
             change_prop_name(project_id='P001',node='surgery',props={'time_of_surgery':'hour_of_surgery'})
