@@ -2324,7 +2324,7 @@ class Gen3Expansion:
                                     bin_txt = nn[prop][0]
                                     bins = sorted(bin_txt.split(','))
 
-                                elif ptype in ['string','enum']:
+                                elif ptype in ['string','enum','boolean','date']:
 
                                     counts = Counter(nn[prop])
                                     df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
