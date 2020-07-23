@@ -2321,15 +2321,17 @@ class Gen3Expansion:
 
                                 if ptype == 'array':
 
-                                    bin_txt = nn[prop][0]
-                                    bins = sorted(bin_txt.split(','))
+                                    all_bins = list(nn[prop])
+                                    bin_list = [bin_txt.split(',') for bin_txt in list(nn[prop])]
+                                    counts = Counter([item for sublist in bin_list for item in sublist])
 
                                 elif ptype in ['string','enum','boolean','date']:
 
                                     counts = Counter(nn[prop])
-                                    df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
-                                    bins = [tuple(x) for x in df1.values]
-                                    bins = sorted(sorted(bins,key=lambda x: (x[0])),key=lambda x: (x[1]),reverse=True) # sort first by name, then by value. This way, names with same value are in same order.
+
+                                df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
+                                bins = [tuple(x) for x in df1.values]
+                                bins = sorted(sorted(bins,key=lambda x: (x[0])),key=lambda x: (x[1]),reverse=True) # sort first by name, then by value. This way, names with same value are in same order.
 
                                 prop_stats['bins'] = bins
                                 prop_stats['bin_number'] = len(bins)
