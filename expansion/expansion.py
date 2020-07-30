@@ -2250,7 +2250,14 @@ class Gen3Expansion:
             #msg = "\t\tFound the following {} TSVs: {}".format(len(fnames),fnames)
             #sys.stdout.write("\r" + str(msg))
 
+
+            #print(fnames) # trouble-shooting
+            if len(fnames) == 0:
+                continue
+
             for fname in fnames: # Each node with data in the project is in one TSV file so len(fnames) is the number of nodes in the project with data.
+
+                #print("\n\t\t{}".format(fname)) # trouble-shooting
 
                 node_regex = re.escape(project_id) + r"_([a-zA-Z0-9_]+)\.tsv$" #node = re.search(r'^([a-zA-Z0-9_]+)-([a-zA-Z0-9]+)_([a-zA-Z0-9_]+)\.tsv$',fname).group(3)
 
