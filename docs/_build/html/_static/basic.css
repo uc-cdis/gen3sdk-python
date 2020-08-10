@@ -344,7 +344,6 @@ div.topic {
     border: 1px solid #ccc;
     padding: 7px;
     margin: 10px 0 10px 0;
-    overflow-x: auto;
 }
 
 p.topic-title {
@@ -359,7 +358,6 @@ div.admonition {
     margin-top: 10px;
     margin-bottom: 10px;
     padding: 7px;
-    overflow-x: auto;
 }
 
 div.admonition dt {
@@ -553,7 +551,6 @@ ul.simple > li:not(:first-child) > p {
 ol.simple p,
 ul.simple p {
     margin-bottom: 0;
-
 }
 
 dl.footnote > dt,
