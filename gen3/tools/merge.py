@@ -12,7 +12,8 @@ import logging
 
 def _get_guids_for_manifest_row(row, data_from_indexing_manifest, config, **kwargs):
     """
-    Given a row from the manifest, return the guids that match it.
+    Given a row from the metadata manifest, return the guids that match it based on
+    whatever key was used.
 
     Example:
         row = {"submitted_sample_id": "123", "foo": "bar", "fizz": "buzz"}
@@ -94,7 +95,13 @@ def get_guids_for_manifest_row_partial_match(
     return matching_guids
 
 
-def _get_data_from_indexing_manifest(manifest_file, config, delimiter="\t", **kwargs):
+def _get_data_from_indexing_manifest(
+    manifest_file,
+    config,
+    delimiter="\t",
+    include_all_indexing_cols_in_output=True,
+    **kwargs,
+):
     """
     Create an OrderedDictionary mapping some key to a list of matching records with some
     field to use as a GUID.
@@ -109,11 +116,18 @@ def _get_data_from_indexing_manifest(manifest_file, config, delimiter="\t", **kw
             with matching columns
     """
     key_column_name = config.get("indexing_manifest_column_name")
-    value_column_names = [config.get("guid_column_name")]
 
     column_to_matching_rows = {}
     with open(manifest_file, "rt", encoding="utf-8-sig") as csvfile:
         csvReader = csv.DictReader(csvfile, delimiter=delimiter)
+
+        value_column_names = [config.get("guid_column_name")]
+
+        if include_all_indexing_cols_in_output:
+            value_column_names = value_column_names + csvReader.fieldnames
+
+        print(f"getting indexing columns: {value_column_names}")
+
         for row in csvReader:
             key = str(row[key_column_name]).strip()
             column_to_matching_rows.setdefault(key, []).append(
@@ -145,6 +159,7 @@ def merge_guids_into_metadata(
     manifest_row_parsers=manifest_row_parsers,
     manifests_mapping_config=manifests_mapping_config,
     output_filename="merged-metadata-manifest.tsv",
+    include_all_indexing_cols_in_output=True,
 ):
     start_time = time.perf_counter()
     logging.info(f"start time: {start_time}")
@@ -166,16 +181,31 @@ def merge_guids_into_metadata(
         indexing_manifest,
         config=manifests_mapping_config,
         delimiter=indexing_manifest_file_delimiter,
+        include_all_indexing_cols_in_output=include_all_indexing_cols_in_output,
     )
 
     logging.debug(
-        f"Iterating over {metadata_manifest} and finding guid using dict created "
+        f"Iterating over {metadata_manifest} and finding matches using dict created "
         f"from {indexing_manifest}."
     )
     with open(metadata_manifest, "rt", encoding="utf-8-sig") as file:
         reader = csv.DictReader(file, delimiter=metadata_manifest_file_delimiter)
         headers = ["guid"]
         headers.extend(reader.fieldnames)
+
+        if include_all_indexing_cols_in_output:
+            with open(indexing_manifest, "rt", encoding="utf-8-sig") as csvfile:
+                indexing_reader = csv.DictReader(
+                    csvfile, delimiter=indexing_manifest_file_delimiter
+                )
+                headers.extend(indexing_reader.fieldnames)
+
+        # remove any duplicates but preserve order
+        unique_headers = []
+        for header in headers:
+            if header not in unique_headers:
+                unique_headers.append(header)
+        headers = unique_headers
 
         logging.debug(f"writing headers to {output_filename}: {headers}")
         write_header_to_file(
@@ -190,25 +220,53 @@ def merge_guids_into_metadata(
 
             if not guids:
                 # warning but write to output anyway
-                logging.warning(f"could not find matching guid for row: {row}")
                 row.update({"guid": ""})
-                append_row_to_file(
-                    filename=output_filename,
-                    row=row,
-                    fieldnames=headers,
-                    delimiter="\t",
-                )
+
+                if include_all_indexing_cols_in_output:
+                    row_key = manifests_mapping_config.get("row_column_name")
+                    key_id_from_row = row.get(row_key, "").strip()
+                    rows_to_add = data_from_indexing_manifest.get(key_id_from_row, {})
+
+                    for new_row in rows_to_add:
+                        new_row.update(row)
+                        append_row_to_file(
+                            filename=output_filename,
+                            row=new_row,
+                            fieldnames=headers,
+                            delimiter="\t",
+                        )
+                else:
+                    append_row_to_file(
+                        filename=output_filename,
+                        row=row,
+                        fieldnames=headers,
+                        delimiter="\t",
+                    )
             else:
                 logging.debug(f"found guids {guids} matching row: {row}")
 
             for guid in guids:
                 row.update({"guid": guid})
-                append_row_to_file(
-                    filename=output_filename,
-                    row=row,
-                    fieldnames=headers,
-                    delimiter="\t",
-                )
+
+                if include_all_indexing_cols_in_output:
+                    row_key = manifests_mapping_config.get("row_column_name")
+                    key_id_from_row = row.get(row_key, "").strip()
+                    for new_row in data_from_indexing_manifest.get(key_id_from_row, {}):
+                        if new_row.get("guid") == guid:
+                            new_row.update(row)
+                            append_row_to_file(
+                                filename=output_filename,
+                                row=new_row,
+                                fieldnames=headers,
+                                delimiter="\t",
+                            )
+                else:
+                    append_row_to_file(
+                        filename=output_filename,
+                        row=row,
+                        fieldnames=headers,
+                        delimiter="\t",
+                    )
 
     end_time = time.perf_counter()
     logging.info(f"end time: {end_time}")
