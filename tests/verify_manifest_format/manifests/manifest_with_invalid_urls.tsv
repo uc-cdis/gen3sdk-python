@@ -1,0 +1,12 @@
+authz	acl	file_size	md5	urls
+/programs/DEV/projects/test	DEV  test	123	1596f493ba9ec53023fca640fb69bd3b	gs://test/test.txt s3://testaws/aws/test.txt wrong_protocol://test_bucket/test.txt
+/programs/DEV/projects/test2	DEV	235	d9a68f3d5d9ce03f8a08f50924247223	s3://
+/programs/DEV/projects/test3 /programs/DEV/projects/test3bak	DEV test3	334	51bf75c48761b2e755adc1340e5a9259	gs://
+/programs/DEV/projects/test3 /programs/DEV/projects/test3bak	DEV test3	334	51bf75c48761b2e755adc1340e5a9250	test_bucket/aws/test.txt
+/programs/DEV/projects/test3 /programs/DEV/projects/test3bak	DEV test3	334	51bf75c48761b2e755adc1340e5a9251	s3:/test_bucket/aws/test.txt
+/programs/DEV/projects/test3 /programs/DEV/projects/test3bak	DEV test3	334	51bf75c48761b2e755adc1340e5a9252	s3:test_bucket/aws/test.txt
+/programs/DEV/projects/test3 /programs/DEV/projects/test3bak	DEV test3	334	51bf75c48761b2e755adc1340e5a9253	://test_bucket/aws/test.txt
+/programs/DEV/projects/test3 /programs/DEV/projects/test3bak	DEV test3	334	51bf75c48761b2e755adc1340e5a9254	s3test_bucket/aws/test.txt
+/programs/DEV/projects/test3 /programs/DEV/projects/test3bak	DEV test3	334	51bf75c48761b2e755adc1340e5a9255	https://www.uchicago.edu
+/programs/DEV/projects/test3 /programs/DEV/projects/test3bak	DEV test3	334	51bf75c48761b2e755adc1340e5a9256	https://www.uchicago.edu/about
+/programs/DEV/projects/test3 /programs/DEV/projects/test3bak	DEV test3	334	51bf75c48761b2e755adc1340e5a9257	google.com/path
