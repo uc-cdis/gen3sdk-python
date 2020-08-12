@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gen3 Auth Helper &#8212; Gen3 SDK  documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -37,7 +37,7 @@
 <h1>Gen3 Auth Helper<a class="headerlink" href="#gen3-auth-helper" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt id="gen3.auth.Gen3Auth">
-<em class="property">class </em><code class="sig-prename descclassname">gen3.auth.</code><code class="sig-name descname">Gen3Auth</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">endpoint</span></em>, <em class="sig-param"><span class="n">refresh_file</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">refresh_token</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/auth.html#Gen3Auth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.auth.Gen3Auth" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">gen3.auth.</code><code class="sig-name descname">Gen3Auth</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">endpoint</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">refresh_file</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">refresh_token</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">idp</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/auth.html#Gen3Auth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.auth.Gen3Auth" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">requests.auth.AuthBase</span></code></p>
 <p>Gen3 auth helper class for use with requests auth.</p>
 <p>Implements requests.auth.AuthBase in order to support JWT authentication.
@@ -46,9 +46,10 @@ Automatically refreshes access tokens when they expire.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>endpoint</strong> (<em>str</em>) – The URL of the data commons.</p></li>
-<li><p><strong>refresh_file</strong> (<em>str</em>) – The file containing the downloaded json web token.</p></li>
-<li><p><strong>refresh_token</strong> (<em>str</em>) – The json web token.</p></li>
+<li><p><strong>endpoint</strong> (<em>str</em><em>, </em><em>opt</em>) – The URL of the data commons. Optional if working in a Gen3 Workspace.</p></li>
+<li><p><strong>refresh_file</strong> (<em>str</em><em>, </em><em>opt</em>) – The file containing the downloaded JSON web token. Optional if working in a Gen3 Workspace.</p></li>
+<li><p><strong>refresh_token</strong> (<em>str</em><em>, </em><em>opt</em>) – The JSON web token. Optional if working in a Gen3 Workspace.</p></li>
+<li><p><strong>idp</strong> (<em>str</em><em>, </em><em>opt</em>) – If working in a Gen3 Workspace, the IDP to use can be specified.</p></li>
 </ul>
 </dd>
 </dl>
