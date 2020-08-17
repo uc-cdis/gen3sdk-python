@@ -4,6 +4,8 @@ from enum import Enum, unique
 import pdb
 from urllib.parse import urlparse
 from base64 import b64encode, b64decode
+import warnings
+from abc import ABC
 
 
 @unique
@@ -12,113 +14,242 @@ class Columns(Enum):
     URL = 2
     SIZE = 3
     AUTHZ = 4
-    ACL = 5
 
 
-class Validator:
-    #  XXX change to variable?
-    def allowed_column_names(self):
-        return []
+class EmptyWarning(Warning):
+    pass
 
-    #  XXX abstract?
+
+#  XXX use
+#  class SingleValueError(ValueError):
+#  pass
+
+
+class MultiValueError(ValueError):
+    pass
+
+
+class Validator(ABC):
+    #  @blah
+    #  @staticmethod
+    #  @abstractmethod
+    #  def allowed_column_names():
+    #  return []
+
     def validate(self, value):
-        return False
+        if value.startswith('"') and value.endswith('"'):
+            value = value[1:-1]
+        self._validate_single_value(value)
+
+    #  XXX abstract
+    #  @abstractmethod
+    #  def _validate_single_value(self, value):
+    #  pass
+
+    def _validate_mulitple_values(self, values):
+        if not values and not self._error_on_empty:
+            warnings.warn(EmptyWarning())
+            return
+
+        split_values = self._parse_values(values)
+        if not split_values:
+            raise ValueError(f'"{values}" is empty, {self._expectation_message}')
+
+        invalid_values = [v for v in split_values if not self._is_single_value_valid(v)]
+
+        if len(invalid_values) == 1:
+            raise ValueError(
+                f'"{invalid_values[0]}" is invalid, {self._expectation_message}'
+            )
+        elif len(invalid_values) > 1:
+            formatted_invalid_values = ", ".join(f'"{s}"' for s in invalid_values)
+            raise MultiValueError(
+                f"{formatted_invalid_values} are invalid, {self._expectation_message}"
+            )
+
+    #  XXX abstract
+    #  XXX classmethod or static
+    #  def _is_single_value_valid(self, value):
+    #  pass
 
     #  XXX catch errors?
     #  XXX rename
-    def _parse_values(self, values):
-        values.translate(values.maketrans("[],\"'", "     "))
+    #  XXX class method or static
+    @staticmethod
+    def _parse_values(values):
+        values = values.translate(values.maketrans("[],\"'", "     "))
         return values.split()
 
 
 class MD5Validator(Validator):
-    def __init__(self, require_non_base64_md5=True):
-        self._require_non_base64_md5 = require_non_base64_md5
+    ALLOWED_COLUMN_NAMES = ("md5", "md5_hash", "md5hash", "hash")
 
-    def allowed_column_names(self):
-        return ["md5"]
+    def __init__(self, allow_base64_encoding=False):
+        self._allow_base64_encoding = allow_base64_encoding
 
-    def validate(self, md5_hash):
-        error_message = None
-        if not self._require_non_base64_md5:
-            try:
-                #  pdb.set_trace()
-                md5_hash_in_bytes = bytes(md5_hash, encoding="utf-8")
-                base64_decoded_md5 = b64decode(md5_hash_in_bytes)
-                if len(base64_decoded_md5) * 8 != 128:
-                    error_message = f'base64 decoded value for "{md5_hash}" contains {len(base64_decoded_md5)*8} bits, expecting 128 bits'
-                if b64encode(b64decode(md5_hash_in_bytes)) != md5_hash_in_bytes:
-                    raise Exception
-            except Exception:
-                error_message = f'"{md5_hash}" is not properly base64 encoded'
-        else:
-            if any(c not in string.hexdigits for c in md5_hash):
-                error_message = f'"{md5_hash}" contains non-hexadecimal characters, expecting each character to be one of "{string.hexdigits}"'
-            if len(md5_hash) != 32:
-                error_message = f'"{md5_hash}" has {len(md5_hash)} hexadecimal characters, expecting 32'
+    #  @classmethod
+    #  @staticmethod
+    #  def allowed_column_names():
+    #  return ["md5", "md5_hash", "md5hash", "hash"]
 
-        if error_message:
-            raise ValueError(error_message)
+    def _validate_single_value(self, md5_hash):
+        if all(c in string.hexdigits for c in md5_hash) and len(md5_hash) == 32:
+            return
+        hex_error_message = (
+            f'"{md5_hash}" is invalid, expecting 32 hexadecimal characters'
+        )
+        if not self._allow_base64_encoding:
+            raise ValueError(hex_error_message)
 
-
-class URLValidator(Validator):
-    def __init__(self, allowed_protocols=["s3", "gs"]):
-        self._allowed_protocols = allowed_protocols
-
-    def allowed_column_names(self):
-        return ["url", "urls"]
-
-    def validate(self, urls):
-        error_messages = []
-        for url in self._parse_values(urls):
-            try:
-                result = urlparse(url)
-                if result.scheme not in self._allowed_protocols or not all(
-                    [result.netloc, result.path]
-                ):
-                    raise ValueError()
-            except:
-                error_messages.append(f'"{url}" is not a valid URL')
-        if error_messages:
-            error_messages.append(
-                f'Expecting URL in format "<protocol>://<hostname>/<path>", with protocol being one of {self._allowed_protocols}'
-            )
-            raise ValueError(". ".join(error_messages))
+        base64_error_message = f"{hex_error_message} or Base64 encoding"
+        try:
+            md5_hash_in_bytes = bytes(md5_hash, encoding="utf-8")
+            base64_decoded_md5 = b64decode(md5_hash_in_bytes)
+            if b64encode(base64_decoded_md5) != md5_hash_in_bytes:
+                raise Exception
+            if len(base64_decoded_md5) * 8 != 128:
+                base64_error_message = f'{base64_error_message}. Base64 decoded value for "{md5_hash}" contains {len(base64_decoded_md5)*8} bits, expecting 128 bits'
+                raise Exception
+        except:
+            raise ValueError(base64_error_message)
 
 
 class SizeValidator(Validator):
-    def allowed_column_names(self):
-        return ["size", "file_size"]
+    ALLOWED_COLUMN_NAMES = ("size", "file_size", "filesize", "file size")
 
-    def validate(self, size):
-        error_message = None
+    #  def allowed_column_names(self):
+    #  return ["size", "file_size", "file size", "filesize"]
+
+    @staticmethod
+    def _validate_single_value(size):
         try:
             x = int(size)
-            if x < 0:
-                error_message = f'"{size}" is negative, expecting non-negative'
         except:
-            error_message = f'"{size}" is not of int type'
+            raise ValueError(f'"{size}" is not an integer')
+        if x < 0:
+            raise ValueError(f'"{size}" is negative, expecting non-negative integer')
 
-        if error_message:
-            raise ValueError(error_message)
+
+class URLValidator(Validator):
+    ALLOWED_COLUMN_NAMES = ("url", "urls")
+
+    def __init__(self, allowed_protocols=["s3", "gs"], error_on_empty=False):
+        self._allowed_protocols = allowed_protocols
+        self._error_on_empty = error_on_empty
+        self._expectation_message = f'expecting URL in format "<protocol>://<hostname>/<path>", with protocol being one of {self._allowed_protocols}'
+
+    #  def allowed_column_names(self):
+    #  return ["url", "urls"]
+
+    #  def validate(self, urls):
+    #  error_messages = []
+    #  if not urls and not self._error_on_empty:
+    #  warnings.warn(Warning("is empty"))
+    #  return
+
+    #  split_urls = self._parse_values(urls)
+    #  if not split_urls:
+    #  error_messages.append(f'"{urls}" does not contain any urls')
+    #  for url in split_urls:
+    #  try:
+    #  result = urlparse(url)
+    #  if result.scheme not in self._allowed_protocols or not all(
+    #  [result.netloc, result.path]
+    #  ):
+    #  raise ValueError()
+
+    #  except:
+    #  error_messages.append(f'"{url}" is not a valid URL')
+    #  if error_messages:
+    #  error_messages.append(
+    #  f'Expecting URL in format "<protocol>://<hostname>/<path>", with protocol being one of {self._allowed_protocols}'
+    #  )
+    #  raise ValueError(". ".join(error_messages))
+
+    #  def validate(self, urls):
+    #  if not urls and not self._error_on_empty:
+    #  warnings.warn(EmptyWarning())
+    #  return
+
+    #  split_urls = self._parse_values(urls)
+    #  if not split_urls:
+    #  raise ValueError(f'"{urls}" is empty')
+
+    #  invalid_urls = []
+    #  for url in split_urls:
+    #  try:
+    #  result = urlparse(url)
+    #  if result.scheme not in self._allowed_protocols or not all(
+    #  [result.netloc, result.path]
+    #  ):
+    #  raise Exception()
+    #  except:
+    #  invalid_urls.append(url)
+
+    #  suffix = f'expecting URL in format "<protocol>://<hostname>/<path>", with protocol being one of {self._allowed_protocols}'
+    #  if len(invalid_urls) == 1:
+    #  raise ValueError(f'"{invalid_urls[0]}" is invalid, {suffix}')
+    #  elif len(invalid_urls) > 1:
+    #  formatted_invalid_urls = ', '.join(f'"{s}"' for s in invalid_urls)
+    #  raise MultiValueError(f'{formatted_invalid_urls} are invalid, {suffix}')
+
+    def validate(self, urls):
+        self._validate_mulitple_values(urls)
+
+    def _is_single_value_valid(self, url):
+        try:
+            result = urlparse(url)
+            if (
+                result.scheme not in self._allowed_protocols
+                or not all([result.netloc, result.path])
+                or result.path == "/"
+            ):
+                raise Exception()
+        except:
+            return False
+
+        return True
 
 
 class AuthzValidator(Validator):
-    def allowed_column_names(self):
-        return ["authz"]
+    ALLOWED_COLUMN_NAMES = (
+        "authz",
+        "authz_resource",
+        "authz_resources",
+        "authz resource",
+        "authz resources",
+    )
+
+    def __init__(self):
+        self._error_on_empty = False
+        self._expectation_message = f'expecting authz resource in format "/<resource>/<subresource>/.../<subresource>"'
+
+    #  def allowed_column_names(self):
+    #  return ["authz"]
+
+    #  def validate(self, authz_resources):
+    #  error_messages = []
+    #  for authz_resource in self._parse_values(authz_resources):
+    #  if not authz_resource.startswith("/") or not all(
+    #  authz_resource.strip("/").split("/")
+    #  ):
+    #  error_messages.append(
+    #  f'"{authz_resource}" is not a valid authz resource'
+    #  )
+
+    #  if error_messages:
+    #  #  XXX /.../
+    #  error_messages.append(
+    #  f'Expecting authz resource in format "/<resource>/<subresource>/.../<subresource>"'
+    #  )
+    #  raise ValueError(". ".join(error_messages))
 
     def validate(self, authz_resources):
-        error_messages = []
-        for authz_resource in self._parse_values(authz_resources):
-            if not authz_resource.startswith("/") or not all(
-                authz_resource.strip("/").split("/")
-            ):
-                error_messages.append(
-                    f'"{authz_resource}" is not a valid authz resource'
-                )
+        self._validate_mulitple_values(authz_resources)
 
-        if error_messages:
-            error_messages.append(
-                f'Expecting authz resource in format "/<resource>/<subresource>"'
-            )
-            raise ValueError(". ".join(error_messages))
+    @staticmethod
+    def _is_single_value_valid(authz_resource):
+        #  def _is_single_value_valid(self, authz_resource):
+        return authz_resource.startswith("/") and all(
+            authz_resource.strip("/").split("/")
+        )

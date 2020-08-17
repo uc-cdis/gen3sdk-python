@@ -1,0 +1,6 @@
+authz	acl	file_size	md5	urls
+invalid_authz	DEV	123	1596f493ba9ec53023fca640fb69bd3b	gs://test/test.txt
+/	DEV	123	1596f493ba9ec53023fca640fb69bd3c	gs://test/test.txt
+//	DEV	123	1596f493ba9ec53023fca640fb69bd3d	gs://test/test.txt
+///	DEV	123	1596f493ba9ec53023fca640fb69bd3e	gs://test/test.txt
+/programs invalid_authz2	DEV	123	1596f493ba9ec53023fca640fb69bd3e	gs://test/test.txt
