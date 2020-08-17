@@ -1,7 +1,6 @@
-#  XXX reorder
-import csv
-
 import logging
+import warnings
+import csv
 
 from gen3.tools.indexing.manifest_columns import (
     Columns,
@@ -12,9 +11,6 @@ from gen3.tools.indexing.manifest_columns import (
     EmptyWarning,
     MultiValueError,
 )
-
-import warnings
-import pdb
 
 
 def is_valid_manifest_format(
@@ -79,7 +75,6 @@ def _get_manifest_column_names_to_validators(
     manifest_column_names_to_validators = {}
     if column_names_to_enums is None:
         for validator in enums_to_validators.values():
-            #  for allowed_column_name in validator.allowed_column_names():
             for allowed_column_name in validator.ALLOWED_COLUMN_NAMES:
                 if allowed_column_name in manifest_column_names:
                     manifest_column_names_to_validators[allowed_column_name] = validator
@@ -97,9 +92,6 @@ def _get_manifest_column_names_to_validators(
 def _validate_manifest_column_names(
     manifest_column_names_to_validators, enums_to_validators, error_on_empty_url
 ):
-    #  pdb.set_trace()
-
-    #  manifest_column_names_are_valid = True
     def check_column(column_enum):
         validator = enums_to_validators[column_enum]
         if validator not in manifest_column_names_to_validators.values():
@@ -112,36 +104,7 @@ def _validate_manifest_column_names(
 
         return True
 
-    #  required_columns = [Columns.MD5, Columns.SIZE]
-    #  if error_on_empty_url:
-    #  required_columns.append(Columns.URL)
-    #  elif enums_to_validators[Columns.URL] not in manifest_column_names_to_validators.values():
-    #  logging.warning(f'line 0, ')
-
-    #  manifest_columns_names_are_valid = all([is_column_present(c) for c in required_columns])
     return all([check_column(c) for c in [Columns.MD5, Columns.SIZE, Columns.URL]])
-    #  for column_enum in [Columns.MD5, Columns.SIZE, Columns.URL]:
-    #  check_column(column_enum)
-
-    #  return manifest_column_names_are_valid
-
-    #  if enums_to_validators[Columns.MD5] not in manifest_column_names_to_validators.values():
-    #  #  XXX better message
-    #  logging.error("line 0, md5 is a required column name")
-    #  column_names_are_valid = False
-    #  if enums_to_validators[Columns.SIZE] not in manifest_column_names_to_validators.values():
-    #  #  XXX better message
-    #  logging.error("line 0, size is a required column name")
-    #  column_names_are_valid = False
-    #  if enums_to_validators[Columns.SIZE] not in manifest_column_names_to_validators.values():
-    #  #  XXX better message
-    #  logging.error("line 0, size is a required column name")
-    #  column_names_are_valid = False
-    #  XXX detect duplicate columns
-    #  return column_names_are_valid
-
-
-#  def _log_column_names_to_validators(mkjhh)
 
 
 def _log_manifest_column_names_to_validators(manifest_column_names_to_validators):
@@ -149,7 +112,7 @@ def _log_manifest_column_names_to_validators(manifest_column_names_to_validators
         logging.error("line 1, no manifest columns were mapped to validators")
     for manifest_column_name, validator in manifest_column_names_to_validators.items():
         logging.info(
-            f'mapped manifest column "{manifest_column_name}" to instance of "{validator.__class__.__name__}" class'
+            f'mapped manifest column "{manifest_column_name}" to "{validator.__class__.__name__}" class instance'
         )
 
 
@@ -168,8 +131,6 @@ def _validate_rows(dsv_reader, manifest_column_names_to_validators, line_limit=N
                 validator = manifest_column_names_to_validators[column_name]
                 try:
                     validator.validate(value)
-                #  except Warning as w:
-                #  logging.warning(f'line {line_number}, "{column_name}" value {w}')
                 except EmptyWarning:
                     logging.warning(
                         f'line {line_number}, "{column_name}" field is empty'
@@ -179,11 +140,7 @@ def _validate_rows(dsv_reader, manifest_column_names_to_validators, line_limit=N
                     logging.error(f'line {line_number}, "{column_name}" values {e}')
                 except ValueError as e:
                     rows_are_valid = False
-                    logging.error(
-                        #  f'line {line_number}, validation failed for value in "{column_name}" column: {e}'
-                        f'line {line_number}, "{column_name}" value {e}'
-                        #  f'line {line_number}, "{column_name}" validation failed: {e}'
-                    )
+                    logging.error(f'line {line_number}, "{column_name}" value {e}')
 
         if line_number == line_limit:
             break
