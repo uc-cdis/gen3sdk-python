@@ -7,11 +7,17 @@ from gen3.tools.indexing.manifest_columns import Columns
 
 @pytest.fixture(autouse=True)
 def set_log_level_to_error():
+    """
+    By default, only log errors
+    """
     logging.getLogger().setLevel(logging.ERROR)
     yield
 
 
 def test_is_valid_manifest_format_with_no_errors(caplog):
+    """
+    Test that no errors occur for manifest without errors
+    """
     assert (
         is_valid_manifest_format(
             "tests/verify_manifest_format/manifests/manifest_with_no_errors.tsv"
@@ -22,11 +28,20 @@ def test_is_valid_manifest_format_with_no_errors(caplog):
 
 
 def test_is_valid_manifest_format_with_csv(caplog):
+    """
+    Test that alternative delimiter can be automatically detected
+    """
     assert is_valid_manifest_format("tests/test_manifest.csv") == True
     assert caplog.text == ""
 
 
 def manifest_with_many_types_of_errors_helper(error_log):
+    """
+    Helper method to assert that invalid values appear in error log generated
+    after validating:
+        "tests/verify_manifest_format/manifests/manifest_with_many_types_of_errors.tsv"
+        "tests/verify_manifest_format/manifests/manifest_with_custom_column_names.tsv"
+    """
     assert '"invalid_authz"' in error_log
     assert '"invalid_int"' in error_log
     assert '"invalid_md5"' in error_log
@@ -34,6 +49,10 @@ def manifest_with_many_types_of_errors_helper(error_log):
 
 
 def test_is_valid_manifest_format_with_many_types_of_errors(caplog):
+    """
+    Test that errors with md5, file size, url, and authz all get detected and
+    error logged
+    """
     result = is_valid_manifest_format(
         "tests/verify_manifest_format/manifests/manifest_with_many_types_of_errors.tsv",
     )
@@ -43,6 +62,9 @@ def test_is_valid_manifest_format_with_many_types_of_errors(caplog):
 
 
 def test_is_valid_manifest_format_using_column_names_to_enums(caplog):
+    """
+    Test that custom manifest column names can be used
+    """
     column_names_to_enums = {
         "md5_with_underscores": Columns.MD5,
         "file size with spaces": Columns.SIZE,
@@ -59,6 +81,11 @@ def test_is_valid_manifest_format_using_column_names_to_enums(caplog):
 
 
 def manifest_with_invalid_md5_values_helper(error_log):
+    """
+    Helper method to assert that invalid values appear in error log generated
+    after validating:
+    "tests/verify_manifest_format/manifests/manifest_with_invalid_md5_values.tsv"
+    """
     valid_md5 = '"1596f493ba9ec53023fca640fb69bd3b"'  # pragma: allowlist secret
     assert valid_md5 not in error_log
 
@@ -75,6 +102,9 @@ def manifest_with_invalid_md5_values_helper(error_log):
 
 
 def test_is_valid_manifest_format_with_invalid_md5_values(caplog):
+    """
+    Test that invalid md5 errors are detected and error logged
+    """
     result = is_valid_manifest_format(
         "tests/verify_manifest_format/manifests/manifest_with_invalid_md5_values.tsv"
     )
@@ -87,6 +117,10 @@ def test_is_valid_manifest_format_with_invalid_md5_values(caplog):
 
 
 def test_is_valid_manifest_format_allowing_base64_encoded_md5(caplog):
+    """
+    Test that valid Base64 encoded md5 does not get reported in error log when
+    allow_base64_encoded_md5 is used
+    """
     result = is_valid_manifest_format(
         "tests/verify_manifest_format/manifests/manifest_with_invalid_md5_values.tsv",
         allow_base64_encoded_md5=True,
@@ -100,6 +134,9 @@ def test_is_valid_manifest_format_allowing_base64_encoded_md5(caplog):
 
 
 def test_is_valid_manifest_format_with_invalid_sizes(caplog):
+    """
+    Test that invalid sizes are detected and error logged
+    """
     result = is_valid_manifest_format(
         "tests/verify_manifest_format/manifests/manifest_with_invalid_sizes.tsv"
     )
@@ -112,6 +149,10 @@ def test_is_valid_manifest_format_with_invalid_sizes(caplog):
 
 
 def test_is_valid_manifest_format_with_invalid_urls(caplog):
+    """
+    Test that invalid urls are detected and error logged
+    Test that empty arrays and empty quote pairs are detected and error logged
+    """
     result = is_valid_manifest_format(
         "tests/verify_manifest_format/manifests/manifest_with_invalid_urls.tsv"
     )
@@ -143,6 +184,9 @@ def test_is_valid_manifest_format_with_invalid_urls(caplog):
 
 
 def test_is_valid_manifest_format_using_allowed_protocols(caplog):
+    """
+    Test that user defined protocols can be used
+    """
     result = is_valid_manifest_format(
         "tests/verify_manifest_format/manifests/manifest_with_custom_url_protocols.tsv",
         allowed_protocols=["s3", "gs", "http", "https"],
@@ -159,6 +203,9 @@ def test_is_valid_manifest_format_using_allowed_protocols(caplog):
 
 
 def test_is_valid_manifest_format_with_invalid_authz_resources(caplog):
+    """
+    Test that invalid authz resources are detected and reported in error log
+    """
     result = is_valid_manifest_format(
         "tests/verify_manifest_format/manifests/manifest_with_invalid_authz_resources.tsv",
     )
@@ -172,6 +219,9 @@ def test_is_valid_manifest_format_with_invalid_authz_resources(caplog):
 
 
 def test_is_valid_manifest_format_using_line_limit(caplog):
+    """
+    Test that only first few lines of manifest can be validated
+    """
     result = is_valid_manifest_format(
         "tests/verify_manifest_format/manifests/manifest_with_invalid_sizes.tsv",
         line_limit=3,
@@ -185,6 +235,9 @@ def test_is_valid_manifest_format_using_line_limit(caplog):
 
 
 def test_is_valid_manifest_format_with_empty_url(caplog):
+    """
+    Test that by default, completely empty url values are allowed
+    """
     result = is_valid_manifest_format(
         "tests/verify_manifest_format/manifests/manifest_with_empty_url.tsv",
     )
@@ -193,6 +246,10 @@ def test_is_valid_manifest_format_with_empty_url(caplog):
 
 
 def test_is_valid_manifest_format_using_error_on_empty_url(caplog):
+    """
+    Test that completely empty urls are detected and reported in error log when
+    using error_on_empty_url
+    """
     result = is_valid_manifest_format(
         "tests/verify_manifest_format/manifests/manifest_with_empty_url.tsv",
         error_on_empty_url=True,
@@ -202,6 +259,9 @@ def test_is_valid_manifest_format_using_error_on_empty_url(caplog):
 
 
 def test_is_valid_manifest_with_wide_row(caplog):
+    """
+    Test that warning is generated for a wide row with an extra value
+    """
     logging.getLogger().setLevel(logging.WARNING)
     result = is_valid_manifest_format(
         "tests/verify_manifest_format/manifests/manifest_with_wide_row.tsv",
@@ -212,6 +272,10 @@ def test_is_valid_manifest_with_wide_row(caplog):
 
 
 def test_is_valid_manifest_with_missing_md5_column(caplog):
+    """
+    Test that completely missing md5 column is detected and reported in error
+    log
+    """
     result = is_valid_manifest_format(
         "tests/verify_manifest_format/manifests/manifest_with_missing_md5_column.tsv",
     )
@@ -223,6 +287,10 @@ def test_is_valid_manifest_with_missing_md5_column(caplog):
 
 
 def test_is_valid_manifest_with_missing_size_column(caplog):
+    """
+    Test that completely missing size column is detected and reported in error
+    log
+    """
     result = is_valid_manifest_format(
         "tests/verify_manifest_format/manifests/manifest_with_missing_size_column.tsv",
     )
@@ -234,6 +302,10 @@ def test_is_valid_manifest_with_missing_size_column(caplog):
 
 
 def test_is_valid_manifest_with_missing_url_column(caplog):
+    """
+    Test that a warning is generated for completely missing url column by
+    default
+    """
     logging.getLogger().setLevel(logging.WARNING)
     result = is_valid_manifest_format(
         "tests/verify_manifest_format/manifests/manifest_with_missing_url_column.tsv",
@@ -246,6 +318,10 @@ def test_is_valid_manifest_with_missing_url_column(caplog):
 
 
 def test_is_valid_manifest_with_missing_url_column_and_error_on_empty_url(caplog):
+    """
+    Test that an error is generated for completely missing url column when using
+    error_on_empty_url
+    """
     result = is_valid_manifest_format(
         "tests/verify_manifest_format/manifests/manifest_with_missing_url_column.tsv",
         error_on_empty_url=True,
