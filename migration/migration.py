@@ -1288,19 +1288,22 @@ class Gen3Migration:
 
         # Check for the common missing root nodes
         for missing_node in missing_nodes:
-            if missing_node not in all_nodes:
+            if missing_node not in all_nodes and missing_node in list(dd):
                 suborder[missing_node]=0
 
         checked = []
+        node = all_nodes.pop(0)
         while len(all_nodes) > 0:
 
-            node = all_nodes.pop(0)
-            #print("\tDetermining order for node '{}'.".format(node)) # for trouble-shooting
+            if node in suborder.keys():
+                node = all_nodes.pop(0)
+
+            print("\t\tDetermining order for node '{}'.".format(node)) # for trouble-shooting
 
             node_links = dd[node]['links']
-            for link in node_links:
+            for link in node_links: #link = node_links[0]
                 if 'subgroup' in list(link):
-                    for subgroup in link['subgroup']:
+                    for subgroup in link['subgroup']:#subgroup=link['subgroup'][0]
 
                         if subgroup['target_type'] == 'project':
                             suborder[node]=1
@@ -1314,19 +1317,32 @@ class Gen3Migration:
                                 suborder[node] = 2
                             else:
                                 checked.append(node)
-                    if node in list(suborder.keys()):
-                        continue
-                    else:
-                        all_nodes.append(node)
+                        elif subgroup['target_type'] in all_nodes:
+                            all_nodes.append(node)
+                            node = subgroup['target_type']
+                            all_nodes.remove(subgroup['target_type'])
+                    # if node in list(suborder.keys()):
+                    #     continue
+                    # else:
+                    #     all_nodes.append(node)
+                    #     node = all_nodes.pop(0)
+
                 elif 'target_type' in list(link):
                     if link['target_type'] == 'project':
                         suborder[node]=1
                     elif link['target_type'] in list(suborder.keys()):
                         suborder[node]=suborder[link['target_type']]+1
+                    elif link['target_type'] in all_nodes:
+                        all_nodes.append(node)
+                        node = link['target_type']
+                        all_nodes.remove(link['target_type'])
                     else: #skip it for now
                         all_nodes.append(node)
+                        node = all_nodes.pop(0)
+
                 else:
                     print("\tNo link target_type found for node '{}'".format(node))
+
         #suborder = sorted(suborder.items(), key=operator.itemgetter(1))
         suborder = {key:val for key, val in suborder.items() if val > 0}
         print("\tSubmission Order: \n\t\t{}".format(suborder))
@@ -1821,3 +1837,108 @@ class Gen3Migration:
                 print("Can't find link '{}.submitter_id' or '{}.submitter_id#1' in '{}' TSV: {}".format(link_def))
 
         return links
+
+
+    def move_strings_to_other(self,project_id,node,props,name='temp'):
+        """ Move strings from numeric properties into a different string property.
+            Not useful in most situations, this script is for legacy data where a "mixed type" of both integers and strings were allowed.
+
+            Arguments:
+                project_id (str): The project_id
+                node (str): the node with the props.
+                props (dict): props = {"num_prop":"str_prop"} where num_prop is the prop with mixed type data that is now numeric only and str_prop is the prop for the string data to be moved into.
+        """
+
+        df = self.read_tsv(project_id=project_id,node=node,name=name)
+        # filename = "{}_{}_{}.tsv".format(name,project_id,node)
+
+        num_prop = list(props)[0]
+        str_prop = props[num_prop]
+
+        nn = df.loc[df[num_prop].notnull()]
+
+        if nn.empty:
+            print("\t\tproperty '{}' has all null values in '{}' TSV of project '{}'!".format(num_prop,node,project_id))
+
+        elif num_prop in list(nn):
+            str_data = nn.loc[~nn[num_prop].str.isnumeric()]
+            num_data = nn.loc[nn[num_prop].str.isnumeric()]
+
+            # move the strings from num_prop to str_prop
+            nn.loc[~nn[num_prop].str.isnumeric(), str_prop] = nn[num_prop]
+
+            # null the strings in the numeric prop
+            nn.loc[~nn[num_prop].str.isnumeric(), num_prop] = np.nan
+
+            df[num_prop] = nn[num_prop]
+            df[str_prop] = nn[str_prop]
+
+            df = self.write_tsv(df,project_id,node,name=name)
+            print("\t\t{} numeric value(s) kept in prop '{}'; {} string values moved to prop '{}' in '{}' TSV.".format(len(num_data),num_prop,len(str_data),str_prop,node))
+
+        else:
+            print("\t\tproperty '{}' not found in '{}' TSV of project '{}'!".format(num_prop,node,project_id))
+
+        return df
+
+
+    def drop_empty_links(self,project_id,node,dd,remove_not_required=True,remove_empty=False,name='temp'):
+        """
+        Drops the 'links.id' and 'links.submitter_id' column from node TSV, where 'links' is the backref of the parent node(s) if the links are all null.
+
+        Example:
+            drop_all_links(project_id=project_id,node=node)
+        """
+
+        print("\tDropping all links in '{}' TSV.".format(node))
+
+        df = self.read_tsv(project_id=project_id,node=node,name=name)
+        # filename = "{}_{}_{}.tsv".format(name,project_id,node)
+
+        link_regex = re.compile('(.+)\.submitter_id')
+        df_links = [link_regex.match(header).groups()[0] for header in list(df) if link_regex.match(header) is not None]
+
+        remove_links = []
+
+        # remove not required links:
+        if remove_not_required is True:
+            not_required_links = [df_link for df_link in df_links if df_link not in dd[node]['required']]
+            remove_links += not_required_links
+
+        # remove empty links (default is False)
+        if remove_empty is True:
+            empty_links = [df_link for df_link in df_links if not df.loc[df['{}.submitter_id'.format(df_link)].isnull()].empty]
+            remove_links += empty_links
+
+        remove_links = list(set(remove_links))
+        dropped = 0
+
+        for link in remove_links:
+            sid = "{}.submitter_id".format(link)
+            uuid = "{}.id".format(link)
+            if sid in df.columns:
+                df = df.drop(columns=[sid])
+                dropped += 1
+            if uuid in df.columns:
+                df = df.drop(columns=[uuid])
+                dropped += 1
+            count = 1
+            sid = "{}.submitter_id#{}".format(link,count)
+            while sid in df.columns:
+                df = df.drop(columns=[sid])
+                dropped += 1
+                count += 1
+                sid = "{}.submitter_id#{}".format(link,count)
+            count = 1
+            uuid = "{}.id#{}".format(link,count)
+            while uuid in df.columns:
+                df = df.drop(columns=[uuid])
+                dropped += 1
+                count += 1
+                uuid = "{}.submitter_id#{}".format(link,count)
+        if dropped > 0:
+            df = self.write_tsv(df,project_id,node,name=name)
+            print("\tLinks {} dropped from '{}' TSV.".format(remove_links,node))
+        else:
+            print("\tNone of {} links found in '{}' TSV.".format(remove_links,node))
+        return df
