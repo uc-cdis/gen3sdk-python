@@ -1861,14 +1861,16 @@ class Gen3Migration:
             print("\t\tproperty '{}' has all null values in '{}' TSV of project '{}'!".format(num_prop,node,project_id))
 
         elif num_prop in list(nn):
-            str_data = nn.loc[~nn[num_prop].str.isnumeric()]
-            num_data = nn.loc[nn[num_prop].str.isnumeric()]
+            str_data = nn.loc[~nn[num_prop].astype(str).str.replace('.', '', regex=False).str.isdigit()]
+            num_data = nn.loc[nn[num_prop].astype(str).str.replace('.', '', regex=False).str.isdigit()]
 
             # move the strings from num_prop to str_prop
-            nn.loc[~nn[num_prop].str.isnumeric(), str_prop] = nn[num_prop]
+            nn.loc[~nn[num_prop].astype(str).str.replace('.', '', regex=False).str.isdigit(), str_prop] = nn[num_prop]
+            #nn.loc[~nn[num_prop].str.isnumeric(), str_prop] = nn[num_prop]
 
             # null the strings in the numeric prop
-            nn.loc[~nn[num_prop].str.isnumeric(), num_prop] = np.nan
+            nn.loc[~nn[num_prop].astype(str).str.replace('.', '', regex=False).str.isdigit(), num_prop] = np.nan
+            #nn.loc[~nn[num_prop].str.isnumeric(), num_prop] = np.nan
 
             df[num_prop] = nn[num_prop]
             df[str_prop] = nn[str_prop]
