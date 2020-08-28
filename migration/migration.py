@@ -1327,7 +1327,7 @@ class Gen3Migration:
                     #     all_nodes.append(node)
                     #     node = all_nodes.pop(0)
 
-                elif 'target_type' in list(link):
+                elif 'target_type' in list(link) and link['required'] is True:
                     if link['target_type'] == 'project':
                         suborder[node]=1
                     elif link['target_type'] in list(suborder.keys()):
