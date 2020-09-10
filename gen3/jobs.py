@@ -13,10 +13,12 @@ import time
 
 from gen3.utils import append_query_params, DEFAULT_BACKOFF_SETTINGS
 
+# sower's "action" mapping to the relevant job
 INGEST_METADATA_JOB = "ingest-metadata-manifest"
 DBGAP_METADATA_JOB = "get-dbgap-metadata"
 INDEX_MANIFEST_JOB = "index-object-manifest"
 DOWNLOAD_MANIFEST_JOB = "download-indexd-manifest"
+MERGE_MANIFEST_JOB = "merge-manifests"
 
 
 class Gen3Jobs:
