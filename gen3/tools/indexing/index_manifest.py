@@ -149,8 +149,8 @@ def _get_and_verify_fileinfos_from_tsv_manifest(
                     fieldnames[fieldnames.index(key)] = "guid"
                     standardized_key = "guid"
                 elif key.lower() in FILENAME:
-                    fieldnames[fieldnames.index(key)] = "filename"
-                    standardized_key = "filename"
+                    fieldnames[fieldnames.index(key)] = "file_name"
+                    standardized_key = "file_name"
                 elif key.lower() in MD5:
                     fieldnames[fieldnames.index(key)] = "md5"
                     standardized_key = "md5"
@@ -307,6 +307,11 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
         else:
             acl = []
 
+        if "file_name" in fi:
+            file_name = _standardize_str(fi["file_name"])
+        else:
+            file_name = ""
+
         doc = None
 
         if fi.get("guid"):
@@ -348,6 +353,10 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
                     doc.authz = authz
                     need_update = True
 
+                if doc.file_name != file_name:
+                    doc.file_name = file_name
+                    need_update = True
+
                 if need_update:
                     logging.info(f"updating {doc.did} to: {doc.to_json()}")
                     doc.patch()
@@ -364,6 +373,7 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
                 "acl": acl,
                 "authz": authz,
                 "urls": urls,
+                "file_name": file_name,
             }
             logging.info(f"creating: {record}")
             doc = indexclient.create(**record)

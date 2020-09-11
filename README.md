@@ -21,6 +21,7 @@ The docs here contain general descriptions of the different pieces of the SDK an
     - [Download Manifest](#download-manifest)
     - [Verify Manifest](#verify-manifest)
     - [Indexing Manifest](#indexing-manifest)
+    - [Merge Bucket Manifests](#merge-bucket-manifests)
 - [Metadata Tools](#metadata-tools)
     - [Ingest Manifest](#ingest-manifest)
     - [Searching Indexd to get GUID for Metadata Ingestion](#searching-indexd-to-get-guid-for-metadata-ingestion)
@@ -520,6 +521,34 @@ def main():
 if __name__ == "__main__":
     main()
 
+```
+
+### Merge Bucket Manifests
+
+To merge bucket manifests contained in `/input_manifests` into one output manifest on the basis of `md5`:
+```
+import sys
+import logging
+
+from gen3.tools.indexing import merge_bucket_manifests
+
+logging.basicConfig(filename="output.log", level=logging.DEBUG)
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
+INPUT_MANIFEST_DIRECTORY = "./input_manifests"
+OUTPUT_MANIFEST = "merged-bucket-manifest.tsv"
+
+
+def main():
+    merge_bucket_manifests(
+        directory=INPUT_MANIFEST_DIRECTORY,
+        merge_column="md5",
+        output_manifest=OUTPUT_MANIFEST,
+    )
+
+
+if __name__ == "__main__":
+    main()
 ```
 
 ## Metadata Tools

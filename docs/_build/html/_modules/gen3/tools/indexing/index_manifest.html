@@ -4,6 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>gen3.tools.indexing.index_manifest &#8212; Gen3 SDK  documentation</title>
     <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
@@ -182,8 +183,8 @@
                     <span class="n">fieldnames</span><span class="p">[</span><span class="n">fieldnames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;guid&quot;</span>
                     <span class="n">standardized_key</span> <span class="o">=</span> <span class="s2">&quot;guid&quot;</span>
                 <span class="k">elif</span> <span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">FILENAME</span><span class="p">:</span>
-                    <span class="n">fieldnames</span><span class="p">[</span><span class="n">fieldnames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;filename&quot;</span>
-                    <span class="n">standardized_key</span> <span class="o">=</span> <span class="s2">&quot;filename&quot;</span>
+                    <span class="n">fieldnames</span><span class="p">[</span><span class="n">fieldnames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;file_name&quot;</span>
+                    <span class="n">standardized_key</span> <span class="o">=</span> <span class="s2">&quot;file_name&quot;</span>
                 <span class="k">elif</span> <span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">MD5</span><span class="p">:</span>
                     <span class="n">fieldnames</span><span class="p">[</span><span class="n">fieldnames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;md5&quot;</span>
                     <span class="n">standardized_key</span> <span class="o">=</span> <span class="s2">&quot;md5&quot;</span>
@@ -340,6 +341,11 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">acl</span> <span class="o">=</span> <span class="p">[]</span>
 
+        <span class="k">if</span> <span class="s2">&quot;file_name&quot;</span> <span class="ow">in</span> <span class="n">fi</span><span class="p">:</span>
+            <span class="n">file_name</span> <span class="o">=</span> <span class="n">_standardize_str</span><span class="p">(</span><span class="n">fi</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">file_name</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
         <span class="n">doc</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="k">if</span> <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;guid&quot;</span><span class="p">):</span>
@@ -381,6 +387,10 @@
                     <span class="n">doc</span><span class="o">.</span><span class="n">authz</span> <span class="o">=</span> <span class="n">authz</span>
                     <span class="n">need_update</span> <span class="o">=</span> <span class="kc">True</span>
 
+                <span class="k">if</span> <span class="n">doc</span><span class="o">.</span><span class="n">file_name</span> <span class="o">!=</span> <span class="n">file_name</span><span class="p">:</span>
+                    <span class="n">doc</span><span class="o">.</span><span class="n">file_name</span> <span class="o">=</span> <span class="n">file_name</span>
+                    <span class="n">need_update</span> <span class="o">=</span> <span class="kc">True</span>
+
                 <span class="k">if</span> <span class="n">need_update</span><span class="p">:</span>
                     <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;updating </span><span class="si">{</span><span class="n">doc</span><span class="o">.</span><span class="n">did</span><span class="si">}</span><span class="s2"> to: </span><span class="si">{</span><span class="n">doc</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
                     <span class="n">doc</span><span class="o">.</span><span class="n">patch</span><span class="p">()</span>
@@ -397,6 +407,7 @@
                 <span class="s2">&quot;acl&quot;</span><span class="p">:</span> <span class="n">acl</span><span class="p">,</span>
                 <span class="s2">&quot;authz&quot;</span><span class="p">:</span> <span class="n">authz</span><span class="p">,</span>
                 <span class="s2">&quot;urls&quot;</span><span class="p">:</span> <span class="n">urls</span><span class="p">,</span>
+                <span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="n">file_name</span><span class="p">,</span>
             <span class="p">}</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;creating: </span><span class="si">{</span><span class="n">record</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="n">doc</span> <span class="o">=</span> <span class="n">indexclient</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="o">**</span><span class="n">record</span><span class="p">)</span>
