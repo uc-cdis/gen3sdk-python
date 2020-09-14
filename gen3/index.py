@@ -594,7 +594,7 @@ class Gen3Index:
     ### Put Requests
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    def update_blank(self, guid, rev, hashes, size):
+    def update_blank(self, guid, rev, hashes, size, urls=None, authz=None):
         """
 
         Update only hashes and size for a blank index
@@ -607,13 +607,18 @@ class Gen3Index:
             size (int): file size metadata associated with a given uuid
 
         """
-        p = {"rev": rev}
+        params = {"rev": rev}
         json = {"hashes": hashes, "size": size}
+        if urls:
+            json["urls"] = urls
+        if authz:
+            json["authz"] = authz
+
         response = self.client._put(
             "index/blank/",
             guid,
             headers={"content-type": "application/json"},
-            params=p,
+            params=params,
             auth=self.client.auth,
             data=client.json_dumps(json),
         )
