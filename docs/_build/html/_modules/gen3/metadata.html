@@ -1,0 +1,504 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>gen3.metadata &#8212; Gen3 SDK  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for gen3.metadata</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Contains class for interacting with Gen3&#39;s Metadata Service.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">aiohttp</span>
+<span class="kn">import</span> <span class="nn">backoff</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">urllib.parse</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">append_query_params</span><span class="p">,</span> <span class="n">DEFAULT_BACKOFF_SETTINGS</span>
+
+
+<div class="viewcode-block" id="Gen3Metadata"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata">[docs]</a><span class="k">class</span> <span class="nc">Gen3Metadata</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class for interacting with the Gen3 Metadata services.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        This generates the Gen3Metadata class pointed at the sandbox commons while</span>
+<span class="sd">        using the credentials.json downloaded from the commons profile page.</span>
+
+<span class="sd">        &gt;&gt;&gt; endpoint = &quot;https://nci-crdc-demo.datacommons.io&quot;</span>
+<span class="sd">        ... auth = Gen3Auth(endpoint, refresh_file=&quot;credentials.json&quot;)</span>
+<span class="sd">        ... sub = Gen3Metadata(endpoint, auth)</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        admin_endpoint (str): endpoint for admin functionality (Create/Update/Delete)</span>
+<span class="sd">        endpoint (str): public endpoint for reading/querying metadata</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">endpoint</span><span class="p">,</span>
+        <span class="n">auth_provider</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">service_location</span><span class="o">=</span><span class="s2">&quot;mds&quot;</span><span class="p">,</span>
+        <span class="n">admin_endpoint_suffix</span><span class="o">=</span><span class="s2">&quot;-admin&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialization for instance of the class to setup basic endpoint info.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            endpoint (str): URL for a data commons that has metadata service deployed</span>
+<span class="sd">            auth_provider (Gen3Auth, optional): Gen3Auth class to handle passing your</span>
+<span class="sd">                token, required for admin endpoints</span>
+<span class="sd">            service_location (str, optional): deployment location relative to the</span>
+<span class="sd">                endpoint provided</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">endpoint</span> <span class="o">=</span> <span class="n">endpoint</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+        <span class="c1"># if running locally, mds is deployed by itself without a location relative</span>
+        <span class="c1"># to the commons</span>
+        <span class="k">if</span> <span class="s2">&quot;http://localhost&quot;</span> <span class="ow">in</span> <span class="n">endpoint</span><span class="p">:</span>
+            <span class="n">service_location</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="n">admin_endpoint_suffix</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">endpoint</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">service_location</span><span class="p">):</span>
+            <span class="n">endpoint</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">service_location</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">=</span> <span class="n">endpoint</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">=</span> <span class="n">endpoint</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="n">admin_endpoint_suffix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span> <span class="o">=</span> <span class="n">auth_provider</span>
+
+<div class="viewcode-block" id="Gen3Metadata.is_healthy"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.is_healthy">[docs]</a>    <span class="k">def</span> <span class="nf">is_healthy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return if is healthy or not</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: True if healthy</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/_status&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
+            <span class="p">)</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;OK&quot;</span></div>
+
+<div class="viewcode-block" id="Gen3Metadata.get_version"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.get_version">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_version</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the version</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: the version</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/version&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span></div>
+
+<div class="viewcode-block" id="Gen3Metadata.get_index_key_paths"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.get_index_key_paths">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_index_key_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        List all the metadata key paths indexed in the database.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List: list of metadata key paths</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="s2">&quot;/metadata_index&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
+        <span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Metadata.create_index_key_path"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.create_index_key_path">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">create_index_key_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a metadata key path indexed in the database.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            path (str): metadata key path</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            TYPE: Description</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/metadata_index/</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
+        <span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Metadata.delete_index_key_path"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.delete_index_key_path">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">delete_index_key_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        List all the metadata key paths indexed in the database.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            path (str): metadata key path</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            TYPE: Description</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/metadata_index/</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
+        <span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">response</span></div>
+
+<div class="viewcode-block" id="Gen3Metadata.query"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.query">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">return_full_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Query the metadata given a query.</span>
+
+<span class="sd">        Query format is based off the logic used in the service:</span>
+<span class="sd">            &#39;&#39;&#39;</span>
+<span class="sd">            Without filters, this will return all data. Add filters as query strings like this:</span>
+
+<span class="sd">            GET /metadata?a=1&amp;b=2</span>
+
+<span class="sd">        This will match all records that have metadata containing all of:</span>
+<span class="sd">            {&quot;a&quot;: 1, &quot;b&quot;: 2}</span>
+<span class="sd">            The values are always treated as strings for filtering. Nesting is supported:</span>
+
+<span class="sd">            GET /metadata?a.b.c=3</span>
+
+<span class="sd">        Matching records containing:</span>
+<span class="sd">            {&quot;a&quot;: {&quot;b&quot;: {&quot;c&quot;: 3}}}</span>
+<span class="sd">            Providing the same key with more than one value filters records whose value of the given key matches any of the given values. But values of different keys must all match. For example:</span>
+
+<span class="sd">            GET /metadata?a.b.c=3&amp;a.b.c=33&amp;a.b.d=4</span>
+
+<span class="sd">        Matches these:</span>
+<span class="sd">            {&quot;a&quot;: {&quot;b&quot;: {&quot;c&quot;: 3, &quot;d&quot;: 4}}}</span>
+<span class="sd">            {&quot;a&quot;: {&quot;b&quot;: {&quot;c&quot;: 33, &quot;d&quot;: 4}}}</span>
+<span class="sd">            {&quot;a&quot;: {&quot;b&quot;: {&quot;c&quot;: &quot;3&quot;, &quot;d&quot;: 4, &quot;e&quot;: 5}}}</span>
+<span class="sd">            But won&#39;t match these:</span>
+
+<span class="sd">            {&quot;a&quot;: {&quot;b&quot;: {&quot;c&quot;: 3}}}</span>
+<span class="sd">            {&quot;a&quot;: {&quot;b&quot;: {&quot;c&quot;: 3, &quot;d&quot;: 5}}}</span>
+<span class="sd">            {&quot;a&quot;: {&quot;b&quot;: {&quot;d&quot;: 5}}}</span>
+<span class="sd">            {&quot;a&quot;: {&quot;b&quot;: {&quot;c&quot;: &quot;333&quot;, &quot;d&quot;: 4}}}</span>
+<span class="sd">            &#39;&#39;&#39;</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            query (str): mds query as defined by the metadata api</span>
+<span class="sd">            return_full_metadata (bool, optional): if False will just return a list of guids</span>
+<span class="sd">            limit (int, optional): max num records to return</span>
+<span class="sd">            offset (int, optional): offset for output</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List: list of guids matching query</span>
+<span class="sd">                OR if return_full_metadata=True</span>
+<span class="sd">            Dict{guid: {metadata}}: Dictionary with GUIDs as keys and associated</span>
+<span class="sd">                metadata JSON blobs as values</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/metadata?</span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span>
+            <span class="n">url</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">return_full_metadata</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="n">offset</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;hitting: </span><span class="si">{</span><span class="n">url_with_params</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url_with_params</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Metadata.async_get"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.async_get">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">async_get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Asynchronous function to get metadata</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guid (str): guid to use</span>
+<span class="sd">            _ssl (None, optional): whether or not to use ssl</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dict: metadata for given guid</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/metadata/</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;hitting: </span><span class="si">{</span><span class="n">url_with_params</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url_with_params</span><span class="p">,</span> <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span><span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">response</span></div>
+
+<div class="viewcode-block" id="Gen3Metadata.get"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.get">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the metadata associated with the guid</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guid (str): guid to use</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dict: metadata for given guid</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/metadata/</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;hitting: </span><span class="si">{</span><span class="n">url_with_params</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url_with_params</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Metadata.batch_create"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.batch_create">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">batch_create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">metadata_list</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create the list of metadata associated with the list of guids</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            metadata_list (List[Dict{&quot;guid&quot;: &quot;&quot;, &quot;data&quot;: {}}]): list of metadata</span>
+<span class="sd">                objects in a specific format. Expects a dict with &quot;guid&quot; and &quot;data&quot;</span>
+<span class="sd">                fields where &quot;data&quot; is another JSON blob to add to the mds</span>
+<span class="sd">            overwrite (bool, optional): whether or not to overwrite existing data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/metadata&quot;</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">metadata_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="p">(</span>
+            <span class="s2">&quot;guid&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">metadata_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="s2">&quot;data&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">metadata_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="p">):</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">&quot;it looks like your metadata list for bulk create is malformed. &quot;</span>
+                <span class="s2">&quot;the expected format is a list of dicts that have 2 keys: &#39;guid&#39; &quot;</span>
+                <span class="s2">&quot;and &#39;data&#39;, where &#39;guid&#39; is a string and &#39;data&#39; is another dict. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;The first element doesn&#39;t match that pattern: </span><span class="si">{</span><span class="n">metadata_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="n">overwrite</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;hitting: </span><span class="si">{</span><span class="n">url_with_params</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;data: </span><span class="si">{</span><span class="n">metadata_list</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+            <span class="n">url_with_params</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">metadata_list</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
+        <span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Metadata.create"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.create">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create the metadata associated with the guid</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guid (str): guid to use</span>
+<span class="sd">            metadata (Dict): dictionary representing what will end up a JSON blob</span>
+<span class="sd">                attached to the provided GUID as metadata</span>
+<span class="sd">            overwrite (bool, optional): whether or not to overwrite existing data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/metadata/</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="n">overwrite</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;hitting: </span><span class="si">{</span><span class="n">url_with_params</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;data: </span><span class="si">{</span><span class="n">metadata</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+            <span class="n">url_with_params</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
+        <span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Metadata.async_create"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.async_create">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">async_create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Asynchronous function to create metadata</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guid (str): guid to use</span>
+<span class="sd">            metadata (Dict): dictionary representing what will end up a JSON blob</span>
+<span class="sd">                attached to the provided GUID as metadata</span>
+<span class="sd">            overwrite (bool, optional): whether or not to overwrite existing data</span>
+<span class="sd">            _ssl (None, optional): whether or not to use ssl</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/metadata/</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="n">overwrite</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+            <span class="c1"># aiohttp only allows basic auth with their built in auth, so we</span>
+            <span class="c1"># need to manually add JWT auth header</span>
+            <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">_get_auth_value</span><span class="p">()}</span>
+
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+                <span class="n">url_with_params</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span>
+            <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">response</span></div>
+
+<div class="viewcode-block" id="Gen3Metadata.update"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.update">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update the metadata associated with the guid</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guid (str): guid to use</span>
+<span class="sd">            metadata (Dict): dictionary representing what will end up a JSON blob</span>
+<span class="sd">                attached to the provided GUID as metadata</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/metadata/</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;hitting: </span><span class="si">{</span><span class="n">url_with_params</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;data: </span><span class="si">{</span><span class="n">metadata</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">put</span><span class="p">(</span>
+            <span class="n">url_with_params</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
+        <span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Metadata.async_update"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.async_update">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">async_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Asynchronous function to update metadata</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guid (str): guid to use</span>
+<span class="sd">            metadata (Dict): dictionary representing what will end up a JSON blob</span>
+<span class="sd">                attached to the provided GUID as metadata</span>
+<span class="sd">            _ssl (None, optional): whether or not to use ssl</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/metadata/</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+            <span class="c1"># aiohttp only allows basic auth with their built in auth, so we</span>
+            <span class="c1"># need to manually add JWT auth header</span>
+            <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">_get_auth_value</span><span class="p">()}</span>
+
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">put</span><span class="p">(</span>
+                <span class="n">url_with_params</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span>
+            <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">response</span></div>
+
+<div class="viewcode-block" id="Gen3Metadata.delete"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.delete">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Delete the metadata associated with the guid</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guid (str): guid to use</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/metadata/</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;hitting: </span><span class="si">{</span><span class="n">url_with_params</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">url_with_params</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Gen3 SDK</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=uc-cdis&repo=gen3sdk-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../auth.html">Gen3 Auth Helper</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../file.html">Gen3 File Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../indexing.html">Gen3 Index Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../jobs.html">Gen3 Jobs Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../metadata.html">Gen3 Metadata Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../submission.html">Gen3 Submission Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools.html">Gen3 Tools</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Center for Translational Data Science.
+      
+    </div>
+
+    
+    <a href="https://github.com/uc-cdis/gen3sdk-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
