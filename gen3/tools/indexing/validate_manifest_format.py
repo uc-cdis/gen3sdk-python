@@ -117,7 +117,7 @@ def is_valid_manifest_format(
     enums_to_validators = _init_enums_to_validators(
         allowed_protocols, allow_base64_encoded_md5, error_on_empty_url
     )
-    with open(manifest_path) as dsv_file:
+    with open(manifest_path, "r", encoding="utf-8-sig") as dsv_file:
         dsv_reader = _get_dsv_reader(dsv_file)
         manifest_column_names = dsv_reader.fieldnames
         manifest_column_names_to_validators = _get_manifest_column_names_to_validators(
