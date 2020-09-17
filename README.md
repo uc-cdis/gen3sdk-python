@@ -671,7 +671,7 @@ ERROR:root:line 5, "Urls With Caps" value "invalid_url" is invalid, expecting UR
 INFO:root:finished validating "tests/validate_manifest_format/manifests/manifest_with_custom_column_names.tsv" manifest
 ```
 
-To see more examples, take a look at `tests/verify_manifest_format/test_is_valid_manifest_format.py`
+To see more examples, take a look at `tests/validate_manifest_format/test_is_valid_manifest_format.py`
 
 
 ## Metadata Tools
