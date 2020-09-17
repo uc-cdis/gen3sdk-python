@@ -164,7 +164,14 @@ class MD5Validator(Validator):
     ```
     """
 
-    ALLOWED_COLUMN_NAMES = ("md5", "md5_hash", "md5hash", "hash")
+    ALLOWED_COLUMN_NAMES = (
+        "md5",
+        "md5_hash",
+        "md5hash",
+        "hash",
+        "file_md5sum",
+        "md5sum",
+    )
 
     def __init__(self, allow_base64_encoding=False):
         """
@@ -227,7 +234,14 @@ class SizeValidator(Validator):
     ```
     """
 
-    ALLOWED_COLUMN_NAMES = ("size", "file_size", "filesize", "file size")
+    ALLOWED_COLUMN_NAMES = (
+        "size",
+        "filesize",
+        "file_size",
+        "file size",
+        "s3_file_size",
+        "gs_file_size",
+    )
 
     @staticmethod
     def _validate_single_value(size):
@@ -266,7 +280,7 @@ class URLValidator(Validator):
     ```
     """
 
-    ALLOWED_COLUMN_NAMES = ("url", "urls")
+    ALLOWED_COLUMN_NAMES = ("url", "urls", "s3_path", "gs_path")
 
     def __init__(self, allowed_protocols=["s3", "gs"], error_on_empty=False):
         """
