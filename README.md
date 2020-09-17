@@ -22,7 +22,7 @@ The docs here contain general descriptions of the different pieces of the SDK an
     - [Verify Manifest](#verify-manifest)
     - [Indexing Manifest](#indexing-manifest)
     - [Merge Bucket Manifests](#merge-bucket-manifests)
-    - [Verify Manifest Format](#verify-manifest-format)
+    - [Validate Manifest Format](#validate-manifest-format)
 - [Metadata Tools](#metadata-tools)
     - [Ingest Manifest](#ingest-manifest)
     - [Searching Indexd to get GUID for Metadata Ingestion](#searching-indexd-to-get-guid-for-metadata-ingestion)
@@ -552,7 +552,7 @@ if __name__ == "__main__":
     main()
 ```
 
-### Verify Manifest Format
+### Validate Manifest Format
 
 `gen3.tools.indexing.is_valid_manifest_format` validates the contents of a
 manifest of file objects and logs all errors found. Each logged error message
@@ -585,7 +585,7 @@ logging.basicConfig(filename="output.log", level=logging.DEBUG)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 MANIFEST = (
-    "tests/verify_manifest_format/manifests/manifest_with_many_types_of_errors.tsv"
+    "tests/validate_manifest_format/manifests/manifest_with_many_types_of_errors.tsv"
 )
 
 
@@ -607,7 +607,7 @@ if __name__ == "__main__":
 
 The script above logs the following output:
 ```
-INFO:root:validating "tests/verify_manifest_format/manifests/manifest_with_many_types_of_errors.tsv" manifest
+INFO:root:validating "tests/validate_manifest_format/manifests/manifest_with_many_types_of_errors.tsv" manifest
 INFO:root:mapped manifest column "md5" to "MD5Validator" class instance
 INFO:root:mapped manifest column "urls" to "URLValidator" class instance
 INFO:root:mapped manifest column "file_size" to "SizeValidator" class instance
@@ -616,7 +616,7 @@ ERROR:root:line 2, "authz" value "invalid_authz" is invalid, expecting authz res
 ERROR:root:line 3, "file_size" value "invalid_int" is not an integer
 ERROR:root:line 4, "md5" value "invalid_md5" is invalid, expecting 32 hexadecimal characters
 ERROR:root:line 5, "urls" value "invalid_url" is invalid, expecting URL in format "<protocol>://<hostname>/<path>", with protocol being one of ['s3', 'gs']
-INFO:root:finished validating "tests/verify_manifest_format/manifests/manifest_with_many_types_of_errors.tsv" manifest
+INFO:root:finished validating "tests/validate_manifest_format/manifests/manifest_with_many_types_of_errors.tsv" manifest
 ```
 
 `column_names_to_enums` can be used to identify custom column names:
@@ -631,7 +631,7 @@ logging.basicConfig(filename="output.log", level=logging.DEBUG)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 MANIFEST = (
-    "tests/verify_manifest_format/manifests/manifest_with_custom_column_names.tsv"
+    "tests/validate_manifest_format/manifests/manifest_with_custom_column_names.tsv"
 )
 
 COLUMN_NAMES_TO_ENUMS = {
@@ -659,7 +659,7 @@ if __name__ == "__main__":
 ```
 Which logs the following output:
 ```
-INFO:root:validating "tests/verify_manifest_format/manifests/manifest_with_custom_column_names.tsv" manifest
+INFO:root:validating "tests/validate_manifest_format/manifests/manifest_with_custom_column_names.tsv" manifest
 INFO:root:mapped manifest column "authz with special chars!@*&" to "AuthzValidator" class instance
 INFO:root:mapped manifest column "file size with spaces" to "SizeValidator" class instance
 INFO:root:mapped manifest column "md5_with_underscores" to "MD5Validator" class instance
@@ -668,7 +668,7 @@ ERROR:root:line 2, "authz with special chars!@*&" value "invalid_authz" is inval
 ERROR:root:line 3, "file size with spaces" value "invalid_int" is not an integer
 ERROR:root:line 4, "md5_with_underscores" value "invalid_md5" is invalid, expecting 32 hexadecimal characters
 ERROR:root:line 5, "Urls With Caps" value "invalid_url" is invalid, expecting URL in format "<protocol>://<hostname>/<path>", with protocol being one of ['s3', 'gs']
-INFO:root:finished validating "tests/verify_manifest_format/manifests/manifest_with_custom_column_names.tsv" manifest
+INFO:root:finished validating "tests/validate_manifest_format/manifests/manifest_with_custom_column_names.tsv" manifest
 ```
 
 To see more examples, take a look at `tests/verify_manifest_format/test_is_valid_manifest_format.py`

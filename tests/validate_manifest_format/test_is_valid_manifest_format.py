@@ -1,7 +1,7 @@
 import pytest
 import logging
 
-from gen3.tools.indexing.verify_manifest_format import is_valid_manifest_format
+from gen3.tools.indexing import is_valid_manifest_format
 from gen3.tools.indexing.manifest_columns import Columns
 
 
@@ -20,7 +20,7 @@ def test_is_valid_manifest_format_with_no_errors(caplog):
     """
     assert (
         is_valid_manifest_format(
-            "tests/verify_manifest_format/manifests/manifest_with_no_errors.tsv"
+            "tests/validate_manifest_format/manifests/manifest_with_no_errors.tsv"
         )
         == True
     )
@@ -39,8 +39,8 @@ def manifest_with_many_types_of_errors_helper(error_log):
     """
     Helper method to assert that invalid values appear in error log generated
     after validating:
-        "tests/verify_manifest_format/manifests/manifest_with_many_types_of_errors.tsv"
-        "tests/verify_manifest_format/manifests/manifest_with_custom_column_names.tsv"
+        "tests/validate_manifest_format/manifests/manifest_with_many_types_of_errors.tsv"
+        "tests/validate_manifest_format/manifests/manifest_with_custom_column_names.tsv"
     """
     assert '"invalid_authz"' in error_log
     assert '"invalid_int"' in error_log
@@ -54,7 +54,7 @@ def test_is_valid_manifest_format_with_many_types_of_errors(caplog):
     error logged
     """
     result = is_valid_manifest_format(
-        "tests/verify_manifest_format/manifests/manifest_with_many_types_of_errors.tsv",
+        "tests/validate_manifest_format/manifests/manifest_with_many_types_of_errors.tsv",
     )
     error_log = caplog.text
     manifest_with_many_types_of_errors_helper(error_log)
@@ -72,7 +72,7 @@ def test_is_valid_manifest_format_using_column_names_to_enums(caplog):
         "authz with special chars!@*&": Columns.AUTHZ,
     }
     result = is_valid_manifest_format(
-        "tests/verify_manifest_format/manifests/manifest_with_custom_column_names.tsv",
+        "tests/validate_manifest_format/manifests/manifest_with_custom_column_names.tsv",
         column_names_to_enums=column_names_to_enums,
     )
     error_log = caplog.text
@@ -84,7 +84,7 @@ def manifest_with_invalid_md5_values_helper(error_log):
     """
     Helper method to assert that invalid values appear in error log generated
     after validating:
-    "tests/verify_manifest_format/manifests/manifest_with_invalid_md5_values.tsv"
+    "tests/validate_manifest_format/manifests/manifest_with_invalid_md5_values.tsv"
     """
     valid_md5 = '"1596f493ba9ec53023fca640fb69bd3b"'  # pragma: allowlist secret
     assert valid_md5 not in error_log
@@ -106,7 +106,7 @@ def test_is_valid_manifest_format_with_invalid_md5_values(caplog):
     Test that invalid md5 errors are detected and error logged
     """
     result = is_valid_manifest_format(
-        "tests/verify_manifest_format/manifests/manifest_with_invalid_md5_values.tsv"
+        "tests/validate_manifest_format/manifests/manifest_with_invalid_md5_values.tsv"
     )
 
     error_log = caplog.text
@@ -122,7 +122,7 @@ def test_is_valid_manifest_format_allowing_base64_encoded_md5(caplog):
     allow_base64_encoded_md5 is used
     """
     result = is_valid_manifest_format(
-        "tests/verify_manifest_format/manifests/manifest_with_invalid_md5_values.tsv",
+        "tests/validate_manifest_format/manifests/manifest_with_invalid_md5_values.tsv",
         allow_base64_encoded_md5=True,
     )
 
@@ -138,7 +138,7 @@ def test_is_valid_manifest_format_with_invalid_sizes(caplog):
     Test that invalid sizes are detected and error logged
     """
     result = is_valid_manifest_format(
-        "tests/verify_manifest_format/manifests/manifest_with_invalid_sizes.tsv"
+        "tests/validate_manifest_format/manifests/manifest_with_invalid_sizes.tsv"
     )
     error_log = caplog.text
     assert "-1" in error_log
@@ -154,7 +154,7 @@ def test_is_valid_manifest_format_with_invalid_urls(caplog):
     Test that empty arrays and empty quote pairs are detected and error logged
     """
     result = is_valid_manifest_format(
-        "tests/verify_manifest_format/manifests/manifest_with_invalid_urls.tsv"
+        "tests/validate_manifest_format/manifests/manifest_with_invalid_urls.tsv"
     )
     error_log = caplog.text
     assert '"wrong_protocol://test_bucket/test.txt"' in error_log
@@ -188,7 +188,7 @@ def test_is_valid_manifest_format_using_allowed_protocols(caplog):
     Test that user defined protocols can be used
     """
     result = is_valid_manifest_format(
-        "tests/verify_manifest_format/manifests/manifest_with_custom_url_protocols.tsv",
+        "tests/validate_manifest_format/manifests/manifest_with_custom_url_protocols.tsv",
         allowed_protocols=["s3", "gs", "http", "https"],
     )
     error_log = caplog.text
@@ -207,7 +207,7 @@ def test_is_valid_manifest_format_with_invalid_authz_resources(caplog):
     Test that invalid authz resources are detected and reported in error log
     """
     result = is_valid_manifest_format(
-        "tests/verify_manifest_format/manifests/manifest_with_invalid_authz_resources.tsv",
+        "tests/validate_manifest_format/manifests/manifest_with_invalid_authz_resources.tsv",
     )
     error_log = caplog.text
     assert '"invalid_authz"' in error_log
@@ -223,7 +223,7 @@ def test_is_valid_manifest_format_using_line_limit(caplog):
     Test that only first few lines of manifest can be validated
     """
     result = is_valid_manifest_format(
-        "tests/verify_manifest_format/manifests/manifest_with_invalid_sizes.tsv",
+        "tests/validate_manifest_format/manifests/manifest_with_invalid_sizes.tsv",
         line_limit=3,
     )
     error_log = caplog.text
@@ -239,7 +239,7 @@ def test_is_valid_manifest_format_with_empty_url(caplog):
     Test that by default, completely empty url values are allowed
     """
     result = is_valid_manifest_format(
-        "tests/verify_manifest_format/manifests/manifest_with_empty_url.tsv",
+        "tests/validate_manifest_format/manifests/manifest_with_empty_url.tsv",
     )
     assert caplog.text == ""
     assert result == True
@@ -251,7 +251,7 @@ def test_is_valid_manifest_format_using_error_on_empty_url(caplog):
     using error_on_empty_url
     """
     result = is_valid_manifest_format(
-        "tests/verify_manifest_format/manifests/manifest_with_empty_url.tsv",
+        "tests/validate_manifest_format/manifests/manifest_with_empty_url.tsv",
         error_on_empty_url=True,
     )
     assert '""' in caplog.text
@@ -264,7 +264,7 @@ def test_is_valid_manifest_with_wide_row(caplog):
     """
     logging.getLogger().setLevel(logging.WARNING)
     result = is_valid_manifest_format(
-        "tests/verify_manifest_format/manifests/manifest_with_wide_row.tsv",
+        "tests/validate_manifest_format/manifests/manifest_with_wide_row.tsv",
     )
     wide_warning = f"line 3, number of fields (6) in row is unequal to number of column names in manifest (5)"
     assert wide_warning in caplog.text
@@ -277,7 +277,7 @@ def test_is_valid_manifest_with_missing_md5_column(caplog):
     log
     """
     result = is_valid_manifest_format(
-        "tests/verify_manifest_format/manifests/manifest_with_missing_md5_column.tsv",
+        "tests/validate_manifest_format/manifests/manifest_with_missing_md5_column.tsv",
     )
     missing_md5_message = (
         'could not find a column name corresponding to required "Columns.MD5"'
@@ -292,7 +292,7 @@ def test_is_valid_manifest_with_missing_size_column(caplog):
     log
     """
     result = is_valid_manifest_format(
-        "tests/verify_manifest_format/manifests/manifest_with_missing_size_column.tsv",
+        "tests/validate_manifest_format/manifests/manifest_with_missing_size_column.tsv",
     )
     missing_size_message = (
         'could not find a column name corresponding to required "Columns.SIZE"'
@@ -308,7 +308,7 @@ def test_is_valid_manifest_with_missing_url_column(caplog):
     """
     logging.getLogger().setLevel(logging.WARNING)
     result = is_valid_manifest_format(
-        "tests/verify_manifest_format/manifests/manifest_with_missing_url_column.tsv",
+        "tests/validate_manifest_format/manifests/manifest_with_missing_url_column.tsv",
     )
     missing_size_message = (
         'could not find a column name corresponding to required "Columns.URL"'
@@ -323,7 +323,7 @@ def test_is_valid_manifest_with_missing_url_column_and_error_on_empty_url(caplog
     error_on_empty_url
     """
     result = is_valid_manifest_format(
-        "tests/verify_manifest_format/manifests/manifest_with_missing_url_column.tsv",
+        "tests/validate_manifest_format/manifests/manifest_with_missing_url_column.tsv",
         error_on_empty_url=True,
     )
     missing_size_message = (
