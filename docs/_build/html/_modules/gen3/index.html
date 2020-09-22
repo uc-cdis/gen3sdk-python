@@ -628,7 +628,7 @@
     <span class="c1">### Put Requests</span>
 
 <div class="viewcode-block" id="Gen3Index.update_blank"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.update_blank">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
-    <span class="k">def</span> <span class="nf">update_blank</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">rev</span><span class="p">,</span> <span class="n">hashes</span><span class="p">,</span> <span class="n">size</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">update_blank</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">rev</span><span class="p">,</span> <span class="n">hashes</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">urls</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">authz</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="sd">        Update only hashes and size for a blank index</span>
@@ -641,13 +641,18 @@
 <span class="sd">            size (int): file size metadata associated with a given uuid</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">p</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;rev&quot;</span><span class="p">:</span> <span class="n">rev</span><span class="p">}</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;rev&quot;</span><span class="p">:</span> <span class="n">rev</span><span class="p">}</span>
         <span class="n">json</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;hashes&quot;</span><span class="p">:</span> <span class="n">hashes</span><span class="p">,</span> <span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="n">size</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">urls</span><span class="p">:</span>
+            <span class="n">json</span><span class="p">[</span><span class="s2">&quot;urls&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">urls</span>
+        <span class="k">if</span> <span class="n">authz</span><span class="p">:</span>
+            <span class="n">json</span><span class="p">[</span><span class="s2">&quot;authz&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">authz</span>
+
         <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_put</span><span class="p">(</span>
             <span class="s2">&quot;index/blank/&quot;</span><span class="p">,</span>
             <span class="n">guid</span><span class="p">,</span>
             <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;content-type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">},</span>
-            <span class="n">params</span><span class="o">=</span><span class="n">p</span><span class="p">,</span>
+            <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span>
             <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">auth</span><span class="p">,</span>
             <span class="n">data</span><span class="o">=</span><span class="n">client</span><span class="o">.</span><span class="n">json_dumps</span><span class="p">(</span><span class="n">json</span><span class="p">),</span>
         <span class="p">)</span>
