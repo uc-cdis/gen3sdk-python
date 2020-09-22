@@ -47,10 +47,12 @@
 
 <span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">append_query_params</span><span class="p">,</span> <span class="n">DEFAULT_BACKOFF_SETTINGS</span>
 
+<span class="c1"># sower&#39;s &quot;action&quot; mapping to the relevant job</span>
 <span class="n">INGEST_METADATA_JOB</span> <span class="o">=</span> <span class="s2">&quot;ingest-metadata-manifest&quot;</span>
 <span class="n">DBGAP_METADATA_JOB</span> <span class="o">=</span> <span class="s2">&quot;get-dbgap-metadata&quot;</span>
 <span class="n">INDEX_MANIFEST_JOB</span> <span class="o">=</span> <span class="s2">&quot;index-object-manifest&quot;</span>
 <span class="n">DOWNLOAD_MANIFEST_JOB</span> <span class="o">=</span> <span class="s2">&quot;download-indexd-manifest&quot;</span>
+<span class="n">MERGE_MANIFEST_JOB</span> <span class="o">=</span> <span class="s2">&quot;merge-manifests&quot;</span>
 
 
 <div class="viewcode-block" id="Gen3Jobs"><a class="viewcode-back" href="../../jobs.html#gen3.jobs.Gen3Jobs">[docs]</a><span class="k">class</span> <span class="nc">Gen3Jobs</span><span class="p">:</span>
