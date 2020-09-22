@@ -29,7 +29,7 @@ def _get_ordered_csv_data(manifest):
     with open(manifest) as f:
         reader = csv.reader(f, delimiter="\t")
         next(reader)
-        for url, size, md5, authz in reader:
+        for url, size, md5, authz, acl in reader:
             csv_data.append(
                 tuple((set(url.split(" ")), size, md5, set(authz.split(" "))))
             )
