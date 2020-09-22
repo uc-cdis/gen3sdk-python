@@ -6,6 +6,8 @@ import copy
 from collections import OrderedDict
 from gen3.tools.indexing.index_manifest import (
     get_and_verify_fileinfos_from_tsv_manifest,
+)
+from gen3.tools.indexing.manifest_columns import (
     GUID_STANDARD_KEY,
     FILENAME_STANDARD_KEY,
     SIZE_STANDARD_KEY,

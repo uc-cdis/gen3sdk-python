@@ -9,6 +9,28 @@ import string
 from urllib.parse import urlparse
 from base64 import b64encode, b64decode
 
+# Pre-defined supported column names
+GUID_COLUMN_NAMES = ["guid", "GUID"]
+GUID_STANDARD_KEY = "guid"
+
+FILENAME_COLUMN_NAMES = ["filename", "file_name"]
+FILENAME_STANDARD_KEY = "file_name"
+
+SIZE_COLUMN_NAMES = ["size", "filesize", "file_size", "s3_file_size", "gs_file_size"]
+SIZE_STANDARD_KEY = "size"
+
+MD5_COLUMN_NAMES = ["md5", "md5_hash", "md5hash", "hash", "md5sum", "file_md5sum"]
+MD5_STANDARD_KEY = "md5"
+
+ACLS_COLUMN_NAMES = ["acl", "acls"]
+ACL_STANDARD_KEY = "acl"
+
+URLS_COLUMN_NAMES = ["url", "urls", "s3_path", "gs_path"]
+URLS_STANDARD_KEY = "urls"
+
+AUTHZ_COLUMN_NAMES = ["authz"]
+AUTHZ_STANDARD_KEY = "authz"
+
 
 @unique
 class Columns(Enum):
@@ -164,14 +186,7 @@ class MD5Validator(Validator):
     ```
     """
 
-    ALLOWED_COLUMN_NAMES = (
-        "md5",
-        "md5_hash",
-        "md5hash",
-        "hash",
-        "file_md5sum",
-        "md5sum",
-    )
+    ALLOWED_COLUMN_NAMES = MD5_COLUMN_NAMES
 
     def __init__(self, allow_base64_encoding=False):
         """
@@ -234,14 +249,7 @@ class SizeValidator(Validator):
     ```
     """
 
-    ALLOWED_COLUMN_NAMES = (
-        "size",
-        "filesize",
-        "file_size",
-        "file size",
-        "s3_file_size",
-        "gs_file_size",
-    )
+    ALLOWED_COLUMN_NAMES = SIZE_COLUMN_NAMES
 
     @staticmethod
     def _validate_single_value(size):
@@ -280,7 +288,7 @@ class URLValidator(Validator):
     ```
     """
 
-    ALLOWED_COLUMN_NAMES = ("url", "urls", "s3_path", "gs_path")
+    ALLOWED_COLUMN_NAMES = URLS_COLUMN_NAMES
 
     def __init__(self, allowed_protocols=["s3", "gs"], error_on_empty=False):
         """
@@ -356,13 +364,7 @@ class AuthzValidator(Validator):
     ```
     """
 
-    ALLOWED_COLUMN_NAMES = (
-        "authz",
-        "authz_resource",
-        "authz_resources",
-        "authz resource",
-        "authz resources",
-    )
+    ALLOWED_COLUMN_NAMES = AUTHZ_COLUMN_NAMES
 
     def __init__(self):
         """

@@ -44,31 +44,26 @@ import sys
 import traceback
 
 from gen3.auth import Gen3Auth
+from gen3.tools.indexing.manifest_columns import (
+    GUID_COLUMN_NAMES,
+    GUID_STANDARD_KEY,
+    FILENAME_COLUMN_NAMES,
+    FILENAME_STANDARD_KEY,
+    SIZE_COLUMN_NAMES,
+    SIZE_STANDARD_KEY,
+    MD5_COLUMN_NAMES,
+    MD5_STANDARD_KEY,
+    ACLS_COLUMN_NAMES,
+    ACL_STANDARD_KEY,
+    URLS_COLUMN_NAMES,
+    URLS_STANDARD_KEY,
+    AUTHZ_COLUMN_NAMES,
+    AUTHZ_STANDARD_KEY,
+)
 import indexclient.client as client
 
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
-# Pre-defined supported column names
-GUID = ["guid", "GUID"]
-GUID_STANDARD_KEY = "guid"
-
-FILENAME = ["filename", "file_name"]
-FILENAME_STANDARD_KEY = "file_name"
-
-SIZE = ["size", "filesize", "file_size", "s3_file_size", "gs_file_size"]
-SIZE_STANDARD_KEY = "size"
-
-MD5 = ["md5", "md5_hash", "md5hash", "hash", "md5sum"]
-MD5_STANDARD_KEY = "md5"
-
-ACLS = ["acl", "acls"]
-ACL_STANDARD_KEY = "acl"
-
-URLS = ["url", "urls", "s3_path", "gs_path"]
-URLS_STANDARD_KEY = "urls"
-
-AUTHZ = ["authz"]
-AUTHZ_STANDARD_KEY = "authz"
 
 UUID_FORMAT = (
     r"^.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
@@ -158,37 +153,37 @@ def get_and_verify_fileinfos_from_tsv_manifest(
             for key in row.keys():
                 row_number = row_number + 1
                 standardized_key = None
-                if key.lower() in GUID:
+                if key.lower() in GUID_COLUMN_NAMES:
                     fieldnames[fieldnames.index(key)] = GUID_STANDARD_KEY
                     standardized_key = GUID_STANDARD_KEY
-                elif key.lower() in FILENAME:
+                elif key.lower() in FILENAME_COLUMN_NAMES:
                     fieldnames[fieldnames.index(key)] = FILENAME_STANDARD_KEY
                     standardized_key = FILENAME_STANDARD_KEY
-                elif key.lower() in MD5:
+                elif key.lower() in MD5_COLUMN_NAMES:
                     fieldnames[fieldnames.index(key)] = MD5_STANDARD_KEY
                     standardized_key = MD5_STANDARD_KEY
                     if not _verify_format(row[key], MD5_FORMAT):
                         logging.error(f"ERROR: {row[key]} is not in md5 format")
                         pass_verification = False
-                elif key.lower() in ACLS:
+                elif key.lower() in ACLS_COLUMN_NAMES:
                     fieldnames[fieldnames.index(key)] = ACL_STANDARD_KEY
                     standardized_key = ACL_STANDARD_KEY
                     if not _verify_format(row[key], ACL_FORMAT):
                         logging.error(f"ERROR: {row[key]} is not in acl format")
                         pass_verification = False
-                elif key.lower() in URLS:
+                elif key.lower() in URLS_COLUMN_NAMES:
                     fieldnames[fieldnames.index(key)] = URLS_STANDARD_KEY
                     standardized_key = URLS_STANDARD_KEY
                     if not _verify_format(row[key], URL_FORMAT):
                         logging.error(f"ERROR: {row[key]} is not in urls format")
                         pass_verification = False
-                elif key.lower() in AUTHZ:
+                elif key.lower() in AUTHZ_COLUMN_NAMES:
                     fieldnames[fieldnames.index(key)] = AUTHZ_STANDARD_KEY
                     standardized_key = AUTHZ_STANDARD_KEY
                     if not _verify_format(row[key], AUTHZ_FORMAT):
                         logging.error(f"ERROR: {row[key]} is not in authz format")
                         pass_verification = False
-                elif key.lower() in SIZE:
+                elif key.lower() in SIZE_COLUMN_NAMES:
                     fieldnames[fieldnames.index(key)] = SIZE_STANDARD_KEY
                     standardized_key = SIZE_STANDARD_KEY
                     if not _verify_format(row[key], SIZE_FORMAT):
