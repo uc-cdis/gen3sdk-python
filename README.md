@@ -912,7 +912,7 @@ If you have a manifest full of metadata and a manifest of indexed file objects i
 
 For example, a common use case for this is if you have a file full of metadata from dbGaP and want to get associated GUIDs for each row. You can then add the dbGaP metadata to the metadata service for those GUIDs with the file output from this merge script.
 
-The script is also fairly configurable depending on how you need to map between the two files.
+The script is also fairly configurable depending on how you need to map between the two files. Even if the "indexing file" doesn't include GUIDs, this script can still be used to combine 2 manifests based on a common column.
 
 The ideal scenario is when you can map column to column between your _metadata manifest_ and _indexing manifest_ (e.g. what's in indexd).
 
@@ -921,8 +921,6 @@ The non-ideal scenario is if you need something for partially matching one colum
 By default this merge can match multiple GUIDs with the same metadata (depending on the configuration). This supports situations where there may exist metadata that applies to multiple files. For example: dbGaP sample metadata applied to both CRAM and CRAI genomic files.
 
 So while this supports metadata matching multiple GUIDs, it does *not* support GUIDs matching multiple sets of metadata.
-
-> IMPORTANT NOTE: The tool will log warnings about unmatched records but it will not halt execution, so be sure to check logs when using these tools.
 
 #### Ideal Scenario (Column to Column Match, Indexing:Metadata Manifest Rows)
 
@@ -979,7 +977,8 @@ def main():
 
     merge_guids_into_metadata(
         indexing_manifest, metadata_manifest, output_filename=output_filename,
-        manifests_mapping_config=manifests_mapping_config
+        manifests_mapping_config=manifests_mapping_config,
+        include_all_indexing_cols_in_output=False,
     )
 
 if __name__ == "__main__":
@@ -988,6 +987,8 @@ if __name__ == "__main__":
 ```
 
 The final output file will contain all the columns from the metadata manifest in addition to a new GUID column which maps to indexed records.
+
+> NOTE: If you want all the indexing manifest columns as well, make sure to set `include_all_indexing_cols_in_output=True`
 
 *output manifest* (to be used in metadata ingestion):
 
@@ -1065,6 +1066,7 @@ def main():
         output_filename=output_filename,
         manifests_mapping_config=manifests_mapping_config,
         manifest_row_parsers=manifest_row_parsers,
+        include_all_indexing_cols_in_output=False,
     )
 
 
@@ -1075,6 +1077,8 @@ if __name__ == "__main__":
 > WARNING: The efficiency here is O(n2) so this does not scale well with large files.
 
 The final output file will contain all the columns from the metadata manifest in addition to a new GUID column which maps to indexed records.
+
+> NOTE: If you want all the indexing manifest columns as well, make sure to set `include_all_indexing_cols_in_output=True`
 
 *output manifest* (to be used in metadata ingestion):
 
