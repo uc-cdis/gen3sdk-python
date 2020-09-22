@@ -121,7 +121,7 @@ def _get_data_from_indexing_manifest(
     with open(manifest_file, "rt", encoding="utf-8-sig") as csvfile:
         csvReader = csv.DictReader(csvfile, delimiter=delimiter)
 
-        value_column_names = [config.get("guid_column_name")]
+        value_column_names = [item for item in [config.get("guid_column_name")] if item]
 
         if include_all_indexing_cols_in_output:
             value_column_names = value_column_names + csvReader.fieldnames
