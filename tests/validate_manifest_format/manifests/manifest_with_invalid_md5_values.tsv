@@ -1,0 +1,6 @@
+authz	acl	file_size	md5	urls
+/programs/DEV/projects/test	DEV	123	1596f493ba9ec53023fca640fb69bd3	s3://testaws/aws/test.txt
+/programs/DEV/projects/test2	DEV	235	d9a68f3d5d9ce03f8a08f509242472234	gs://test/test3.txt
+/programs/DEV/projects/test3	DEV	334	5J1bf75c48761b2e755adc1340e5a9259	gs://test/test.txt
+/programs/DEV/projects/test2	DEV	235	jd2L5LF5pSmvpfL/rkuYWA==	gs://test/test3.txt
+/programs/DEV/projects/test2	DEV	235	aGVsbG8=	gs://test/test3.txt

@@ -22,6 +22,7 @@ The docs here contain general descriptions of the different pieces of the SDK an
     - [Verify Manifest](#verify-manifest)
     - [Indexing Manifest](#indexing-manifest)
     - [Merge Bucket Manifests](#merge-bucket-manifests)
+    - [Validate Manifest Format](#validate-manifest-format)
 - [Metadata Tools](#metadata-tools)
     - [Ingest Manifest](#ingest-manifest)
     - [Searching Indexd to get GUID for Metadata Ingestion](#searching-indexd-to-get-guid-for-metadata-ingestion)
@@ -550,6 +551,128 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+
+### Validate Manifest Format
+
+`gen3.tools.indexing.is_valid_manifest_format` validates the contents of a
+manifest of file objects and logs all errors found. Each logged error message
+includes a description along with the line number and column in which the error
+occurred. md5, size, url, and authz values can be validated.
+
+
+`is_valid_manifest_format` can validate md5, size, url and authz values by
+making use of the `MD5Validator`, `SizeValidator`, `URLValidator`, and
+`AuthzValidator` classes defined in `gen3.tools.indexing.manifest_columns`,
+respectively. See documentation in these `Validator` subclasses for more details
+on how specific values are validated.
+
+`is_valid_manifest_format` attempts to automatically map manifest column
+names to `Validator` subclasses based on the `ALLOWED_COLUMN_NAMES` tuple
+attribute defined in each `Validator` subclass.
+
+The input manifest may contain extra columns that are not intended to be
+validated, and columns can appear in any order.
+
+Example:
+
+```python
+import sys
+import logging
+
+from gen3.tools.indexing import is_valid_manifest_format
+
+logging.basicConfig(filename="output.log", level=logging.DEBUG)
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
+MANIFEST = (
+    "tests/validate_manifest_format/manifests/manifest_with_many_types_of_errors.tsv"
+)
+
+
+def main():
+
+    is_valid_manifest_format(
+        manifest_path=MANIFEST,
+        column_names_to_enums=None,
+        allowed_protocols=["s3", "gs"],
+        allow_base64_encoded_md5=False,
+        error_on_empty_url=False,
+        line_limit=None,
+    )
+
+
+if __name__ == "__main__":
+    main()
+```
+
+The script above logs the following output:
+```
+INFO:root:validating "tests/validate_manifest_format/manifests/manifest_with_many_types_of_errors.tsv" manifest
+INFO:root:mapped manifest column "md5" to "MD5Validator" class instance
+INFO:root:mapped manifest column "urls" to "URLValidator" class instance
+INFO:root:mapped manifest column "file_size" to "SizeValidator" class instance
+INFO:root:mapped manifest column "authz" to "AuthzValidator" class instance
+ERROR:root:line 2, "authz" value "invalid_authz" is invalid, expecting authz resource in format "/<resource>/<subresource>/.../<subresource>"
+ERROR:root:line 3, "file_size" value "invalid_int" is not an integer
+ERROR:root:line 4, "md5" value "invalid_md5" is invalid, expecting 32 hexadecimal characters
+ERROR:root:line 5, "urls" value "invalid_url" is invalid, expecting URL in format "<protocol>://<hostname>/<path>", with protocol being one of ['s3', 'gs']
+INFO:root:finished validating "tests/validate_manifest_format/manifests/manifest_with_many_types_of_errors.tsv" manifest
+```
+
+`column_names_to_enums` can be used to identify custom column names:
+```python
+import sys
+import logging
+
+from gen3.tools.indexing import is_valid_manifest_format
+from gen3.tools.indexing.manifest_columns import Columns
+
+logging.basicConfig(filename="output.log", level=logging.DEBUG)
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
+MANIFEST = (
+    "tests/validate_manifest_format/manifests/manifest_with_custom_column_names.tsv"
+)
+
+COLUMN_NAMES_TO_ENUMS = {
+    "md5_with_underscores": Columns.MD5,
+    "file size with spaces": Columns.SIZE,
+    "Urls With Caps": Columns.URL,
+    "authz with special chars!@*&": Columns.AUTHZ,
+}
+
+
+def main():
+
+    is_valid_manifest_format(
+        manifest_path=MANIFEST,
+        column_names_to_enums=COLUMN_NAMES_TO_ENUMS,
+        allowed_protocols=["s3", "gs"],
+        allow_base64_encoded_md5=False,
+        error_on_empty_url=False,
+        line_limit=None,
+    )
+
+
+if __name__ == "__main__":
+    main()
+```
+Which logs the following output:
+```
+INFO:root:validating "tests/validate_manifest_format/manifests/manifest_with_custom_column_names.tsv" manifest
+INFO:root:mapped manifest column "authz with special chars!@*&" to "AuthzValidator" class instance
+INFO:root:mapped manifest column "file size with spaces" to "SizeValidator" class instance
+INFO:root:mapped manifest column "md5_with_underscores" to "MD5Validator" class instance
+INFO:root:mapped manifest column "Urls With Caps" to "URLValidator" class instance
+ERROR:root:line 2, "authz with special chars!@*&" value "invalid_authz" is invalid, expecting authz resource in format "/<resource>/<subresource>/.../<subresource>"
+ERROR:root:line 3, "file size with spaces" value "invalid_int" is not an integer
+ERROR:root:line 4, "md5_with_underscores" value "invalid_md5" is invalid, expecting 32 hexadecimal characters
+ERROR:root:line 5, "Urls With Caps" value "invalid_url" is invalid, expecting URL in format "<protocol>://<hostname>/<path>", with protocol being one of ['s3', 'gs']
+INFO:root:finished validating "tests/validate_manifest_format/manifests/manifest_with_custom_column_names.tsv" manifest
+```
+
+To see more examples, take a look at `tests/validate_manifest_format/test_is_valid_manifest_format.py`
+
 
 ## Metadata Tools
 

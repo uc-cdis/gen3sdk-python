@@ -1,0 +1,5 @@
+authz with special chars!@*&	acl	file size with spaces	md5_with_underscores	Urls With Caps
+invalid_authz	DEV	123	1596f493ba9ec53023fca640fb69bd3b	gs://test/test.txt
+/programs/DEV/projects/test2	DEV	invalid_int	d9a68f3d5d9ce03f8a08f50924247223	gs://test/test3.txt
+/programs/DEV/projects/test3	DEV	334	invalid_md5	gs://test/test.txt
+/programs/DEV/projects/test3	DEV	334	51bf75c48761b2e755adc1340e5a925a	invalid_url
