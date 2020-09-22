@@ -1,6 +1,6 @@
-Gen3 Auth Helper
+Gen3 Jobs Class
 ----------------
 
-.. autoclass:: gen3.auth.Gen3Auth
+.. autoclass:: gen3.jobs.Gen3Jobs
    :members:
    :show-inheritance:
