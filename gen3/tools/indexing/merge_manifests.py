@@ -22,6 +22,7 @@ def merge_bucket_manifests(
     merge_column="md5",
     output_manifest_file_delimiter=None,
     output_manifest="merged-bucket-manifest.tsv",
+    continue_after_error=False,
 ):
     """
     Merge all of the input manifests in the provided directory into a single
@@ -35,12 +36,18 @@ def merge_bucket_manifests(
         all of the manifests contained in directory are assumed to be in a
         delimiter-separated values (DSV) format, and that there are no other
         non-DSV files in directory.
+        files(list[str]): list of paths containing the input manifests.
+        all of the manifests contained in directory are assumed to be in a
+        delimiter-separated values (DSV) format, and that there are no other
+        non-DSV files in directory.
         merge_column(str): the common hash used to merge files. it is unique
         for every file in the output manifest
         output_manifest_file_delimiter(str): the delimiter used for writing the
         output manifest. if not provided, the delimiter will be determined
         based on the file extension of output_manifest
         output_manifest(str): the file to write the output manifest to
+        continue_after_error(bool): whether or not to continue merging even after a "critical"
+            error like 2 different GUIDs with same md5
 
     Returns:
         None
@@ -66,12 +73,18 @@ def merge_bucket_manifests(
                     size = record[SIZE_STANDARD_KEY]
 
                     if size != record_to_write[SIZE_STANDARD_KEY]:
-                        raise csv.Error(
+                        error_msg = (
                             "Found two objects with the same hash but different sizes,"
                             f" could not merge. Details: object {record} could not be"
                             f" merged with object {record_to_write} because {size} !="
                             f" {record_to_write[SIZE_STANDARD_KEY]}."
                         )
+                        logging.error(error_msg)
+
+                        if continue_after_error:
+                            continue
+
+                        raise csv.Error(error_msg)
 
                 # default value if not available
                 if URLS_STANDARD_KEY not in record_to_write:
@@ -113,12 +126,18 @@ def merge_bucket_manifests(
                         and record_to_write.get(GUID_STANDARD_KEY)
                         and guid != record_to_write.get(GUID_STANDARD_KEY)
                     ):
-                        raise csv.Error(
+                        error_msg = (
                             "Found two objects with the same hash but different guids,"
                             f" could not merge. Details: object {record} could not be"
                             f" merged with object {record_to_write} because {guid} !="
                             f" {record_to_write.get(GUID_STANDARD_KEY)}."
                         )
+                        logging.error(error_msg)
+
+                        if continue_after_error:
+                            continue
+
+                        raise csv.Error(error_msg)
 
                     if guid:
                         record_to_write[GUID_STANDARD_KEY] = guid
@@ -137,9 +156,12 @@ def merge_bucket_manifests(
 
     with open(output_manifest, "w") as outfile:
         logging.info(f"Writing merged manifest to {output_manifest}")
-        logging.info(f"Headers {list(headers)}")
+        logging.info(f"Headers {list(sorted(headers))}")
         output_writer = csv.DictWriter(
-            outfile, delimiter="\t", fieldnames=list(headers), extrasaction="ignore"
+            outfile,
+            delimiter="\t",
+            fieldnames=list(sorted(headers)),
+            extrasaction="ignore",
         )
         output_writer.writeheader()
 

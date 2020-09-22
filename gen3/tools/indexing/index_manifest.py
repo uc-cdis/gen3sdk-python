@@ -168,31 +168,31 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                     fieldnames[fieldnames.index(key)] = MD5_STANDARD_KEY
                     standardized_key = MD5_STANDARD_KEY
                     if not _verify_format(row[key], MD5_FORMAT):
-                        logging.error("ERROR: {} is not in md5 format", row[key])
+                        logging.error(f"ERROR: {row[key]} is not in md5 format")
                         pass_verification = False
                 elif key.lower() in ACLS:
                     fieldnames[fieldnames.index(key)] = ACL_STANDARD_KEY
                     standardized_key = ACL_STANDARD_KEY
                     if not _verify_format(row[key], ACL_FORMAT):
-                        logging.error("ERROR: {} is not in acl format", row[key])
+                        logging.error(f"ERROR: {row[key]} is not in acl format")
                         pass_verification = False
                 elif key.lower() in URLS:
                     fieldnames[fieldnames.index(key)] = URLS_STANDARD_KEY
                     standardized_key = URLS_STANDARD_KEY
                     if not _verify_format(row[key], URL_FORMAT):
-                        logging.error("ERROR: {} is not in urls format", row[key])
+                        logging.error(f"ERROR: {row[key]} is not in urls format")
                         pass_verification = False
                 elif key.lower() in AUTHZ:
                     fieldnames[fieldnames.index(key)] = AUTHZ_STANDARD_KEY
                     standardized_key = AUTHZ_STANDARD_KEY
                     if not _verify_format(row[key], AUTHZ_FORMAT):
-                        logging.error("ERROR: {} is not in authz format", row[key])
+                        logging.error(f"ERROR: {row[key]} is not in authz format")
                         pass_verification = False
                 elif key.lower() in SIZE:
                     fieldnames[fieldnames.index(key)] = SIZE_STANDARD_KEY
                     standardized_key = SIZE_STANDARD_KEY
                     if not _verify_format(row[key], SIZE_FORMAT):
-                        logging.error("ERROR: {} is not in int format", row[key])
+                        logging.error(f"ERROR: {row[key]} is not in int format")
                         pass_verification = False
 
                 if standardized_key:
