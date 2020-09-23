@@ -147,6 +147,7 @@ def get_and_verify_fileinfos_from_tsv_manifest(
 
         logging.debug(f"got fieldnames from {manifest_file}: {fieldnames}")
         pass_verification = True
+        is_row_valid = True
         for row_number, row in enumerate(csvReader, 1):
             output_row = {}
             for current_column_name in row.keys():
@@ -168,7 +169,7 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                         logging.error(
                             f"ERROR: {row[current_column_name]} is not in md5 format"
                         )
-                        pass_verification = False
+                        is_row_valid = False
                 elif current_column_name.lower() in ACLS_COLUMN_NAMES:
                     fieldnames[fieldnames.index(current_column_name)] = ACL_STANDARD_KEY
                     output_column_name = ACL_STANDARD_KEY
@@ -176,7 +177,7 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                         logging.error(
                             f"ERROR: {row[current_column_name]} is not in acl format"
                         )
-                        pass_verification = False
+                        is_row_valid = False
                 elif current_column_name.lower() in URLS_COLUMN_NAMES:
                     fieldnames[
                         fieldnames.index(current_column_name)
@@ -186,7 +187,7 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                         logging.error(
                             f"ERROR: {row[current_column_name]} is not in urls format"
                         )
-                        pass_verification = False
+                        is_row_valid = False
                 elif current_column_name.lower() in AUTHZ_COLUMN_NAMES:
                     fieldnames[
                         fieldnames.index(current_column_name)
@@ -196,7 +197,7 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                         logging.error(
                             f"ERROR: {row[current_column_name]} is not in authz format"
                         )
-                        pass_verification = False
+                        is_row_valid = False
                 elif current_column_name.lower() in SIZE_COLUMN_NAMES:
                     fieldnames[
                         fieldnames.index(current_column_name)
@@ -206,7 +207,7 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                         logging.error(
                             f"ERROR: {row[current_column_name]} is not in int format"
                         )
-                        pass_verification = False
+                        is_row_valid = False
                 elif include_additional_columns:
                     output_column_name = current_column_name
 
@@ -224,12 +225,16 @@ def get_and_verify_fileinfos_from_tsv_manifest(
             if not {URLS_STANDARD_KEY, MD5_STANDARD_KEY, SIZE_STANDARD_KEY}.issubset(
                 set(output_row.keys())
             ):
-                pass_verification = False
+                is_row_valid = False
 
-            if not pass_verification:
+            if not is_row_valid:
                 logging.error(
                     f"row {row_number} with values {row} does not pass the validation"
                 )
+
+                # overall verification fails, but reset row validity
+                pass_verification = False
+                is_row_valid = True
 
             files.append(output_row)
 
