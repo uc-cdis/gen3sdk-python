@@ -76,8 +76,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span> <span class="o">=</span> <span class="n">endpoint</span>
 
     <span class="k">def</span> <span class="nf">__export_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">output</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Writes an API response to a file.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Writes an API response to a file.&quot;&quot;&quot;</span>
         <span class="n">outfile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span>
         <span class="n">outfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
         <span class="n">outfile</span><span class="o">.</span><span class="n">close</span>
@@ -86,9 +85,7 @@
     <span class="c1">### Program functions</span>
 
 <div class="viewcode-block" id="Gen3Submission.get_programs"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.get_programs">[docs]</a>    <span class="k">def</span> <span class="nf">get_programs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;List registered programs</span>
-
-<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;List registered programs&quot;&quot;&quot;</span>
         <span class="n">api_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="si">}</span><span class="s2">/api/v0/submission/&quot;</span>
         <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
         <span class="n">output</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
