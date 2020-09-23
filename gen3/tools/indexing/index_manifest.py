@@ -147,11 +147,9 @@ def get_and_verify_fileinfos_from_tsv_manifest(
 
         logging.debug(f"got fieldnames from {manifest_file}: {fieldnames}")
         pass_verification = True
-        row_number = 0
-        for row in csvReader:
+        for row_number, row in enumerate(csvReader, 1):
             output_row = {}
             for current_column_name in row.keys():
-                row_number = row_number + 1
                 output_column_name = None
                 if current_column_name.lower() in GUID_COLUMN_NAMES:
                     fieldnames[
