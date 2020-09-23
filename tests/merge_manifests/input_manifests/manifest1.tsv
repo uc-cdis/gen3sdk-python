@@ -1,4 +1,4 @@
-url	size	md5	authz
-s3://cdistest-giangb-bucket1-databucket-gen3/ReportPrefix/job-46419099-6153-4011-a44a-829470e02758/results/57cad0b7636f54d4eb9e695f62e026ad9e333940.csv	1142	f7cbeb4f7fcc139d95cb9cc1cf0696ec	phs_test
-s3://cdistest-giangb-bucket1-databucket-gen3/ReportPrefix/job-8e49040d-36f0-4cc5-a4d3-d509e48b9dd7/results/1e1966b4c35dc5fa1a45760e5c24241b3f88fdca.csv	476	4daa609f5c12b9354c901eb57d56398e	phs_test
-s3://cdistest-giangb-bucket1-databucket-gen3/ReportPrefix/job-d2e89015-9344-4b4a-a9cc-f4f6f48c41fd/results/d25d76f50aec8b508b74d1da28a0b6f482fff341.csv	476	4daa609f5c12b9354c901eb57d56398e	phs_test
+url	size	md5	authz	some_additional_data	more_data
+s3://cdistest-giangb-bucket1-databucket-gen3/ReportPrefix/job-46419099-6153-4011-a44a-829470e02758/results/57cad0b7636f54d4eb9e695f62e026ad9e333940.csv	1142	f7cbeb4f7fcc139d95cb9cc1cf0696ec	phs_test	1	one
+s3://cdistest-giangb-bucket1-databucket-gen3/ReportPrefix/job-8e49040d-36f0-4cc5-a4d3-d509e48b9dd7/results/1e1966b4c35dc5fa1a45760e5c24241b3f88fdca.csv	476	4daa609f5c12b9354c901eb57d56398e	phs_test	2	two
+s3://cdistest-giangb-bucket1-databucket-gen3/ReportPrefix/job-d2e89015-9344-4b4a-a9cc-f4f6f48c41fd/results/d25d76f50aec8b508b74d1da28a0b6f482fff341.csv	476	4daa609f5c12b9354c901eb57d56398e	phs_test	3	three

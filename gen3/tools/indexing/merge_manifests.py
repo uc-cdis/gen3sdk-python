@@ -9,7 +9,6 @@ from gen3.tools.indexing.index_manifest import (
 )
 from gen3.tools.indexing.manifest_columns import (
     GUID_STANDARD_KEY,
-    FILENAME_STANDARD_KEY,
     SIZE_STANDARD_KEY,
     MD5_STANDARD_KEY,
     ACL_STANDARD_KEY,
@@ -65,10 +64,14 @@ def merge_bucket_manifests(
     headers = set()
     all_rows = {}
     for manifest in files:
-        records_from_file, _ = get_and_verify_fileinfos_from_tsv_manifest(manifest)
+        records_from_file, _ = get_and_verify_fileinfos_from_tsv_manifest(
+            manifest, include_additional_columns=True
+        )
         for record in records_from_file:
             record_to_write = copy.deepcopy(record)
             if record[MD5_STANDARD_KEY] in all_rows:
+                # if the record already exists, let's start with existing data and
+                # update as needed
                 record_to_write = copy.deepcopy(all_rows[record[MD5_STANDARD_KEY]])
 
                 if SIZE_STANDARD_KEY in record:
@@ -144,6 +147,30 @@ def merge_bucket_manifests(
                     if guid:
                         record_to_write[GUID_STANDARD_KEY] = guid
 
+                # for any column not in the standard set, either update the existing
+                # record with new data, or initialize field to data provided
+                for column_name in [
+                    key
+                    for key in record.keys()
+                    if key
+                    not in (
+                        GUID_STANDARD_KEY,
+                        SIZE_STANDARD_KEY,
+                        MD5_STANDARD_KEY,
+                        ACL_STANDARD_KEY,
+                        URLS_STANDARD_KEY,
+                        AUTHZ_STANDARD_KEY,
+                    )
+                ]:
+                    if column_name in record_to_write:
+                        # create a space-delimited list for mult values for the same column
+                        record_to_write[column_name] += f" {record[column_name]}"
+                        record_to_write[column_name] = record_to_write[
+                            column_name
+                        ].strip()
+                    else:
+                        record_to_write[column_name] = record[column_name]
+
             for key in record_to_write.keys():
                 headers.add(key)
 
@@ -156,13 +183,31 @@ def merge_bucket_manifests(
         else:
             output_manifest_file_delimiter = ","
 
+    # order headers with alphabetical for standard columns, followed by alphabetical for
+    # non-standard columns
+    stardard_headers = sorted(
+        [
+            GUID_STANDARD_KEY,
+            SIZE_STANDARD_KEY,
+            MD5_STANDARD_KEY,
+            ACL_STANDARD_KEY,
+            URLS_STANDARD_KEY,
+            AUTHZ_STANDARD_KEY,
+        ]
+    )
+    non_standard_headers = sorted(
+        [header for header in headers if header not in stardard_headers]
+    )
+
+    headers = stardard_headers + non_standard_headers
+
     with open(output_manifest, "w") as outfile:
         logging.info(f"Writing merged manifest to {output_manifest}")
-        logging.info(f"Headers {list(sorted(headers))}")
+        logging.info(f"Headers {headers}")
         output_writer = csv.DictWriter(
             outfile,
-            delimiter="\t",
-            fieldnames=list(sorted(headers)),
+            delimiter=output_manifest_file_delimiter,
+            fieldnames=headers,
             extrasaction="ignore",
         )
         output_writer.writeheader()

@@ -117,7 +117,7 @@ def _standardize_str(s):
 
 
 def get_and_verify_fileinfos_from_tsv_manifest(
-    manifest_file, manifest_file_delimiter="\t"
+    manifest_file, manifest_file_delimiter="\t", include_additional_columns=False
 ):
     """
     get and verify file infos from tsv manifest
@@ -149,60 +149,82 @@ def get_and_verify_fileinfos_from_tsv_manifest(
         pass_verification = True
         row_number = 0
         for row in csvReader:
-            standardized_dict = {}
-            for key in row.keys():
+            output_row = {}
+            for current_column_name in row.keys():
                 row_number = row_number + 1
-                standardized_key = None
-                if key.lower() in GUID_COLUMN_NAMES:
-                    fieldnames[fieldnames.index(key)] = GUID_STANDARD_KEY
-                    standardized_key = GUID_STANDARD_KEY
-                elif key.lower() in FILENAME_COLUMN_NAMES:
-                    fieldnames[fieldnames.index(key)] = FILENAME_STANDARD_KEY
-                    standardized_key = FILENAME_STANDARD_KEY
-                elif key.lower() in MD5_COLUMN_NAMES:
-                    fieldnames[fieldnames.index(key)] = MD5_STANDARD_KEY
-                    standardized_key = MD5_STANDARD_KEY
-                    if not _verify_format(row[key], MD5_FORMAT):
-                        logging.error(f"ERROR: {row[key]} is not in md5 format")
+                output_column_name = None
+                if current_column_name.lower() in GUID_COLUMN_NAMES:
+                    fieldnames[
+                        fieldnames.index(current_column_name)
+                    ] = GUID_STANDARD_KEY
+                    output_column_name = GUID_STANDARD_KEY
+                elif current_column_name.lower() in FILENAME_COLUMN_NAMES:
+                    fieldnames[
+                        fieldnames.index(current_column_name)
+                    ] = FILENAME_STANDARD_KEY
+                    output_column_name = FILENAME_STANDARD_KEY
+                elif current_column_name.lower() in MD5_COLUMN_NAMES:
+                    fieldnames[fieldnames.index(current_column_name)] = MD5_STANDARD_KEY
+                    output_column_name = MD5_STANDARD_KEY
+                    if not _verify_format(row[current_column_name], MD5_FORMAT):
+                        logging.error(
+                            f"ERROR: {row[current_column_name]} is not in md5 format"
+                        )
                         pass_verification = False
-                elif key.lower() in ACLS_COLUMN_NAMES:
-                    fieldnames[fieldnames.index(key)] = ACL_STANDARD_KEY
-                    standardized_key = ACL_STANDARD_KEY
-                    if not _verify_format(row[key], ACL_FORMAT):
-                        logging.error(f"ERROR: {row[key]} is not in acl format")
+                elif current_column_name.lower() in ACLS_COLUMN_NAMES:
+                    fieldnames[fieldnames.index(current_column_name)] = ACL_STANDARD_KEY
+                    output_column_name = ACL_STANDARD_KEY
+                    if not _verify_format(row[current_column_name], ACL_FORMAT):
+                        logging.error(
+                            f"ERROR: {row[current_column_name]} is not in acl format"
+                        )
                         pass_verification = False
-                elif key.lower() in URLS_COLUMN_NAMES:
-                    fieldnames[fieldnames.index(key)] = URLS_STANDARD_KEY
-                    standardized_key = URLS_STANDARD_KEY
-                    if not _verify_format(row[key], URL_FORMAT):
-                        logging.error(f"ERROR: {row[key]} is not in urls format")
+                elif current_column_name.lower() in URLS_COLUMN_NAMES:
+                    fieldnames[
+                        fieldnames.index(current_column_name)
+                    ] = URLS_STANDARD_KEY
+                    output_column_name = URLS_STANDARD_KEY
+                    if not _verify_format(row[current_column_name], URL_FORMAT):
+                        logging.error(
+                            f"ERROR: {row[current_column_name]} is not in urls format"
+                        )
                         pass_verification = False
-                elif key.lower() in AUTHZ_COLUMN_NAMES:
-                    fieldnames[fieldnames.index(key)] = AUTHZ_STANDARD_KEY
-                    standardized_key = AUTHZ_STANDARD_KEY
-                    if not _verify_format(row[key], AUTHZ_FORMAT):
-                        logging.error(f"ERROR: {row[key]} is not in authz format")
+                elif current_column_name.lower() in AUTHZ_COLUMN_NAMES:
+                    fieldnames[
+                        fieldnames.index(current_column_name)
+                    ] = AUTHZ_STANDARD_KEY
+                    output_column_name = AUTHZ_STANDARD_KEY
+                    if not _verify_format(row[current_column_name], AUTHZ_FORMAT):
+                        logging.error(
+                            f"ERROR: {row[current_column_name]} is not in authz format"
+                        )
                         pass_verification = False
-                elif key.lower() in SIZE_COLUMN_NAMES:
-                    fieldnames[fieldnames.index(key)] = SIZE_STANDARD_KEY
-                    standardized_key = SIZE_STANDARD_KEY
-                    if not _verify_format(row[key], SIZE_FORMAT):
-                        logging.error(f"ERROR: {row[key]} is not in int format")
+                elif current_column_name.lower() in SIZE_COLUMN_NAMES:
+                    fieldnames[
+                        fieldnames.index(current_column_name)
+                    ] = SIZE_STANDARD_KEY
+                    output_column_name = SIZE_STANDARD_KEY
+                    if not _verify_format(row[current_column_name], SIZE_FORMAT):
+                        logging.error(
+                            f"ERROR: {row[current_column_name]} is not in int format"
+                        )
                         pass_verification = False
+                elif include_additional_columns:
+                    output_column_name = current_column_name
 
-                if standardized_key:
+                if output_column_name:
                     try:
-                        standardized_dict[standardized_key] = (
-                            int(row[key])
-                            if standardized_key == SIZE_STANDARD_KEY
-                            else row[key].strip()
+                        output_row[output_column_name] = (
+                            int(row[current_column_name])
+                            if output_column_name == SIZE_STANDARD_KEY
+                            else row[current_column_name].strip()
                         )
                     except ValueError:
                         # don't break
                         pass
 
             if not {URLS_STANDARD_KEY, MD5_STANDARD_KEY, SIZE_STANDARD_KEY}.issubset(
-                set(standardized_dict.keys())
+                set(output_row.keys())
             ):
                 pass_verification = False
 
@@ -211,7 +233,7 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                     f"row {row_number} with values {row} does not pass the validation"
                 )
 
-            files.append(standardized_dict)
+            files.append(output_row)
 
     if not pass_verification:
         logging.error("The manifest is not in the correct format!!!")
