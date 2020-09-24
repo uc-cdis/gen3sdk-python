@@ -162,7 +162,10 @@ def merge_bucket_manifests(
                         AUTHZ_STANDARD_KEY,
                     )
                 ]:
-                    if column_name in record_to_write:
+                    if (
+                        column_name in record_to_write
+                        and record[column_name] not in record_to_write[column_name]
+                    ):
                         # create a space-delimited list for mult values for the same column
                         record_to_write[column_name] += f" {record[column_name]}"
                         record_to_write[column_name] = record_to_write[
