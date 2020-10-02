@@ -705,9 +705,19 @@ class Gen3Expansion:
         counts = Counter(df[prop])
         df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
         df1 = df1.rename(columns={'index':prop, 0:'count'}).sort_values(by='count', ascending=False)
+        total = sum(df1['count'])
+        df1['percent'] = round(100*(df1['count']/total),1)
+
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-            display(df1)
+            print(df1.to_string(index=False))
+            print("\nTotal {}".format(total))
+
         return df1
+
+
+
+
+print(antable.to_string(index=False))
 
     def property_counts_by_project(self, prop, df):
         df = df[df[prop].notnull()]

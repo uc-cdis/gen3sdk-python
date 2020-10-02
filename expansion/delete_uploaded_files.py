@@ -4,6 +4,7 @@ When successful, the script deletes the indexd record for the files and also del
 
 Example:
 python delete_uploaded_files.py -a https://nci-crdc-demo.datacommons.io/ -u user@datacommons.org -c ~/Downloads/demo-credentials.json
+python delete_uploaded_files.py -a https://data.midrc.org/ -u cgmeyer@uchicago.edu -c ~/Downloads/midrc-credentials.json
 
 Arguments:
     -a or --api: The URL for the data commons the file was uploaded to.
