@@ -699,7 +699,7 @@ class Gen3Expansion:
         else:
             print("Successfully deleted the project '{}'".format(project_id))
 
-# Analysis Functions
+    # Analysis Functions
     def property_counts_table(self, prop, df):
         df = df[df[prop].notnull()]
         counts = Counter(df[prop])
@@ -713,11 +713,6 @@ class Gen3Expansion:
             print("\nTotal {}".format(total))
 
         return df1
-
-
-
-
-print(antable.to_string(index=False))
 
     def property_counts_by_project(self, prop, df):
         df = df[df[prop].notnull()]
