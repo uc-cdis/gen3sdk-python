@@ -51,8 +51,8 @@ def merge_bucket_manifests(
         allow_mult_guids_per_hash(bool): allows multiple records with the same
             md5 to exist in the final manifest if they have diff guids.
             Use this with EXTREME caution as the purpose
-            of this code is to combine such entries, however, in cases where you want to
-            allow multiple GUIDs to exist with the same md5 but still merge manifests
+            of this code is to combine such entries, however, in cases where you have
+            existing GUIDs with the same md5 but still want to merge manifests
             together, this can be used.
 
     Returns:
