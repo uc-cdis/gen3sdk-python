@@ -710,7 +710,7 @@ class Gen3Expansion:
 
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
             print(df1.to_string(index=False))
-            print("\nTotal {}".format(total))
+            print("\nTotal Count: {}, Total Categories: {}".format(total,len(df1)))
 
         return df1
 
