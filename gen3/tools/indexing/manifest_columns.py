@@ -25,7 +25,7 @@ MD5_STANDARD_KEY = "md5"
 ACLS_COLUMN_NAMES = ["acl", "acls"]
 ACL_STANDARD_KEY = "acl"
 
-URLS_COLUMN_NAMES = ["url", "urls", "s3_path", "gs_path"]
+URLS_COLUMN_NAMES = ["url", "urls", "s3_path", "gs_path", "aws_uri", "gcp_uri"]
 URLS_STANDARD_KEY = "urls"
 
 AUTHZ_COLUMN_NAMES = ["authz"]

@@ -20,35 +20,40 @@ from gen3.tools.indexing.manifest_columns import (
 def merge_bucket_manifests(
     directory=".",
     files=None,
-    merge_column="md5",
     output_manifest_file_delimiter=None,
     output_manifest="merged-bucket-manifest.tsv",
     continue_after_error=False,
+    allow_mult_guids_per_hash=False,
+    **kwargs,
 ):
     """
     Merge all of the input manifests in the provided directory into a single
     output manifest. Files contained in the input manifests are merged on the
-    basis of a common hash (i.e. merge_column). The url and authz values for
+    basis of a common hash. The url and authz values for
     matching input files are concatenated with spaces in the merged output file
     record.
 
     Args:
         directory(str): path of the directory containing the input manifests.
-        all of the manifests contained in directory are assumed to be in a
-        delimiter-separated values (DSV) format, and that there are no other
-        non-DSV files in directory.
+            all of the manifests contained in directory are assumed to be in a
+            delimiter-separated values (DSV) format, and that there are no other
+            non-DSV files in directory.
         files(list[str]): list of paths containing the input manifests.
-        all of the manifests contained in directory are assumed to be in a
-        delimiter-separated values (DSV) format, and that there are no other
-        non-DSV files in directory.
-        merge_column(str): the common hash used to merge files. it is unique
-        for every file in the output manifest
+            all of the manifests contained in directory are assumed to be in a
+            delimiter-separated values (DSV) format, and that there are no other
+            non-DSV files in directory.
         output_manifest_file_delimiter(str): the delimiter used for writing the
-        output manifest. if not provided, the delimiter will be determined
-        based on the file extension of output_manifest
+            output manifest. if not provided, the delimiter will be determined
+            based on the file extension of output_manifest
         output_manifest(str): the file to write the output manifest to
         continue_after_error(bool): whether or not to continue merging even after a "critical"
             error like 2 different GUIDs with same md5
+        allow_mult_guids_per_hash(bool): allows multiple records with the same
+            md5 to exist in the final manifest if they have diff guids.
+            Use this with EXTREME caution as the purpose
+            of this code is to combine such entries, however, in cases where you want to
+            allow multiple GUIDs to exist with the same md5 but still merge manifests
+            together, this can be used.
 
     Returns:
         None
@@ -70,59 +75,10 @@ def merge_bucket_manifests(
         for record in records_from_file:
             record_to_write = copy.deepcopy(record)
             if record[MD5_STANDARD_KEY] in all_rows:
+                previous_guid_exists = False
                 # if the record already exists, let's start with existing data and
                 # update as needed
-                record_to_write = copy.deepcopy(all_rows[record[MD5_STANDARD_KEY]])
-
-                if SIZE_STANDARD_KEY in record:
-                    size = record[SIZE_STANDARD_KEY]
-
-                    if size != record_to_write[SIZE_STANDARD_KEY]:
-                        error_msg = (
-                            "Found two objects with the same hash but different sizes,"
-                            f" could not merge. Details: object {record} could not be"
-                            f" merged with object {record_to_write} because {size} !="
-                            f" {record_to_write[SIZE_STANDARD_KEY]}."
-                        )
-                        logging.error(error_msg)
-
-                        if continue_after_error:
-                            continue
-
-                        raise csv.Error(error_msg)
-
-                # default value if not available
-                if URLS_STANDARD_KEY not in record_to_write:
-                    record_to_write[URLS_STANDARD_KEY] = ""
-                # if value provided, add it to existing values
-                if URLS_STANDARD_KEY in record:
-                    url = record[URLS_STANDARD_KEY]
-                    if url not in record_to_write[URLS_STANDARD_KEY]:
-                        record_to_write[URLS_STANDARD_KEY] += f" {url}"
-                        # if this is the first one, strip off the space
-                        record_to_write[URLS_STANDARD_KEY] = record_to_write[
-                            URLS_STANDARD_KEY
-                        ].strip()
-
-                if AUTHZ_STANDARD_KEY not in record_to_write:
-                    record_to_write[AUTHZ_STANDARD_KEY] = ""
-                if AUTHZ_STANDARD_KEY in record:
-                    authz = record[AUTHZ_STANDARD_KEY]
-                    if authz not in record_to_write[AUTHZ_STANDARD_KEY]:
-                        record_to_write[AUTHZ_STANDARD_KEY] += f" {authz}"
-                        record_to_write[AUTHZ_STANDARD_KEY] = record_to_write[
-                            AUTHZ_STANDARD_KEY
-                        ].strip()
-
-                if ACL_STANDARD_KEY not in record_to_write:
-                    record_to_write[ACL_STANDARD_KEY] = ""
-                if ACL_STANDARD_KEY in record:
-                    acl = record[ACL_STANDARD_KEY]
-                    if acl not in record_to_write[ACL_STANDARD_KEY]:
-                        record_to_write[ACL_STANDARD_KEY] += f" {acl}"
-                        record_to_write[ACL_STANDARD_KEY] = record_to_write[
-                            ACL_STANDARD_KEY
-                        ].strip()
+                record_to_write = copy.deepcopy(all_rows[record[MD5_STANDARD_KEY]][-1])
 
                 if GUID_STANDARD_KEY in record:
                     guid = record[GUID_STANDARD_KEY]
@@ -139,13 +95,76 @@ def merge_bucket_manifests(
                         )
                         logging.error(error_msg)
 
-                        if continue_after_error:
-                            continue
+                        if not continue_after_error and not allow_mult_guids_per_hash:
+                            raise csv.Error(error_msg)
 
-                        raise csv.Error(error_msg)
+                        previous_guid_exists = True
 
                     if guid:
                         record_to_write[GUID_STANDARD_KEY] = guid
+
+                if SIZE_STANDARD_KEY in record:
+                    size = record[SIZE_STANDARD_KEY]
+
+                    if size != record_to_write[SIZE_STANDARD_KEY]:
+                        error_msg = (
+                            "Found two objects with the same hash but different sizes,"
+                            f" could not merge. Details: object {record} could not be"
+                            f" merged with object {record_to_write} because {size} !="
+                            f" {record_to_write[SIZE_STANDARD_KEY]}."
+                        )
+                        logging.error(error_msg)
+
+                        if not continue_after_error:
+                            raise csv.Error(error_msg)
+
+                # if there's a prev guid and we're allowing duplicates, we don't want
+                # to copy the existing url/authz/acl, so clear them out
+                if previous_guid_exists and allow_mult_guids_per_hash:
+                    record_to_write[URLS_STANDARD_KEY] = ""
+                    record_to_write[AUTHZ_STANDARD_KEY] = ""
+                    record_to_write[ACL_STANDARD_KEY] = ""
+
+                if AUTHZ_STANDARD_KEY not in record_to_write:
+                    record_to_write[AUTHZ_STANDARD_KEY] = ""
+                if AUTHZ_STANDARD_KEY in record:
+                    authz = record[AUTHZ_STANDARD_KEY]
+                    record_to_write[AUTHZ_STANDARD_KEY] = " ".join(
+                        list(
+                            set(
+                                record_to_write[AUTHZ_STANDARD_KEY].split(" ")
+                                + authz.split(" ")
+                            )
+                        )
+                    ).strip(" ")
+
+                if ACL_STANDARD_KEY not in record_to_write:
+                    record_to_write[ACL_STANDARD_KEY] = ""
+                if ACL_STANDARD_KEY in record:
+                    acl = record[ACL_STANDARD_KEY]
+                    record_to_write[ACL_STANDARD_KEY] = " ".join(
+                        list(
+                            set(
+                                record_to_write[ACL_STANDARD_KEY].split(" ")
+                                + acl.split(" ")
+                            )
+                        )
+                    ).strip(" ")
+
+                # default value if not available
+                if URLS_STANDARD_KEY not in record_to_write:
+                    record_to_write[URLS_STANDARD_KEY] = ""
+                # if value provided, add it to existing values
+                if URLS_STANDARD_KEY in record:
+                    urls = record[URLS_STANDARD_KEY]
+                    record_to_write[URLS_STANDARD_KEY] = " ".join(
+                        list(
+                            set(
+                                record_to_write[URLS_STANDARD_KEY].split(" ")
+                                + urls.split(" ")
+                            )
+                        )
+                    ).strip(" ")
 
                 # for any column not in the standard set, either update the existing
                 # record with new data, or initialize field to data provided
@@ -162,22 +181,29 @@ def merge_bucket_manifests(
                         AUTHZ_STANDARD_KEY,
                     )
                 ]:
-                    if (
-                        column_name in record_to_write
-                        and record[column_name] not in record_to_write[column_name]
-                    ):
-                        # create a space-delimited list for mult values for the same column
-                        record_to_write[column_name] += f" {record[column_name]}"
-                        record_to_write[column_name] = record_to_write[
-                            column_name
-                        ].strip()
+                    if column_name in record_to_write:
+                        record_to_write[column_name] = " ".join(
+                            list(
+                                set(
+                                    record_to_write[column_name].split(" ")
+                                    + record[column_name].split(" ")
+                                )
+                            )
+                        ).strip(" ")
                     else:
                         record_to_write[column_name] = record[column_name]
+
+                # if there's NOT a previous guid matching this record and we're NOT allowing
+                # duplicates, remove existing record so that we can replace with newly updated one
+                if not (previous_guid_exists and allow_mult_guids_per_hash):
+                    all_rows[record_to_write[MD5_STANDARD_KEY]] = []
 
             for key in record_to_write.keys():
                 headers.add(key)
 
-            all_rows.update({record_to_write[MD5_STANDARD_KEY]: record_to_write})
+            all_rows.setdefault(record_to_write[MD5_STANDARD_KEY], []).append(
+                record_to_write
+            )
 
     if output_manifest_file_delimiter is None:
         output_manifest_file_ext = os.path.splitext(output_manifest)
@@ -215,7 +241,8 @@ def merge_bucket_manifests(
         )
         output_writer.writeheader()
 
-        for hash_code, record in all_rows.items():
-            output_writer.writerow(record)
+        for hash_code, records in all_rows.items():
+            for record in records:
+                output_writer.writerow(record)
 
         logging.info(f"Finished writing merged manifest to {output_manifest}")
