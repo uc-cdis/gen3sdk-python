@@ -121,9 +121,7 @@ def merge_bucket_manifests(
                 # if there's a prev guid and we're allowing duplicates, we don't want
                 # to copy the existing url/authz/acl, so clear them out
                 if previous_guid_exists and allow_mult_guids_per_hash:
-                    record_to_write[URLS_STANDARD_KEY] = ""
-                    record_to_write[AUTHZ_STANDARD_KEY] = ""
-                    record_to_write[ACL_STANDARD_KEY] = ""
+                    record_to_write = copy.deepcopy(record)
 
                 if AUTHZ_STANDARD_KEY not in record_to_write:
                     record_to_write[AUTHZ_STANDARD_KEY] = ""
