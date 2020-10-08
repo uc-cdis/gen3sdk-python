@@ -1,7 +1,7 @@
 import csv
 import pytest
 from gen3.tools.indexing import merge_bucket_manifests
-from gen3.tools.indexing.manifest_columns import MD5_STANDARD_KEY
+from gen3.tools.indexing.manifest_columns import MD5_STANDARD_KEY, GUID_STANDARD_KEY
 
 
 def test_regular_merge_bucket_manifests():
@@ -110,4 +110,6 @@ def _get_tsv_data(manifest, delimiter="\t"):
         for row in reader:
             rows.append(dict({k: sorted(v.split(" ")) for k, v in row.items()}))
 
-    return sorted(rows, key=lambda row: row[MD5_STANDARD_KEY][0])
+    return sorted(
+        rows, key=lambda row: (row[MD5_STANDARD_KEY][0], row[GUID_STANDARD_KEY][0])
+    )
