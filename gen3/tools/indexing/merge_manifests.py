@@ -5,7 +5,7 @@ import copy
 
 from collections import OrderedDict
 from gen3.tools.indexing.index_manifest import (
-    get_and_verify_fileinfos_from_tsv_manifest,
+    get_and_verify_fileinfos_from_manifest,
 )
 from gen3.tools.indexing.manifest_columns import (
     GUID_STANDARD_KEY,
@@ -69,7 +69,7 @@ def merge_bucket_manifests(
     headers = set()
     all_rows = {}
     for manifest in files:
-        records_from_file, _ = get_and_verify_fileinfos_from_tsv_manifest(
+        records_from_file, _ = get_and_verify_fileinfos_from_manifest(
             manifest, include_additional_columns=True
         )
         for record in records_from_file:

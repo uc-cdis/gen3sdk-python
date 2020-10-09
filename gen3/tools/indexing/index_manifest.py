@@ -245,6 +245,25 @@ def get_and_verify_fileinfos_from_tsv_manifest(
     return files, fieldnames
 
 
+def get_and_verify_fileinfos_from_manifest(
+    manifest_file, include_additional_columns=False
+):
+    """
+    Wrapper for above function to determine the delimeter based on file extention
+    """
+    manifest_file_ext = os.path.splitext(manifest_file)
+    if manifest_file_ext[-1].lower() == ".tsv":
+        manifest_file_delimiter = "\t"
+    else:
+        manifest_file_delimiter = ","
+
+    return get_and_verify_fileinfos_from_tsv_manifest(
+        manifest_file=manifest_file,
+        manifest_file_delimiter=manifest_file_delimiter,
+        include_additional_columns=include_additional_columns,
+    )
+
+
 def _write_csv(filename, files, fieldnames=None):
     """
     write to csv file
