@@ -279,6 +279,25 @@
     <span class="k">return</span> <span class="n">files</span><span class="p">,</span> <span class="n">fieldnames</span></div>
 
 
+<div class="viewcode-block" id="get_and_verify_fileinfos_from_manifest"><a class="viewcode-back" href="../../../../tools/indexing.html#gen3.tools.indexing.index_manifest.get_and_verify_fileinfos_from_manifest">[docs]</a><span class="k">def</span> <span class="nf">get_and_verify_fileinfos_from_manifest</span><span class="p">(</span>
+    <span class="n">manifest_file</span><span class="p">,</span> <span class="n">include_additional_columns</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrapper for above function to determine the delimeter based on file extention</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">manifest_file_ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">manifest_file_ext</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.tsv&quot;</span><span class="p">:</span>
+        <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span>
+
+    <span class="k">return</span> <span class="n">get_and_verify_fileinfos_from_tsv_manifest</span><span class="p">(</span>
+        <span class="n">manifest_file</span><span class="o">=</span><span class="n">manifest_file</span><span class="p">,</span>
+        <span class="n">manifest_file_delimiter</span><span class="o">=</span><span class="n">manifest_file_delimiter</span><span class="p">,</span>
+        <span class="n">include_additional_columns</span><span class="o">=</span><span class="n">include_additional_columns</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
 <span class="k">def</span> <span class="nf">_write_csv</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">files</span><span class="p">,</span> <span class="n">fieldnames</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    write to csv file</span>
