@@ -42,8 +42,7 @@ class Gen3Submission:
         self._endpoint = endpoint
 
     def __export_file(self, filename, output):
-        """Writes an API response to a file.
-        """
+        """Writes an API response to a file."""
         outfile = open(filename, "w")
         outfile.write(output)
         outfile.close
@@ -52,9 +51,7 @@ class Gen3Submission:
     ### Program functions
 
     def get_programs(self):
-        """List registered programs
-
-        """
+        """List registered programs"""
         api_url = f"{self._endpoint}/api/v0/submission/"
         output = requests.get(api_url, auth=self._auth_provider)
         output.raise_for_status()

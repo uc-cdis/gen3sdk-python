@@ -3,11 +3,11 @@ from unittest.mock import patch
 
 
 def test_get(sub):
-    """ 
-        tests: 
-        get_programs
-        get_graphql_schema
-        get_dictionary_all
+    """
+    tests:
+    get_programs
+    get_graphql_schema
+    get_dictionary_all
 
     """
     with patch("gen3.submission.requests") as mock_request:
@@ -25,9 +25,9 @@ def test_get(sub):
 
 
 def test_exportnode(sub):
-    """ 
-        tests:
-        export_node
+    """
+    tests:
+    export_node
 
     """
     with patch("gen3.submission.requests") as mock_request:
