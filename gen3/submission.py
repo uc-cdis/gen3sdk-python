@@ -534,11 +534,14 @@ class Gen3Submission:
                         sid = entity["unique_keys"][0]["submitter_id"]
                         results["succeeded"].append(sid)
 
-                elif (
-                    json_res["code"] == 400
-                    or json_res["code"] == 403
-                    or json_res["code"] == 404
-                ):  # failure
+                elif json_res["code"] == 500:  # internal server error
+
+                    print("\t Internal Server Error: {}".format(response))
+                    results["responses"].append(
+                        "Internal Server Error: {}".format(response)
+                    )
+
+                else:  # failure (400, 401, 403, 404...)
 
                     entities = json_res.get("entities", [])
                     print("\tChunk Failed: {} entities.".format(str(len(entities))))
@@ -558,13 +561,6 @@ class Gen3Submission:
                             invalid.append(sid)
                     print(
                         "\tInvalid records in this chunk: {}".format(str(len(invalid)))
-                    )
-
-                elif json_res["code"] == 500:  # internal server error
-
-                    print("\t Internal Server Error: {}".format(response))
-                    results["responses"].append(
-                        "Internal Server Error: {}".format(response)
                     )
 
             if (
@@ -603,7 +599,7 @@ class Gen3Submission:
                     )
                     timeout = False
                 else:
-                    raise Gen3SubmissionError(
+                    raise Gen3Error(
                         "Submission is timing out. Please contact the Helpdesk."
                     )
 
