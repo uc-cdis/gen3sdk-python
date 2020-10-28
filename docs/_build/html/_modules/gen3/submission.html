@@ -470,7 +470,7 @@
             <span class="p">)</span>
 
         <span class="c1"># Chunk the file</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Submitting </span><span class="si">{}</span><span class="s2"> with </span><span class="si">{}</span><span class="s2"> records.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">))))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Submitting </span><span class="si">{}</span><span class="s2"> with </span><span class="si">{}</span><span class="s2"> records.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)))</span>
         <span class="n">program</span><span class="p">,</span> <span class="n">project</span> <span class="o">=</span> <span class="n">project_id</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
         <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/api/v0/submission/</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">)</span>
         <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;content-type&quot;</span><span class="p">:</span> <span class="s2">&quot;text/tab-separated-values&quot;</span><span class="p">}</span>
@@ -498,10 +498,10 @@
             <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
             <span class="nb">print</span><span class="p">(</span>
                 <span class="s2">&quot;Chunk </span><span class="si">{}</span><span class="s2"> (chunk size: </span><span class="si">{}</span><span class="s2">, submitted: </span><span class="si">{}</span><span class="s2"> of </span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                    <span class="nb">str</span><span class="p">(</span><span class="n">count</span><span class="p">),</span>
-                    <span class="nb">str</span><span class="p">(</span><span class="n">chunk_size</span><span class="p">),</span>
-                    <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s2">&quot;succeeded&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s2">&quot;invalid&quot;</span><span class="p">])),</span>
-                    <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)),</span>
+                    <span class="n">count</span><span class="p">,</span>
+                    <span class="n">chunk_size</span><span class="p">,</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s2">&quot;succeeded&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s2">&quot;invalid&quot;</span><span class="p">]),</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">),</span>
                 <span class="p">)</span>
             <span class="p">)</span>
 
@@ -539,12 +539,12 @@
                 <span class="k">if</span> <span class="s2">&quot;message&quot;</span> <span class="ow">in</span> <span class="n">json_res</span> <span class="ow">and</span> <span class="s2">&quot;code&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">json_res</span><span class="p">:</span>
                     <span class="nb">print</span><span class="p">(</span>
                         <span class="s2">&quot;</span><span class="se">\t</span><span class="s2"> No code in the API response for Chunk </span><span class="si">{}</span><span class="s2">: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                            <span class="nb">str</span><span class="p">(</span><span class="n">count</span><span class="p">),</span> <span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message&quot;</span><span class="p">)</span>
+                            <span class="n">count</span><span class="p">,</span> <span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message&quot;</span><span class="p">)</span>
                         <span class="p">)</span>
                     <span class="p">)</span>
-                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2"> </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;transactional_errors&quot;</span><span class="p">))))</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2"> </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;transactional_errors&quot;</span><span class="p">)))</span>
                     <span class="n">results</span><span class="p">[</span><span class="s2">&quot;responses&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                        <span class="s2">&quot;Error Chunk </span><span class="si">{}</span><span class="s2">: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">count</span><span class="p">),</span> <span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message&quot;</span><span class="p">))</span>
+                        <span class="s2">&quot;Error Chunk </span><span class="si">{}</span><span class="s2">: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">count</span><span class="p">,</span> <span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message&quot;</span><span class="p">))</span>
                     <span class="p">)</span>
                     <span class="n">results</span><span class="p">[</span><span class="s2">&quot;other&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;transactional_errors&quot;</span><span class="p">))</span>
 
@@ -557,11 +557,9 @@
                 <span class="k">elif</span> <span class="n">json_res</span><span class="p">[</span><span class="s2">&quot;code&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span>  <span class="c1"># success</span>
 
                     <span class="n">entities</span> <span class="o">=</span> <span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;entities&quot;</span><span class="p">,</span> <span class="p">[])</span>
-                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2"> Succeeded: </span><span class="si">{}</span><span class="s2"> entities.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">entities</span><span class="p">))))</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2"> Succeeded: </span><span class="si">{}</span><span class="s2"> entities.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">entities</span><span class="p">)))</span>
                     <span class="n">results</span><span class="p">[</span><span class="s2">&quot;responses&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                        <span class="s2">&quot;Chunk </span><span class="si">{}</span><span class="s2"> Succeeded: </span><span class="si">{}</span><span class="s2"> entities.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                            <span class="nb">str</span><span class="p">(</span><span class="n">count</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">entities</span><span class="p">))</span>
-                        <span class="p">)</span>
+                        <span class="s2">&quot;Chunk </span><span class="si">{}</span><span class="s2"> Succeeded: </span><span class="si">{}</span><span class="s2"> entities.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">count</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">entities</span><span class="p">))</span>
                     <span class="p">)</span>
 
                     <span class="k">for</span> <span class="n">entity</span> <span class="ow">in</span> <span class="n">entities</span><span class="p">:</span>
@@ -578,11 +576,13 @@
                 <span class="k">else</span><span class="p">:</span>  <span class="c1"># failure (400, 401, 403, 404...)</span>
 
                     <span class="n">entities</span> <span class="o">=</span> <span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;entities&quot;</span><span class="p">,</span> <span class="p">[])</span>
-                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">Chunk Failed: </span><span class="si">{}</span><span class="s2"> entities.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">entities</span><span class="p">))))</span>
-                    <span class="n">results</span><span class="p">[</span><span class="s2">&quot;responses&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                        <span class="s2">&quot;Chunk </span><span class="si">{}</span><span class="s2"> Failed: </span><span class="si">{}</span><span class="s2"> entities.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                            <span class="nb">str</span><span class="p">(</span><span class="n">count</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">entities</span><span class="p">))</span>
+                    <span class="nb">print</span><span class="p">(</span>
+                        <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">Chunk Failed (status code </span><span class="si">{}</span><span class="s2">): </span><span class="si">{}</span><span class="s2"> entities.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;code&quot;</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">entities</span><span class="p">)</span>
                         <span class="p">)</span>
+                    <span class="p">)</span>
+                    <span class="n">results</span><span class="p">[</span><span class="s2">&quot;responses&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="s2">&quot;Chunk </span><span class="si">{}</span><span class="s2"> Failed: </span><span class="si">{}</span><span class="s2"> entities.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">count</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">entities</span><span class="p">))</span>
                     <span class="p">)</span>
 
                     <span class="k">for</span> <span class="n">entity</span> <span class="ow">in</span> <span class="n">entities</span><span class="p">:</span>
@@ -593,9 +593,7 @@
                             <span class="n">message</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">entity</span><span class="p">[</span><span class="s2">&quot;errors&quot;</span><span class="p">])</span>
                             <span class="n">results</span><span class="p">[</span><span class="s2">&quot;invalid&quot;</span><span class="p">][</span><span class="n">sid</span><span class="p">]</span> <span class="o">=</span> <span class="n">message</span>
                             <span class="n">invalid</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sid</span><span class="p">)</span>
-                    <span class="nb">print</span><span class="p">(</span>
-                        <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">Invalid records in this chunk: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">invalid</span><span class="p">)))</span>
-                    <span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">Invalid records in this chunk: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">invalid</span><span class="p">)))</span>
 
             <span class="k">if</span> <span class="p">(</span>
                 <span class="nb">len</span><span class="p">(</span><span class="n">valid_but_failed</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">invalid</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
@@ -605,7 +603,7 @@
                 <span class="p">]</span>  <span class="c1"># these are records that weren&#39;t successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes</span>
                 <span class="nb">print</span><span class="p">(</span>
                     <span class="s2">&quot;Retrying submission of valid entities from failed chunk: </span><span class="si">{}</span><span class="s2"> valid entities.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                        <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">))</span>
+                        <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
                     <span class="p">)</span>
                 <span class="p">)</span>
 
@@ -627,20 +625,18 @@
                     <span class="n">end</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">chunk_size</span>
                     <span class="n">chunk</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
                     <span class="nb">print</span><span class="p">(</span>
-                        <span class="s2">&quot;Retrying Chunk with reduced chunk_size: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                            <span class="nb">str</span><span class="p">(</span><span class="n">chunk_size</span><span class="p">)</span>
-                        <span class="p">)</span>
+                        <span class="s2">&quot;Retrying Chunk with reduced chunk_size: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">chunk_size</span><span class="p">)</span>
                     <span class="p">)</span>
                     <span class="n">timeout</span> <span class="o">=</span> <span class="kc">False</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Failed invalid records:</span><span class="se">\n</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s2">&quot;invalid&quot;</span><span class="p">],</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)))</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Last chunk:</span><span class="se">\n</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">chunk</span><span class="p">))</span>
                     <span class="k">raise</span> <span class="n">Gen3Error</span><span class="p">(</span>
                         <span class="s2">&quot;Submission is timing out. Please contact the Helpdesk.&quot;</span>
                     <span class="p">)</span>
 
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Finished data submission.&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Successful records: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s2">&quot;succeeded&quot;</span><span class="p">])))))</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Failed invalid records: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s2">&quot;invalid&quot;</span><span class="p">]))))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Successful records: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s2">&quot;succeeded&quot;</span><span class="p">]))))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Failed invalid records: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s2">&quot;invalid&quot;</span><span class="p">])))</span>
 
         <span class="k">return</span> <span class="n">results</span></div></div>
 </pre></div>
