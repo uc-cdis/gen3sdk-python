@@ -2805,3 +2805,84 @@ class Gen3Expansion:
 #         raise(Exception(resp.reason))
 #     token = resp.json()['access_token']
 #     return token
+
+
+
+
+# get a summarized version of a data dictionary
+#
+# remove_props = ['project_id','submitter_id','id','type','updated_datetime','created_datetime','state','object_id','md5sum','file_size','file_state','error_type','file_name'] # 383
+# #remove_props = ['project_id','submitter_id','id','type','updated_datetime','created_datetime','state','object_id','md5sum','file_size','file_state','error_type'] #396 total prop_ids
+# #remove_props = ['project_id','submitter_id','id','type','updated_datetime','created_datetime','state','file_state','error_type'] #435 total prop_ids
+# #remove_props = ['project_id','id','type','updated_datetime','created_datetime','state','object_id','file_state','error_type'] #464 total prop_ids
+# #remove_props = ['type','updated_datetime','created_datetime','state','file_state','error_type'] #563 total prop_ids
+# #remove_props = ['project_id','submitter_id','id','type','updated_datetime','created_datetime','state'] #461 total prop_ids
+# #remove_props = ['object_id','md5sum','file_size','file_state','error_type','type','updated_datetime','created_datetime','state'] # 524 prop_ids
+# #remove_props = ['project_id','type','updated_datetime','created_datetime','state'] # 547 prop_ids
+# #remove_props = ['type','updated_datetime','created_datetime','state'] # 589 prop_ids
+# #remove_props = ['updated_datetime','created_datetime','state'] # 633 prop_ids
+# #remove_props = [] #760 props
+# remove_parents = True
+# dds = {}
+# prop_ids = []
+# props = []
+# edges = 0
+# for node in nodes:
+#
+#     print("{}".format(node))
+#     dds[node] = {}
+#     dds[node]['props']=[]
+#     dds[node]['links']=[]
+#
+#     node_links = dd[node].get('links')
+#     print("\t{}".format(node_links))
+#     for node_link in node_links:
+#
+#         if isinstance(node_link,dict): #gets rid of nodes with no links
+#
+#             if "target_type" in node_link:
+#                 link = {}
+#                 link['target'] = node_link['target_type']
+#                 link['name'] = node_link.get('name')
+#                 link['backref'] = node_link.get('backref')
+#                 link['multiplicity'] = node_link.get('multiplicity')
+#                 dds[node]['links'].append(link)
+#                 edges += 1
+#                 print("{}\t\t{}".format(edges,link))
+#
+#             elif "subgroup" in node_link:
+#
+#                 sublinks = node_link['subgroup']
+#                 for sublink in sublinks:
+#
+#                     if "target_type" in sublink:
+#                         link = {}
+#                         link['target'] = sublink['target_type']
+#                         link['name'] = sublink.get('name')
+#                         link['backref'] = sublink.get('backref')
+#                         link['multiplicity'] = sublink.get('multiplicity')
+#                         dds[node]['links'].append(link)
+#                         edges += 1
+#                         print("{}\t\t{}".format(edges,link))
+#
+#                     else:
+#                         print("\n\n\nPOOPSublink {} {}\n\n\n".format(node,sublinks))
+#
+#     # make a list of properties for the node,
+#     # remove system properties
+#     node_props = list(dd[node]['properties'])
+#     node_props = [prop for prop in node_props if prop not in remove_props]
+#
+#     # remove links to parent nodes from the "properties" list
+#     if remove_parents is True:
+#         parent_nodes = [link['name'] for link in dds[node]['links']]
+#         node_props = [prop for prop in node_props if prop not in parent_nodes]
+#
+#     for prop in node_props:
+#         dds[node]['props'].append(prop)
+#         prop_id = "{}-{}".format(node,prop)
+#         prop_ids.append(prop_id)
+#         props.append(prop)
+#
+# props = sorted(list(set(props))) # unique properties, excluding any removed
+# print("props: {} prop_ids: {}, edges: {}".format(len(props),len(prop_ids),edges))
