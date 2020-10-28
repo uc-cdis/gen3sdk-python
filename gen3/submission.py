@@ -599,6 +599,7 @@ class Gen3Submission:
                     )
                     timeout = False
                 else:
+                    print("Failed invalid records:\n{}".format(json.dumps(results["invalid"], indent=2)))
                     raise Gen3Error(
                         "Submission is timing out. Please contact the Helpdesk."
                     )
