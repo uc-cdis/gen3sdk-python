@@ -568,11 +568,14 @@
                         <span class="n">sid</span> <span class="o">=</span> <span class="n">entity</span><span class="p">[</span><span class="s2">&quot;unique_keys&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;submitter_id&quot;</span><span class="p">]</span>
                         <span class="n">results</span><span class="p">[</span><span class="s2">&quot;succeeded&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sid</span><span class="p">)</span>
 
-                <span class="k">elif</span> <span class="p">(</span>
-                    <span class="n">json_res</span><span class="p">[</span><span class="s2">&quot;code&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">400</span>
-                    <span class="ow">or</span> <span class="n">json_res</span><span class="p">[</span><span class="s2">&quot;code&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">403</span>
-                    <span class="ow">or</span> <span class="n">json_res</span><span class="p">[</span><span class="s2">&quot;code&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">404</span>
-                <span class="p">):</span>  <span class="c1"># failure</span>
+                <span class="k">elif</span> <span class="n">json_res</span><span class="p">[</span><span class="s2">&quot;code&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">500</span><span class="p">:</span>  <span class="c1"># internal server error</span>
+
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2"> Internal Server Error: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">response</span><span class="p">))</span>
+                    <span class="n">results</span><span class="p">[</span><span class="s2">&quot;responses&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="s2">&quot;Internal Server Error: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+                    <span class="p">)</span>
+
+                <span class="k">else</span><span class="p">:</span>  <span class="c1"># failure (400, 401, 403, 404...)</span>
 
                     <span class="n">entities</span> <span class="o">=</span> <span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;entities&quot;</span><span class="p">,</span> <span class="p">[])</span>
                     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">Chunk Failed: </span><span class="si">{}</span><span class="s2"> entities.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">entities</span><span class="p">))))</span>
@@ -592,13 +595,6 @@
                             <span class="n">invalid</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sid</span><span class="p">)</span>
                     <span class="nb">print</span><span class="p">(</span>
                         <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">Invalid records in this chunk: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">invalid</span><span class="p">)))</span>
-                    <span class="p">)</span>
-
-                <span class="k">elif</span> <span class="n">json_res</span><span class="p">[</span><span class="s2">&quot;code&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">500</span><span class="p">:</span>  <span class="c1"># internal server error</span>
-
-                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2"> Internal Server Error: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">response</span><span class="p">))</span>
-                    <span class="n">results</span><span class="p">[</span><span class="s2">&quot;responses&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                        <span class="s2">&quot;Internal Server Error: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
                     <span class="p">)</span>
 
             <span class="k">if</span> <span class="p">(</span>
@@ -637,7 +633,7 @@
                     <span class="p">)</span>
                     <span class="n">timeout</span> <span class="o">=</span> <span class="kc">False</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="n">Gen3SubmissionError</span><span class="p">(</span>
+                    <span class="k">raise</span> <span class="n">Gen3Error</span><span class="p">(</span>
                         <span class="s2">&quot;Submission is timing out. Please contact the Helpdesk.&quot;</span>
                     <span class="p">)</span>
 
