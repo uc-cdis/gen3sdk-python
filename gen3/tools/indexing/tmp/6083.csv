@@ -1,0 +1,4 @@
+dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b,gs://test/test.txt s3://testaws/aws/test.txt,/programs/DEV/projects/test,DEV test,a1234567891234567890123456789012,123,
+dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2,gs://test/test.txt,/programs/DEV/projects/test2 /programs/DEV/projects/test2bak,DEV test2,b1234567891234567890123456789012,234,test.txt
+dg.TEST/ed8f4658-6acd-4f96-9dd8-3709890c959e,gs://test/test3.txt,/programs/DEV/projects/test3 /programs/DEV/projects/test3bak,DEV test3,e1234567891234567890123456789012,345,
+dg.TEST/a802e27d-4a5b-42e3-92b0-ba19e81b9dce,gs://test/test4%20space.txt s3://test/test4%20space.txt,/programs/DEV/projects/test4 /programs/DEV/projects/test4bak,DEV test4,f1234567891234567890123456789012,345,
