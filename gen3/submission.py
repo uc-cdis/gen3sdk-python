@@ -436,7 +436,7 @@ class Gen3Submission:
             )
 
         # Chunk the file
-        print("\nSubmitting {} with {} records.".format(filename, str(len(df))))
+        print("\nSubmitting {} with {} records.".format(filename, len(df)))
         program, project = project_id.split("-", 1)
         api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
         headers = {"content-type": "text/tab-separated-values"}
@@ -464,10 +464,10 @@ class Gen3Submission:
             count += 1
             print(
                 "Chunk {} (chunk size: {}, submitted: {} of {})".format(
-                    str(count),
-                    str(chunk_size),
-                    str(len(results["succeeded"]) + len(results["invalid"])),
-                    str(len(df)),
+                    count,
+                    chunk_size,
+                    len(results["succeeded"]) + len(results["invalid"]),
+                    len(df),
                 )
             )
 
@@ -505,12 +505,12 @@ class Gen3Submission:
                 if "message" in json_res and "code" not in json_res:
                     print(
                         "\t No code in the API response for Chunk {}: {}".format(
-                            str(count), json_res.get("message")
+                            count, json_res.get("message")
                         )
                     )
-                    print("\t {}".format(str(json_res.get("transactional_errors"))))
+                    print("\t {}".format(json_res.get("transactional_errors")))
                     results["responses"].append(
-                        "Error Chunk {}: {}".format(str(count), json_res.get("message"))
+                        "Error Chunk {}: {}".format(count, json_res.get("message"))
                     )
                     results["other"].append(json_res.get("transactional_errors"))
 
@@ -523,29 +523,32 @@ class Gen3Submission:
                 elif json_res["code"] == 200:  # success
 
                     entities = json_res.get("entities", [])
-                    print("\t Succeeded: {} entities.".format(str(len(entities))))
+                    print("\t Succeeded: {} entities.".format(len(entities)))
                     results["responses"].append(
-                        "Chunk {} Succeeded: {} entities.".format(
-                            str(count), str(len(entities))
-                        )
+                        "Chunk {} Succeeded: {} entities.".format(count, len(entities))
                     )
 
                     for entity in entities:
                         sid = entity["unique_keys"][0]["submitter_id"]
                         results["succeeded"].append(sid)
 
-                elif (
-                    json_res["code"] == 400
-                    or json_res["code"] == 403
-                    or json_res["code"] == 404
-                ):  # failure
+                elif json_res["code"] == 500:  # internal server error
+
+                    print("\t Internal Server Error: {}".format(response))
+                    results["responses"].append(
+                        "Internal Server Error: {}".format(response)
+                    )
+
+                else:  # failure (400, 401, 403, 404...)
 
                     entities = json_res.get("entities", [])
-                    print("\tChunk Failed: {} entities.".format(str(len(entities))))
-                    results["responses"].append(
-                        "Chunk {} Failed: {} entities.".format(
-                            str(count), str(len(entities))
+                    print(
+                        "\tChunk Failed (status code {}): {} entities.".format(
+                            json_res.get("code"), len(entities)
                         )
+                    )
+                    results["responses"].append(
+                        "Chunk {} Failed: {} entities.".format(count, len(entities))
                     )
 
                     for entity in entities:
@@ -556,16 +559,7 @@ class Gen3Submission:
                             message = str(entity["errors"])
                             results["invalid"][sid] = message
                             invalid.append(sid)
-                    print(
-                        "\tInvalid records in this chunk: {}".format(str(len(invalid)))
-                    )
-
-                elif json_res["code"] == 500:  # internal server error
-
-                    print("\t Internal Server Error: {}".format(response))
-                    results["responses"].append(
-                        "Internal Server Error: {}".format(response)
-                    )
+                    print("\tInvalid records in this chunk: {}".format(len(invalid)))
 
             if (
                 len(valid_but_failed) > 0 and len(invalid) > 0
@@ -575,7 +569,7 @@ class Gen3Submission:
                 ]  # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
                 print(
                     "Retrying submission of valid entities from failed chunk: {} valid entities.".format(
-                        str(len(chunk))
+                        len(chunk)
                     )
                 )
 
@@ -597,18 +591,17 @@ class Gen3Submission:
                     end = start + chunk_size
                     chunk = df[start:end]
                     print(
-                        "Retrying Chunk with reduced chunk_size: {}".format(
-                            str(chunk_size)
-                        )
+                        "Retrying Chunk with reduced chunk_size: {}".format(chunk_size)
                     )
                     timeout = False
                 else:
-                    raise Gen3SubmissionError(
+                    print("Last chunk:\n{}".format(chunk))
+                    raise Gen3Error(
                         "Submission is timing out. Please contact the Helpdesk."
                     )
 
         print("Finished data submission.")
-        print("Successful records: {}".format(str(len(set(results["succeeded"])))))
-        print("Failed invalid records: {}".format(str(len(results["invalid"]))))
+        print("Successful records: {}".format(len(set(results["succeeded"]))))
+        print("Failed invalid records: {}".format(len(results["invalid"])))
 
         return results
