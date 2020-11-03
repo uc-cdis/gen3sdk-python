@@ -183,9 +183,7 @@ def _get_dsv_reader(dsv_file):
 
 
 def _get_manifest_column_names_to_validators(
-    manifest_column_names,
-    enums_to_validators,
-    column_names_to_enums=None,
+    manifest_column_names, enums_to_validators, column_names_to_enums=None,
 ):
     """
     Maps manifest column names to Validator subclass instances. If
