@@ -1274,11 +1274,10 @@ def main():
     # use basic auth for admin privileges in indexd
     # auth = ("basic_auth_username", "basic_auth_password")
 
-    ingest_object_manifest(
+    ingest_bundle_manifest(
         commons_url=COMMONS,
         manifest_file=MANIFEST,
         out_manifest_file="ingest_out.csv",
-        manifest_file_delimeter=",",
         auth=auth,
     )
 
