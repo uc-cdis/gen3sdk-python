@@ -1,6 +1,6 @@
 # Gen3 SDK for Python
 
-The Gen3 PSDK for Python provides classes and functions for handling common tasks when interacting with a Gen3 commons. The API for a commons can be overwhelming, so this SDK aims
+The Gen3 SDK for Python provides classes and functions for handling common tasks when interacting with a Gen3 commons. The API for a commons can be overwhelming, so this SDK aims
 to simplify communication with various microservices in a clear Python package.
 
 The docs here contain general descriptions of the different pieces of the SDK and example scripts. For detailed API documentation, see the link below:

@@ -12,7 +12,7 @@ from gen3.tools.indexing.download_manifest import TMP_FOLDER
 from gen3.tools.indexing import async_download_object_manifest
 from gen3.tools.indexing.index_manifest import (
     index_object_manifest,
-    _get_and_verify_fileinfos_from_tsv_manifest,
+    get_and_verify_fileinfos_from_tsv_manifest,
 )
 
 
@@ -372,7 +372,7 @@ def _mock_get_records_on_page(page, limit, **kwargs):
 
 
 def test_read_manifest():
-    files, headers = _get_and_verify_fileinfos_from_tsv_manifest("./test.tsv")
+    files, headers = get_and_verify_fileinfos_from_tsv_manifest("./test.tsv")
     assert headers.index("guid") >= 0
     assert headers.index("md5") >= 0
     assert headers.index("urls") >= 0

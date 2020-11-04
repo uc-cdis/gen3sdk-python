@@ -44,18 +44,26 @@ import sys
 import traceback
 
 from gen3.auth import Gen3Auth
+from gen3.tools.indexing.manifest_columns import (
+    GUID_COLUMN_NAMES,
+    GUID_STANDARD_KEY,
+    FILENAME_COLUMN_NAMES,
+    FILENAME_STANDARD_KEY,
+    SIZE_COLUMN_NAMES,
+    SIZE_STANDARD_KEY,
+    MD5_COLUMN_NAMES,
+    MD5_STANDARD_KEY,
+    ACLS_COLUMN_NAMES,
+    ACL_STANDARD_KEY,
+    URLS_COLUMN_NAMES,
+    URLS_STANDARD_KEY,
+    AUTHZ_COLUMN_NAMES,
+    AUTHZ_STANDARD_KEY,
+)
 import indexclient.client as client
 
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
-# Pre-defined supported column names
-GUID = ["guid", "GUID"]
-FILENAME = ["filename", "file_name"]
-SIZE = ["size", "filesize", "file_size"]
-MD5 = ["md5", "md5_hash", "md5hash", "hash", "file_md5sum", "md5sum"]
-ACLS = ["acl", "acls"]
-URLS = ["url", "urls"]
-AUTHZ = ["authz"]
 
 UUID_FORMAT = (
     r"^.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
@@ -108,8 +116,8 @@ def _standardize_str(s):
     return res
 
 
-def _get_and_verify_fileinfos_from_tsv_manifest(
-    manifest_file, manifest_file_delimiter="\t"
+def get_and_verify_fileinfos_from_tsv_manifest(
+    manifest_file, manifest_file_delimiter="\t", include_additional_columns=False
 ):
     """
     get and verify file infos from tsv manifest
@@ -139,75 +147,121 @@ def _get_and_verify_fileinfos_from_tsv_manifest(
 
         logging.debug(f"got fieldnames from {manifest_file}: {fieldnames}")
         pass_verification = True
-        row_number = 0
-        for row in csvReader:
-            standardized_dict = {}
-            for key in row.keys():
-                row_number = row_number + 1
-                standardized_key = None
-                if key.lower() in GUID:
-                    fieldnames[fieldnames.index(key)] = "guid"
-                    standardized_key = "guid"
-                elif key.lower() in FILENAME:
-                    fieldnames[fieldnames.index(key)] = "file_name"
-                    standardized_key = "file_name"
-                elif key.lower() in MD5:
-                    fieldnames[fieldnames.index(key)] = "md5"
-                    standardized_key = "md5"
-                    if not _verify_format(row[key], MD5_FORMAT):
-                        logging.error("ERROR: {} is not in md5 format", row[key])
-                        pass_verification = False
-                elif key.lower() in ACLS:
-                    fieldnames[fieldnames.index(key)] = "acl"
-                    standardized_key = "acl"
-                    if not _verify_format(row[key], ACL_FORMAT):
-                        logging.error("ERROR: {} is not in acl format", row[key])
-                        pass_verification = False
-                elif key.lower() in URLS:
-                    fieldnames[fieldnames.index(key)] = "urls"
-                    standardized_key = "urls"
-                    if not _verify_format(row[key], URL_FORMAT):
-                        logging.error("ERROR: {} is not in urls format", row[key])
-                        pass_verification = False
-                elif key.lower() in AUTHZ:
-                    fieldnames[fieldnames.index(key)] = "authz"
-                    standardized_key = "authz"
-                    if not _verify_format(row[key], AUTHZ_FORMAT):
-                        logging.error("ERROR: {} is not in authz format", row[key])
-                        pass_verification = False
-                elif key.lower() in SIZE:
-                    fieldnames[fieldnames.index(key)] = "size"
-                    standardized_key = "size"
-                    if not _verify_format(row[key], SIZE_FORMAT):
-                        logging.error("ERROR: {} is not in int format", row[key])
-                        pass_verification = False
+        is_row_valid = True
+        for row_number, row in enumerate(csvReader, 1):
+            output_row = {}
+            for current_column_name in row.keys():
+                output_column_name = None
+                if current_column_name.lower() in GUID_COLUMN_NAMES:
+                    fieldnames[
+                        fieldnames.index(current_column_name)
+                    ] = GUID_STANDARD_KEY
+                    output_column_name = GUID_STANDARD_KEY
+                elif current_column_name.lower() in FILENAME_COLUMN_NAMES:
+                    fieldnames[
+                        fieldnames.index(current_column_name)
+                    ] = FILENAME_STANDARD_KEY
+                    output_column_name = FILENAME_STANDARD_KEY
+                elif current_column_name.lower() in MD5_COLUMN_NAMES:
+                    fieldnames[fieldnames.index(current_column_name)] = MD5_STANDARD_KEY
+                    output_column_name = MD5_STANDARD_KEY
+                    if not _verify_format(row[current_column_name], MD5_FORMAT):
+                        logging.error(
+                            f"ERROR: {row[current_column_name]} is not in md5 format"
+                        )
+                        is_row_valid = False
+                elif current_column_name.lower() in ACLS_COLUMN_NAMES:
+                    fieldnames[fieldnames.index(current_column_name)] = ACL_STANDARD_KEY
+                    output_column_name = ACL_STANDARD_KEY
+                    if not _verify_format(row[current_column_name], ACL_FORMAT):
+                        logging.error(
+                            f"ERROR: {row[current_column_name]} is not in acl format"
+                        )
+                        is_row_valid = False
+                elif current_column_name.lower() in URLS_COLUMN_NAMES:
+                    fieldnames[
+                        fieldnames.index(current_column_name)
+                    ] = URLS_STANDARD_KEY
+                    output_column_name = URLS_STANDARD_KEY
+                    if not _verify_format(row[current_column_name], URL_FORMAT):
+                        logging.error(
+                            f"ERROR: {row[current_column_name]} is not in urls format"
+                        )
+                        is_row_valid = False
+                elif current_column_name.lower() in AUTHZ_COLUMN_NAMES:
+                    fieldnames[
+                        fieldnames.index(current_column_name)
+                    ] = AUTHZ_STANDARD_KEY
+                    output_column_name = AUTHZ_STANDARD_KEY
+                    if not _verify_format(row[current_column_name], AUTHZ_FORMAT):
+                        logging.error(
+                            f"ERROR: {row[current_column_name]} is not in authz format"
+                        )
+                        is_row_valid = False
+                elif current_column_name.lower() in SIZE_COLUMN_NAMES:
+                    fieldnames[
+                        fieldnames.index(current_column_name)
+                    ] = SIZE_STANDARD_KEY
+                    output_column_name = SIZE_STANDARD_KEY
+                    if not _verify_format(row[current_column_name], SIZE_FORMAT):
+                        logging.error(
+                            f"ERROR: {row[current_column_name]} is not in int format"
+                        )
+                        is_row_valid = False
+                elif include_additional_columns:
+                    output_column_name = current_column_name
 
-                if standardized_key:
+                if output_column_name:
                     try:
-                        standardized_dict[standardized_key] = (
-                            int(row[key])
-                            if standardized_key == "size"
-                            else row[key].strip()
+                        output_row[output_column_name] = (
+                            int(row[current_column_name])
+                            if output_column_name == SIZE_STANDARD_KEY
+                            else row[current_column_name].strip()
                         )
                     except ValueError:
                         # don't break
                         pass
 
-            if not {"urls", "md5", "size"}.issubset(set(standardized_dict.keys())):
-                pass_verification = False
+            if not {URLS_STANDARD_KEY, MD5_STANDARD_KEY, SIZE_STANDARD_KEY}.issubset(
+                set(output_row.keys())
+            ):
+                is_row_valid = False
 
-            if not pass_verification:
+            if not is_row_valid:
                 logging.error(
                     f"row {row_number} with values {row} does not pass the validation"
                 )
 
-            files.append(standardized_dict)
+                # overall verification fails, but reset row validity
+                pass_verification = False
+                is_row_valid = True
+
+            files.append(output_row)
 
     if not pass_verification:
         logging.error("The manifest is not in the correct format!!!")
-        return None, None
+        return [], []
 
     return files, fieldnames
+
+
+def get_and_verify_fileinfos_from_manifest(
+    manifest_file, include_additional_columns=False
+):
+    """
+    Wrapper for above function to determine the delimeter based on file extention
+    """
+    manifest_file_ext = os.path.splitext(manifest_file)
+    if manifest_file_ext[-1].lower() == ".tsv":
+        manifest_file_delimiter = "\t"
+    else:
+        manifest_file_delimiter = ","
+
+    return get_and_verify_fileinfos_from_tsv_manifest(
+        manifest_file=manifest_file,
+        manifest_file_delimiter=manifest_file_delimiter,
+        include_additional_columns=include_additional_columns,
+    )
 
 
 def _write_csv(filename, files, fieldnames=None):
@@ -263,30 +317,34 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
         urls = (
             [
                 element.strip().replace("'", "").replace('"', "").replace("%20", " ")
-                for element in _standardize_str(fi["urls"])
+                for element in _standardize_str(fi[URLS_STANDARD_KEY])
                 .strip()
                 .lstrip("[")
                 .rstrip("]")
                 .split(" ")
             ]
-            if "urls" in fi and fi["urls"] != "[]" and fi["urls"]
+            if URLS_STANDARD_KEY in fi
+            and fi[URLS_STANDARD_KEY] != "[]"
+            and fi[URLS_STANDARD_KEY]
             else []
         )
         authz = (
             [
                 element.strip().replace("'", "").replace('"', "").replace("%20", " ")
-                for element in _standardize_str(fi["authz"])
+                for element in _standardize_str(fi[AUTHZ_STANDARD_KEY])
                 .strip()
                 .lstrip("[")
                 .rstrip("]")
                 .split(" ")
             ]
-            if "authz" in fi and fi["authz"] != "[]" and fi["authz"]
+            if AUTHZ_STANDARD_KEY in fi
+            and fi[AUTHZ_STANDARD_KEY] != "[]"
+            and fi[AUTHZ_STANDARD_KEY]
             else []
         )
 
-        if "acl" in fi:
-            if fi["acl"].strip().lower() in {"[u'open']", "['open']"}:
+        if ACL_STANDARD_KEY in fi:
+            if fi[ACL_STANDARD_KEY].strip().lower() in {"[u'open']", "['open']"}:
                 acl = ["*"]
             else:
                 acl = (
@@ -295,33 +353,37 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
                         .replace("'", "")
                         .replace('"', "")
                         .replace("%20", " ")
-                        for element in _standardize_str(fi["acl"])
+                        for element in _standardize_str(fi[ACL_STANDARD_KEY])
                         .strip()
                         .lstrip("[")
                         .rstrip("]")
                         .split(" ")
                     ]
-                    if "acl" in fi and fi["acl"] != "[]" and fi["acl"]
+                    if ACL_STANDARD_KEY in fi
+                    and fi[ACL_STANDARD_KEY] != "[]"
+                    and fi[ACL_STANDARD_KEY]
                     else []
                 )
         else:
             acl = []
 
-        if "file_name" in fi:
-            file_name = _standardize_str(fi["file_name"])
+        if FILENAME_STANDARD_KEY in fi:
+            file_name = _standardize_str(fi[FILENAME_STANDARD_KEY])
         else:
             file_name = ""
 
         doc = None
 
-        if fi.get("guid"):
-            doc = indexclient.get(fi["guid"])
+        if fi.get(GUID_STANDARD_KEY):
+            doc = indexclient.get(fi[GUID_STANDARD_KEY])
 
         if doc is not None:
-            if doc.size != fi.get("size") or doc.hashes.get("md5") != fi.get("md5"):
+            if doc.size != fi.get(SIZE_STANDARD_KEY) or doc.hashes.get(
+                MD5_STANDARD_KEY
+            ) != fi.get(MD5_STANDARD_KEY):
                 logging.error(
                     "The guid {} with different size/hash already exist. Can not index it without getting a new guid".format(
-                        fi.get("guid")
+                        fi.get(GUID_STANDARD_KEY)
                     )
                 )
             else:
@@ -361,24 +423,24 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
                     logging.info(f"updating {doc.did} to: {doc.to_json()}")
                     doc.patch()
         else:
-            if fi.get("guid"):
-                guid = fi.get("guid", "").strip()
+            if fi.get(GUID_STANDARD_KEY):
+                guid = fi.get(GUID_STANDARD_KEY, "").strip()
             else:
                 guid = None
 
             record = {
                 "did": guid,
-                "hashes": {"md5": fi.get("md5", "").strip()},
-                "size": fi.get("size", 0),
-                "acl": acl,
-                "authz": authz,
-                "urls": urls,
-                "file_name": file_name,
+                "hashes": {MD5_STANDARD_KEY: fi.get(MD5_STANDARD_KEY, "").strip()},
+                SIZE_STANDARD_KEY: fi.get(SIZE_STANDARD_KEY, 0),
+                ACL_STANDARD_KEY: acl,
+                AUTHZ_STANDARD_KEY: authz,
+                URLS_STANDARD_KEY: urls,
+                FILENAME_STANDARD_KEY: file_name,
             }
             logging.info(f"creating: {record}")
             doc = indexclient.create(**record)
 
-            fi["guid"] = doc.did
+            fi[GUID_STANDARD_KEY] = doc.did
 
     except Exception as e:
         # Don't break for any reason
@@ -386,7 +448,7 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
         traceback.print_exception(*exc_info)
         logging.error(
             "Can not update/create an indexd record with guid {}. Detail {}".format(
-                fi.get("guid"), e
+                fi.get(GUID_STANDARD_KEY), e
             )
         )
 
@@ -461,7 +523,7 @@ def index_object_manifest(
             manifest_file_delimiter = ","
 
     try:
-        files, headers = _get_and_verify_fileinfos_from_tsv_manifest(
+        files, headers = get_and_verify_fileinfos_from_tsv_manifest(
             manifest_file, manifest_file_delimiter
         )
     except Exception as e:
@@ -475,9 +537,9 @@ def index_object_manifest(
         return None, None
 
     try:
-        headers.index("guid")
+        headers.index(GUID_STANDARD_KEY)
     except ValueError:
-        headers.insert(0, "guid")
+        headers.insert(0, GUID_STANDARD_KEY)
 
     pool = ThreadPool(thread_num)
 

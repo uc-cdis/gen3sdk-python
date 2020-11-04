@@ -1,0 +1,4 @@
+url	size	md5	authz	some_additional_data	extra_data
+s3://cdistest-giangb-bucket1-databucket-gen3/reports/object_metadata/job-2053f094-d99b-4f72-a491-9e2aa200a132/results/c5fbdf5ab6cef21b72ac2cdbd1712143159996e2.csv	476	4daa609f5c12b9354c901eb57d56398e	phs_test	4	foo
+s3://cdistest-giangb-bucket1-databucket-gen3/reports/object_metadata/job-15fa3e5a-aeb3-4a9e-a40e-f5737abd9888/results/f3f950846e4c218e15c51916ec054108de577f45.csv	476	4daa609f5c12b9354c901eb57d56398e	phs_dev	5	bar
+s3://cdistest-giangb-bucket1-databucket-gen3/ReportPrefix/job-70ababcb-c9bf-40b8-a1ee-f388b575ad73/manifest.json	478	8279d92917f24cc63dca0c3d51cdb33f	phs_test	6	buzz
