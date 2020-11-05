@@ -199,7 +199,7 @@ def _create_bundle_record(manifest_file, manifest_file_delimiter="\t"):
                     record[key] = value
             records.append(record)
     if not pass_verification:
-        logging.error("The manifsest is not in the correct format!")
+        logging.error("The manifest is not in the correct format!")
         return None, None
     return records, MAIN_DICT
 
