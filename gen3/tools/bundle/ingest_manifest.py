@@ -163,8 +163,8 @@ def _create_bundle_record(manifest_file, manifest_file_delimiter="\t"):
                             bundles.append(bundle)
                         else:
                             logging.error(
-                                "ERROR: bundle_name:{} in list at row {} does not exist".format(
-                                    bundle, row_n
+                                "ERROR: {} {} at row {} must either be a UUID or reference another bundle in this manifest".format(
+                                    key, bundle, row_n
                                 )
                             )
                             pass_verification = False
