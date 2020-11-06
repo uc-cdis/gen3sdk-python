@@ -60,19 +60,18 @@ from gen3.tools.indexing.manifest_columns import (
     AUTHZ_COLUMN_NAMES,
     AUTHZ_STANDARD_KEY,
 )
+from gen3.utils import (
+    UUID_FORMAT,
+    MD5_FORMAT,
+    ACL_FORMAT,
+    URL_FORMAT,
+    AUTHZ_FORMAT,
+    SIZE_FORMAT,
+)
 import indexclient.client as client
 
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
-
-UUID_FORMAT = (
-    r"^.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
-)
-MD5_FORMAT = r"^[a-fA-F0-9]{32}$"
-SIZE_FORMAT = r"^[0-9]*$"
-ACL_FORMAT = r"^.*$"
-URL_FORMAT = r"^.*$"
-AUTHZ_FORMAT = r"^.*$"
 
 
 class ThreadControl(object):

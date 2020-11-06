@@ -7,6 +7,16 @@ from urllib.parse import urlsplit
 from urllib.parse import parse_qs
 
 
+UUID_FORMAT = (
+    r"^.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+)
+MD5_FORMAT = r"^[a-fA-F0-9]{32}$"
+SIZE_FORMAT = r"^[0-9]*$"
+ACL_FORMAT = r"^.*$"
+URL_FORMAT = r"^.*$"
+AUTHZ_FORMAT = r"^.*$"
+
+
 def append_query_params(original_url, **kwargs):
     """
     Add additional query string arguments to the given url.

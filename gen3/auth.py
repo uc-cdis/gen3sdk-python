@@ -43,8 +43,8 @@ class Gen3Auth(AuthBase):
         namespace = os.environ.get("NAMESPACE")
         if namespace:
             # attempt to get a token from the workspace-token-service
-            self._wts_url = (
-                "http://workspace-token-service.{}.svc.cluster.local".format(namespace)
+            self._wts_url = "http://workspace-token-service.{}.svc.cluster.local".format(
+                namespace
             )
             resp = requests.get("{}/token/".format(self._wts_url))
             if resp.status_code == 200:

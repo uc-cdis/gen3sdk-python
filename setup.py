@@ -37,7 +37,7 @@ setup(
         "requests",
         "pandas",
         "indexclient>=1.6.2",
-        "drsclient",
+        "drsclient<1.0.0",
         "aiohttp",
         "backoff",
         "click",
