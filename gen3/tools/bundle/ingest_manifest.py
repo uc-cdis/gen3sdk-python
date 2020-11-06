@@ -166,8 +166,8 @@ def _verify_and_process_bundle_manifest(manifest_file, manifest_file_delimiter="
                             item_ids.append(item_id)
                         else:
                             logging.error(
-                                "ERROR: bundle_name:{} in list at row {} does not exist".format(
-                                    item_id, row_n
+                                "ERROR: {} {} at row {} must either be a UUID or reference another bundle in this manifest".format(
+                                    key, bundle, row_n
                                 )
                             )
                             pass_verification = False
@@ -202,7 +202,7 @@ def _verify_and_process_bundle_manifest(manifest_file, manifest_file_delimiter="
                     record[key] = value
             records.append(record)
     if not pass_verification:
-        logging.error("The manifsest is not in the correct format!")
+        logging.error("The manifest is not in the correct format!")
         return None, None
     return records, bundle_name_to_guid
 

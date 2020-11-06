@@ -1225,7 +1225,7 @@ if __name__ == "__main__":
 
 ## Bundle Tools
 ### Ingest Manifest
-The only required columns are `bundle_name` and `ids`(list of object or bundles). You can reference a `bundle_name` in the `ids` list if that bundle_name comes appears before the bundle containing it. Order of the bundle matters in the manifest. Lowest level bundles should only contain GUIDs to File Objects and should live at the top of the manifest. If a GUID is not provided for a bundle, indexd will assign a GUID for the bundle. Witin the manifest `bundle_names` is to be used as a unique identifier. 
+The only required columns are `bundle_name` and `ids`(list of object or bundles). The order of bundles in the manifest matters: you can reference a `bundle_name` in the `ids` list if that bundle_name appears before the bundle containing it. Lowest level bundles should only contain GUIDs to File Objects and should live at the top of the manifest. If a GUID is not provided for a bundle, indexd will assign a GUID for the bundle. Within the manifest `bundle_names` is to be used as a unique identifier. 
 
 #### Example Bundle:
 To create the following bundle:
@@ -1284,4 +1284,3 @@ def main():
 if __name__ == "__main__":
     main()
 ```
-
