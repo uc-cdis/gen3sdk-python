@@ -315,9 +315,3 @@ def ingest_bundle_manifest(
     logging.info("Done!")
 
     return records
-
-
-if __name__ == "__main__":
-    logging.basicConfig(filename="ingest_bundle_manifest.log", level=logging.DEBUG)
-    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
-    ingest_bundle_manifest()
