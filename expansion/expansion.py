@@ -1860,7 +1860,7 @@ class Gen3Expansion:
         done = False
         while done is False:
 
-            records = query_indexd(api=self._endpoint,limit=limit,page=page)
+            records = self.query_indexd(limit=limit,page=page)
             all_records.extend(records)
 
             if len(records) != limit:
