@@ -127,7 +127,6 @@ def test_invalid_ingest_bundle_manifest(gen3_index, indexd_server, drs_client):
     resp = drs_client.get("dg.xxxx/590ee63d-2790-477a-bbf8-d53873ca4933")
     assert resp.status_code == 404
 
-
     resp1 = drs_client.get_all(endpoint="/bundle")
     rec1 = resp1.json()
     assert len(rec1["records"]) == 0
