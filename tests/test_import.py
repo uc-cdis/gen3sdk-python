@@ -29,8 +29,3 @@ def test_submission_import():
 def test_file_import():
 
     from gen3.file import Gen3File
-
-
-def test_drsclient():
-
-    import drsclient
