@@ -2886,3 +2886,8 @@ class Gen3Expansion:
 #
 # props = sorted(list(set(props))) # unique properties, excluding any removed
 # print("props: {} prop_ids: {}, edges: {}".format(len(props),len(prop_ids),edges))
+
+
+
+### look up files in indexd by md5 sum
+# index_url = "{}/index?hash=md5:{}".format(api, md5sum)
