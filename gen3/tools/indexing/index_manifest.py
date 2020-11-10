@@ -37,8 +37,6 @@ from functools import partial
 import logging
 from multiprocessing.dummy import Pool as ThreadPool
 import threading
-import re
-import uuid
 import copy
 import sys
 import traceback
@@ -67,6 +65,8 @@ from gen3.utils import (
     URL_FORMAT,
     AUTHZ_FORMAT,
     SIZE_FORMAT,
+    _verify_format,
+    _standardize_str,
 )
 import indexclient.client as client
 
@@ -83,36 +83,6 @@ class ThreadControl(object):
         self.mutexLock = threading.Lock()
         self.num_processed_files = processed_files
         self.num_total_files = num_total_files
-
-
-def _verify_format(s, format):
-    """
-    Make sure the input is in the right format
-    """
-    r = re.compile(format)
-    if r.match(s) is not None:
-        return True
-    return False
-
-
-def _standardize_str(s):
-    """
-    Remove unnecessary spaces, commas
-
-    Ex. "abc    d" -> "abc d"
-        "abc, d" -> "abc d"
-    """
-    memory = []
-    s = s.replace(",", " ")
-    res = ""
-    for c in s:
-        if c != " ":
-            res += c
-            memory = []
-        elif not memory:
-            res += c
-            memory.append(" ")
-    return res
 
 
 def get_and_verify_fileinfos_from_tsv_manifest(

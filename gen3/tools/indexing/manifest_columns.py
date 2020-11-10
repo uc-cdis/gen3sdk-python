@@ -37,7 +37,7 @@ IDS_COLUMN_NAME = ["ids", "bundle_ids"]
 
 DESCRIPTION_COLUMN_NAME = ["description"]
 
-CHECKSUMS_COLUMN_NAME = ["checksums", "checksum"]
+CHECKSUMS_COLUMN_NAME = ["checksums"]
 
 ALIASES_COLUMN_NAME = ["alias", "aliases"]
 

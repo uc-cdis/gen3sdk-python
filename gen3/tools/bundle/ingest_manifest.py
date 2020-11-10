@@ -1,20 +1,14 @@
-import aiohttp
-import asyncio
 import csv
 import json
 import logging
 import os
 import time
-import urllib.parse
-import uuid
-import re
 import sys
 import traceback
 
 from drsclient.client import DrsClient
 from gen3.auth import Gen3Auth
-from gen3.tools.indexing.index_manifest import _standardize_str
-from gen3.utils import UUID_FORMAT, SIZE_FORMAT
+from gen3.utils import UUID_FORMAT, SIZE_FORMAT, _verify_format, _standardize_str
 from gen3.tools.indexing.manifest_columns import (
     GUID_COLUMN_NAMES,
     SIZE_COLUMN_NAMES,
@@ -53,36 +47,6 @@ json representaion:
   }
 ]
 """
-
-
-def _verify_format(s, format):
-    """
-    Make sure the input is in the right format
-    """
-    r = re.compile(format)
-    if r.match(s) is not None:
-        return True
-    return False
-
-
-def _standardize_str(s):
-    """
-    Remove unnecessary spaces, commas
-
-    Ex. "abc    d" -> "abc d"
-        "abc, d" -> "abc d"
-    """
-    memory = []
-    s = s.replace(",", " ")
-    res = ""
-    for c in s:
-        if c != " ":
-            res += c
-            memory = []
-        elif not memory:
-            res += c
-            memory.append(" ")
-    return res
 
 
 def _replace_bundle_name_with_guid(bundles, bundle_name_to_guid):
@@ -194,7 +158,10 @@ def _verify_and_process_bundle_manifest(manifest_file, manifest_file_delimiter="
                         v = element.strip().replace("'", "").replace('"', "")
                         if v:
                             values.append(v)
-                    record[key] = values
+                    k = "aliases"
+                    if key in CHECKSUMS_COLUMN_NAME:
+                        k = "checksums"
+                    record[k] = values
                 # Add all the other optional fields
                 elif value:
                     if key in SIZE_COLUMN_NAMES:
