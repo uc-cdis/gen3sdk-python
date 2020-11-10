@@ -71,8 +71,6 @@
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">from</span> <span class="nn">multiprocessing.dummy</span> <span class="kn">import</span> <span class="n">Pool</span> <span class="k">as</span> <span class="n">ThreadPool</span>
 <span class="kn">import</span> <span class="nn">threading</span>
-<span class="kn">import</span> <span class="nn">re</span>
-<span class="kn">import</span> <span class="nn">uuid</span>
 <span class="kn">import</span> <span class="nn">copy</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">traceback</span>
@@ -101,6 +99,8 @@
     <span class="n">URL_FORMAT</span><span class="p">,</span>
     <span class="n">AUTHZ_FORMAT</span><span class="p">,</span>
     <span class="n">SIZE_FORMAT</span><span class="p">,</span>
+    <span class="n">_verify_format</span><span class="p">,</span>
+    <span class="n">_standardize_str</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">import</span> <span class="nn">indexclient.client</span> <span class="k">as</span> <span class="nn">client</span>
 
@@ -117,36 +117,6 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">mutexLock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">num_processed_files</span> <span class="o">=</span> <span class="n">processed_files</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">num_total_files</span> <span class="o">=</span> <span class="n">num_total_files</span></div>
-
-
-<span class="k">def</span> <span class="nf">_verify_format</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="nb">format</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Make sure the input is in the right format</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">r</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="nb">format</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">True</span>
-    <span class="k">return</span> <span class="kc">False</span>
-
-
-<span class="k">def</span> <span class="nf">_standardize_str</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Remove unnecessary spaces, commas</span>
-
-<span class="sd">    Ex. &quot;abc    d&quot; -&gt; &quot;abc d&quot;</span>
-<span class="sd">        &quot;abc, d&quot; -&gt; &quot;abc d&quot;</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">memory</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span>
-    <span class="n">res</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">s</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">c</span> <span class="o">!=</span> <span class="s2">&quot; &quot;</span><span class="p">:</span>
-            <span class="n">res</span> <span class="o">+=</span> <span class="n">c</span>
-            <span class="n">memory</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">elif</span> <span class="ow">not</span> <span class="n">memory</span><span class="p">:</span>
-            <span class="n">res</span> <span class="o">+=</span> <span class="n">c</span>
-            <span class="n">memory</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">res</span>
 
 
 <div class="viewcode-block" id="get_and_verify_fileinfos_from_tsv_manifest"><a class="viewcode-back" href="../../../../tools/indexing.html#gen3.tools.indexing.index_manifest.get_and_verify_fileinfos_from_tsv_manifest">[docs]</a><span class="k">def</span> <span class="nf">get_and_verify_fileinfos_from_tsv_manifest</span><span class="p">(</span>
