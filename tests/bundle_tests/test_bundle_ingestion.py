@@ -69,7 +69,7 @@ def test_valid_ingest_bundle_manifest(gen3_index, indexd_server, drs_client):
         auth=("user", "user"),
     )
 
-    # 5 bundles in the manfiest
+    # 6 bundles in the manfiest
     assert len(records) == 6
 
     resp = drs_client.get("dg.xxxx/590ee63d-2790-477a-bbf8-d53873ca4933")

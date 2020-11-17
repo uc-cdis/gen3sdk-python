@@ -5,6 +5,7 @@ import os
 import time
 import sys
 import traceback
+import re
 
 from drsclient.client import DrsClient
 from gen3.auth import Gen3Auth
@@ -49,6 +50,24 @@ json representaion:
 ]
 """
 
+ACCEPTABLE_HASHES = {
+    "md5": re.compile(r"^[0-9a-f]{32}$").match,
+    "sha1": re.compile(r"^[0-9a-f]{40}$").match,
+    "sha256": re.compile(r"^[0-9a-f]{64}$").match,
+    "sha512": re.compile(r"^[0-9a-f]{128}$").match,
+}
+
+
+def validate_hashes(hashes):
+    """
+    Validate hashes against known and valid hashing algorithms.
+    """
+    if not all(h in ACCEPTABLE_HASHES for h in hashes):
+        return False
+    if not all(ACCEPTABLE_HASHES[h](v) for h, v in hashes.items()):
+        return False
+    return True
+
 
 def _replace_bundle_name_with_guid(bundles, bundle_name_to_guid):
     """
@@ -64,21 +83,21 @@ def _replace_bundle_name_with_guid(bundles, bundle_name_to_guid):
     return new_list
 
 
-def _join_type_and_checksum(record):
+def _join_type_and_checksum(type_list, checksum_list):
     """
     Join checksum and their correlated type together to the following format:
     "checksums": [{"type":"md5", "checksum":"abcdefg}, {"type":"sha256", "checksum":"abcd12345"}]
     """
-    zipped = dict(zip(record["type"], record["checksum"]))
-    del record["type"]
-    del record["checksum"]
-    checksums = []
-    for key, value in zipped.items():
-        temp = {}
-        temp["type"] = key
-        temp["checksum"] = value
-        checksums.append(temp)
-    record["checksums"] = checksums
+    zipped = dict(zip(type_list, checksum_list))
+    for c_type, checksum in zip(type_list, checksum_list):
+        checksums = [
+            {
+                "type": c_type,
+                "checksum": checksum,
+            }
+            for c_type, checksum in zip(type_list, checksum_list)
+        ]
+        return checksums
 
 
 def _verify_and_process_bundle_manifest(manifest_file, manifest_file_delimiter="\t"):
@@ -168,30 +187,44 @@ def _verify_and_process_bundle_manifest(manifest_file, manifest_file_delimiter="
                     or key in CHECKSUMS_COLUMN_NAME
                     or key in ALIASES_COLUMN_NAME
                 ):
-                    standard = (
-                        _standardize_str(value)
-                        .strip()
-                        .lstrip("[")
-                        .rstrip("]")
-                        .split(" ")
-                    )
-                    values = []
-                    for element in standard:
-                        v = element.strip().replace("'", "").replace('"', "")
-                        if v:
-                            values.append(v)
-                    k = "aliases"
-                    if key in CHECKSUMS_COLUMN_NAME:
-                        k = "checksum"
-                    if key in TYPE_COLUMN_NAME:
-                        k = "type"
-                    record[k] = values
+                    if value:
+                        standard = (
+                            _standardize_str(value)
+                            .strip()
+                            .lstrip("[")
+                            .rstrip("]")
+                            .split(" ")
+                        )
+                        values = []
+                        for element in standard:
+                            v = element.strip().replace("'", "").replace('"', "")
+                            if v:
+                                values.append(v)
+                        k = "aliases"
+                        if key in CHECKSUMS_COLUMN_NAME:
+                            k = "checksum"
+                        if key in TYPE_COLUMN_NAME:
+                            k = "type"
+                        record[k] = values
                 elif value:
                     if key in SIZE_COLUMN_NAMES:
                         value = int(value)
                     record[key] = value
             if "checksum" in record and "type" in record:
-                _join_type_and_checksum(record)
+                if len(record["type"]) != len(record["checksum"]):
+                    logging.error(
+                        "ERROR: Number of checksum type and checksum does not match."
+                    )
+                    pass_verification = False
+                elif not validate_hashes(dict(zip(record["type"], record["checksum"]))):
+                    logging.error("ERROR: invalid checksums at row {}".format(row_n))
+                    pass_verification = False
+                else:
+                    record["checksums"] = _join_type_and_checksum(
+                        record["type"], record["checksum"]
+                    )
+                    del record["type"]
+                    del record["checksum"]
             records.append(record)
     if not pass_verification:
         logging.error("The manifest is not in the correct format!")
@@ -260,7 +293,6 @@ def ingest_bundle_manifest(
         bundle_name = record["name"]
 
         logging.info("Posting bundle {} of {}".format(start, total))
-        record["bundles"]
         # Check the bundle list to make sure they're all guids
         record["bundles"] = _replace_bundle_name_with_guid(
             record["bundles"], bundle_name_to_guid
