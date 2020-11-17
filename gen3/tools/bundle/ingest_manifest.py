@@ -137,6 +137,7 @@ def _verify_and_process_bundle_manifest(manifest_file, manifest_file_delimiter="
                                     bundle_name, row_n
                                 )
                             )
+                            pass_verification = False
                     else:
                         logging.error(
                             "ERROR: row {} does not contain bundle_name. bundle_name is required".format(
