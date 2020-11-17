@@ -16,6 +16,7 @@ from gen3.tools.indexing.manifest_columns import (
     IDS_COLUMN_NAME,
     DESCRIPTION_COLUMN_NAME,
     CHECKSUMS_COLUMN_NAME,
+    TYPE_COLUMN_NAME,
     ALIASES_COLUMN_NAME,
 )
 
@@ -63,6 +64,23 @@ def _replace_bundle_name_with_guid(bundles, bundle_name_to_guid):
     return new_list
 
 
+def _join_type_and_checksum(record):
+    """
+    Join checksum and their correlated type together to the following format:
+    "checksums": [{"type":"md5", "checksum":"abcdefg}, {"type":"sha256", "checksum":"abcd12345"}]
+    """
+    zipped = dict(zip(record["type"], record["checksum"]))
+    del record["type"]
+    del record["checksum"]
+    checksums = []
+    for key, value in zipped.items():
+        temp = {}
+        temp["type"] = key
+        temp["checksum"] = value
+        checksums.append(temp)
+    record["checksums"] = checksums
+
+
 def _verify_and_process_bundle_manifest(manifest_file, manifest_file_delimiter="\t"):
     """
     Verify the manifest and create list of all records that needs to be ingested
@@ -70,18 +88,18 @@ def _verify_and_process_bundle_manifest(manifest_file, manifest_file_delimiter="
     Args:
         manifest_file(str): the path to the input manifest
         manifest_file_delimiter(str): delimiter
-    
+
     Returns:
-        record(dict): Valid bundle record to use in POST /bundle
         records(list): List of all records to be ingested
+        bundle_name_to_guid(dict): dict containing bundle_name to bundle_guid association
     NOTE: we dont do a check if indexd contains these ids since it checks that in POST /bundle
     """
     pass_verification = True
     records = []
-    bundle_name_to_guid = {}  # dict containing bundle_name : bundle_guid association
+    bundle_name_to_guid = {}
+
     with open(manifest_file, encoding="utf-8-sig") as manifest:
         reader = csv.DictReader(manifest, delimiter=manifest_file_delimiter)
-        row_n = 1
         for row_n, row in enumerate(reader, 1):
             record = {}
             for key, value in row.items():
@@ -145,7 +163,11 @@ def _verify_and_process_bundle_manifest(manifest_file, manifest_file_delimiter="
                                 key, value, row_n
                             )
                         )
-                elif key in CHECKSUMS_COLUMN_NAME or key in ALIASES_COLUMN_NAME:
+                elif (
+                    key in TYPE_COLUMN_NAME
+                    or key in CHECKSUMS_COLUMN_NAME
+                    or key in ALIASES_COLUMN_NAME
+                ):
                     standard = (
                         _standardize_str(value)
                         .strip()
@@ -160,17 +182,22 @@ def _verify_and_process_bundle_manifest(manifest_file, manifest_file_delimiter="
                             values.append(v)
                     k = "aliases"
                     if key in CHECKSUMS_COLUMN_NAME:
-                        k = "checksums"
+                        k = "checksum"
+                    if key in TYPE_COLUMN_NAME:
+                        k = "type"
                     record[k] = values
-                # Add all the other optional fields
                 elif value:
                     if key in SIZE_COLUMN_NAMES:
                         value = int(value)
                     record[key] = value
+            if "checksum" in record and "type" in record:
+                _join_type_and_checksum(record)
             records.append(record)
     if not pass_verification:
         logging.error("The manifest is not in the correct format!")
         return None, None
+    print("------------------------------------------------------------")
+    print(records)
     return records, bundle_name_to_guid
 
 
@@ -235,7 +262,7 @@ def ingest_bundle_manifest(
         bundle_name = record["name"]
 
         logging.info("Posting bundle {} of {}".format(start, total))
-
+        record["bundles"]
         # Check the bundle list to make sure they're all guids
         record["bundles"] = _replace_bundle_name_with_guid(
             record["bundles"], bundle_name_to_guid
@@ -252,26 +279,10 @@ def ingest_bundle_manifest(
             rec = resp.json()
             guid = rec["bundle_id"]
             logging.info("Successfully created bundle {}".format(bundle_name))
-
-            resp = drsclient.get(guid, expand=False)
-            rec = resp.json()
-
-            if resp.status_code != 200:
-                logging.error(
-                    "Failed to get bundle {} with guid {}".format(bundle_name, guid)
-                )
-            else:
-                logging.info(
-                    "Sucessfully received bundle {} with guid {}".format(
-                        bundle_name, guid
-                    )
-                )
-                # Associate bundle_name to its guid created by indexd
-                bundle_name_to_guid[bundle_name] = guid
-                if "guid" not in record:
-                    record["guid"] = guid
-                if "size" not in record:
-                    record["size"] = rec["size"]
+            # Associate bundle_name to its guid created by indexd
+            bundle_name_to_guid[bundle_name] = guid
+            if "guid" not in record:
+                record["guid"] = guid
 
     logging.info("Published all {} bundles".format(total))
     logging.info("Start writng output manifest . . .")

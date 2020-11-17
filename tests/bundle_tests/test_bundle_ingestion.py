@@ -70,7 +70,7 @@ def test_valid_ingest_bundle_manifest(gen3_index, indexd_server, drs_client):
     )
 
     # 5 bundles in the manfiest
-    assert len(records) == 5
+    assert len(records) == 6
 
     resp = drs_client.get("dg.xxxx/590ee63d-2790-477a-bbf8-d53873ca4933")
     assert resp.status_code == 200
@@ -78,10 +78,32 @@ def test_valid_ingest_bundle_manifest(gen3_index, indexd_server, drs_client):
     resp1 = drs_client.get_all(endpoint="/bundle")
     assert resp1.status_code == 200
     res1 = resp1.json()
-    assert len(res1["records"]) == 5
+    assert len(res1["records"]) == 6
 
     for record in res1["records"]:
-        assert record["name"] in ["A", "B", "C", "D", "E"]
+        assert record["name"] in ["A", "B", "C", "D", "E", "F"]
+
+    resp2 = drs_client.get("dg.xxxx/e366dbca-3c7f-4be6-86e4-c1f8f3e4189d")
+    rec2 = resp2.json()
+    for checksum in rec2["checksums"]:
+        assert checksum in [
+            {"type": "md5", "checksum": "14d2e36323ad8d37423bb76347128234"},
+            {
+                "type": "sha256",
+                "checksum": "3319c07dea1628afaefe76de8ac867cfece7e2bfebacb6432f69a44111536e0f",
+            },
+        ]
+
+    resp3 = drs_client.get("dg.xxxx/590ee63d-2790-477a-bbf8-d53873ca4933")
+    rec3 = resp3.json()
+    for checksum in rec3["checksums"]:
+        assert checksum in [
+            {"type": "md5", "checksum": "14d2e36323ad8d37423bb76347128234"},
+            {
+                "type": "sha256",
+                "checksum": "3319c07dea1628afaefe76de8ac867cfece7e2bfebacb6432f69a44111536e0f",
+            },
+        ]
 
 
 def test_invalid_ingest_bundle_manifest(gen3_index, indexd_server, drs_client):
