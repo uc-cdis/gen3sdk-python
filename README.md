@@ -1247,12 +1247,23 @@ BundleA, [BundleB BundleC],
 
 The following is an example csv manifest:
 ```
-bundle_name,ids,GUID,size,checksums,description
-A,[dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2],,,,something something
-B,['dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2' 'dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b'],,789,,something 
-C,[A 'B' dg.TEST/ed8f4658-6acd-4f96-9dd8-3709890c959e],,120,,lalala
-D,[A B C],,,,
-E,[A B],dg.xxxx/590ee63d-2790-477a-bbf8-d53873ca4933,,,
+bundle_name,ids,GUID,size,type,checksum,description
+A,[dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2],,,,,some description
+B,['dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2' 'dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b'],,789,,,something 
+C,[A 'B' dg.TEST/ed8f4658-6acd-4f96-9dd8-3709890c959e],,120,,,lalala
+D,[A B C],,,[md5 sha256],[1234567 abc12345],
+E,[A B],dg.xxxx/590ee63d-2790-477a-bbf8-d53873ca4933,,md5 sha256,abcdefg abcd123,
+```
+NOTE: DrsObjects/Bundles support multiple checksums so in the manifest define type and the hash respectively.
+
+Example:
+```
+type,checksum
+md5 sha256, abcde 12345
+```
+The above manifest would result to the following `checksums` field in the bundle:
+```json
+"checksums":[{"type": "md5", "checksum": "abcde"}, {"type": "sha256", "checksum": "12345"}]
 ```
 
 ```python
