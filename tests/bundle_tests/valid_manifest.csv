@@ -1,7 +1,7 @@
 bundle_name,ids,GUID,size,type,checksum,description
 A,[dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2],,,,,something something
 B,['dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2' 'dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b'],,789,,,something 
-C,[A 'B' dg.TEST/ed8f4658-6acd-4f96-9dd8-3709890c959e],,120,,,lalala
+C,[A 'B' dg.TEST/ed8f4658-6acd-4f96-9dd8-3709890c959e],,121,,,lalala
 D,[A B C],,,md5,c3f5f87171034245b12ba9aaeb5ec6a7,
 E,[A B],dg.xxxx/590ee63d-2790-477a-bbf8-d53873ca4933,,[md5 sha256],["14d2e36323ad8d37423bb76347128234" '3319c07dea1628afaefe76de8ac867cfece7e2bfebacb6432f69a44111536e0f'],
 F,[E],dg.xxxx/e366dbca-3c7f-4be6-86e4-c1f8f3e4189d,,md5 sha256,14d2e36323ad8d37423bb76347128234 3319c07dea1628afaefe76de8ac867cfece7e2bfebacb6432f69a44111536e0f,
