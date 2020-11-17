@@ -196,8 +196,6 @@ def _verify_and_process_bundle_manifest(manifest_file, manifest_file_delimiter="
     if not pass_verification:
         logging.error("The manifest is not in the correct format!")
         return None, None
-    print("------------------------------------------------------------")
-    print(records)
     return records, bundle_name_to_guid
 
 
