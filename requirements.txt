@@ -1,6 +1,7 @@
 requests
 pandas
 indexclient>=1.6.2
+drsclient<1.0.0
 aiohttp
 backoff
 click

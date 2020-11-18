@@ -1,10 +1,21 @@
 import logging
 import sys
+import re
 
 from urllib.parse import urlunsplit
 from urllib.parse import urlencode
 from urllib.parse import urlsplit
 from urllib.parse import parse_qs
+
+
+UUID_FORMAT = (
+    r"^.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+)
+MD5_FORMAT = r"^[a-fA-F0-9]{32}$"
+SIZE_FORMAT = r"^[0-9]*$"
+ACL_FORMAT = r"^.*$"
+URL_FORMAT = r"^.*$"
+AUTHZ_FORMAT = r"^.*$"
 
 
 def append_query_params(original_url, **kwargs):
@@ -88,6 +99,36 @@ def exception_do_not_retry(error):
         return True
 
     return False
+
+
+def _verify_format(s, format):
+    """
+    Make sure the input is in the right format
+    """
+    r = re.compile(format)
+    if r.match(s) is not None:
+        return True
+    return False
+
+
+def _standardize_str(s):
+    """
+    Remove unnecessary spaces, commas
+
+    Ex. "abc    d" -> "abc d"
+        "abc, d" -> "abc d"
+    """
+    memory = []
+    s = s.replace(",", " ")
+    res = ""
+    for c in s:
+        if c != " ":
+            res += c
+            memory = []
+        elif not memory:
+            res += c
+            memory.append(" ")
+    return res
 
 
 # Default settings to control usage of backoff library.

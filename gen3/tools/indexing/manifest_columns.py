@@ -31,6 +31,18 @@ URLS_STANDARD_KEY = "urls"
 AUTHZ_COLUMN_NAMES = ["authz"]
 AUTHZ_STANDARD_KEY = "authz"
 
+BUNDLENAME_COLUMN_NAME = ["bundle_name", "name"]
+
+IDS_COLUMN_NAME = ["ids", "bundle_ids"]
+
+DESCRIPTION_COLUMN_NAME = ["description"]
+
+CHECKSUMS_COLUMN_NAME = ["checksums", "checksum"]
+
+TYPE_COLUMN_NAME = ["type", "types"]
+
+ALIASES_COLUMN_NAME = ["alias", "aliases"]
+
 
 @unique
 class Columns(Enum):
