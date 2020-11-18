@@ -215,7 +215,7 @@ def _verify_and_process_bundle_manifest(manifest_file, manifest_file_delimiter="
             if "checksum" in record and "type" in record:
                 if len(record["type"]) != len(record["checksum"]):
                     logging.error(
-                        "ERROR: Number of checksum type and checksum does not match."
+                        "ERROR: Number of checksum types ({}) and checksums ({}) does not match for row {}.".format(len(record["type"]), len(record["checksum"]), row_n)
                     )
                     pass_verification = False
                 elif not validate_hashes(dict(zip(record["type"], record["checksum"]))):
