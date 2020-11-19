@@ -1,2 +1,5 @@
 from gen3.tools.indexing.download_manifest import async_download_object_manifest
-from gen3.tools.indexing.verify_manifest import verify_object_manifest
+from gen3.tools.indexing.verify_manifest import async_verify_object_manifest
+from gen3.tools.indexing.index_manifest import index_object_manifest
+from gen3.tools.indexing.merge_manifests import merge_bucket_manifests
+from gen3.tools.indexing.validate_manifest_format import is_valid_manifest_format

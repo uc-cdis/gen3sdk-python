@@ -1,5 +1,6 @@
 requests
 <<<<<<< HEAD
+<<<<<<< HEAD
 -e git+https://github.com/uc-cdis/indexclient.git@1.5.6#egg=indexclient
 pandas
 =======
@@ -8,3 +9,11 @@ pandas
 
 -e git+https://github.com/uc-cdis/indexclient.git@1.6.2#egg=indexclient
 >>>>>>> 8fd67fdfb8509a503a48cb01894f0124f210b79c
+=======
+pandas
+indexclient>=1.6.2
+drsclient<1.0.0
+aiohttp
+backoff
+click
+>>>>>>> cf36f3bf47e9bcd57b733524cac746cee27b3dbb

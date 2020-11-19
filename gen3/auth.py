@@ -1,5 +1,6 @@
 import json
 from requests.auth import AuthBase
+import os
 import requests
 
 
@@ -15,9 +16,10 @@ class Gen3Auth(AuthBase):
     Automatically refreshes access tokens when they expire.
 
     Args:
-        endpoint (str): The URL of the data commons.
-        refresh_file (str): The file containing the downloaded json web token.
-        refresh_token (str): The json web token.
+        endpoint (str, opt): The URL of the data commons. Optional if working in a Gen3 Workspace.
+        refresh_file (str, opt): The file containing the downloaded JSON web token. Optional if working in a Gen3 Workspace.
+        refresh_token (str, opt): The JSON web token. Optional if working in a Gen3 Workspace.
+        idp (str, opt): If working in a Gen3 Workspace, the IDP to use can be specified.
 
     Examples:
         This generates the Gen3Auth class pointed at the sandbox commons while
@@ -27,19 +29,43 @@ class Gen3Auth(AuthBase):
 
     """
 
-    def __init__(self, endpoint, refresh_file=None, refresh_token=None):
+    def __init__(self, endpoint=None, refresh_file=None, refresh_token=None, idp=None):
+        self._endpoint = endpoint
+        self._refresh_file = refresh_file
+        self._refresh_token = refresh_token
+        self._wts_idp = idp
+        self._access_token = None
+
+        self._use_wts = False
+        self._wts_url = None
+
+        # if working in a Gen3 Workspace, we'll use the WTS
+        namespace = os.environ.get("NAMESPACE")
+        if namespace:
+            # attempt to get a token from the workspace-token-service
+            self._wts_url = (
+                "http://workspace-token-service.{}.svc.cluster.local".format(namespace)
+            )
+            resp = requests.get("{}/token/".format(self._wts_url))
+            if resp.status_code == 200:
+                self._use_wts = True
+                return
+
+        # fall back to non-WTS initialization
+        if not endpoint:
+            raise ValueError(
+                "When working outside of the Gen3 Workspace, parameter 'endpoint' must be specified."
+            )
+
         if not refresh_file and not refresh_token:
             raise ValueError(
-                "Either parameter 'refresh_file' or parameter 'refresh_token' must be specified."
+                "When working outside of the Gen3 Workspace, either parameter 'refresh_file' or parameter 'refresh_token' must be specified."
             )
 
         if refresh_file and refresh_token:
             raise ValueError(
-                "Only one of 'refresh_file' and 'refresh_token' must be specified."
+                "Only one of 'refresh_file' and 'refresh_token' can be specified."
             )
-
-        self._refresh_file = refresh_file
-        self._refresh_token = refresh_token
 
         if refresh_file:
             try:
@@ -51,9 +77,6 @@ class Gen3Auth(AuthBase):
                         self._refresh_file, str(e)
                     )
                 )
-
-        self._access_token = None
-        self._endpoint = endpoint
 
     def __call__(self, request):
         """Adds authorization header to the request
@@ -107,14 +130,30 @@ class Gen3Auth(AuthBase):
 
         """
         if not self._access_token:
-            auth_url = "{}/user/credentials/cdis/access_token".format(self._endpoint)
-            try:
-                self._access_token = requests.post(
-                    auth_url, json=self._refresh_token
-                ).json()["access_token"]
-            except Exception as e:
-                raise Gen3AuthError(
-                    "Failed to authenticate to {}\n{}".format(auth_url, str(e))
+            if self._use_wts:
+                # attempt to get a token from the workspace-token-service
+                auth_url = "{}/token/".format(self._wts_url)
+                if self._wts_idp:
+                    auth_url += "?idp={}".format(self._wts_idp)
+                resp = requests.get(auth_url)
+                err_msg = "Failed to get an access token from WTS at {}:\n{}"
+                token_key = "token"
+            else:
+                # attempt to get a token from Fence
+                auth_url = "{}/user/credentials/cdis/access_token".format(
+                    self._endpoint
                 )
+                resp = requests.post(auth_url, json=self._refresh_token)
+                err_msg = "Failed to get an access token from Fence at {}:\n{}"
+                token_key = "access_token"
+
+            assert resp.status_code == 200, err_msg.format(auth_url, resp.text)
+            try:
+                json_resp = resp.json()
+                self._access_token = json_resp[token_key]
+            except ValueError:  # cannot parse JSON
+                raise Gen3AuthError(err_msg.format(auth_url, resp.text))
+            except KeyError:  # no access_token in JSON response
+                raise Gen3AuthError(err_msg.format(auth_url, json_resp))
 
         return "Bearer " + self._access_token

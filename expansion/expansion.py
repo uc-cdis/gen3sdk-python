@@ -15,6 +15,7 @@ import seaborn as sns
 class Gen3Error(Exception):
     pass
 
+
 class Gen3Expansion:
     """Advanced scripts for interacting with the Gen3 submission, query and index APIs
 
@@ -41,7 +42,7 @@ class Gen3Expansion:
     def __init__(self, endpoint, auth_provider, submission):
         self._auth_provider = auth_provider
         self._endpoint = endpoint
-        self.sub = submission # submission is Gen3Submission(endpoint, auth_provider)
+        self.sub = submission  # submission is Gen3Submission(endpoint, auth_provider)
 
     def __export_file(self, filename, output):
         """Writes text, e.g., an API response, to a file.
@@ -55,131 +56,173 @@ class Gen3Expansion:
         outfile = open(filename, "w")
         outfile.write(output)
         outfile.close
-        print("Output written to file: "+filename+"\n")
+        print("Output written to file: " + filename + "\n")
 
     ### AWS S3 Tools:
-    def s3_ls(self, path, bucket, profile, pattern='*'):
-        ''' Print the results of an `aws s3 ls` command '''
+    def s3_ls(self, path, bucket, profile, pattern="*"):
+        """ Print the results of an `aws s3 ls` command """
         s3_path = bucket + path
-        cmd = ['aws', 's3', 'ls', s3_path, '--profile', profile]
+        cmd = ["aws", "s3", "ls", s3_path, "--profile", profile]
         try:
-            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode(
+                "UTF-8"
+            )
         except Exception as e:
-            output = e.output.decode('UTF-8')
+            output = e.output.decode("UTF-8")
             print("ERROR:" + output)
-        psearch = output.split('\n')
-        if pattern != '*':
-            pmatch = fnmatch.filter(psearch, pattern) #if default '*', all files will match
+        psearch = output.split("\n")
+        if pattern != "*":
+            pmatch = fnmatch.filter(
+                psearch, pattern
+            )  # if default '*', all files will match
             return arrayTable(pmatch)
         else:
             return output
 
-    def s3_files(self, path, bucket, profile, pattern='*',verbose=True):
-        ''' Get a list of files returned by an `aws s3 ls` command '''
+    def s3_files(self, path, bucket, profile, pattern="*", verbose=True):
+        """ Get a list of files returned by an `aws s3 ls` command """
         s3_path = bucket + path
-        cmd = ['aws', 's3', 'ls', s3_path, '--profile', profile]
+        cmd = ["aws", "s3", "ls", s3_path, "--profile", profile]
         try:
-            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
+            output = subprocess.check_output(
+                cmd, stderr=subprocess.STDOUT, shell=True
+            ).decode("UTF-8")
         except Exception as e:
-            output = e.output.decode('UTF-8')
+            output = e.output.decode("UTF-8")
             print("ERROR:" + output)
-        output = [line.split() for line in output.split('\n')]
-        output = [line for line in output if len(line) == 4] #filter output for lines with file info
-        output = [line[3] for line in output] #grab the filename only
-        output = fnmatch.filter(output, pattern) #if default '*', all files will match
+        output = [line.split() for line in output.split("\n")]
+        output = [
+            line for line in output if len(line) == 4
+        ]  # filter output for lines with file info
+        output = [line[3] for line in output]  # grab the filename only
+        output = fnmatch.filter(output, pattern)  # if default '*', all files will match
         if verbose is True:
-            print('\nIndex \t Filename')
-            for (i, item) in enumerate(output, start=0): print(i, '\t', item)
+            print("\nIndex \t Filename")
+            for (i, item) in enumerate(output, start=0):
+                print(i, "\t", item)
         return output
 
     def get_s3_files(self, path, bucket, profile, files=None, mydir=None):
-        ''' Transfer data from object storage to the VM in the private subnet '''
+        """ Transfer data from object storage to the VM in the private subnet """
 
         # Set the path to the directory where files reside
         s3_path = bucket + path
 
         # Create folder on VM for downloaded files
         if not isinstance(mydir, str):
-           mydir = path
+            mydir = path
         if not os.path.exists(mydir):
-           os.makedirs(mydir)
+            os.makedirs(mydir)
 
         # If files is an array of filenames, download them
         if isinstance(files, list):
-           print("Getting files...")
-           for filename in files:
-              s3_filepath = s3_path + str(filename)
-              if os.path.exists(mydir + str(filename)):
-                  print("File "+filename+" already downloaded in that location.")
-              else:
-                  print(s3_filepath)
-                  cmd = ['aws', 's3', '--profile', profile, 'cp', s3_filepath, mydir]
-                  try:
-                      output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
-                  except Exception as e:
-                      output = e.output.decode('UTF-8')
-                      print("ERROR:" + output)
+            print("Getting files...")
+            for filename in files:
+                s3_filepath = s3_path + str(filename)
+                if os.path.exists(mydir + str(filename)):
+                    print("File " + filename + " already downloaded in that location.")
+                else:
+                    print(s3_filepath)
+                    cmd = ["aws", "s3", "--profile", profile, "cp", s3_filepath, mydir]
+                    try:
+                        output = subprocess.check_output(
+                            cmd, stderr=subprocess.STDOUT, shell=True
+                        ).decode("UTF-8")
+                    except Exception as e:
+                        output = e.output.decode("UTF-8")
+                        print("ERROR:" + output)
         # If files is None, which syncs the s3_path 'directory'
         else:
-           print("Syncing directory " + s3_path)
-           cmd = ['aws', 's3', '--profile', profile, 'sync', s3_path, mydir]
-           try:
-              output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
-           except Exception as e:
-              output = e.output.decode('UTF-8')
-              print("ERROR:" + output)
+            print("Syncing directory " + s3_path)
+            cmd = ["aws", "s3", "--profile", profile, "sync", s3_path, mydir]
+            try:
+                output = subprocess.check_output(
+                    cmd, stderr=subprocess.STDOUT, shell=True
+                ).decode("UTF-8")
+            except Exception as e:
+                output = e.output.decode("UTF-8")
+                print("ERROR:" + output)
         print("Finished")
 
     # Functions for downloading metadata in TSVs
 
-    def get_project_ids(self, node=None,name=None):
+    def get_project_ids(self, node=None, name=None):
         """Get a list of project_ids you have access to in a data commons.
 
-            Args:
-                node(str): The node you want projects to have at least one record in.
-                name(str): The name of the programs to get projects in, or the submitter_id of a particular record.
+        Args:
+            node(str): The node you want projects to have at least one record in.
+            name(str): The name of the programs to get projects in, or the submitter_id of a particular record.
 
-            Example:
-                get_project_ids()
-                get_project_ids(node='demographic')
-                get_project_ids(node='program',name=['training','internal'])
-                get_project_ids(node='case',name='case-01')
+        Example:
+            get_project_ids()
+            get_project_ids(node='demographic')
+            get_project_ids(node='program',name=['training','internal'])
+            get_project_ids(node='case',name='case-01')
         """
         project_ids = []
         queries = []
-        #Return all project_ids in the data commons if no node is provided or if node is program but no name provided
-        if name is None and ((node is None) or (node is 'program')):
+        # Return all project_ids in the data commons if no node is provided or if node is program but no name provided
+        if name is None and ((node is None) or (node is "program")):
             print("Getting all project_ids you have access to in the data commons.")
-            if node == 'program':
-                print('Specify a list of program names (name = [\'myprogram1\',\'myprogram2\']) to get only project_ids in particular programs.')
+            if node == "program":
+                print(
+                    "Specify a list of program names (name = ['myprogram1','myprogram2']) to get only project_ids in particular programs."
+                )
             queries.append("""{project (first:0){project_id}}""")
-        elif name is not None and node == 'program':
-            if isinstance(name,list):
-                print('Getting all project_ids in the programs \''+",".join(name)+'\'')
+        elif name is not None and node == "program":
+            if isinstance(name, list):
+                print(
+                    "Getting all project_ids in the programs '" + ",".join(name) + "'"
+                )
                 for program_name in name:
-                    queries.append("""{project (first:0, with_path_to:{type:"program",name:"%s"}){project_id}}""" % (program_name))
-            elif isinstance(name,str):
-                print('Getting all project_ids in the program \''+name+'\'')
-                queries.append("""{project (first:0, with_path_to:{type:"program",name:"%s"}){project_id}}""" % (name))
-        elif isinstance(node,str) and isinstance(name,str):
-            print('Getting all project_ids for projects with a path to record \''+name+'\' in node \''+node+'\'')
-            queries.append("""{project (first:0, with_path_to:{type:"%s",submitter_id:"%s"}){project_id}}""" % (node,name))
-        elif isinstance(node,str) and name is None:
-            print('Getting all project_ids for projects with at least one record in the node \''+node+'\'')
+                    queries.append(
+                        """{project (first:0, with_path_to:{type:"program",name:"%s"}){project_id}}"""
+                        % (program_name)
+                    )
+            elif isinstance(name, str):
+                print("Getting all project_ids in the program '" + name + "'")
+                queries.append(
+                    """{project (first:0, with_path_to:{type:"program",name:"%s"}){project_id}}"""
+                    % (name)
+                )
+        elif isinstance(node, str) and isinstance(name, str):
+            print(
+                "Getting all project_ids for projects with a path to record '"
+                + name
+                + "' in node '"
+                + node
+                + "'"
+            )
+            queries.append(
+                """{project (first:0, with_path_to:{type:"%s",submitter_id:"%s"}){project_id}}"""
+                % (node, name)
+            )
+        elif isinstance(node, str) and name is None:
+            print(
+                "Getting all project_ids for projects with at least one record in the node '"
+                + node
+                + "'"
+            )
             query = """{node (first:0,of_type:"%s"){project_id}}""" % (node)
-            df = json_normalize(self.sub.query(query)['data']['node'])
-            project_ids = project_ids + list(set(df['project_id']))
+            df = json_normalize(self.sub.query(query)["data"]["node"])
+            project_ids = project_ids + list(set(df["project_id"]))
         if len(queries) > 0:
             for query in queries:
                 res = self.sub.query(query)
-                df = json_normalize(res['data']['project'])
-                project_ids = project_ids + list(set(df['project_id']))
-        my_ids = sorted(project_ids,key=str.lower)
+                df = json_normalize(res["data"]["project"])
+                project_ids = project_ids + list(set(df["project_id"]))
+        my_ids = sorted(project_ids, key=str.lower)
         print(my_ids)
         return my_ids
 
-
-    def get_node_tsvs(self, node, projects=None, overwrite=False, remove_empty=True, outdir='node_tsvs'):
+    def get_node_tsvs(
+        self,
+        node,
+        projects=None,
+        overwrite=False,
+        remove_empty=True,
+        outdir="node_tsvs",
+    ):
         """Gets a TSV of the structuerd data from particular node for each project specified.
            Also creates a master TSV of merged data from each project for the specified node.
            Returns a DataFrame containing the merged data for the specified node.
@@ -195,49 +238,71 @@ class Gen3Expansion:
 
         if not os.path.exists(outdir):
             os.makedirs(outdir)
-        mydir = "{}/{}_tsvs".format(outdir,node)
+        mydir = "{}/{}_tsvs".format(outdir, node)
         if not os.path.exists(mydir):
             os.makedirs(mydir)
 
-        if projects is None: #if no projects specified, get node for all projects
-            projects = list(json_normalize(self.sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+        if projects is None:  # if no projects specified, get node for all projects
+            projects = list(
+                json_normalize(
+                    self.sub.query("""{project (first:0){project_id}}""")["data"][
+                        "project"
+                    ]
+                )["project_id"]
+            )
         elif isinstance(projects, str):
             projects = [projects]
 
         dfs = []
         df_len = 0
         for project in projects:
-            filename = str(mydir+'/'+project+'_'+node+'.tsv')
+            filename = str(mydir + "/" + project + "_" + node + ".tsv")
             if (os.path.isfile(filename)) and (overwrite is False):
                 print("File previously downloaded.")
             else:
-                prog,proj = project.split('-',1)
-                self.sub.export_node(prog,proj,node,'tsv',filename)
-            df1 = pd.read_csv(filename, sep='\t', header=0, index_col=False)
-            df_len+=len(df1)
+                prog, proj = project.split("-", 1)
+                self.sub.export_node(prog, proj, node, "tsv", filename)
+            df1 = pd.read_csv(filename, sep="\t", header=0, index_col=False)
+            df_len += len(df1)
             if not df1.empty:
                 dfs.append(df1)
 
-            print(filename +' has '+str(len(df1))+' records.')
+            print(filename + " has " + str(len(df1)) + " records.")
 
             if remove_empty is True:
                 if df1.empty:
-                    print('Removing empty file: ' + filename)
-                    cmd = ['rm',filename] #look in the download directory
+                    print("Removing empty file: " + filename)
+                    cmd = ["rm", filename]  # look in the download directory
                     try:
-                        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+                        output = subprocess.check_output(
+                            cmd, stderr=subprocess.STDOUT
+                        ).decode("UTF-8")
                     except Exception as e:
-                        output = e.output.decode('UTF-8')
+                        output = e.output.decode("UTF-8")
                         print("ERROR deleting file: " + output)
 
-        all_data = pd.concat(dfs, ignore_index=True, sort = False)
-        print('length of all dfs: ' +str(df_len))
-        nodefile = str('master_'+node+'.tsv')
-        all_data.to_csv(str(mydir+'/'+nodefile),sep='\t',index=False)
-        print('Master node TSV with '+str(len(all_data))+' total records written to '+nodefile+'.')
+        all_data = pd.concat(dfs, ignore_index=True, sort=False)
+        print("length of all dfs: " + str(df_len))
+        nodefile = str("master_" + node + ".tsv")
+        all_data.to_csv(str(mydir + "/" + nodefile), sep="\t", index=False)
+        print(
+            "Master node TSV with "
+            + str(len(all_data))
+            + " total records written to "
+            + nodefile
+            + "."
+        )
         return all_data
 
-    def get_project_tsvs(self, projects=None, nodes=None, outdir='project_tsvs', overwrite=False, save_empty=False,remove_nodes = ['program','project','root','data_release']):
+    def get_project_tsvs(
+        self,
+        projects=None,
+        nodes=None,
+        outdir="project_tsvs",
+        overwrite=False,
+        save_empty=False,
+        remove_nodes=["program", "project", "root", "data_release"],
+    ):
         """Function gets a TSV for every node in a specified project.
             Exports TSV files into a directory "project_tsvs/".
             Function returns a list of the contents of the directory.
@@ -252,49 +317,88 @@ class Gen3Expansion:
 
         """
         if nodes is None:
-            nodes = sorted(list(set(json_normalize(self.sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
-        elif isinstance(nodes,str):
+            nodes = sorted(
+                list(
+                    set(
+                        json_normalize(
+                            self.sub.query("""{_node_type (first:-1) {id}}""")["data"][
+                                "_node_type"
+                            ]
+                        )["id"]
+                    )
+                )
+            )  # get all the 'node_id's in the data model
+        elif isinstance(nodes, str):
             nodes = [nodes]
 
         for node in remove_nodes:
-            if node in nodes: nodes.remove(node)
+            if node in nodes:
+                nodes.remove(node)
 
-        if projects is None: #if no projects specified, get node for all projects
-            projects = list(json_normalize(self.sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+        if projects is None:  # if no projects specified, get node for all projects
+            projects = list(
+                json_normalize(
+                    self.sub.query("""{project (first:0){project_id}}""")["data"][
+                        "project"
+                    ]
+                )["project_id"]
+            )
         elif isinstance(projects, str):
             projects = [projects]
 
         for project_id in projects:
-            mydir = "{}/{}_tsvs".format(outdir,project_id) #create the directory to store TSVs
+            mydir = "{}/{}_tsvs".format(
+                outdir, project_id
+            )  # create the directory to store TSVs
 
             if not os.path.exists(mydir):
                 os.makedirs(mydir)
 
             for node in nodes:
-                filename = str(mydir+'/'+project_id+'_'+node+'.tsv')
+                filename = str(mydir + "/" + project_id + "_" + node + ".tsv")
                 if (os.path.isfile(filename)) and (overwrite is False):
                     print("\tPreviously downloaded: '{}'".format(filename))
                 else:
-                    query_txt = """{_%s_count (project_id:"%s")}""" % (node,project_id)
-                    res = self.sub.query(query_txt) #  {'data': {'_acknowledgement_count': 0}}
-                    count = res['data'][str('_'+node+'_count')] # count=int(0)
+                    query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
+                    res = self.sub.query(
+                        query_txt
+                    )  #  {'data': {'_acknowledgement_count': 0}}
+                    count = res["data"][str("_" + node + "_count")]  # count=int(0)
                     if count > 0 or save_empty is True:
-                        print("\nDownloading {} records in node '{}' of project '{}'.".format(count,node,project_id))
-                        prog,proj = project_id.split('-',1)
-                        self.sub.export_node(prog,proj,node,'tsv',filename)
+                        print(
+                            "\nDownloading {} records in node '{}' of project '{}'.".format(
+                                count, node, project_id
+                            )
+                        )
+                        prog, proj = project_id.split("-", 1)
+                        self.sub.export_node(prog, proj, node, "tsv", filename)
                     else:
-                        print("\t{} records in node '{}' of project '{}'.".format(count,node,project_id))
+                        print(
+                            "\t{} records in node '{}' of project '{}'.".format(
+                                count, node, project_id
+                            )
+                        )
 
-        cmd = ['ls',mydir] #look in the download directory
+        cmd = ["ls", mydir]  # look in the download directory
         try:
-            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode(
+                "UTF-8"
+            )
         except Exception as e:
-            output = 'ERROR:' + e.output.decode('UTF-8')
+            output = "ERROR:" + e.output.decode("UTF-8")
 
         return output
 
-# Query Functions
-    def paginate_query(self, node, project_id=None, props=['id','submitter_id'], chunk_size=2500, format='json',args=None):
+    # Query Functions
+    def paginate_query(
+        self,
+        node,
+        project_id=None,
+        props=["id", "submitter_id"],
+        chunk_size=2500,
+        format="json",
+        args=None,
+    ):
         """Function to paginate a query to avoid time-outs.
         Returns a json of all the records in the node.
 
@@ -308,141 +412,200 @@ class Gen3Expansion:
             paginate_query('demographic')
         """
 
-        if node == 'datanode':
+        if node == "datanode":
             query_txt = """{ %s (%s) { type } }""" % (node, args)
             response = self.sub.query(query_txt)
-            if 'data' in response:
-                nodes = [record['type'] for record in response['data']['datanode']]
+            if "data" in response:
+                nodes = [record["type"] for record in response["data"]["datanode"]]
                 if len(nodes) > 1:
-                    print("\tMultiple files with that file_name exist across multiple nodes:\n\t{}.".format(nodes))
+                    print(
+                        "\tMultiple files with that file_name exist across multiple nodes:\n\t{}.".format(
+                            nodes
+                        )
+                    )
                 elif len(nodes) == 1:
                     node = nodes[0]
                 else:
                     return nodes
 
         if project_id is not None:
-            program,project = project_id.split('-',1)
+            program, project = project_id.split("-", 1)
             if args is None:
                 query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
             else:
-                query_txt = """{_%s_count (project_id:"%s", %s)}""" % (node, project_id, args)
+                query_txt = """{_%s_count (project_id:"%s", %s)}""" % (
+                    node,
+                    project_id,
+                    args,
+                )
         else:
             if args is None:
                 query_txt = """{_%s_count}""" % (node)
             else:
                 query_txt = """{_%s_count (%s)}""" % (node, args)
 
-
         # First query the node count to get the expected number of results for the requested query:
 
         try:
             res = self.sub.query(query_txt)
-            count_name = '_'.join(map(str,['',node,'count']))
-            qsize = res['data'][count_name]
-            print("\n\tFound {} records in '{}' node of project '{}'. ".format(qsize,node,project_id))
+            count_name = "_".join(map(str, ["", node, "count"]))
+            qsize = res["data"][count_name]
+            print(
+                "\n\tFound {} records in '{}' node of project '{}'. ".format(
+                    qsize, node, project_id
+                )
+            )
         except:
-            print("\n\tQuery to get _{}_count failed! {}".format(node,query_txt))
+            print("\n\tQuery to get _{}_count failed! {}".format(node, query_txt))
 
-        #Now paginate the actual query:
-        properties = ' '.join(map(str,props))
+        # Now paginate the actual query:
+        properties = " ".join(map(str, props))
         offset = 0
         total = {}
-        total['data'] = {}
-        total['data'][node] = []
+        total["data"] = {}
+        total["data"][node] = []
         count = 0
         while offset < qsize:
 
             if project_id is not None:
                 if args is None:
-                    query_txt = """{%s (first: %s, offset: %s, project_id:"%s"){%s}}""" % (node, chunk_size, offset, project_id, properties)
+                    query_txt = (
+                        """{%s (first: %s, offset: %s, project_id:"%s"){%s}}"""
+                        % (node, chunk_size, offset, project_id, properties)
+                    )
                 else:
-                    query_txt = """{%s (first: %s, offset: %s, project_id:"%s", %s){%s}}""" % (node, chunk_size, offset, project_id, args, properties)
+                    query_txt = (
+                        """{%s (first: %s, offset: %s, project_id:"%s", %s){%s}}"""
+                        % (node, chunk_size, offset, project_id, args, properties)
+                    )
             else:
                 if args is None:
-                    query_txt = """{%s (first: %s, offset: %s){%s}}""" % (node, chunk_size, offset, properties)
+                    query_txt = """{%s (first: %s, offset: %s){%s}}""" % (
+                        node,
+                        chunk_size,
+                        offset,
+                        properties,
+                    )
                 else:
-                    query_txt = """{%s (first: %s, offset: %s, %s){%s}}""" % (node, chunk_size, offset, args, properties)
+                    query_txt = """{%s (first: %s, offset: %s, %s){%s}}""" % (
+                        node,
+                        chunk_size,
+                        offset,
+                        args,
+                        properties,
+                    )
 
             res = self.sub.query(query_txt)
-            if 'data' in res:
-                records = res['data'][node]
+            if "data" in res:
+                records = res["data"][node]
 
                 if len(records) < chunk_size:
                     if qsize == 999999999:
                         return total
 
-                total['data'][node] +=  records # res['data'][node] should be a list
+                total["data"][node] += records  # res['data'][node] should be a list
                 offset += chunk_size
-            elif 'error' in res:
-                print(res['error'])
+            elif "error" in res:
+                print(res["error"])
                 if chunk_size > 1:
-                    chunk_size = int(chunk_size/2)
-                    print("Halving chunk_size to: "+str(chunk_size)+".")
+                    chunk_size = int(chunk_size / 2)
+                    print("Halving chunk_size to: " + str(chunk_size) + ".")
                 else:
                     print("Query timing out with chunk_size of 1!")
                     exit(1)
             else:
-                print("Query Error: "+str(res))
+                print("Query Error: " + str(res))
 
-            pct = int((len(total['data'][node]) / qsize)*100)
-            msg = "\tRecords retrieved: {} of {} ({}%), offset: {}, chunk_size: {}.".format(len(total['data'][node]),qsize,pct,offset,chunk_size)
-            #print(msg)
-            sys.stdout.write("\r"+str(msg).ljust(200,' '))
+            pct = int((len(total["data"][node]) / qsize) * 100)
+            msg = "\tRecords retrieved: {} of {} ({}%), offset: {}, chunk_size: {}.".format(
+                len(total["data"][node]), qsize, pct, offset, chunk_size
+            )
+            # print(msg)
+            sys.stdout.write("\r" + str(msg).ljust(200, " "))
 
-        if format is 'tsv':
-            df = json_normalize(total['data'][node])
+        if format is "tsv":
+            df = json_normalize(total["data"][node])
             return df
         else:
             return total
 
-    def paginate_query_new(self, node, project_id=None, props=[], args=None, chunk_size=5000, offset=0, format='json'):
+    def paginate_query_new(
+        self,
+        node,
+        project_id=None,
+        props=[],
+        args=None,
+        chunk_size=5000,
+        offset=0,
+        format="json",
+    ):
         """Function to paginate a query to avoid time-outs.
-            Returns a json of all the records in the node.
-            Args:
-                node (str): The node to query.
-                project_id(str): The project_id to limit the query to. Default is None.
-                props(list): A list of properties in the node to return.
-                args(str): Put graphQL arguments here. For example, 'with_path_to:{type:"case",submitter_id:"case-01"}', etc. Don't enclose in parentheses.
-                chunk_size(int): The number of records to return per query. Default is 10000.
-                offset(int): Return results with an offset; setting offset=10 will skip first 10 records.
-                format(str): 'json' or 'tsv'. If set to 'tsv', function will return DataFrame and create a TSV file from it.
-            Example:
-                paginate_query('demographic')
+        Returns a json of all the records in the node.
+        Args:
+            node (str): The node to query.
+            project_id(str): The project_id to limit the query to. Default is None.
+            props(list): A list of properties in the node to return.
+            args(str): Put graphQL arguments here. For example, 'with_path_to:{type:"case",submitter_id:"case-01"}', etc. Don't enclose in parentheses.
+            chunk_size(int): The number of records to return per query. Default is 10000.
+            offset(int): Return results with an offset; setting offset=10 will skip first 10 records.
+            format(str): 'json' or 'tsv'. If set to 'tsv', function will return DataFrame and create a TSV file from it.
+        Example:
+            paginate_query('demographic')
         """
-        props = list(set(['id','submitter_id']+props))
-        properties = ' '.join(map(str,props))
+        props = list(set(["id", "submitter_id"] + props))
+        properties = " ".join(map(str, props))
 
         if project_id is not None:
             outname = "query_{}_{}.tsv".format(project_id, node)
             if args is None:
-                query_txt = """{%s (first: %s, offset: %s, project_id:"%s"){%s}}""" % (node, chunk_size, offset, project_id, properties)
+                query_txt = """{%s (first: %s, offset: %s, project_id:"%s"){%s}}""" % (
+                    node,
+                    chunk_size,
+                    offset,
+                    project_id,
+                    properties,
+                )
             else:
-                query_txt = """{%s (first: %s, offset: %s, project_id:"%s", %s){%s}}""" % (node, chunk_size, offset, project_id, args, properties)
+                query_txt = (
+                    """{%s (first: %s, offset: %s, project_id:"%s", %s){%s}}"""
+                    % (node, chunk_size, offset, project_id, args, properties)
+                )
         else:
             outname = "query_{}.tsv".format(node)
             if args is None:
-                query_txt = """{%s (first: %s, offset: %s){%s}}""" % (node, chunk_size, offset, properties)
+                query_txt = """{%s (first: %s, offset: %s){%s}}""" % (
+                    node,
+                    chunk_size,
+                    offset,
+                    properties,
+                )
             else:
-                query_txt = """{%s (first: %s, offset: %s, %s){%s}}""" % (node, chunk_size, offset, args, properties)
+                query_txt = """{%s (first: %s, offset: %s, %s){%s}}""" % (
+                    node,
+                    chunk_size,
+                    offset,
+                    args,
+                    properties,
+                )
 
         total = {}
-        total['data'] = {}
-        total['data'][node] = []
+        total["data"] = {}
+        total["data"][node] = []
 
         records = list(range(chunk_size))
         while len(records) == chunk_size:
 
             res = self.sub.query(query_txt)
 
-            if 'data' in res:
-                records = res['data'][node]
-                total['data'][node] +=  records # res['data'][node] should be a list
+            if "data" in res:
+                records = res["data"][node]
+                total["data"][node] += records  # res['data'][node] should be a list
                 offset += chunk_size
 
-            elif 'error' in res:
-                print(res['error'])
+            elif "error" in res:
+                print(res["error"])
                 if chunk_size > 1:
-                    chunk_size = int(chunk_size/2)
+                    chunk_size = int(chunk_size / 2)
                     print("\tHalving chunk_size to: {}.".format(chunk_size))
                 else:
                     print("\tQuery timing out with chunk_size of 1!")
@@ -451,41 +614,49 @@ class Gen3Expansion:
             else:
                 print("Query Error: {}".format(res))
 
-            print("\tTotal records retrieved: {}".format(len(total['data'][node])))
+            print("\tTotal records retrieved: {}".format(len(total["data"][node])))
 
-        if format is 'tsv':
-            df = json_normalize(total['data'][node])
-            df.to_csv(outname,sep='\t',index=False)
+        if format is "tsv":
+            df = json_normalize(total["data"][node])
+            df.to_csv(outname, sep="\t", index=False)
             return df
         else:
             return total
 
-
-    def get_uuids_in_node(self,node,project_id):
+    def get_uuids_in_node(self, node, project_id):
         """
         This function returns a list of all the UUIDs of records
         in a particular node of a given project.
         """
-        program,project = project_id.split('-',1)
+        program, project = project_id.split("-", 1)
 
         try:
-            res = self.paginate_query(node,project_id)
-            uuids = [x['id'] for x in res['data'][node]]
+            res = self.paginate_query(node, project_id)
+            uuids = [x["id"] for x in res["data"][node]]
         except:
-            raise Gen3Error("Failed to get UUIDs in node '"+node+"' of project '"+project_id+"'.")
+            raise Gen3Error(
+                "Failed to get UUIDs in node '"
+                + node
+                + "' of project '"
+                + project_id
+                + "'."
+            )
 
         return uuids
 
     def list_project_files(self, project_id):
-        query_txt = """{datanode(first:-1,project_id: "%s") {type file_name id object_id}}""" % (project_id)
+        query_txt = (
+            """{datanode(first:-1,project_id: "%s") {type file_name id object_id}}"""
+            % (project_id)
+        )
         res = self.sub.query(query_txt)
-        if len(res['data']['datanode']) == 0:
-            print('Project ' + project_id + ' has no records in any data_file node.')
+        if len(res["data"]["datanode"]) == 0:
+            print("Project " + project_id + " has no records in any data_file node.")
             return None
         else:
-            df = json_normalize(res['data']['datanode'])
-            json_normalize(Counter(df['type']))
-            #guids = df.loc[(df['type'] == node)]['object_id']
+            df = json_normalize(res["data"]["datanode"])
+            json_normalize(Counter(df["type"]))
+            # guids = df.loc[(df['type'] == node)]['object_id']
             return df
 
     def get_uuids_for_submitter_ids(self, sids, node):
@@ -497,14 +668,18 @@ class Gen3Expansion:
         for sid in sids:
             count += 1
             args = 'submitter_id:"{}"'.format(sid)
-            res = self.paginate_query(node=node,args=args)
-            recs = res['data'][node]
+            res = self.paginate_query(node=node, args=args)
+            recs = res["data"][node]
             if len(recs) == 1:
-                uuids.append(recs[0]['id'])
+                uuids.append(recs[0]["id"])
             elif len(recs) == 0:
-                print("No data returned for {}:\n\t{}".format(sid,res))
-            print("\t{}/{}".format(count,len(sids)))
-        print("Finished retrieving {} uuids for {} submitter_ids".format(len(uuids),len(sids)))
+                print("No data returned for {}:\n\t{}".format(sid, res))
+            print("\t{}/{}".format(count, len(sids)))
+        print(
+            "Finished retrieving {} uuids for {} submitter_ids".format(
+                len(uuids), len(sids)
+            )
+        )
         return uuids
 
     def delete_records(self, uuids, project_id, chunk_size=200, backup=False):
@@ -521,38 +696,58 @@ class Gen3Expansion:
         Example:
             delete_records(project_id=project_id,uuids=uuids,chunk_size=200)
         """
-        program,project = project_id.split('-',1)
+        program, project = project_id.split("-", 1)
 
         if isinstance(uuids, str):
             uuids = [uuids]
 
         if not isinstance(uuids, list):
-            raise Gen3Error("Please provide a list of UUID(s) to delete with the 'uuid' argument.")
+            raise Gen3Error(
+                "Please provide a list of UUID(s) to delete with the 'uuid' argument."
+            )
 
         if backup:
-            ext = backup.split('.')[-1]
-            fname = ".".join(backup.split('.')[0:-1])
+            ext = backup.split(".")[-1]
+            fname = ".".join(backup.split(".")[0:-1])
             count = 0
             while path.exists(backup):
-                count+=1
-                backup = "{}_{}.{}".format(fname,count,ext)
+                count += 1
+                backup = "{}_{}.{}".format(fname, count, ext)
 
             count = 0
-            print("Attempting to backup {} records to delete to file '{}'.".format(len(uuids),backup))
+            print(
+                "Attempting to backup {} records to delete to file '{}'.".format(
+                    len(uuids), backup
+                )
+            )
 
             records = []
             for uuid in uuids:
-                count+=1
+                count += 1
                 try:
-                    response = self.sub.export_record(program=program,project=project,uuid=uuid,fileformat='json',filename=None)
+                    response = self.sub.export_record(
+                        program=program,
+                        project=project,
+                        uuid=uuid,
+                        fileformat="json",
+                        filename=None,
+                    )
                     record = json.loads(json.dumps(response[0]))
                     records.append(record)
-                    print("\tRetrieving record for UUID '{}' ({}/{}).".format(uuid,count,len(uuids)))
+                    print(
+                        "\tRetrieving record for UUID '{}' ({}/{}).".format(
+                            uuid, count, len(uuids)
+                        )
+                    )
                 except Exception as e:
-                    print("Exception occurred during 'export_record' request: {}.".format(e))
+                    print(
+                        "Exception occurred during 'export_record' request: {}.".format(
+                            e
+                        )
+                    )
                     continue
 
-            with open(backup,'w') as backfile:
+            with open(backup, "w") as backfile:
                 backfile.write("{}".format(records))
 
         responses = []
@@ -563,90 +758,159 @@ class Gen3Expansion:
         tried = []
         results = {}
 
-        while len(tried) < len(uuids): #loop sorts all uuids into success or failure
+        while len(tried) < len(uuids):  # loop sorts all uuids into success or failure
 
             if len(retry) > 0:
                 print("Retrying deletion of {} valid UUIDs.".format(len(retry)))
                 list_ids = ",".join(retry)
                 retry = []
             else:
-                list_ids  = ",".join(uuids[len(tried):len(tried)+chunk_size])
+                list_ids = ",".join(uuids[len(tried) : len(tried) + chunk_size])
 
             rurl = "{}/api/v0/submission/{}/{}/entities/{}".format(
-                self._endpoint,program,project,list_ids
+                self._endpoint, program, project, list_ids
             )
 
             try:
-                #print("\n\trurl='{}'\n".format(rurl)) # trouble-shooting
-                #print("\n\tresp = requests.delete(rurl, auth=auth)")
-                #print("\n\tprint(resp.text)")
+                # print("\n\trurl='{}'\n".format(rurl)) # trouble-shooting
+                # print("\n\tresp = requests.delete(rurl, auth=auth)")
+                # print("\n\tprint(resp.text)")
                 resp = requests.delete(rurl, auth=self._auth_provider)
             except Exception as e:
-                chunk_size = int(chunk_size/2)
-                print("Exception occurred during delete request:\n\t{}.\n\tReducing chunk_size to '{}'.".format(e,chunk_size))
+                chunk_size = int(chunk_size / 2)
+                print(
+                    "Exception occurred during delete request:\n\t{}.\n\tReducing chunk_size to '{}'.".format(
+                        e, chunk_size
+                    )
+                )
                 continue
 
-            if "414 Request-URI Too Large" in resp.text or "service failure" in resp.text:
-                chunk_size = int(chunk_size/2)
-                print("Service Failure. The chunk_size is too large. Reducing to '{}'".format(chunk_size))
+            if (
+                "414 Request-URI Too Large" in resp.text
+                or "service failure" in resp.text
+            ):
+                chunk_size = int(chunk_size / 2)
+                print(
+                    "Service Failure. The chunk_size is too large. Reducing to '{}'".format(
+                        chunk_size
+                    )
+                )
             elif "The requested URL was not found on the server." in resp.text:
-                print("\n Requested URL not found on server:\n\t{}\n\t{}".format(resp,rurl)) #debug
+                print(
+                    "\n Requested URL not found on server:\n\t{}\n\t{}".format(
+                        resp, rurl
+                    )
+                )  # debug
                 break
-            else: # the delete request got an API response
-                #print(resp.text) #trouble-shooting
+            else:  # the delete request got an API response
+                # print(resp.text) #trouble-shooting
                 output = json.loads(resp.text)
                 responses.append(output)
 
-                if output['success']: # 'success' is True or False in API response
-                    success = list(set(success + [x['id'] for x in output['entities']]))
-                else: # if one UUID fails to delete in the request, the entire request fails.
-                    for entity in output['entities']:
-                        if entity['valid']: # get the valid entities from repsonse to retry.
-                            retry.append(entity['id'])
+                if output["success"]:  # 'success' is True or False in API response
+                    success = list(set(success + [x["id"] for x in output["entities"]]))
+                else:  # if one UUID fails to delete in the request, the entire request fails.
+                    for entity in output["entities"]:
+                        if entity[
+                            "valid"
+                        ]:  # get the valid entities from repsonse to retry.
+                            retry.append(entity["id"])
                         else:
-                            errors.append(entity['errors'][0]['message'])
-                            failure.append(entity['id'])
+                            errors.append(entity["errors"][0]["message"])
+                            failure.append(entity["id"])
                             failure = list(set(failure))
                     for error in list(set(errors)):
-                        print("Error message for {} records: {}".format(errors.count(error),error))
+                        print(
+                            "Error message for {} records: {}".format(
+                                errors.count(error), error
+                            )
+                        )
 
             tried = list(set(success + failure))
-            print("\tProgress: {}/{} (Success: {}, Failure: {}).".format(len(tried),len(uuids),len(success),len(failure)))
+            print(
+                "\tProgress: {}/{} (Success: {}, Failure: {}).".format(
+                    len(tried), len(uuids), len(success), len(failure)
+                )
+            )
 
         # exit the while loop if
-        results['failure'] = failure
-        results['success'] = success
-        results['responses'] = responses
-        results['errors'] = errors
+        results["failure"] = failure
+        results["success"] = success
+        results["responses"] = responses
+        results["errors"] = errors
         print("\tFinished record deletion script.")
 
         return results
 
-
-    def delete_node(self,node,project_id,chunk_size=200):
+    def delete_node(self, node, project_id, chunk_size=200):
         """
         This function attempts to delete all the records in a particular node of a project.
         It returns the results of the delete_records function.
         """
         try:
-            uuids = self.get_uuids_in_node(node,project_id)
+            uuids = self.get_uuids_in_node(node, project_id)
         except:
-            raise Gen3Error("Failed to get UUIDs in the node '"+node+"' of project '"+project_id+"'.")
+            raise Gen3Error(
+                "Failed to get UUIDs in the node '"
+                + node
+                + "' of project '"
+                + project_id
+                + "'."
+            )
 
         if len(uuids) != 0:
-            print("Attemping to delete "+str(len(uuids))+" records in the node '"+node+"' of project '"+project_id+"'.")
+            print(
+                "Attemping to delete "
+                + str(len(uuids))
+                + " records in the node '"
+                + node
+                + "' of project '"
+                + project_id
+                + "'."
+            )
 
             try:
                 results = self.delete_records(uuids, project_id, chunk_size)
-                print("Successfully deleted "+str(len(results['success']))+" records in the node '"+node+"' of project '"+project_id+"'.")
-                if len(results['failure']) > 0:
-                    print("Failed to delete "+str(len(results['failure']))+" records. See results['errors'] for the error messages.")
+                print(
+                    "Successfully deleted "
+                    + str(len(results["success"]))
+                    + " records in the node '"
+                    + node
+                    + "' of project '"
+                    + project_id
+                    + "'."
+                )
+                if len(results["failure"]) > 0:
+                    print(
+                        "Failed to delete "
+                        + str(len(results["failure"]))
+                        + " records. See results['errors'] for the error messages."
+                    )
             except:
-                raise Gen3Error("Failed to delete UUIDs in the node '"+node+"' of project '"+project_id+"'.")
+                raise Gen3Error(
+                    "Failed to delete UUIDs in the node '"
+                    + node
+                    + "' of project '"
+                    + project_id
+                    + "'."
+                )
 
             return results
 
-    def get_submission_order(self,root_node='project',excluded_schemas=['_definitions','_settings','_terms','program','project','root','data_release','metaschema']):
+    def get_submission_order(
+        self,
+        root_node="project",
+        excluded_schemas=[
+            "_definitions",
+            "_settings",
+            "_terms",
+            "program",
+            "project",
+            "root",
+            "data_release",
+            "metaschema",
+        ],
+    ):
         """
         This function gets a data dictionary, and then it determines the submission order of nodes by looking at the links.
         The reverse of this is the deletion order for deleting projects. (Must delete child nodes before parents).
@@ -654,46 +918,60 @@ class Gen3Expansion:
         dd = self.sub.get_dictionary_all()
         schemas = list(dd)
         nodes = [k for k in schemas if k not in excluded_schemas]
-        submission_order = [(root_node,0)] # make a list of tuples with (node, order) where order is int
-        while len(submission_order) < len(nodes)+1: # "root_node" is not in "nodes", thus the +1
+        submission_order = [
+            (root_node, 0)
+        ]  # make a list of tuples with (node, order) where order is int
+        while (
+            len(submission_order) < len(nodes) + 1
+        ):  # "root_node" is not in "nodes", thus the +1
             for node in nodes:
-                if len([item for item in submission_order if node in item]) == 0: #if the node is not in submission_order
-                    #print("Node: {}".format(node))
-                    node_links = dd[node]['links']
+                if (
+                    len([item for item in submission_order if node in item]) == 0
+                ):  # if the node is not in submission_order
+                    # print("Node: {}".format(node))
+                    node_links = dd[node]["links"]
                     parents = []
                     for link in node_links:
-                        if 'target_type' in link: #node = 'webster_step_second_test'
-                            parents.append(link['target_type'])
-                        elif 'subgroup' in link: # node = 'expression_array_result'
-                            sub_links = link.get('subgroup')
+                        if "target_type" in link:  # node = 'webster_step_second_test'
+                            parents.append(link["target_type"])
+                        elif "subgroup" in link:  # node = 'expression_array_result'
+                            sub_links = link.get("subgroup")
                             if not isinstance(sub_links, list):
                                 sub_links = [sub_links]
                             for sub_link in sub_links:
-                                if 'target_type' in sub_link:
-                                    parents.append(sub_link['target_type'])
-                    if False in [i in [i[0] for i in submission_order] for i in parents]:
-                        continue # if any parent is not already in submission_order, skip this node for now
-                    else: # submit this node after the last parent to submit
-                        parents_order = [item for item in submission_order if item[0] in parents]
-                        submission_order.append((node,max([item[1] for item in parents_order]) + 1))
+                                if "target_type" in sub_link:
+                                    parents.append(sub_link["target_type"])
+                    if False in [
+                        i in [i[0] for i in submission_order] for i in parents
+                    ]:
+                        continue  # if any parent is not already in submission_order, skip this node for now
+                    else:  # submit this node after the last parent to submit
+                        parents_order = [
+                            item for item in submission_order if item[0] in parents
+                        ]
+                        submission_order.append(
+                            (node, max([item[1] for item in parents_order]) + 1)
+                        )
         return submission_order
 
-    def delete_project(self,project_id,root_node='project',chunk_size=200):
+    def delete_project(self, project_id, root_node="project", chunk_size=200):
         submission_order = self.get_submission_order(root_node=root_node)
         delete_order = sorted(submission_order, key=lambda x: x[1], reverse=True)
         nodes = [i[0] for i in delete_order]
         try:
-            nodes.remove('project')
+            nodes.remove("project")
         except:
             print("No 'project' node in list of nodes.")
         for node in nodes:
-            print("\nDeleting node '{}' from project '{}'.".format(node,project_id))
-            data = self.delete_node(node=node,project_id=project_id,chunk_size=chunk_size)
-        prog,proj = project_id.split('-',1)
+            print("\nDeleting node '{}' from project '{}'.".format(node, project_id))
+            data = self.delete_node(
+                node=node, project_id=project_id, chunk_size=chunk_size
+            )
+        prog, proj = project_id.split("-", 1)
         try:
-            data = self.sub.delete_project(program=prog,project=proj)
+            data = self.sub.delete_project(program=prog, project=proj)
         except Exception as e:
-            print("Couldn't delete project '{}':\n\t{}".format(project_id,e))
+            print("Couldn't delete project '{}':\n\t{}".format(project_id, e))
         if "Can not delete the project." in data:
             print("{}".format(data))
         else:
@@ -703,108 +981,141 @@ class Gen3Expansion:
     def property_counts_table(self, prop, df):
         df = df[df[prop].notnull()]
         counts = Counter(df[prop])
-        df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
-        df1 = df1.rename(columns={'index':prop, 0:'count'}).sort_values(by='count', ascending=False)
-        total = sum(df1['count'])
-        df1['percent'] = round(100*(df1['count']/total),1)
+        df1 = pd.DataFrame.from_dict(counts, orient="index").reset_index()
+        df1 = df1.rename(columns={"index": prop, 0: "count"}).sort_values(
+            by="count", ascending=False
+        )
+        total = sum(df1["count"])
+        df1["percent"] = round(100 * (df1["count"] / total), 1)
 
-        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+        with pd.option_context("display.max_rows", None, "display.max_columns", None):
             print(df1.to_string(index=False))
-            print("\nTotal Count: {}, Total Categories: {}".format(total,len(df1)))
+            print("\nTotal Count: {}, Total Categories: {}".format(total, len(df1)))
 
         return df1
 
     def property_counts_by_project(self, prop, df):
         df = df[df[prop].notnull()]
         categories = list(set(df[prop]))
-        projects = list(set(df['project_id']))
+        projects = list(set(df["project_id"]))
 
-        project_table = pd.DataFrame(columns=['Project','Total']+categories)
+        project_table = pd.DataFrame(columns=["Project", "Total"] + categories)
         project_table
 
         proj_counts = {}
         for project in projects:
             cat_counts = {}
-            cat_counts['Project'] = project
-            df1 = df.loc[df['project_id']==project]
+            cat_counts["Project"] = project
+            df1 = df.loc[df["project_id"] == project]
             total = 0
             for category in categories:
-                cat_count = len(df1.loc[df1[prop]==category])
-                total+=cat_count
+                cat_count = len(df1.loc[df1[prop] == category])
+                total += cat_count
                 cat_counts[category] = cat_count
 
-            cat_counts['Total'] = total
+            cat_counts["Total"] = total
             index = len(project_table)
             for key in list(cat_counts.keys()):
-                project_table.loc[index,key] = cat_counts[key]
+                project_table.loc[index, key] = cat_counts[key]
 
-            project_table = project_table.sort_values(by='Total', ascending=False, na_position='first')
+            project_table = project_table.sort_values(
+                by="Total", ascending=False, na_position="first"
+            )
 
         return project_table
 
     def plot_categorical_property(self, property, df):
-        #plot a bar graph of categorical variable counts in a dataframe
+        # plot a bar graph of categorical variable counts in a dataframe
         df = df[df[property].notnull()]
         N = len(df)
         categories, counts = zip(*Counter(df[property]).items())
         y_pos = np.arange(len(categories))
-        plt.bar(y_pos, counts, align='center', alpha=0.5)
-        #plt.figtext(.8, .8, 'N = '+str(N))
+        plt.bar(y_pos, counts, align="center", alpha=0.5)
+        # plt.figtext(.8, .8, 'N = '+str(N))
         plt.xticks(y_pos, categories)
-        plt.ylabel('Counts')
-        plt.title(str('Counts by '+property+' (N = '+str(N)+')'))
-        plt.xticks(rotation=90, horizontalalignment='center')
-        #add N for each bar
+        plt.ylabel("Counts")
+        plt.title(str("Counts by " + property + " (N = " + str(N) + ")"))
+        plt.xticks(rotation=90, horizontalalignment="center")
+        # add N for each bar
         plt.show()
 
     def plot_numeric_property(self, property, df, by_project=False):
-        #plot a histogram of numeric variable in a dataframe
+        # plot a histogram of numeric variable in a dataframe
         df = df[df[property].notnull()]
         data = list(df[property].astype(float))
         N = len(data)
-        fig = sns.distplot(data, hist=False, kde=True,
-                 bins=int(180/5), color = 'darkblue',
-                 kde_kws={'linewidth': 2})
-#        plt.figtext(.8, .8, 'N = '+str(N))
+        fig = sns.distplot(
+            data,
+            hist=False,
+            kde=True,
+            bins=int(180 / 5),
+            color="darkblue",
+            kde_kws={"linewidth": 2},
+        )
+        #        plt.figtext(.8, .8, 'N = '+str(N))
         plt.xlabel(property)
         plt.ylabel("Probability")
-        plt.title("PDF for all projects "+property+' (N = '+str(N)+')') # You can comment this line out if you don't need title
+        plt.title(
+            "PDF for all projects " + property + " (N = " + str(N) + ")"
+        )  # You can comment this line out if you don't need title
         plt.show(fig)
 
         if by_project is True:
-            projects = list(set(df['project_id']))
+            projects = list(set(df["project_id"]))
             for project in projects:
-                proj_df = df[df['project_id']==project]
+                proj_df = df[df["project_id"] == project]
                 data = list(proj_df[property].astype(float))
                 N = len(data)
-                fig = sns.distplot(data, hist=False, kde=True,
-                         bins=int(180/5), color = 'darkblue',
-                         kde_kws={'linewidth': 2})
-#                plt.figtext(.8, .8, 'N = '+str(N))
+                fig = sns.distplot(
+                    data,
+                    hist=False,
+                    kde=True,
+                    bins=int(180 / 5),
+                    color="darkblue",
+                    kde_kws={"linewidth": 2},
+                )
+                #                plt.figtext(.8, .8, 'N = '+str(N))
                 plt.xlabel(property)
                 plt.ylabel("Probability")
-                plt.title("PDF for "+property+' in ' + project+' (N = '+str(N)+')') # You can comment this line out if you don't need title
+                plt.title(
+                    "PDF for " + property + " in " + project + " (N = " + str(N) + ")"
+                )  # You can comment this line out if you don't need title
                 plt.show(fig)
 
-    def plot_numeric_property_by_category(self, numeric_property, category_property, df):
-        #plot a histogram of numeric variable in a dataframe
+    def plot_numeric_property_by_category(
+        self, numeric_property, category_property, df
+    ):
+        # plot a histogram of numeric variable in a dataframe
         df = df[df[numeric_property].notnull()]
         data = list(df[numeric_property])
         N = len(data)
 
         categories = list(set(df[category_property]))
         for category in categories:
-            df_2 = df[df[category_property]==category]
+            df_2 = df[df[category_property] == category]
             if len(df_2) != 0:
                 data = list(df_2[numeric_property].astype(float))
                 N = len(data)
-                fig = sns.distplot(data, hist=False, kde=True,
-                         bins=int(180/5), color = 'darkblue',
-                         kde_kws={'linewidth': 2})
-    #            plt.figtext(.8, .8, 'N = '+str(N))
+                fig = sns.distplot(
+                    data,
+                    hist=False,
+                    kde=True,
+                    bins=int(180 / 5),
+                    color="darkblue",
+                    kde_kws={"linewidth": 2},
+                )
+                #            plt.figtext(.8, .8, 'N = '+str(N))
                 plt.xlabel(numeric_property)
                 plt.ylabel("Probability")
-                plt.title("PDF of "+numeric_property+' for ' + category +' (N = '+str(N)+')') # You can comment this line out if you don't need title
+                plt.title(
+                    "PDF of "
+                    + numeric_property
+                    + " for "
+                    + category
+                    + " (N = "
+                    + str(N)
+                    + ")"
+                )  # You can comment this line out if you don't need title
                 plt.show(fig)
 
     def plot_numeric_by_category(self, numeric_property, category_property, df):
@@ -816,14 +1127,21 @@ class Gen3Expansion:
             subset = df[df[category_property] == category]
             N += len(subset)
             data = subset[numeric_property].dropna().astype(float)
-            fig = sns.distplot(data, hist = False, kde = True,
-                         bins = 3, kde_kws = {'linewidth': 2}, label = category)
+            fig = sns.distplot(
+                data,
+                hist=False,
+                kde=True,
+                bins=3,
+                kde_kws={"linewidth": 2},
+                label=category,
+            )
 
-            plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+            plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.0)
 
-        plt.title(numeric_property+' by ' + category_property +' (N = '+str(N)+')') # You can comment this line out if you don't need title
+        plt.title(
+            numeric_property + " by " + category_property + " (N = " + str(N) + ")"
+        )  # You can comment this line out if you don't need title
         plt.show(fig)
-
 
     def plot_category_by_category(self, prop1, prop2, df):
         sns.set(style="darkgrid")
@@ -836,14 +1154,13 @@ class Gen3Expansion:
             data = subset[prop2].dropna().astype(str)
 
             y_pos = np.arange(len(categories))
-            plt.bar(y_pos, counts, align='center', alpha=0.5)
+            plt.bar(y_pos, counts, align="center", alpha=0.5)
             plt.xticks(y_pos, categories)
-            plt.ylabel('Counts')
-            plt.xticks(rotation=90, horizontalalignment='center')
+            plt.ylabel("Counts")
+            plt.xticks(rotation=90, horizontalalignment="center")
 
-        plt.title("{} by {} (N = {})".format(prop1,prop2,N))
+        plt.title("{} by {} (N = {})".format(prop1, prop2, N))
         plt.show()
-
 
     def plot_top10_numeric_by_category(self, numeric_property, category_property, df):
         sns.set(style="darkgrid")
@@ -852,13 +1169,19 @@ class Gen3Expansion:
         category_means = {}
         for category in categories:
             df_2 = df[df[numeric_property].notnull()]
-            data = list(df_2.loc[df_2[category_property]==category][numeric_property].astype(float))
+            data = list(
+                df_2.loc[df_2[category_property] == category][numeric_property].astype(
+                    float
+                )
+            )
 
             if len(data) > 5:
                 category_means[category] = mean(data)
 
         if len(category_means) > 1:
-            sorted_means = sorted(category_means.items(), key=operator.itemgetter(1), reverse=True)[0:10]
+            sorted_means = sorted(
+                category_means.items(), key=operator.itemgetter(1), reverse=True
+            )[0:10]
             categories_list = [x[0] for x in sorted_means]
 
         N = 0
@@ -866,15 +1189,25 @@ class Gen3Expansion:
             subset = df[df[category_property] == category]
             N += len(subset)
             data = subset[numeric_property].dropna().astype(float)
-            fig = sns.distplot(data, hist = False, kde = True,
-                         bins = 3, kde_kws = {'linewidth': 2}, label = category)
+            fig = sns.distplot(
+                data,
+                hist=False,
+                kde=True,
+                bins=3,
+                kde_kws={"linewidth": 2},
+                label=category,
+            )
 
-            plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+            plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.0)
 
-        plt.title(numeric_property+' by ' + category_property +' (N = '+str(N)+')')
+        plt.title(
+            numeric_property + " by " + category_property + " (N = " + str(N) + ")"
+        )
         plt.show(fig)
 
-    def plot_numeric_property_by_2_categories(self, numeric_property, category_property, category_property_2, df):
+    def plot_numeric_property_by_2_categories(
+        self, numeric_property, category_property, category_property_2, df
+    ):
 
         df = df[df[numeric_property].notnull()]
         data = list(df[numeric_property])
@@ -882,43 +1215,60 @@ class Gen3Expansion:
         categories = list(set(df[category_property]))
 
         for category in categories:
-            df_2 = df[df[category_property]==category]
-            categories_2 = list(set(df_2[category_property_2])) #This is a list of all compounds tested for each tissue type.
+            df_2 = df[df[category_property] == category]
+            categories_2 = list(
+                set(df_2[category_property_2])
+            )  # This is a list of all compounds tested for each tissue type.
 
             N = 0
             for category_2 in categories_2:
                 subset = df_2[df_2[category_property_2] == category_2]
                 N += len(subset)
                 data = subset[numeric_property].dropna().astype(float)
-                fig = sns.distplot(data, hist = False, kde = True,
-                            bins = 3,
-                            kde_kws = {'linewidth': 2}, label = category_2)
+                fig = sns.distplot(
+                    data,
+                    hist=False,
+                    kde=True,
+                    bins=3,
+                    kde_kws={"linewidth": 2},
+                    label=category_2,
+                )
 
-                plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+                plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.0)
 
-            plt.title(numeric_property+' for ' + category +' (N = '+str(N)+')') # You can comment this line out if you don't need title
+            plt.title(
+                numeric_property + " for " + category + " (N = " + str(N) + ")"
+            )  # You can comment this line out if you don't need title
             plt.show(fig)
 
-
-
-    def plot_top10_numeric_property_by_2_categories(self, numeric_property, category_property, category_property_2, df):
+    def plot_top10_numeric_property_by_2_categories(
+        self, numeric_property, category_property, category_property_2, df
+    ):
         df = df[df[numeric_property].notnull()]
         categories = list(set(df[category_property]))
 
         for category in categories:
-            df_2 = df[df[category_property]==category]
-            categories_2 = list(set(df_2[category_property_2])) #This is a list of all category_property_2 values for each category_property value.
+            df_2 = df[df[category_property] == category]
+            categories_2 = list(
+                set(df_2[category_property_2])
+            )  # This is a list of all category_property_2 values for each category_property value.
 
             category_2_means = {}
             for category_2 in categories_2:
                 df_3 = df_2[df_2[numeric_property].notnull()]
-                data = list(df_3.loc[df_3[category_property_2]==category_2][numeric_property].astype(float))
+                data = list(
+                    df_3.loc[df_3[category_property_2] == category_2][
+                        numeric_property
+                    ].astype(float)
+                )
 
                 if len(data) > 5:
                     category_2_means[category_2] = mean(data)
 
             if len(category_2_means) > 1:
-                sorted_means = sorted(category_2_means.items(), key=operator.itemgetter(1), reverse=True)[0:10]
+                sorted_means = sorted(
+                    category_2_means.items(), key=operator.itemgetter(1), reverse=True
+                )[0:10]
                 categories_2_list = [x[0] for x in sorted_means]
 
                 N = 0
@@ -926,119 +1276,188 @@ class Gen3Expansion:
                     subset = df_2[df_2[category_property_2] == category_2]
                     N += len(subset)
                     data = subset[numeric_property].dropna().astype(float)
-                    fig = sns.distplot(data, hist = False, kde = True,
-                                bins = 3,
-                                kde_kws = {'linewidth': 2}, label = category_2)
+                    fig = sns.distplot(
+                        data,
+                        hist=False,
+                        kde=True,
+                        bins=3,
+                        kde_kws={"linewidth": 2},
+                        label=category_2,
+                    )
 
-                    plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+                    plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.0)
 
-                plt.title(numeric_property+' for ' + category +' (N = '+str(N)+')') # You can comment this line out if you don't need title
+                plt.title(
+                    numeric_property + " for " + category + " (N = " + str(N) + ")"
+                )  # You can comment this line out if you don't need title
                 plt.show(fig)
 
     def node_record_counts(self, project_id):
         query_txt = """{node (first:-1, project_id:"%s"){type}}""" % (project_id)
         res = self.sub.query(query_txt)
-        df = json_normalize(res['data']['node'])
-        counts = Counter(df['type'])
-        df = pd.DataFrame.from_dict(counts, orient='index').reset_index()
-        df = df.rename(columns={'index':'node', 0:'count'})
+        df = json_normalize(res["data"]["node"])
+        counts = Counter(df["type"])
+        df = pd.DataFrame.from_dict(counts, orient="index").reset_index()
+        df = df.rename(columns={"index": "node", 0: "count"})
         return df
 
-
-    def get_data_file_tsvs(self, projects=None,remove_empty=True):
+    def get_data_file_tsvs(self, projects=None, remove_empty=True):
         # Download TSVs for all data file nodes in the specified projects
-        #if no projects specified, get node for all projects
+        # if no projects specified, get node for all projects
         if projects is None:
-            projects = list(json_normalize(self.sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+            projects = list(
+                json_normalize(
+                    self.sub.query("""{project (first:0){project_id}}""")["data"][
+                        "project"
+                    ]
+                )["project_id"]
+            )
         elif isinstance(projects, str):
             projects = [projects]
         # Make a directory for files
-        mydir = 'downloaded_data_file_tsvs'
+        mydir = "downloaded_data_file_tsvs"
         if not os.path.exists(mydir):
             os.makedirs(mydir)
         # list all data_file 'node_id's in the data model
-        dnodes = list(set(json_normalize(self.sub.query("""{_node_type (first:-1,category:"data_file") {id}}""")['data']['_node_type'])['id']))
-        mnodes = list(set(json_normalize(self.sub.query("""{_node_type (first:-1,category:"metadata_file") {id}}""")['data']['_node_type'])['id']))
-        inodes = list(set(json_normalize(self.sub.query("""{_node_type (first:-1,category:"index_file") {id}}""")['data']['_node_type'])['id']))
+        dnodes = list(
+            set(
+                json_normalize(
+                    self.sub.query(
+                        """{_node_type (first:-1,category:"data_file") {id}}"""
+                    )["data"]["_node_type"]
+                )["id"]
+            )
+        )
+        mnodes = list(
+            set(
+                json_normalize(
+                    self.sub.query(
+                        """{_node_type (first:-1,category:"metadata_file") {id}}"""
+                    )["data"]["_node_type"]
+                )["id"]
+            )
+        )
+        inodes = list(
+            set(
+                json_normalize(
+                    self.sub.query(
+                        """{_node_type (first:-1,category:"index_file") {id}}"""
+                    )["data"]["_node_type"]
+                )["id"]
+            )
+        )
         nodes = list(set(dnodes + mnodes + inodes))
         # get TSVs and return a master pandas DataFrame with records from every project
         dfs = []
         df_len = 0
         for node in nodes:
             for project in projects:
-                filename = str(mydir+'/'+project+'_'+node+'.tsv')
+                filename = str(mydir + "/" + project + "_" + node + ".tsv")
                 if os.path.isfile(filename):
-                    print('\n'+filename + " previously downloaded.")
+                    print("\n" + filename + " previously downloaded.")
                 else:
-                    prog,proj = project.split('-',1)
-                    self.sub.export_node(prog,proj,node,'tsv',filename) # use the gen3sdk to download a tsv for the node
-                df1 = pd.read_csv(filename, sep='\t', header=0) # read in the downloaded TSV to append to the master (all projects) TSV
+                    prog, proj = project.split("-", 1)
+                    self.sub.export_node(
+                        prog, proj, node, "tsv", filename
+                    )  # use the gen3sdk to download a tsv for the node
+                df1 = pd.read_csv(
+                    filename, sep="\t", header=0
+                )  # read in the downloaded TSV to append to the master (all projects) TSV
                 dfs.append(df1)
-                df_len+=len(df1) # Counting the total number of records in the node
-                print(filename +' has '+str(len(df1))+' records.')
+                df_len += len(df1)  # Counting the total number of records in the node
+                print(filename + " has " + str(len(df1)) + " records.")
                 if remove_empty is True:
                     if df1.empty:
-                        print('Removing empty file: ' + filename)
-                        cmd = ['rm',filename] #look in the download directory
+                        print("Removing empty file: " + filename)
+                        cmd = ["rm", filename]  # look in the download directory
                         try:
-                            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+                            output = subprocess.check_output(
+                                cmd, stderr=subprocess.STDOUT
+                            ).decode("UTF-8")
                         except Exception as e:
-                            output = e.output.decode('UTF-8')
+                            output = e.output.decode("UTF-8")
                             print("ERROR:" + output)
             all_data = pd.concat(dfs, ignore_index=True, sort=False)
-            print('\nlength of all dfs: ' +str(df_len)) # this should match len(all_data) below
-            nodefile = str('master_'+node+'.tsv')
-            all_data.to_csv(str(mydir+'/'+nodefile),sep='\t')
-            print('Master node TSV with '+str(len(all_data))+' total records written to '+nodefile+'.') # this should match df_len above
+            print(
+                "\nlength of all dfs: " + str(df_len)
+            )  # this should match len(all_data) below
+            nodefile = str("master_" + node + ".tsv")
+            all_data.to_csv(str(mydir + "/" + nodefile), sep="\t")
+            print(
+                "Master node TSV with "
+                + str(len(all_data))
+                + " total records written to "
+                + nodefile
+                + "."
+            )  # this should match df_len above
         return all_data
 
-    def list_guids_in_nodes(self, nodes=None,projects=None):
+    def list_guids_in_nodes(self, nodes=None, projects=None):
         # Get GUIDs for node(s) in project(s)
-        if nodes is None: # get all data_file/metadata_file/index_file 'node_id's in the data model
-            categories = ['data_file','metadata_file','index_file']
+        if (
+            nodes is None
+        ):  # get all data_file/metadata_file/index_file 'node_id's in the data model
+            categories = ["data_file", "metadata_file", "index_file"]
             nodes = []
             for category in categories:
                 query_txt = """{_node_type (first:-1,category:"%s") {id}}""" % category
-                df = json_normalize(self.sub.query(query_txt)['data']['_node_type'])
+                df = json_normalize(self.sub.query(query_txt)["data"]["_node_type"])
                 if not df.empty:
-                    nodes = list(set(nodes + list(set(df['id']))))
-        elif isinstance(nodes,str):
+                    nodes = list(set(nodes + list(set(df["id"]))))
+        elif isinstance(nodes, str):
             nodes = [nodes]
         if projects is None:
-            projects = list(json_normalize(self.sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+            projects = list(
+                json_normalize(
+                    self.sub.query("""{project (first:0){project_id}}""")["data"][
+                        "project"
+                    ]
+                )["project_id"]
+            )
         elif isinstance(projects, str):
             projects = [projects]
-        all_guids = {} # all_guids will be a nested dict: {project_id: {node1:[guids1],node2:[guids2]} }
+        all_guids = (
+            {}
+        )  # all_guids will be a nested dict: {project_id: {node1:[guids1],node2:[guids2]} }
         for project in projects:
             all_guids[project] = {}
             for node in nodes:
-                guids=[]
-                query_txt = """{%s (first:-1,project_id:"%s") {project_id file_size file_name object_id id}}""" % (node,project)
+                guids = []
+                query_txt = (
+                    """{%s (first:-1,project_id:"%s") {project_id file_size file_name object_id id}}"""
+                    % (node, project)
+                )
                 res = self.sub.query(query_txt)
-                if len(res['data'][node]) == 0:
-                    print(project + ' has no records in node ' + node + '.')
+                if len(res["data"][node]) == 0:
+                    print(project + " has no records in node " + node + ".")
                     guids = None
                 else:
-                    df = json_normalize(res['data'][node])
-                    guids = list(df['object_id'])
-                    print(project + ' has '+str(len(guids))+' records in node ' + node + '.')
+                    df = json_normalize(res["data"][node])
+                    guids = list(df["object_id"])
+                    print(
+                        project
+                        + " has "
+                        + str(len(guids))
+                        + " records in node "
+                        + node
+                        + "."
+                    )
                 all_guids[project][node] = guids
                 # nested dict: all_guids[project][node]
         return all_guids
 
     def get_access_token(self):
-        """ get your temporary access token using your credentials downloaded from the data portal
-            variable <- jsonlite::toJSON(list(api_key = keys$api_key), auto_unbox = TRUE)
-            auth <- POST('https://data.braincommons.org/user/credentials/cdis/access_token', add_headers("Content-Type" = "application/json"), body = variable)
+        """get your temporary access token using your credentials downloaded from the data portal
+        variable <- jsonlite::toJSON(list(api_key = keys$api_key), auto_unbox = TRUE)
+        auth <- POST('https://data.braincommons.org/user/credentials/cdis/access_token', add_headers("Content-Type" = "application/json"), body = variable)
 
         """
         access_token = self._auth_provider._get_auth_value()
         return access_token
 
     def download_file_endpoint(self, guid=None):
-        """ download files by getting a presigned-url from the "/user/data/download/<guid>" endpoint
-        """
-        if not isinstance(guid,str):
+        """download files by getting a presigned-url from the "/user/data/download/<guid>" endpoint"""
+        if not isinstance(guid, str):
             raise Gen3Error("Please, supply GUID as string.")
 
         download_url = "{}/user/data/download/{}".format(self._endpoint, guid)
@@ -1046,31 +1465,43 @@ class Gen3Expansion:
 
         try:
             # get the pre-signed URL
-            res = requests.get(download_url, auth=self._auth_provider) # get the presigned URL
-            file_url = json.loads(res.content)['url']
+            res = requests.get(
+                download_url, auth=self._auth_provider
+            )  # get the presigned URL
+            file_url = json.loads(res.content)["url"]
 
             # extract the filename from the pre-signed url
-            f_regex = re.compile(r'.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}\/(.*)\?.*')
+            f_regex = re.compile(
+                r".*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}\/(.*)\?.*"
+            )
             fmatch = f_regex.match(res.text)
             if fmatch:
                 file_name = fmatch.groups()[0]
                 print("\tSaving downloaded file as '{}'".format(file_name))
             else:
                 file_name = guid
-                print("No matching filename in the response. Saving file with GUID as filename.")
+                print(
+                    "No matching filename in the response. Saving file with GUID as filename."
+                )
 
             # get the file and write the contents to the file_name
             res_file = requests.get(file_url)
-            open("./{}".format(file_name), 'wb').write(res_file.content)
+            open("./{}".format(file_name), "wb").write(res_file.content)
 
         except Exception as e:
-            print("\tFile '{}' failed to download: {}".format(file_name,e))
+            print("\tFile '{}' failed to download: {}".format(file_name, e))
 
         return file_name
 
-    def download_files_for_guids(self, guids=None, profile='profile', client='/home/jovyan/.gen3/gen3-client',method='endpoint'):
+    def download_files_for_guids(
+        self,
+        guids=None,
+        profile="profile",
+        client="/home/jovyan/.gen3/gen3-client",
+        method="endpoint",
+    ):
         # Make a directory for files
-        mydir = 'downloaded_data_files'
+        mydir = "downloaded_data_files"
         file_names = {}
         if not os.path.exists(mydir):
             os.makedirs(mydir)
@@ -1078,147 +1509,230 @@ class Gen3Expansion:
             guids = [guids]
         if isinstance(guids, list):
             for guid in guids:
-                if method == 'client':
-                    cmd = client+' download-single --filename-format=combined --no-prompt --profile='+profile+' --guid='+guid
+                if method == "client":
+                    cmd = (
+                        client
+                        + " download-single --filename-format=combined --no-prompt --profile="
+                        + profile
+                        + " --guid="
+                        + guid
+                    )
                     try:
-                        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
+                        output = subprocess.check_output(
+                            cmd, stderr=subprocess.STDOUT, shell=True
+                        ).decode("UTF-8")
                         try:
-                            file_name = re.search('Successfully downloaded (.+)\\n', output).group(1)
-                            cmd = 'mv ' + file_name + ' ' + mydir
+                            file_name = re.search(
+                                "Successfully downloaded (.+)\\n", output
+                            ).group(1)
+                            cmd = "mv " + file_name + " " + mydir
                             try:
-                                output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('UTF-8')
+                                output = subprocess.check_output(
+                                    cmd, stderr=subprocess.STDOUT, shell=True
+                                ).decode("UTF-8")
                             except Exception as e:
-                                output = e.output.decode('UTF-8')
+                                output = e.output.decode("UTF-8")
                                 print("ERROR:" + output)
                         except AttributeError:
-                            file_name = '' # apply your error handling
-                        print('Successfully downloaded: '+file_name)
+                            file_name = ""  # apply your error handling
+                        print("Successfully downloaded: " + file_name)
                         file_names[guid] = file_name
                     except Exception as e:
-                        output = e.output.decode('UTF-8')
+                        output = e.output.decode("UTF-8")
                         print("ERROR:" + output)
-                elif method == 'endpoint':
+                elif method == "endpoint":
                     try:
                         file_name = self.download_file_endpoint(guid=guid)
                         file_names[guid] = file_name
                     except Exception as e:
-                        print("Failed to download GUID {}: {}".format(guid,e))
+                        print("Failed to download GUID {}: {}".format(guid, e))
                 else:
-                    print("\tPlease set method to either 'endpoint' or 'client'!".format())
+                    print(
+                        "\tPlease set method to either 'endpoint' or 'client'!".format()
+                    )
         else:
-            print('Provide a list of guids to download: "get_file_by_guid(guids=guid_list)"')
+            print(
+                'Provide a list of guids to download: "get_file_by_guid(guids=guid_list)"'
+            )
         return file_names
 
-# file_name = 'GSE63878_final_list_of_normalized_data.txt.gz'
-# exp.download_file_name(file_name)
+    # file_name = 'GSE63878_final_list_of_normalized_data.txt.gz'
+    # exp.download_file_name(file_name)
 
-    def download_file_name(self, file_name, node='datanode', project_id=None, props=['type','file_name','object_id','id','submitter_id','data_type','data_format','data_category'], all=False):
-        """downloads the first file that matches a query for a file_name in a node of a project
-        """
+    def download_file_name(
+        self,
+        file_name,
+        node="datanode",
+        project_id=None,
+        props=[
+            "type",
+            "file_name",
+            "object_id",
+            "id",
+            "submitter_id",
+            "data_type",
+            "data_format",
+            "data_category",
+        ],
+        all=False,
+    ):
+        """downloads the first file that matches a query for a file_name in a node of a project"""
         args = 'file_name:"{}"'.format(file_name)
-        response = self.paginate_query(node=node,project_id=project_id,props=props,args=args) # Use the SDK to send the query and return the response
+        response = self.paginate_query(
+            node=node, project_id=project_id, props=props, args=args
+        )  # Use the SDK to send the query and return the response
 
-        if 'data' in response:
-            node = list(response['data'])[0]
-            records = response['data'][node]
+        if "data" in response:
+            node = list(response["data"])[0]
+            records = response["data"][node]
 
             if len(records) > 1 and all is False:
-                print("\tWARNING - More than one record matched query for '{}' in '{}' node of project '{}'.".format(file_name, node, project))
-                print("\t\tDownloading the first file that matched the query:\n{}".format(data[0]))
+                print(
+                    "\tWARNING - More than one record matched query for '{}' in '{}' node of project '{}'.".format(
+                        file_name, node, project
+                    )
+                )
+                print(
+                    "\t\tDownloading the first file that matched the query:\n{}".format(
+                        data[0]
+                    )
+                )
 
             if len(records) >= 1 and all is False:
                 record = records[0]
-                guid = record['object_id']
+                guid = record["object_id"]
                 fname = self.download_file_endpoint(guid=guid)
 
             elif all is True:
-                guids = [record['object_id'] for record in records]
+                guids = [record["object_id"] for record in records]
                 for guid in guids:
                     self.download_file_endpoint(guid=guid)
 
             return records
 
         else:
-            print("There were no records in the query for '{}' in the '{}' node of project_id '{}'".format(file_name,node,project_id))
+            print(
+                "There were no records in the query for '{}' in the '{}' node of project_id '{}'".format(
+                    file_name, node, project_id
+                )
+            )
             return response
-
 
     def get_records_for_uuids(self, uuids, project, api):
         dfs = []
         for uuid in uuids:
-            #Gen3Submission.export_record("DCF", "CCLE", "d70b41b9-6f90-4714-8420-e043ab8b77b9", "json", filename="DCF-CCLE_one_record.json")
-            #export_record(self, program, project, uuid, fileformat, filename=None)
-            mydir = str('project_uuids/'+project+'_tsvs') #create the directory to store TSVs
+            # Gen3Submission.export_record("DCF", "CCLE", "d70b41b9-6f90-4714-8420-e043ab8b77b9", "json", filename="DCF-CCLE_one_record.json")
+            # export_record(self, program, project, uuid, fileformat, filename=None)
+            mydir = str(
+                "project_uuids/" + project + "_tsvs"
+            )  # create the directory to store TSVs
             if not os.path.exists(mydir):
                 os.makedirs(mydir)
-            filename = str(mydir+'/'+project+'_'+uuid+'.tsv')
+            filename = str(mydir + "/" + project + "_" + uuid + ".tsv")
             if os.path.isfile(filename):
                 print("File previously downloaded.")
             else:
-                prog,proj = project.split('-',1)
-                self.sub.export_record(prog,proj,uuid,'tsv',filename)
-            df1 = pd.read_csv(filename, sep='\t', header=0)
+                prog, proj = project.split("-", 1)
+                self.sub.export_record(prog, proj, uuid, "tsv", filename)
+            df1 = pd.read_csv(filename, sep="\t", header=0)
             dfs.append(df1)
         all_data = pd.concat(dfs, ignore_index=True)
-        master = str('master_uuids_'+project+'.tsv')
-        all_data.to_csv(str(mydir+'/'+master),sep='\t')
-        print('Master node TSV with '+str(len(all_data))+' total records written to '+master+'.')
+        master = str("master_uuids_" + project + ".tsv")
+        all_data.to_csv(str(mydir + "/" + master), sep="\t")
+        print(
+            "Master node TSV with "
+            + str(len(all_data))
+            + " total records written to "
+            + master
+            + "."
+        )
         return all_data
 
     def find_duplicate_filenames(self, node, project):
-        #download the node
-        df = get_node_tsvs(node,project,overwrite=True)
-        counts = Counter(df['file_name'])
-        count_df = pd.DataFrame.from_dict(counts, orient='index').reset_index()
-        count_df = count_df.rename(columns={'index':'file_name', 0:'count'})
-        dup_df = count_df.loc[count_df['count']>1]
-        dup_files = list(dup_df['file_name'])
-        dups = df[df['file_name'].isin(dup_files)].sort_values(by='md5sum', ascending=False)
+        # download the node
+        df = get_node_tsvs(node, project, overwrite=True)
+        counts = Counter(df["file_name"])
+        count_df = pd.DataFrame.from_dict(counts, orient="index").reset_index()
+        count_df = count_df.rename(columns={"index": "file_name", 0: "count"})
+        dup_df = count_df.loc[count_df["count"] > 1]
+        dup_files = list(dup_df["file_name"])
+        dups = df[df["file_name"].isin(dup_files)].sort_values(
+            by="md5sum", ascending=False
+        )
         return dups
 
     def get_duplicates(self, nodes, projects, api):
         # Get duplicate SUBMITTER_IDs in a node, which SHOULD NEVER HAPPEN but alas it has, thus this script
-        #if no projects specified, get node for all projects
+        # if no projects specified, get node for all projects
         if projects is None:
-            projects = list(json_normalize(self.sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
+            projects = list(
+                json_normalize(
+                    self.sub.query("""{project (first:0){project_id}}""")["data"][
+                        "project"
+                    ]
+                )["project_id"]
+            )
         elif isinstance(projects, str):
             projects = [projects]
 
         # if no nodes specified, get all nodes in data commons
         if nodes is None:
-            nodes = sorted(list(set(json_normalize(self.sub.query("""{_node_type (first:-1) {id}}""")['data']['_node_type'])['id'])))  #get all the 'node_id's in the data model
-            remove_nodes = ['program','project','root','data_release'] #remove these nodes from list of nodes
+            nodes = sorted(
+                list(
+                    set(
+                        json_normalize(
+                            self.sub.query("""{_node_type (first:-1) {id}}""")["data"][
+                                "_node_type"
+                            ]
+                        )["id"]
+                    )
+                )
+            )  # get all the 'node_id's in the data model
+            remove_nodes = [
+                "program",
+                "project",
+                "root",
+                "data_release",
+            ]  # remove these nodes from list of nodes
             for node in remove_nodes:
-                if node in nodes: nodes.remove(node)
+                if node in nodes:
+                    nodes.remove(node)
         elif isinstance(nodes, str):
             nodes = [nodes]
 
         pdups = {}
         for project_id in projects:
             pdups[project_id] = {}
-            print("Getting duplicates in project "+project_id)
+            print("Getting duplicates in project " + project_id)
             for node in nodes:
-                print("\tChecking "+node+" node")
-                df = paginate_query(node=node,project_id=project_id,props=['id','submitter_id'],chunk_size=1000)
+                print("\tChecking " + node + " node")
+                df = paginate_query(
+                    node=node,
+                    project_id=project_id,
+                    props=["id", "submitter_id"],
+                    chunk_size=1000,
+                )
                 if not df.empty:
-                    counts = Counter(df['submitter_id'])
-                    c = pd.DataFrame.from_dict(counts, orient='index').reset_index()
-                    c = c.rename(columns={'index':'submitter_id', 0:'count'})
-                    dupc = c.loc[c['count']>1]
+                    counts = Counter(df["submitter_id"])
+                    c = pd.DataFrame.from_dict(counts, orient="index").reset_index()
+                    c = c.rename(columns={"index": "submitter_id", 0: "count"})
+                    dupc = c.loc[c["count"] > 1]
                     if not dupc.empty:
-                        dups = list(set(dupc['submitter_id']))
+                        dups = list(set(dupc["submitter_id"]))
                         uuids = {}
                         for sid in dups:
-                            uuids[sid] = list(df.loc[df['submitter_id']==sid]['id'])
+                            uuids[sid] = list(df.loc[df["submitter_id"] == sid]["id"])
                         pdups[project_id][node] = uuids
         return pdups
 
     def delete_duplicates(self, dups, project_id, api):
 
         if not isinstance(dups, dict):
-            print("Must provide duplicates as a dictionary of keys:submitter_ids and values:uuids; use get_duplicates function")
+            print(
+                "Must provide duplicates as a dictionary of keys:submitter_ids and values:uuids; use get_duplicates function"
+            )
 
-        program,project = project_id.split('-',1)
+        program, project = project_id.split("-", 1)
         failure = []
         success = []
         results = {}
@@ -1228,50 +1742,56 @@ class Gen3Expansion:
         for sid in sids:
             while len(dups[sid]) > 1:
                 uuid = dups[sid].pop(1)
-                r = json.loads(self.sub.delete_record(program,project,uuid))
-                if r['code'] == 200:
-                    print("Deleted record id ("+str(count)+"/"+str(total)+"): "+uuid)
+                r = json.loads(self.sub.delete_record(program, project, uuid))
+                if r["code"] == 200:
+                    print(
+                        "Deleted record id ("
+                        + str(count)
+                        + "/"
+                        + str(total)
+                        + "): "
+                        + uuid
+                    )
                     success.append(uuid)
                 else:
-                    print("Could not deleted record id: "+uuid)
-                    print("API Response: " + r['code'])
+                    print("Could not deleted record id: " + uuid)
+                    print("API Response: " + r["code"])
                     failure.append(uuid)
-            results['failure'] = failure
-            results['success'] = success
+            results["failure"] = failure
+            results["success"] = success
             count += 1
         return results
-
 
     def query_records(self, node, project_id, api, chunk_size=500):
         # Using paginated query, Download all data in a node as a DataFrame and save as TSV
         schema = self.sub.get_dictionary_node(node)
-        props = list(schema['properties'].keys())
-        links = list(schema['links'])
+        props = list(schema["properties"].keys())
+        links = list(schema["links"])
         # need to get links out of the list of properties because they're handled differently in the query
         link_names = []
         for link in links:
             link_list = list(link)
-            if 'subgroup' in link_list:
-                subgroup = link['subgroup']
+            if "subgroup" in link_list:
+                subgroup = link["subgroup"]
                 for sublink in subgroup:
-                    link_names.append(sublink['name'])
+                    link_names.append(sublink["name"])
             else:
-                link_names.append(link['name'])
+                link_names.append(link["name"])
         for link in link_names:
             if link in props:
                 props.remove(link)
-                props.append(str(link + '{id submitter_id}'))
+                props.append(str(link + "{id submitter_id}"))
 
-        df = paginate_query(node,project_id,props,chunk_size)
-        outfile = '_'.join(project_id,node,'query.tsv')
-        df.to_csv(outfile, sep='\t', index=False, encoding='utf-8')
+        df = paginate_query(node, project_id, props, chunk_size)
+        outfile = "_".join(project_id, node, "query.tsv")
+        df.to_csv(outfile, sep="\t", index=False, encoding="utf-8")
         return df
 
     # Group entities in details into succeeded (successfully created/updated) and failed valid/invalid
     def summarize_submission(self, tsv, details, write_tsvs):
-        with open(details, 'r') as file:
-            f = file.read().rstrip('\n')
-        chunks = f.split('\n\n')
+        with open(details, "r") as file:
+            f = file.read().rstrip("\n")
+        chunks = f.split("\n\n")
         invalid = []
         messages = []
         valid = []
@@ -1281,89 +1801,110 @@ class Gen3Expansion:
         chunk_count = 1
         for chunk in chunks:
             d = json.loads(chunk)
-            if 'code' in d and d['code'] != 200:
-                entities = d['entities']
-                response = str('Chunk ' + str(chunk_count) + ' Failed: '+str(len(entities))+' entities.')
+            if "code" in d and d["code"] != 200:
+                entities = d["entities"]
+                response = str(
+                    "Chunk "
+                    + str(chunk_count)
+                    + " Failed: "
+                    + str(len(entities))
+                    + " entities."
+                )
                 responses.append(response)
                 for entity in entities:
-                    sid = entity['unique_keys'][0]['submitter_id']
-                    if entity['valid']: #valid but failed
+                    sid = entity["unique_keys"][0]["submitter_id"]
+                    if entity["valid"]:  # valid but failed
                         valid.append(sid)
-                    else: #invalid and failed
-                        message = entity['errors'][0]['message']
+                    else:  # invalid and failed
+                        message = entity["errors"][0]["message"]
                         messages.append(message)
                         invalid.append(sid)
-                        print("Invalid record: {}\n\tmessage: {}".format(sid,message))
-            elif 'code' not in d:
-                responses.append('Chunk ' + str(chunk_count) + ' Timed-Out: '+str(d))
+                        print("Invalid record: {}\n\tmessage: {}".format(sid, message))
+            elif "code" not in d:
+                responses.append("Chunk " + str(chunk_count) + " Timed-Out: " + str(d))
             else:
-                entities = d['entities']
-                response = str('Chunk ' + str(chunk_count) + ' Succeeded: '+str(len(entities))+' entities.')
+                entities = d["entities"]
+                response = str(
+                    "Chunk "
+                    + str(chunk_count)
+                    + " Succeeded: "
+                    + str(len(entities))
+                    + " entities."
+                )
                 responses.append(response)
                 for entity in entities:
-                    sid = entity['unique_keys'][0]['submitter_id']
+                    sid = entity["unique_keys"][0]["submitter_id"]
                     succeeded.append(sid)
             chunk_count += 1
-        results['valid'] = valid
-        results['invalid'] = invalid
-        results['messages'] = messages
-        results['succeeded'] = succeeded
-        results['responses'] = responses
-        submitted = succeeded + valid + invalid # 1231 in test data
-        #get records missing in details from the submission.tsv
-        df = pd.read_csv(tsv, sep='\t',header=0)
-        missing_df = df.loc[~df['submitter_id'].isin(submitted)] # these are records that timed-out, 240 in test data
-        missing = list(missing_df['submitter_id'])
-        results['missing'] = missing
+        results["valid"] = valid
+        results["invalid"] = invalid
+        results["messages"] = messages
+        results["succeeded"] = succeeded
+        results["responses"] = responses
+        submitted = succeeded + valid + invalid  # 1231 in test data
+        # get records missing in details from the submission.tsv
+        df = pd.read_csv(tsv, sep="\t", header=0)
+        missing_df = df.loc[
+            ~df["submitter_id"].isin(submitted)
+        ]  # these are records that timed-out, 240 in test data
+        missing = list(missing_df["submitter_id"])
+        results["missing"] = missing
 
         # Find the rows in submitted TSV that are not in either failed or succeeded, 8 time outs in test data, 8*30 = 240 records
         if write_tsvs is True:
             print("Writing TSVs: ")
-            valid_df = df.loc[df['submitter_id'].isin(valid)] # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
-            invalid_df = df.loc[df['submitter_id'].isin(invalid)] # these are records that failed due to being invalid and should be reformatted
+            valid_df = df.loc[
+                df["submitter_id"].isin(valid)
+            ]  # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
+            invalid_df = df.loc[
+                df["submitter_id"].isin(invalid)
+            ]  # these are records that failed due to being invalid and should be reformatted
             sub_name = ntpath.basename(tsv)
-            missing_file = 'missing_' + sub_name
-            valid_file = 'valid_' + sub_name
-            invalid_file = 'invalid_' + sub_name
-            missing_df.to_csv(missing_file, sep='\t', index=False, encoding='utf-8')
-            valid_df.to_csv(valid_file, sep='\t', index=False, encoding='utf-8')
-            invalid_df.to_csv(invalid_file, sep='\t', index=False, encoding='utf-8')
-            print('\t' + missing_file)
-            print('\t' + valid_file)
-            print('\t' + invalid_file)
+            missing_file = "missing_" + sub_name
+            valid_file = "valid_" + sub_name
+            invalid_file = "invalid_" + sub_name
+            missing_df.to_csv(missing_file, sep="\t", index=False, encoding="utf-8")
+            valid_df.to_csv(valid_file, sep="\t", index=False, encoding="utf-8")
+            invalid_df.to_csv(invalid_file, sep="\t", index=False, encoding="utf-8")
+            print("\t" + missing_file)
+            print("\t" + valid_file)
+            print("\t" + invalid_file)
 
         return results
 
-    def write_tsvs_from_results(self,invalid_ids,filename):
-            # Read the file in as a pandas DataFrame
+    def write_tsvs_from_results(self, invalid_ids, filename):
+        # Read the file in as a pandas DataFrame
         f = os.path.basename(filename)
-        if f.lower().endswith('.csv'):
-            df = pd.read_csv(filename, header=0, sep=',', dtype=str).fillna('')
-        elif f.lower().endswith('.xlsx'):
-            xl = pd.ExcelFile(filename, dtype=str) #load excel file
-            sheet = xl.sheet_names[0] #sheetname
-            df = xl.parse(sheet) #save sheet as dataframe
-            converters = {col: str for col in list(df)} #make sure int isn't converted to float
-            df = pd.read_excel(filename, converters=converters).fillna('') #remove nan
-        elif filename.lower().endswith(('.tsv','.txt')):
-            df = pd.read_csv(filename, header=0, sep='\t', dtype=str).fillna('')
+        if f.lower().endswith(".csv"):
+            df = pd.read_csv(filename, header=0, sep=",", dtype=str).fillna("")
+        elif f.lower().endswith(".xlsx"):
+            xl = pd.ExcelFile(filename, dtype=str)  # load excel file
+            sheet = xl.sheet_names[0]  # sheetname
+            df = xl.parse(sheet)  # save sheet as dataframe
+            converters = {
+                col: str for col in list(df)
+            }  # make sure int isn't converted to float
+            df = pd.read_excel(filename, converters=converters).fillna("")  # remove nan
+        elif filename.lower().endswith((".tsv", ".txt")):
+            df = pd.read_csv(filename, header=0, sep="\t", dtype=str).fillna("")
         else:
             print("Please upload a file in CSV, TSV, or XLSX format.")
             exit(1)
 
-        invalid_df = df.loc[df['submitter_id'].isin(invalid_ids)] # these are records that failed due to being invalid and should be reformatted
-        invalid_file = 'invalid_' + f + '.tsv'
+        invalid_df = df.loc[
+            df["submitter_id"].isin(invalid_ids)
+        ]  # these are records that failed due to being invalid and should be reformatted
+        invalid_file = "invalid_" + f + ".tsv"
 
         print("Writing TSVs: ")
-        print('\t' + invalid_file)
-        invalid_df.to_csv(invalid_file, sep='\t', index=False, encoding='utf-8')
+        print("\t" + invalid_file)
+        invalid_df.to_csv(invalid_file, sep="\t", index=False, encoding="utf-8")
 
         return invalid_df
 
-    def submit_df(self,project_id,df,chunk_size=1000,row_offset=0):
-        """ Submit data in a pandas DataFrame.
-        """
-        df_type = list(set(df['type']))
+    def submit_df(self, project_id, df, chunk_size=1000, row_offset=0):
+        """Submit data in a pandas DataFrame."""
+        df_type = list(set(df["type"]))
         df.rename(
             columns={c: c.lstrip("*") for c in df.columns}, inplace=True
         )  # remove any leading asterisks in the DataFrame column names
@@ -1375,7 +1916,7 @@ class Gen3Expansion:
             )
 
         # Chunk the file
-        print("Submitting {} DataFrame with {} records.".format(df_type,len(df)))
+        print("Submitting {} DataFrame with {} records.".format(df_type, len(df)))
         program, project = project_id.split("-", 1)
         api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
         headers = {"content-type": "text/tab-separated-values"}
@@ -1497,7 +2038,9 @@ class Gen3Expansion:
                             results["invalid"][sid] = message
                             invalid.append(sid)
                     print(
-                        "\tInvalid records in this chunk: {}, {}".format(len(invalid), message)
+                        "\tInvalid records in this chunk: {}, {}".format(
+                            len(invalid), message
+                        )
                     )
 
                 elif json_res["code"] == 500:  # internal server error
@@ -1552,7 +2095,6 @@ class Gen3Expansion:
         print("Failed invalid records: {}".format(str(len(results["invalid"]))))
 
         return results
-
 
     def submit_file(self, project_id, filename, chunk_size=30, row_offset=0):
         """Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.
@@ -1718,7 +2260,9 @@ class Gen3Expansion:
                             results["invalid"][sid] = message
                             invalid.append(sid)
                     print(
-                        "\tInvalid records in this chunk: {}, {}".format(len(invalid), message)
+                        "\tInvalid records in this chunk: {}, {}".format(
+                            len(invalid), message
+                        )
                     )
 
                 elif json_res["code"] == 500:  # internal server error
@@ -1774,17 +2318,18 @@ class Gen3Expansion:
 
         return results
 
+    # indexd functions:
 
-# indexd functions:
-
-    def get_indexd_old(self,api,outfile=None):
-        """ get all the records in indexd
-            Example:
-            exp.get_indexd(api='https://icgc.bionimbus.org/',outfile=True)
+    def get_indexd_old(self, api, outfile=None):
+        """get all the records in indexd
+        Example:
+        exp.get_indexd(api='https://icgc.bionimbus.org/',outfile=True)
         """
         all_records = []
         indexd_url = "{}/index/index".format(api)
-        response = requests.get(indexd_url, auth=self._auth_provider) #response = requests.get(indexd_url, auth=auth)
+        response = requests.get(
+            indexd_url, auth=self._auth_provider
+        )  # response = requests.get(indexd_url, auth=auth)
         records = response.json().get("records")
         all_records.extend(records)
         print("\tRetrieved {} records from indexd.".format(len(all_records)))
@@ -1794,47 +2339,55 @@ class Gen3Expansion:
 
         while start_did != previous_did:
             previous_did = start_did
-            next_url = "{}?start={}".format(indexd_url,start_did)
-            response = requests.get(next_url, auth=self._auth_provider) #response = requests.get(next_url, auth=auth)
+            next_url = "{}?start={}".format(indexd_url, start_did)
+            response = requests.get(
+                next_url, auth=self._auth_provider
+            )  # response = requests.get(next_url, auth=auth)
             records = response.json().get("records")
             all_records.extend(records)
             print("\tRetrieved {} records from indexd.".format(len(all_records)))
             if records:
                 start_did = response.json().get("records")[-1].get("did")
         if outfile:
-            dc_regex = re.compile(r'https:\/\/(.+)\/')
+            dc_regex = re.compile(r"https:\/\/(.+)\/")
             dc = dc_regex.match(api).groups()[0]
             outname = "{}_indexd_records.txt".format(dc)
-            with open(outname, 'w') as outfile:
+            with open(outname, "w") as outfile:
                 outfile.write(json.dumps(all_records))
         return all_records
 
-
     def query_indexd(self, limit=100, page=0):
-        """ Queries indexd with given records limit and page number.
-            For example:
-                records = query_indexd(api='https://icgc.bionimbus.org/',limit=1000,page=0)
-                https://icgc.bionimbus.org/index/index/?limit=1000&page=0
+        """Queries indexd with given records limit and page number.
+        For example:
+            records = query_indexd(api='https://icgc.bionimbus.org/',limit=1000,page=0)
+            https://icgc.bionimbus.org/index/index/?limit=1000&page=0
         """
-        data,records = {},[]
-        index_url = "{}/index/index/?limit={}&page={}".format(self._endpoint,limit,page)
+        data, records = {}, []
+        index_url = "{}/index/index/?limit={}&page={}".format(
+            self._endpoint, limit, page
+        )
 
         try:
             response = requests.get(index_url).text
             data = json.loads(response)
         except Exception as e:
-            print("\tUnable to parse indexd response as JSON!\n\t\t{} {}".format(type(e),e))
+            print(
+                "\tUnable to parse indexd response as JSON!\n\t\t{} {}".format(
+                    type(e), e
+                )
+            )
 
-        if 'records' in data:
-            records = data['records']
+        if "records" in data:
+            records = data["records"]
         else:
-            print("\tNo records found in data from '{}':\n\t\t{}".format(index_url,data))
+            print(
+                "\tNo records found in data from '{}':\n\t\t{}".format(index_url, data)
+            )
 
         return records
 
-
-    def get_indexd(self, limit=100, page=0, outfile=True):
-        """ get all the records in indexd
+    def get_indexd(self, limit=100, page=0, outfile="JSON"):
+        """get all the records in indexd
             api = "https://icgc.bionimbus.org/"
             args = lambda: None
             setattr(args, 'api', api)
@@ -1844,44 +2397,78 @@ class Gen3Expansion:
         Usage:
             exp.get_index()
         """
-
         stats_url = "{}/index/_stats".format(self._endpoint)
         try:
             response = requests.get(stats_url).text
             stats = json.loads(response)
-            print("Stats for '{}': {}".format(self._endpoint,stats))
+            print("Stats for '{}': {}".format(self._endpoint, stats))
         except Exception as e:
-            print("\tUnable to parse indexd response as JSON!\n\t\t{} {}".format(type(e),e))
+            print(
+                "\tUnable to parse indexd response as JSON!\n\t\t{} {}".format(
+                    type(e), e
+                )
+            )
 
-        print("Getting all records in indexd (limit: {}, starting at page: {})".format(limit,page))
+        print(
+            "Getting all records in indexd (limit: {}, starting at page: {})".format(
+                limit, page
+            )
+        )
 
         all_records = []
 
         done = False
         while done is False:
 
-            records = self.query_indexd(limit=limit,page=page)
+            records = self.query_indexd(limit=limit, page=page)
             all_records.extend(records)
 
             if len(records) != limit:
-                print("\tLength of returned records ({}) does not equal limit ({}).".format(len(records),limit))
+                print(
+                    "\tLength of returned records ({}) does not equal limit ({}).".format(
+                        len(records), limit
+                    )
+                )
                 if len(records) == 0:
                     done = True
 
-            print("\tPage {}: {} records ({} total)".format(page,len(records),len(all_records)))
+            print(
+                "\tPage {}: {} records ({} total)".format(
+                    page, len(records), len(all_records)
+                )
+            )
             page += 1
 
-        print("\t\tScript finished. Total records retrieved: {}".format(len(all_records)))
+        print(
+            "\t\tScript finished. Total records retrieved: {}".format(len(all_records))
+        )
 
-        if outfile:
-            dc_regex = re.compile(r'https:\/\/(.+)\/')
+        if outfile in ["JSON", "TSV"]:
+            dc_regex = re.compile(r"https:\/\/(.+)\/")
             dc = dc_regex.match(self._endpoint).groups()[0]
             outname = "{}_indexd_records.txt".format(dc)
-            with open(outname, 'w') as output:
-                output.write(json.dumps(all_records))
+
+            if outfile == "JSON":
+                with open(outname, "w") as output:
+                    output.write(json.dumps(all_records))
+
+            if outfile == "TSV":
+                irecs = [irec for irec in all_records]
+                dids = [irec["did"] for irec in irecs]
+
+                irecs = [irec for irec in all_records if all_records["size"] is None]
+
+                # failed_guids = [irec['did'] for irec in failed]
+                df = pd.DataFrame()
+
+        else:
+            print(
+                "\n\n'{}' is not a valid output format. Please provide a format of either 'JSON' or 'TSV'.\n\n".format(
+                    format
+                )
+            )
 
         return all_records
-
 
     def get_urls(self, guids):
         # Get URLs for a list of GUIDs
@@ -1893,137 +2480,155 @@ class Gen3Expansion:
                 index_url = "{}/index/{}".format(self._endpoint, guid)
                 output = requests.get(index_url, auth=self._auth_provider).text
                 guid_index = json.loads(output)
-                url = guid_index['urls'][0]
+                url = guid_index["urls"][0]
                 urls[guid] = url
         else:
-            print("Please provide one or a list of data file GUIDs: get_urls\(guids=guid_list\)")
+            print(
+                "Please provide one or a list of data file GUIDs: get_urls\(guids=guid_list\)"
+            )
         return urls
 
-    def get_guids_for_file_names(self, file_names, method='indexd',match='file_name'):
+    def get_guids_for_file_names(self, file_names, method="indexd", match="file_name"):
         # Get GUIDs for a list of file_names
         if isinstance(file_names, str):
             file_names = [file_names]
-        if not isinstance(file_names,list):
-            print("Please provide one or a list of data file file_names: get_guid_for_filename\(file_names=file_name_list\)")
+        if not isinstance(file_names, list):
+            print(
+                "Please provide one or a list of data file file_names: get_guid_for_filename\(file_names=file_name_list\)"
+            )
         guids = {}
-        if method == 'indexd':
+        if method == "indexd":
             for file_name in file_names:
-                index_url = "{}/index/index/?file_name={}".format(self._endpoint,file_name)
+                index_url = "{}/index/index/?file_name={}".format(
+                    self._endpoint, file_name
+                )
                 response = requests.get(index_url, auth=self._auth_provider).text
                 index_record = json.loads(response)
-                if len(index_record['records']) > 0:
-                    guid = index_record['records'][0]['did']
+                if len(index_record["records"]) > 0:
+                    guid = index_record["records"][0]["did"]
                     guids[file_name] = guid
-        elif method == 'sheepdog':
+        elif method == "sheepdog":
             for file_name in file_names:
-                if match == 'file_name':
+                if match == "file_name":
                     args = 'file_name:"{}"'.format(file_name)
-                elif match == 'submitter_id':
+                elif match == "submitter_id":
                     args = 'submitter_id:"{}"'.format(file_name)
-                props = ['object_id']
-                res = self.paginate_query(node='datanode',args=args,props=props)
-                recs = res['data']['datanode']
+                props = ["object_id"]
+                res = self.paginate_query(node="datanode", args=args, props=props)
+                recs = res["data"]["datanode"]
                 if len(recs) >= 1:
-                    guid = recs[0]['object_id']
+                    guid = recs[0]["object_id"]
                     guids[file_name] = guid
                 else:
-                    print("Found no sheepdog records with {}: {}".format(method,file_name))
+                    print(
+                        "Found no sheepdog records with {}: {}".format(
+                            method, file_name
+                        )
+                    )
                 if len(recs) > 1:
-                    guids = [rec['object_id'] for rec in recs]
+                    guids = [rec["object_id"] for rec in recs]
                     guids[file_name] = guids
-                    print("Found more than 1 sheepdog record with {}: {}".format(method,file_name))
+                    print(
+                        "Found more than 1 sheepdog record with {}: {}".format(
+                            method, file_name
+                        )
+                    )
         else:
             print("Enter a valid method.\n\tValid methods: 'sheepdog','indexd'")
         return guids
 
-    def write_manifest_for_guids(self,guids,filename="gen3_manifest.json"):
-        """ write a gen3-client manifest from provided list of guids
-        """
+    def write_manifest_for_guids(self, guids, filename="gen3_manifest.json"):
+        """write a gen3-client manifest from provided list of guids"""
 
-        with open(filename, 'w') as manifest:
+        with open(filename, "w") as manifest:
 
-            manifest.write('[')
+            manifest.write("[")
 
             count = 0
             for guid in guids:
                 count += 1
-                manifest.write('\n\t{')
+                manifest.write("\n\t{")
                 manifest.write('"object_id": "{}"'.format(guid))
 
                 if count == len(guids):
-                    manifest.write('  }]')
+                    manifest.write("  }]")
                 else:
-                    manifest.write('  },')
+                    manifest.write("  },")
 
-                print("\t{} ({}/{})".format(guid,count,len(guids)))
+                print("\t{} ({}/{})".format(guid, count, len(guids)))
 
-            print("\tDone ({}/{}).".format(count,len(guids)))
+            print("\tDone ({}/{}).".format(count, len(guids)))
             print("\tManifest written to file: {}".format(filename))
 
-# guids = exp.get_guids_for_file_names(file_names=file_names,method='sheepdog',match='submitter_id')
+    # guids = exp.get_guids_for_file_names(file_names=file_names,method='sheepdog',match='submitter_id')
 
     def get_index_for_file_names(self, file_names):
         # Get GUIDs for a list of file_names
         if isinstance(file_names, str):
             file_names = [file_names]
-        if not isinstance(file_names,list):
-            print("Please provide one or a list of data file file_names: get_guid_for_filename\(file_names=file_name_list\)")
+        if not isinstance(file_names, list):
+            print(
+                "Please provide one or a list of data file file_names: get_guid_for_filename\(file_names=file_name_list\)"
+            )
         index_records = []
         for file_name in file_names:
-            index_url = "{}/index/index/?file_name={}".format(self._endpoint,file_name)
+            index_url = "{}/index/index/?file_name={}".format(self._endpoint, file_name)
             response = requests.get(index_url, auth=self._auth_provider).text
             index_records.append(json.loads(response))
 
         return index_records
 
     def get_index_for_url(self, url):
-        """ Returns the indexd record for a file's storage location URL ('urls' in indexd)
-            Example:
-                api='https://icgc.bionimbus.org/'
-                url='s3://pcawg-tcga-sarc-us/2720a2b8-3f4e-5b6e-9f74-1067a068462a'
-                exp.get_index_for_url(url=url,api=api)
+        """Returns the indexd record for a file's storage location URL ('urls' in indexd)
+        Example:
+            api='https://icgc.bionimbus.org/'
+            url='s3://pcawg-tcga-sarc-us/2720a2b8-3f4e-5b6e-9f74-1067a068462a'
+            exp.get_index_for_url(url=url,api=api)
         """
         indexd_endpoint = "{}/index/index/".format(self._endpoint)
-        indexd_query = "{}?url={}".format(indexd_endpoint,url)
+        indexd_query = "{}?url={}".format(indexd_endpoint, url)
         output = requests.get(indexd_query, auth=self._auth_provider).text
         response = json.loads(output)
-        index_records = response['records']
+        index_records = response["records"]
         return index_records
 
     def get_index_for_guids(self, guids):
-        """ Returns the indexd record for a GUID ('urls' in indexd)
-        """
+        """Returns the indexd record for a GUID ('urls' in indexd)"""
         if isinstance(guids, str):
             guids = [guids]
 
         index_records = []
         for guid in guids:
-            print("\tGetting index for GUID ({}/{}): {}".format(len(index_records),len(guids),guid))
+            print(
+                "\tGetting index for GUID ({}/{}): {}".format(
+                    len(index_records), len(guids), guid
+                )
+            )
             indexd_endpoint = "{}/index/index/".format(self._endpoint)
-            indexd_query = "{}{}".format(indexd_endpoint,guid)
+            indexd_query = "{}{}".format(indexd_endpoint, guid)
             response = requests.get(indexd_query, auth=self._auth_provider).text
             records = json.loads(response)
             index_records.append(records)
         return index_records
 
-# failed = [irec for irec in irecs if irec['size'] is None]
-# failed_guids = [irec['did'] for irec in failed]
+    # failed = [irec for irec in irecs if irec['size'] is None]
+    # failed_guids = [irec['did'] for irec in failed]
 
     def get_guid_for_url(self, url):
         """Return the GUID for a file's URL in indexd
-            Example:
-                api='https://icgc.bionimbus.org/'
-                url='s3://pcawg-tcga-sarc-us/2720a2b8-3f4e-5b6e-9f74-1067a068462a'
-                exp.get_guid_for_url(url=url,api=api)
+        Example:
+            api='https://icgc.bionimbus.org/'
+            url='s3://pcawg-tcga-sarc-us/2720a2b8-3f4e-5b6e-9f74-1067a068462a'
+            exp.get_guid_for_url(url=url,api=api)
         """
         index_records = self.get_index_for_url(url=url)
         if len(index_records) == 1:
-            guid = index_records[0]['did']
+            guid = index_records[0]["did"]
             return guid
         else:
             guids = []
             for index_record in index_records:
-                guids.append(index_record['did'])
+                guids.append(index_record["did"])
             return guids
 
     def delete_uploaded_files(self, guids):
@@ -2050,25 +2655,22 @@ class Gen3Expansion:
 
         for guid in guids:
 
-            fence_url = "{}user/data/".format(
-                self._endpoint
-            )
+            fence_url = "{}user/data/".format(self._endpoint)
 
             try:
-                response = requests.delete(
-                    fence_url + guid,
-                    auth=self._auth_provider
-                )
+                response = requests.delete(fence_url + guid, auth=self._auth_provider)
             except requests.exceptions.ConnectionError as e:
                 raise Gen3Error(e)
 
-            if (response.status_code == 204):
+            if response.status_code == 204:
                 print("Successfully deleted GUID {}".format(guid))
             else:
                 print("Error deleting GUID {}:".format(guid))
                 print(response.reason)
 
-    def uploader_index(self, uploader='cgmeyer@uchicago.edu', acl=None, limit=1024, format='guids'):
+    def uploader_index(
+        self, uploader="cgmeyer@uchicago.edu", acl=None, limit=1024, format="guids"
+    ):
         """Get records from indexd of the files uploaded by a particular user.
 
         Args:
@@ -2083,17 +2685,14 @@ class Gen3Expansion:
 
         if acl is not None:
             index_url = "{}/index/index/?limit={}&acl={}&uploader={}".format(
-                self._endpoint,limit,acl,uploader
+                self._endpoint, limit, acl, uploader
             )
         else:
             index_url = "{}/index/index/?limit={}&uploader={}".format(
-                self._endpoint,limit,uploader
+                self._endpoint, limit, uploader
             )
         try:
-            response = requests.get(
-                index_url,
-                auth=self._auth_provider
-            ).text
+            response = requests.get(index_url, auth=self._auth_provider).text
         except requests.exceptions.ConnectionError as e:
             print(e)
 
@@ -2104,107 +2703,132 @@ class Gen3Expansion:
             print(str(e))
             raise Gen3Error("Unable to parse indexd response as JSON!")
 
-        records = data['records']
+        records = data["records"]
 
         if records is None:
-            print("No records in the index for uploader {} with acl {}.".format(uploader,acl))
+            print(
+                "No records in the index for uploader {} with acl {}.".format(
+                    uploader, acl
+                )
+            )
 
-        elif format is 'tsv':
+        elif format is "tsv":
             df = json_normalize(records)
             filename = "indexd_records_for_{}.tsv".format(uploader)
-            df.to_csv(filename,sep='\t',index=False, encoding='utf-8')
+            df.to_csv(filename, sep="\t", index=False, encoding="utf-8")
             return df
 
-        elif format is 'guids':
+        elif format is "guids":
             guids = []
             for record in records:
-                guids.append(record['did'])
+                guids.append(record["did"])
             return guids
 
         else:
             return records
 
-
-
     # Data commons summary functions
 
-    def t(self,var):
+    def t(self, var):
         vtype = type(var)
         print(vtype)
-        if vtype in [dict,list]:
+        if vtype in [dict, list]:
             print("{}".format(list(var)))
-        if vtype in [str,int,float]:
+        if vtype in [str, int, float]:
             print("{}".format(var))
 
-    def create_output_dir(self, outdir='data_summary_reports'):
-        cmd = ['mkdir','-p',outdir]
+    def create_output_dir(self, outdir="data_summary_reports"):
+        cmd = ["mkdir", "-p", outdir]
         try:
-            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8')
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode(
+                "UTF-8"
+            )
         except Exception as e:
-            output = e.output.decode('UTF-8')
+            output = e.output.decode("UTF-8")
             print("ERROR:" + output)
         return outdir
 
-
-    def list_links(self,link_list,dd):
-        """ return a list of indiv link names.
-        """
+    def list_links(self, link_list, dd):
+        """return a list of indiv link names."""
         link_names = []
         for link in link_list:
-            if 'subgroup' in link:
-                sublinks = list(link['subgroup'])
+            if "subgroup" in link:
+                sublinks = list(link["subgroup"])
                 for sublink in sublinks:
-                    link_names.append(sublink['name'])
+                    link_names.append(sublink["name"])
             else:
-                link_names.append(link['name'])
+                link_names.append(link["name"])
         return link_names
 
-
-    def get_prop_type(self,node,prop,dd):
-        prop_def = dd[node]['properties'][prop]
-        if 'type' in prop_def:
-            prop_type = prop_def['type']
-            if 'null' in prop_type:
-                prop_type = [prop for prop in prop_type if prop != 'null'][0]
-        elif 'enum' in prop_def:
-            prop_type = 'enum'
-        elif 'oneOf' in prop_def:
-            if 'type' in prop_def['oneOf'][0]:
-                prop_type = prop_def['oneOf'][0]['type']
-            elif 'enum' in prop_def['oneOf'][0]:
-                prop_type = 'enum'
-        elif 'anyOf' in prop_def:
-            if isinstance(prop_def['anyOf'],list):
-                prop_type = [x['type'] for x in prop_def['anyOf'] if 'items' in x][0]
+    def get_prop_type(self, node, prop, dd):
+        prop_def = dd[node]["properties"][prop]
+        if "type" in prop_def:
+            prop_type = prop_def["type"]
+            if "null" in prop_type:
+                prop_type = [prop for prop in prop_type if prop != "null"][0]
+        elif "enum" in prop_def:
+            prop_type = "enum"
+        elif "oneOf" in prop_def:
+            if "type" in prop_def["oneOf"][0]:
+                prop_type = prop_def["oneOf"][0]["type"]
+            elif "enum" in prop_def["oneOf"][0]:
+                prop_type = "enum"
+        elif "anyOf" in prop_def:
+            if isinstance(prop_def["anyOf"], list):
+                prop_type = [x["type"] for x in prop_def["anyOf"] if "items" in x][0]
             else:
-                prop_type = prop_def['anyOf']
+                prop_type = prop_def["anyOf"]
         else:
             print("Can't get the property type for {}!".format(shared_prop))
         return prop_type
 
-
-    def summarize_dd(self,props_to_remove=['case_submitter_id'],nodes_to_remove=['root','metaschema']):
-        """ Return a dict with nodes and list of properties in each node.
-        """
+    def summarize_dd(
+        self,
+        props_to_remove=["case_submitter_id"],
+        nodes_to_remove=["root", "metaschema"],
+    ):
+        """Return a dict with nodes and list of properties in each node."""
         dd = self.sub.get_dictionary_all()
         nodes = []
-        node_regex = re.compile(r'^[^_][A-Za-z0-9_]+$')# don't match _terms,_settings,_definitions, etc.)
+        node_regex = re.compile(
+            r"^[^_][A-Za-z0-9_]+$"
+        )  # don't match _terms,_settings,_definitions, etc.)
         nodes = list(filter(node_regex.search, list(dd)))
 
         dds = {}
         for node in nodes:
             dds[node] = []
-            props = list(dd[node]['properties'])
+            props = list(dd[node]["properties"])
             for prop in props:
                 dds[node].append(prop)
 
         return dds
 
-
-    def summarize_tsvs(self, tsv_dir, dd, prefix='', outlier_threshold=10,
-        omit_props=['project_id','type','id','submitter_id','case_submitter_id','case_ids','visit_id','sample_id','md5sum','file_name','object_id'],
-        omit_nodes=['metaschema','root','program','project','data_release'], outdir='.',
-        bin_limit=False, write_report=True, report_null=True):
+    def summarize_tsvs(
+        self,
+        tsv_dir,
+        dd,
+        prefix="",
+        outlier_threshold=10,
+        omit_props=[
+            "project_id",
+            "type",
+            "id",
+            "submitter_id",
+            "case_submitter_id",
+            "case_ids",
+            "visit_id",
+            "sample_id",
+            "md5sum",
+            "file_name",
+            "object_id",
+        ],
+        omit_nodes=["metaschema", "root", "program", "project", "data_release"],
+        outdir=".",
+        bin_limit=False,
+        write_report=True,
+        report_null=True,
+    ):
 
         """
         Returns a summary of TSV data per project, node, and property in the specified directory "tsv_dir".
@@ -2229,139 +2853,199 @@ class Gen3Expansion:
 
         summary = {}
 
-        report = pd.DataFrame(columns=['prop_id','project_id','node','property','type',
-                    'N','nn','null','all_null',
-                    'min','max','median','mean','stdev','outliers',
-                    'bin_number','bins'])
+        report = pd.DataFrame(
+            columns=[
+                "prop_id",
+                "project_id",
+                "node",
+                "property",
+                "type",
+                "N",
+                "nn",
+                "null",
+                "all_null",
+                "min",
+                "max",
+                "median",
+                "mean",
+                "stdev",
+                "outliers",
+                "bin_number",
+                "bins",
+            ]
+        )
 
-        dir_pattern = "{}*{}".format(prefix,'tsvs')
-        project_dirs = glob.glob("{}/{}".format(tsv_dir,dir_pattern))
+        dir_pattern = "{}*{}".format(prefix, "tsvs")
+        project_dirs = glob.glob("{}/{}".format(tsv_dir, dir_pattern))
 
-        nn_nodes,nn_props,null_nodes,null_props,all_prop_ids = [],[],[],[],[]
+        nn_nodes, nn_props, null_nodes, null_props, all_prop_ids = [], [], [], [], []
 
         msg = "Summarizing TSVs in '{}':\n".format(tsv_dir)
         print("\n\n{}".format(msg))
 
-        for project_dir in project_dirs: # project_dir=project_dirs[0]
+        for project_dir in project_dirs:  # project_dir=project_dirs[0]
 
             try:
-                project_id = re.search(r'^{}/?([A-Za-z0-9_-]+)_tsvs$'.format(tsv_dir), project_dir).group(1)
+                project_id = re.search(
+                    r"^{}/?([A-Za-z0-9_-]+)_tsvs$".format(tsv_dir), project_dir
+                ).group(1)
             except:
-                print("Couldn't extract the project_id from project_dir '{}'!".format(project_dir))
+                print(
+                    "Couldn't extract the project_id from project_dir '{}'!".format(
+                        project_dir
+                    )
+                )
 
-            fpattern = "{}*{}".format(prefix,'.tsv')
-            fnames = glob.glob("{}/{}".format(project_dir,fpattern))
+            fpattern = "{}*{}".format(prefix, ".tsv")
+            fnames = glob.glob("{}/{}".format(project_dir, fpattern))
 
-            #msg = "\t\tFound the following {} TSVs: {}".format(len(fnames),fnames)
-            #sys.stdout.write("\r" + str(msg))
+            # msg = "\t\tFound the following {} TSVs: {}".format(len(fnames),fnames)
+            # sys.stdout.write("\r" + str(msg))
 
-
-            #print(fnames) # trouble-shooting
+            # print(fnames) # trouble-shooting
             if len(fnames) == 0:
                 continue
 
-            for fname in fnames: # Each node with data in the project is in one TSV file so len(fnames) is the number of nodes in the project with data.
+            for (
+                fname
+            ) in (
+                fnames
+            ):  # Each node with data in the project is in one TSV file so len(fnames) is the number of nodes in the project with data.
 
-                #print("\n\t\t{}".format(fname)) # trouble-shooting
+                # print("\n\t\t{}".format(fname)) # trouble-shooting
 
-                node_regex = re.escape(project_id) + r"_([a-zA-Z0-9_]+)\.tsv$" #node = re.search(r'^([a-zA-Z0-9_]+)-([a-zA-Z0-9]+)_([a-zA-Z0-9_]+)\.tsv$',fname).group(3)
+                node_regex = (
+                    re.escape(project_id) + r"_([a-zA-Z0-9_]+)\.tsv$"
+                )  # node = re.search(r'^([a-zA-Z0-9_]+)-([a-zA-Z0-9]+)_([a-zA-Z0-9_]+)\.tsv$',fname).group(3)
 
                 try:
                     node = re.search(node_regex, fname, re.IGNORECASE).group(1)
 
                 except Exception as e:
-                    print("\n\nCouldn't set node with node_regex on '{}':\n\t{}".format(fname,e))
+                    print(
+                        "\n\nCouldn't set node with node_regex on '{}':\n\t{}".format(
+                            fname, e
+                        )
+                    )
                     node = fname
 
-                df = pd.read_csv(fname, sep='\t', header=0, dtype=str)
+                df = pd.read_csv(fname, sep="\t", header=0, dtype=str)
 
                 if df.empty:
                     print("\t\t'{}' TSV is empty. No data to summarize.\n".format(node))
 
                 else:
                     nn_nodes.append(node)
-                    prop_regex = re.compile(r'^[A-Za-z0-9_]*[^.]$') #drop the links, e.g., cases.submitter_id or diagnoses.id (matches all properties with no ".")
-                    props = list(filter(prop_regex.match, list(df))) #properties in this TSV to summarize
-                    props = [prop for prop in props if prop not in omit_props] #omit_props=['project_id','type','id','submitter_id','case_submitter_id','case_ids','visit_id','sample_id','md5sum','file_name','object_id']
+                    prop_regex = re.compile(
+                        r"^[A-Za-z0-9_]*[^.]$"
+                    )  # drop the links, e.g., cases.submitter_id or diagnoses.id (matches all properties with no ".")
+                    props = list(
+                        filter(prop_regex.match, list(df))
+                    )  # properties in this TSV to summarize
+                    props = [
+                        prop for prop in props if prop not in omit_props
+                    ]  # omit_props=['project_id','type','id','submitter_id','case_submitter_id','case_ids','visit_id','sample_id','md5sum','file_name','object_id']
 
-                    #msg = "\t\tTotal of {} records in '{}' TSV with {} properties.".format(len(df),node,len(props))
-                    #sys.stdout.write("\r"+str(msg))
+                    # msg = "\t\tTotal of {} records in '{}' TSV with {} properties.".format(len(df),node,len(props))
+                    # sys.stdout.write("\r"+str(msg))
 
-                    for prop in props: #prop=props[0]
+                    for prop in props:  # prop=props[0]
 
-                        prop_name = "{}.{}".format(node,prop)
-                        prop_id = "{}.{}".format(project_id,prop_name)
+                        prop_name = "{}.{}".format(node, prop)
+                        prop_id = "{}.{}".format(project_id, prop_name)
 
                         # because of sheepdog bug, need to inclue "None" in "null" (:facepalm:) https://ctds-planx.atlassian.net/browse/PXP-5663
-                        df.at[df[prop] == 'None',prop] = np.nan
+                        df.at[df[prop] == "None", prop] = np.nan
                         null = df.loc[df[prop].isnull()]
                         nn = df.loc[df[prop].notnull()]
-                        ptype = self.get_prop_type(node,prop,dd)
+                        ptype = self.get_prop_type(node, prop, dd)
 
                         # dict for the prop's row in report dataframe
-                        prop_stats = {'prop_id':prop_id,
-                            'project_id':project_id,
-                            'node':node,
-                            'property':prop,
-                            'type':ptype,
-                            'N':len(df),
-                            'nn':len(nn),
-                            'null':len(null),
-                            'all_null':np.nan,
-                            'min':np.nan,
-                            'max':np.nan,
-                            'median':np.nan,
-                            'mean':np.nan,
-                            'stdev':np.nan,
-                            'outliers':np.nan,
-                            'bin_number':np.nan,
-                            'bins':np.nan}
+                        prop_stats = {
+                            "prop_id": prop_id,
+                            "project_id": project_id,
+                            "node": node,
+                            "property": prop,
+                            "type": ptype,
+                            "N": len(df),
+                            "nn": len(nn),
+                            "null": len(null),
+                            "all_null": np.nan,
+                            "min": np.nan,
+                            "max": np.nan,
+                            "median": np.nan,
+                            "mean": np.nan,
+                            "stdev": np.nan,
+                            "outliers": np.nan,
+                            "bin_number": np.nan,
+                            "bins": np.nan,
+                        }
 
                         if nn.empty:
                             null_props.append(prop_name)
-                            prop_stats['all_null'] = True
+                            prop_stats["all_null"] = True
 
                         else:
                             nn_props.append(prop_name)
                             all_prop_ids.append(prop_id)
-                            prop_stats['all_null'] = False
+                            prop_stats["all_null"] = False
 
                             msg = "\t'{}'".format(prop_id)
-                            sys.stdout.write("\r"+str(msg).ljust(200,' '))
+                            sys.stdout.write("\r" + str(msg).ljust(200, " "))
 
-                            if ptype in ['string','enum','array','boolean','date']:
+                            if ptype in ["string", "enum", "array", "boolean", "date"]:
 
-                                if ptype == 'array':
+                                if ptype == "array":
 
                                     all_bins = list(nn[prop])
-                                    bin_list = [bin_txt.split(',') for bin_txt in list(nn[prop])]
-                                    counts = Counter([item for sublist in bin_list for item in sublist])
+                                    bin_list = [
+                                        bin_txt.split(",") for bin_txt in list(nn[prop])
+                                    ]
+                                    counts = Counter(
+                                        [
+                                            item
+                                            for sublist in bin_list
+                                            for item in sublist
+                                        ]
+                                    )
 
-                                elif ptype in ['string','enum','boolean','date']:
+                                elif ptype in ["string", "enum", "boolean", "date"]:
 
                                     counts = Counter(nn[prop])
 
-                                df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
+                                df1 = pd.DataFrame.from_dict(
+                                    counts, orient="index"
+                                ).reset_index()
                                 bins = [tuple(x) for x in df1.values]
-                                bins = sorted(sorted(bins,key=lambda x: (x[0])),key=lambda x: (x[1]),reverse=True) # sort first by name, then by value. This way, names with same value are in same order.
+                                bins = sorted(
+                                    sorted(bins, key=lambda x: (x[0])),
+                                    key=lambda x: (x[1]),
+                                    reverse=True,
+                                )  # sort first by name, then by value. This way, names with same value are in same order.
 
-                                prop_stats['bins'] = bins
-                                prop_stats['bin_number'] = len(bins)
+                                prop_stats["bins"] = bins
+                                prop_stats["bin_number"] = len(bins)
 
                             # Get stats for numbers
-                            elif ptype in ['number','integer']: #prop='concentration'
+                            elif ptype in ["number", "integer"]:  # prop='concentration'
 
                                 # make a list of the data values as floats (converted from strings)
                                 nn_all = nn[prop]
                                 d_all = list(nn_all)
 
-                                nn_num = nn[prop].apply(pd.to_numeric, errors='coerce').dropna()
+                                nn_num = (
+                                    nn[prop]
+                                    .apply(pd.to_numeric, errors="coerce")
+                                    .dropna()
+                                )
                                 d = list(nn_num)
 
-                                nn_string = nn.loc[~nn[prop].isin(list(map(str,d)))]
+                                nn_string = nn.loc[~nn[prop].isin(list(map(str, d)))]
                                 non_numbers = list(nn_string[prop])
 
-                                if len(d) > 0: # if there are numbers in the data, calculate numeric stats
+                                if (
+                                    len(d) > 0
+                                ):  # if there are numbers in the data, calculate numeric stats
 
                                     # calculate summary stats using the float list d
                                     mean = statistics.mean(d)
@@ -2369,110 +3053,162 @@ class Gen3Expansion:
                                     minimum = min(d)
                                     maximum = max(d)
 
-                                    if len(d) == 1: # if only one value, no stdev and no outliers
+                                    if (
+                                        len(d) == 1
+                                    ):  # if only one value, no stdev and no outliers
                                         std = "NA"
                                         outliers = []
                                     else:
                                         std = statistics.stdev(d)
                                         # Get outliers by mean +/- outlier_threshold * stdev
-                                        cutoff = std * outlier_threshold # three times the standard deviation is default
-                                        lower, upper = mean - cutoff, mean + cutoff # cut-offs for outliers is 3 times the stdev below and above the mean
-                                        outliers = sorted(list(set([x for x in d if x < lower or x > upper])))
+                                        cutoff = (
+                                            std * outlier_threshold
+                                        )  # three times the standard deviation is default
+                                        lower, upper = (
+                                            mean - cutoff,
+                                            mean + cutoff,
+                                        )  # cut-offs for outliers is 3 times the stdev below and above the mean
+                                        outliers = sorted(
+                                            list(
+                                                set(
+                                                    [
+                                                        x
+                                                        for x in d
+                                                        if x < lower or x > upper
+                                                    ]
+                                                )
+                                            )
+                                        )
 
                                     # if property type is 'integer', change min, max, median to int type
-                                    if ptype == 'integer':
-                                        median = int(median) # median
-                                        minimum = int(minimum) # min
-                                        maximum = int(maximum) # max
-                                        outliers = [int(i) for i in outliers] # convert outliers from float to int
+                                    if ptype == "integer":
+                                        median = int(median)  # median
+                                        minimum = int(minimum)  # min
+                                        maximum = int(maximum)  # max
+                                        outliers = [
+                                            int(i) for i in outliers
+                                        ]  # convert outliers from float to int
 
-                                    prop_stats['stdev'] = std
-                                    prop_stats['mean'] = mean
-                                    prop_stats['median'] = median
-                                    prop_stats['min'] = minimum
-                                    prop_stats['max'] = maximum
-                                    prop_stats['outliers'] = outliers
+                                    prop_stats["stdev"] = std
+                                    prop_stats["mean"] = mean
+                                    prop_stats["median"] = median
+                                    prop_stats["min"] = minimum
+                                    prop_stats["max"] = maximum
+                                    prop_stats["outliers"] = outliers
 
                                 # check if numeric property is mixed with strings, and if so, summarize the string data
                                 if len(d_all) > len(d):
 
-                                    msg = "\t\tFound {} string values among the {} records of prop '{}' with value(s): {}. Calculating stats only for the {} numeric values.".format(len(non_numbers),len(nn),prop,list(set(non_numbers)),len(d))
+                                    msg = "\t\tFound {} string values among the {} records of prop '{}' with value(s): {}. Calculating stats only for the {} numeric values.".format(
+                                        len(non_numbers),
+                                        len(nn),
+                                        prop,
+                                        list(set(non_numbers)),
+                                        len(d),
+                                    )
                                     print("\n\t{}\n".format(msg))
 
-                                    prop_stats['type'] = "mixed {},string".format(ptype)
+                                    prop_stats["type"] = "mixed {},string".format(ptype)
 
                                     counts = Counter(nn_string[prop])
-                                    df1 = pd.DataFrame.from_dict(counts, orient='index').reset_index()
+                                    df1 = pd.DataFrame.from_dict(
+                                        counts, orient="index"
+                                    ).reset_index()
                                     bins = [tuple(x) for x in df1.values]
-                                    bins = sorted(sorted(bins,key=lambda x: (x[0])),key=lambda x: (x[1]),reverse=True)
-                                    prop_stats['bins'] = bins
-                                    prop_stats['bin_number'] = len(bins)
+                                    bins = sorted(
+                                        sorted(bins, key=lambda x: (x[0])),
+                                        key=lambda x: (x[1]),
+                                        reverse=True,
+                                    )
+                                    prop_stats["bins"] = bins
+                                    prop_stats["bin_number"] = len(bins)
 
-                            else: # If its not in the list of ptypes, exit. Need to add array handling.
-                                print("\t\t\n\n\n\nUnhandled property type!\n\n '{}': {}\n\n\n\n".format(prop_id,ptype))
+                            else:  # If its not in the list of ptypes, exit. Need to add array handling.
+                                print(
+                                    "\t\t\n\n\n\nUnhandled property type!\n\n '{}': {}\n\n\n\n".format(
+                                        prop_id, ptype
+                                    )
+                                )
                                 exit()
 
-                        if bin_limit != False and isinstance(prop_stats['bins'],list):
-                            prop_stats['bins'] = prop_stats['bins'][:int(bin_limit)]
+                        if bin_limit != False and isinstance(prop_stats["bins"], list):
+                            prop_stats["bins"] = prop_stats["bins"][: int(bin_limit)]
 
                         report = report.append(prop_stats, ignore_index=True)
 
         if report_null == False:
-            report = report.loc[report['all_null']!=True]
+            report = report.loc[report["all_null"] != True]
 
         # strip the col names so we can sort the report
         report.columns = report.columns.str.strip()
-        report.sort_values(by=['all_null','node','property'],inplace=True)
+        report.sort_values(by=["all_null", "node", "property"], inplace=True)
 
-        summary['report'] = report
-        summary['all_prop_ids'] = all_prop_ids
+        summary["report"] = report
+        summary["all_prop_ids"] = all_prop_ids
 
         # summarize all properties
         nn_props = sorted(list(set(nn_props)))
-        summary['nn_props'] = nn_props
+        summary["nn_props"] = nn_props
 
         null_props = [prop for prop in null_props if prop not in nn_props]
-        summary['null_props'] = sorted(list(set(null_props)))
+        summary["null_props"] = sorted(list(set(null_props)))
 
         # summarize all nodes
         nn_nodes = sorted(list(set(nn_nodes)))
-        summary['nn_nodes'] = nn_nodes
+        summary["nn_nodes"] = nn_nodes
 
-        dd_regex = re.compile(r'[^_][A-Za-z0-9_]+')
+        dd_regex = re.compile(r"[^_][A-Za-z0-9_]+")
         dd_nodes = list(filter(dd_regex.match, list(dd)))
         dd_nodes = [node for node in dd_nodes if node not in omit_nodes]
         null_nodes = [node for node in dd_nodes if node not in nn_nodes]
 
-        summary['null_nodes'] = null_nodes
+        summary["null_nodes"] = null_nodes
 
         if write_report is True:
 
             self.create_output_dir(outdir=outdir)
 
-            if '/' in tsv_dir:
-                names = tsv_dir.split('/')
-                names = [name for name in names if name != '']
+            if "/" in tsv_dir:
+                names = tsv_dir.split("/")
+                names = [name for name in names if name != ""]
                 name = names[-1]
             else:
                 name = tsv_dir
 
             outname = "data_summary_{}.tsv".format(name)
-            outname = "{}/{}".format(outdir,outname) # ./data_summary_prod_tsvs_04272020.tsv
+            outname = "{}/{}".format(
+                outdir, outname
+            )  # ./data_summary_prod_tsvs_04272020.tsv
 
-            report.to_csv(outname, sep='\t', index=False, encoding='utf-8')
-            sys.stdout.write("\rReport written to file:".ljust(200,' '))
+            report.to_csv(outname, sep="\t", index=False, encoding="utf-8")
+            sys.stdout.write("\rReport written to file:".ljust(200, " "))
             print("\n\t{}".format(outname))
 
         return summary
 
+    def compare_commons(
+        self,
+        reports,
+        stats=[
+            "type",
+            "all_null",
+            "N",
+            "null",
+            "nn",
+            "min",
+            "max",
+            "mean",
+            "median",
+            "stdev",
+            "bin_number",
+            "bins",
+            "outliers",
+        ],
+        write_report=True,
+        outdir=".",
+    ):
 
-    def compare_commons(self,reports,
-        stats = ['type','all_null','N','null','nn',
-                'min','max','mean','median','stdev',
-                'bin_number','bins','outliers'],
-        write_report=True,outdir='.'):
-
-        """ Takes two data summary reports (output of "self.write_commons_report" func), and compares the data in each.
+        """Takes two data summary reports (output of "self.write_commons_report" func), and compares the data in each.
             Comparisons are between matching project/node/property combos (aka "prop_id") in each report.
         Args:
             reports(dict): a dict of two "commons_name" : "report", where report is a pandas dataframe generated from a summary of TSV data; obtained by running write_summary_report() on the result of summarize_tsv_data().
@@ -2485,108 +3221,130 @@ class Gen3Expansion:
             c = compare_commons(reports)
         """
 
-        dc0,dc1 = list(reports)
+        dc0, dc1 = list(reports)
         r0 = copy.deepcopy(reports[dc0])
         r1 = copy.deepcopy(reports[dc1])
 
-        r0.insert(loc=0, column='commons', value=dc0)
-        r1.insert(loc=0, column='commons', value=dc1)
-        report = pd.concat([r0,r1], ignore_index=True, sort=False)
+        r0.insert(loc=0, column="commons", value=dc0)
+        r1.insert(loc=0, column="commons", value=dc1)
+        report = pd.concat([r0, r1], ignore_index=True, sort=False)
 
         cols = list(report)
-        p0 = list(r0['prop_id'])
-        p1 = list(r1['prop_id'])
+        p0 = list(r0["prop_id"])
+        p1 = list(r1["prop_id"])
         prop_ids = sorted(list(set(p0 + p1)))
         total = len(prop_ids)
 
         dcs_stats = []
         for stat in stats:
             for dc in list(reports):
-                dcs_stats.append(dc + '_' + stat)
+                dcs_stats.append(dc + "_" + stat)
 
-        common_cols = [col for col in cols if col not in stats + ['commons']]
-        comparison_cols = ['comparison'] + common_cols + dcs_stats
+        common_cols = [col for col in cols if col not in stats + ["commons"]]
+        comparison_cols = ["comparison"] + common_cols + dcs_stats
         comparison = pd.DataFrame(columns=comparison_cols, index=prop_ids)
 
         prop_count = 1
 
         for prop_id in prop_ids:
 
-            msg = "Comparing stats ({} of {}): '{}'".format(prop_count,total,prop_id)
-            sys.stdout.write("\r" + str(msg).ljust(200,' '))
+            msg = "Comparing stats ({} of {}): '{}'".format(prop_count, total, prop_id)
+            sys.stdout.write("\r" + str(msg).ljust(200, " "))
 
             prop_count += 1
 
-            project_id,node,prop = prop_id.split('.')
+            project_id, node, prop = prop_id.split(".")
 
-            comparison['prop_id'][prop_id] = prop_id
-            comparison['project_id'][prop_id] = project_id
-            comparison['node'][prop_id] = node
-            comparison['property'][prop_id] = prop
+            comparison["prop_id"][prop_id] = prop_id
+            comparison["project_id"][prop_id] = project_id
+            comparison["node"][prop_id] = node
+            comparison["property"][prop_id] = prop
 
-            df = report.loc[report['prop_id']==prop_id].reset_index(drop=True)
+            df = report.loc[report["prop_id"] == prop_id].reset_index(drop=True)
 
             if len(df) == 1:
-                comparison['comparison'][prop_id] = 'unique'
-                dc = df['commons'][0]
+                comparison["comparison"][prop_id] = "unique"
+                dc = df["commons"][0]
                 for stat in stats:
-                    col = "{}_{}".format(dc,stat)
+                    col = "{}_{}".format(dc, stat)
                     comparison[col][prop_id] = df[stat][0]
 
-            elif len(df) == 2: #just a check that there should be 2 rows in the df (comparing prop_id stats between two different commons)
+            elif (
+                len(df) == 2
+            ):  # just a check that there should be 2 rows in the df (comparing prop_id stats between two different commons)
                 same = []
-                for stat in stats: # first, check whether any of the stats are different bw commons
+                for (
+                    stat
+                ) in (
+                    stats
+                ):  # first, check whether any of the stats are different bw commons
 
-                    col0 = dc0+'_'+stat #column name for first commons
-                    col1 = dc1+'_'+stat #column name for second commons
-                    comparison[col0][prop_id] = df.loc[df['commons']==dc0].iloc[0][stat]
-                    comparison[col1][prop_id] = df.loc[df['commons']==dc1].iloc[0][stat]
+                    col0 = dc0 + "_" + stat  # column name for first commons
+                    col1 = dc1 + "_" + stat  # column name for second commons
+                    comparison[col0][prop_id] = df.loc[df["commons"] == dc0].iloc[0][
+                        stat
+                    ]
+                    comparison[col1][prop_id] = df.loc[df["commons"] == dc1].iloc[0][
+                        stat
+                    ]
 
-                    if df[stat][0] != df[stat][1]: # Note: if both values are "NaN" this is True; because NaN != NaN
-                        if list(df[stat].isna())[0] is True and list(df[stat].isna())[1] is True:# if stats are both "NaN", data are identical
+                    if (
+                        df[stat][0] != df[stat][1]
+                    ):  # Note: if both values are "NaN" this is True; because NaN != NaN
+                        if (
+                            list(df[stat].isna())[0] is True
+                            and list(df[stat].isna())[1] is True
+                        ):  # if stats are both "NaN", data are identical
                             same.append(True)
-                        else: # if stats are different AND both values aren't "NaN", data are different
+                        else:  # if stats are different AND both values aren't "NaN", data are different
                             same.append(False)
-                    else: # if stat0 is stat1, data are identical
+                    else:  # if stat0 is stat1, data are identical
                         same.append(True)
 
-                if False in same: # if any of the stats are different bw commons, tag as 'different', otherwise tagged as 'identical'
-                    comparison['comparison'][prop_id] = 'different'
+                if (
+                    False in same
+                ):  # if any of the stats are different bw commons, tag as 'different', otherwise tagged as 'identical'
+                    comparison["comparison"][prop_id] = "different"
                 else:
-                    comparison['comparison'][prop_id] = 'identical'
+                    comparison["comparison"][prop_id] = "identical"
 
             else:
-                print("\n\nThe number of instances of this prop_id '{}' is not 2!\n{}\n\n".format(prop_id,df))
+                print(
+                    "\n\nThe number of instances of this prop_id '{}' is not 2!\n{}\n\n".format(
+                        prop_id, df
+                    )
+                )
                 return df
 
         # check total
-        identical = comparison.loc[comparison['comparison']=='identical']
-        different = comparison.loc[comparison['comparison']=='different']
-        unique = comparison.loc[comparison['comparison']=='unique']
+        identical = comparison.loc[comparison["comparison"] == "identical"]
+        different = comparison.loc[comparison["comparison"] == "different"]
+        unique = comparison.loc[comparison["comparison"] == "unique"]
 
         if len(prop_ids) == len(identical) + len(different) + len(unique):
-            msg = "All {} prop_ids in the reports were classified as having unique, identical or different data between data commons: {}.\n".format(len(prop_ids),list(reports))
-            sys.stdout.write("\r" + str(msg).ljust(200,' '))
+            msg = "All {} prop_ids in the reports were classified as having unique, identical or different data between data commons: {}.\n".format(
+                len(prop_ids), list(reports)
+            )
+            sys.stdout.write("\r" + str(msg).ljust(200, " "))
 
         else:
             print("\nSome properties in the report were not classified!")
 
         # strip the col names so we can sort the report
         comparison.columns = comparison.columns.str.strip()
-        comparison.sort_values(by=['comparison','node','property'],inplace=True)
+        comparison.sort_values(by=["comparison", "node", "property"], inplace=True)
 
         if write_report is True:
 
             self.create_output_dir(outdir)
 
-            outname = "{}/comparison_{}_{}.tsv".format(outdir,dc0,dc1)
-            comparison.to_csv(outname, sep='\t', index=False, encoding='utf-8')
+            outname = "{}/comparison_{}_{}.tsv".format(outdir, dc0, dc1)
+            comparison.to_csv(outname, sep="\t", index=False, encoding="utf-8")
 
             msg = "Comparison report written to file: {}".format(outname)
             print(msg)
 
         return comparison
-
 
     def get_token(self):
         with open(self._auth_provider._refresh_file, "r") as f:
@@ -2595,17 +3353,16 @@ class Gen3Expansion:
         token = requests.post(token_url, json=creds).json()["access_token"]
         return token
 
-
     # Guppy funcs
-    def guppy_query(self,node,props):
+    def guppy_query(self, node, props):
 
         guppy_url = "{}/guppy/graphql".format(self._endpoint)
 
-        query = "{{ {} {{ {} }} }}".format(node," ".join(props))
+        query = "{{ {} {{ {} }} }}".format(node, " ".join(props))
 
         query_json = {"query": query, "variables": None}
 
-        print("Requesting '{}': {}".format(guppy_url,query_json))
+        print("Requesting '{}': {}".format(guppy_url, query_json))
 
         response = requests.post(guppy_url, json=query_json, auth=self._auth_provider)
 
@@ -2617,21 +3374,19 @@ class Gen3Expansion:
             return response.text
 
     # Guppy funcs
-    def guppy_download(self,node,props):
+    def guppy_download(self, node, props):
 
         guppy_dl = "{}guppy/download".format(self._endpoint)
 
-        query_dl = "{{ 'type':'{0}' {{ 'fields': {1} }} }}".format(node,props)
-
+        query_dl = "{{ 'type':'{0}' {{ 'fields': {1} }} }}".format(node, props)
 
         json_dl = {"query": query_dl, "variables": None}
-
 
         print("Requesting '{}': {}".format(guppy_dl, query_dl))
 
         headers = {"Authorization": "bearer " + self.get_token()}
 
-        #response = requests.post(guppy_dl, json=json_dl, auth=self._auth_provider)
+        # response = requests.post(guppy_dl, json=json_dl, auth=self._auth_provider)
         response = requests.post(guppy_dl, json=query, headers=headers)
 
         try:
@@ -2641,10 +3396,9 @@ class Gen3Expansion:
             print("Error querying Guppy")
             return response.text
 
+    def write_manifest(self, guids, manifest_name="gen3_manifest.json"):
 
-    def write_manifest(self,guids,manifest_name="gen3_manifest.json"):
-
-        with open(manifest_name, 'w') as mani:
+        with open(manifest_name, "w") as mani:
 
             mani.write("[\n  {\n")
 
@@ -2658,7 +3412,19 @@ class Gen3Expansion:
                     mani.write("  },\n  {\n")
                 count += 1
 
-    def list_nodes(self, excluded_schemas=['_definitions','_settings','_terms','program','project','root','data_release','metaschema']):
+    def list_nodes(
+        self,
+        excluded_schemas=[
+            "_definitions",
+            "_settings",
+            "_terms",
+            "program",
+            "project",
+            "root",
+            "data_release",
+            "metaschema",
+        ],
+    ):
         """
         This function gets a data dictionary, and then it determines the submission order of nodes by looking at the links.
         The reverse of this is the deletion order for deleting projects. (Must delete child nodes before parents).
@@ -2674,47 +3440,54 @@ class Gen3Expansion:
         """
         if nodes is None:
             nodes = self.list_nodes()
-        elif isinstance(nodes,str):
+        elif isinstance(nodes, str):
             nodes = [nodes]
 
-        if 'case' in nodes:
-            subject_node,subject_prop  = 'case','case_ids'
+        if "case" in nodes:
+            subject_node, subject_prop = "case", "case_ids"
         else:
-            subject_node,subject_prop = 'subject','subject_ids'
+            subject_node, subject_prop = "subject", "subject_ids"
 
         # if projects is None: #if no projects specified, get node for all projects
         #     projects = list(json_normalize(self.sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
         # elif isinstance(projects, str):
         #     projects = [projects]
 
-        query_args = '{}:"{}"'.format(subject_prop,subject_id)
+        query_args = '{}:"{}"'.format(subject_prop, subject_id)
         results = {}
         for node in nodes:
-            res = self.paginate_query(node=node,props=['project_id','id','submitter_id'],args=query_args)
-            if len(res['data'][node]) > 0:
-                results[node] = res['data'][node]
+            res = self.paginate_query(
+                node=node, props=["project_id", "id", "submitter_id"], args=query_args
+            )
+            if len(res["data"][node]) > 0:
+                results[node] = res["data"][node]
 
         data = {}
         for node in list(results):
-            #uuids = [rec['id'] for rec in results[node]]
+            # uuids = [rec['id'] for rec in results[node]]
             dfs = []
             for rec in results[node]:
-                project_id = rec['project_id']
-                uuid = rec['id']
-                program,project = project_id.split('-',1)
-                rec = self.sub.export_record(program=program, project=project, uuid=uuid, fileformat='tsv', filename=None)
-                #str_list = rec.split('\r\n')
-                #headers = str_list[0].split('\t')
-                #data = str_list[1].split('\t')
-                #df = pd.DataFrame(data,columns=headers)
-                dfs.append(pd.read_csv(StringIO(rec), sep='\t', header=0))
-            df = pd.concat(dfs, ignore_index=True, sort = False)
+                project_id = rec["project_id"]
+                uuid = rec["id"]
+                program, project = project_id.split("-", 1)
+                rec = self.sub.export_record(
+                    program=program,
+                    project=project,
+                    uuid=uuid,
+                    fileformat="tsv",
+                    filename=None,
+                )
+                # str_list = rec.split('\r\n')
+                # headers = str_list[0].split('\t')
+                # data = str_list[1].split('\t')
+                # df = pd.DataFrame(data,columns=headers)
+                dfs.append(pd.read_csv(StringIO(rec), sep="\t", header=0))
+            df = pd.concat(dfs, ignore_index=True, sort=False)
             data[node] = df
 
         return data
 
         # visits = list(set([item for sublist in [list(set(list(df['visit_id']))) for df in data.values()] for item in sublist if not pd.isnull(item)]))
-
 
     def query_visit_ids(self, visit_ids):
         """
@@ -2730,17 +3503,25 @@ class Gen3Expansion:
             print("Please provide one or more visit_ids!")
             return
 
-        dfs,visit_uuids = [],[]
+        dfs, visit_uuids = [], []
         for visit_id in visit_ids:
             query_args = 'submitter_id:"{}"'.format(visit_id)
-            res = self.paginate_query(node='visit',props=['project_id','id'],args=query_args)
-            if len(res['data']['visit']) > 0:
-                uuid = res['data']['visit'][0]['id']
-                project_id = res['data']['visit'][0]['project_id']
-                program,project = project_id.split('-',1)
-                rec = self.sub.export_record(program=program, project=project, uuid=uuid, fileformat='tsv', filename=None)
-                dfs.append(pd.read_csv(StringIO(rec), sep='\t', header=0))
-        df = pd.concat(dfs, ignore_index=True, sort = False)
+            res = self.paginate_query(
+                node="visit", props=["project_id", "id"], args=query_args
+            )
+            if len(res["data"]["visit"]) > 0:
+                uuid = res["data"]["visit"][0]["id"]
+                project_id = res["data"]["visit"][0]["project_id"]
+                program, project = project_id.split("-", 1)
+                rec = self.sub.export_record(
+                    program=program,
+                    project=project,
+                    uuid=uuid,
+                    fileformat="tsv",
+                    filename=None,
+                )
+                dfs.append(pd.read_csv(StringIO(rec), sep="\t", header=0))
+        df = pd.concat(dfs, ignore_index=True, sort=False)
 
         return df
 
@@ -2805,8 +3586,6 @@ class Gen3Expansion:
 #         raise(Exception(resp.reason))
 #     token = resp.json()['access_token']
 #     return token
-
-
 
 
 # get a summarized version of a data dictionary
@@ -2888,6 +3667,21 @@ class Gen3Expansion:
 # print("props: {} prop_ids: {}, edges: {}".format(len(props),len(prop_ids),edges))
 
 
-
 ### look up files in indexd by md5 sum
 # index_url = "{}/index?hash=md5:{}".format(api, md5sum)
+
+
+### Add function to update indexd:
+# for guid in list(files.keys()):
+#     file_name = files[guid]['file_name']
+#     rev = files[guid]['rev']
+#     payload = {'file_name': file_name}
+#     index_url = "{}/index/index/{}?rev={}".format(api,guid,rev)
+#     access_token = exp.get_token()
+#     headers = {
+#       'Content-Type': 'application/json',
+#       'Authorization': 'bearer {}'.format(access_token)
+#     }
+#     response = requests.put(index_url, headers=headers, json=payload)
+#     print(response.text.encode('utf8'))
+#

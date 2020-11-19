@@ -23,7 +23,7 @@ with open("CHANGELOG.md", "r") as f:
 setup(
     name="gen3",
     description=(
-        "The Gen3 SDK makes it easy to utilize " "functionality in Gen3 data commons. "
+        "The Gen3 SDK makes it easy to utilize functionality in Gen3 data commons."
     ),
     long_description=README + "\n\n" + CHANGELOG,
     long_description_content_type="text/markdown",
@@ -36,13 +36,11 @@ setup(
     install_requires=[
         "requests",
         "pandas",
-        "indexclient",
+        "indexclient>=1.6.2",
+        "drsclient>=0.1.3<1.0.0",
         "aiohttp",
         "backoff",
         "click",
-    ],
-    dependency_links=[
-        "git+https://github.com/uc-cdis/indexclient.git@1.6.2#egg=indexclient"
     ],
     package_data={"": ["LICENSE"]},
     classifiers=[

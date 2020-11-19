@@ -5,7 +5,7 @@ multiple processes and coroutines using Python's asyncio library.
 
 The default manifest format created is a Comma-Separated Value file (csv)
 with rows for every record. A header row is created with field names:
-guid,authz,acl,file_size,md5,urls
+guid,authz,acl,file_size,md5,urls,file_name
 
 Fields that are lists (like acl, authz, and urls) separate the values with spaces.
 
@@ -15,7 +15,7 @@ Attributes:
     MAX_CONCURRENT_REQUESTS (int): maximum number of desired concurrent requests across
         processes/threads
     TMP_FOLDER (str): Folder directory for placing temporary files
-        NOTE: We have to use a temporary folder b/c Python's file writing is not
+        NOTE - We have to use a temporary folder b/c Python's file writing is not
               thread-safe so we can't have all processes writing to the same file.
               To workaround this, we have each process write to a file and concat
               them all post-processing.
@@ -91,9 +91,6 @@ async def _write_all_index_records_to_file(
         max_concurrent_requests (int): the maximum number of concurrent requests allowed
             NOTE: This is the TOTAL number, not just for this process. Used to help
             determine how many requests a process should be making at one time
-
-    No Longer Raises:
-        IndexError: If script detects missing files in indexd after initial parsing
     """
     index = Gen3Index(commons_url)
     logging.debug(f"requesting indexd stats...")
@@ -151,9 +148,7 @@ async def _write_all_index_records_to_file(
         os.unlink(output_filename)
 
     with open(output_filename, "wb") as outfile:
-        outfile.write(
-            "guid, urls, authz, acl, md5, file_size, file_name\n".encode("utf8")
-        )
+        outfile.write("guid,urls,authz,acl,md5,file_size,file_name\n".encode("utf8"))
         for filename in glob.glob(TMP_FOLDER + "*"):
             if output_filename == filename:
                 # don't want to copy the output into the output
@@ -296,9 +291,13 @@ async def _parse_from_queue(queue):
                 for record in list(records):
                     manifest_row = [
                         record.get("did"),
-                        " ".join(record.get("urls")),
-                        " ".join(record.get("authz")),
-                        " ".join(record.get("acl")),
+                        " ".join(
+                            [url.replace(" ", "%20") for url in record.get("urls")]
+                        ),
+                        " ".join(
+                            [auth.replace(" ", "%20") for auth in record.get("authz")]
+                        ),
+                        " ".join([a.replace(" ", "%20") for a in record.get("acl")]),
                         record.get("hashes", {}).get("md5"),
                         record.get("size"),
                         record.get("file_name"),
