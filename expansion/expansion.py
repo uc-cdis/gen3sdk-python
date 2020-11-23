@@ -2446,20 +2446,16 @@ class Gen3Expansion:
         if outfile in ["JSON", "TSV"]:
             dc_regex = re.compile(r"https:\/\/(.+)\/")
             dc = dc_regex.match(self._endpoint).groups()[0]
-            outname = "{}_indexd_records.txt".format(dc)
 
             if outfile == "JSON":
+                outname = "{}_indexd_records.json".format(dc)
                 with open(outname, "w") as output:
                     output.write(json.dumps(all_records))
 
             if outfile == "TSV":
-                irecs = [irec for irec in all_records]
-                dids = [irec["did"] for irec in irecs]
-
-                irecs = [irec for irec in all_records if all_records["size"] is None]
-
-                # failed_guids = [irec['did'] for irec in failed]
-                df = pd.DataFrame()
+                outname = "{}_indexd_records.tsv".format(dc)
+                idf = pd.DataFrame(all_records)
+                idf.to_csv(outname,sep='\t')
 
         else:
             print(
