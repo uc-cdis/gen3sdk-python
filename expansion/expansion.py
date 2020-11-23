@@ -2455,7 +2455,7 @@ class Gen3Expansion:
             if outfile == "TSV":
                 outname = "{}_indexd_records.tsv".format(dc)
                 idf = pd.DataFrame(all_records)
-                idf.to_csv(outname,sep='\t')
+                idf.to_csv(outname,sep='\t',index=False)
 
         else:
             print(
