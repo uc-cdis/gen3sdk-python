@@ -41,6 +41,7 @@ setup(
         "aiohttp",
         "backoff",
         "click",
+        "email_validator",
     ],
     package_data={"": ["LICENSE"]},
     classifiers=[

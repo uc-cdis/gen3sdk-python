@@ -5,3 +5,4 @@ drsclient<1.0.0
 aiohttp
 backoff
 click
+email_validator
