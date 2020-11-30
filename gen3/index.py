@@ -8,7 +8,7 @@ import sys
 import indexclient.client as client
 
 from gen3.utils import DEFAULT_BACKOFF_SETTINGS
-
+from gen3.auth import Gen3Auth
 
 class Gen3Index:
     """
@@ -16,20 +16,20 @@ class Gen3Index:
     A class for interacting with the Gen3 Index services.
 
     Args:
-        endpoint (str): The URL of the data commons.
-        auth_provider (Gen3Auth): A Gen3Auth class instance.
+        auth_provider (Gen3Auth): A Gen3Auth class instance or indexd basic creds tuple
 
     Examples:
         This generates the Gen3Index class pointed at the sandbox commons while
         using the credentials.json downloaded from the commons profile page.
 
-        >>> endpoint = "https://nci-crdc-demo.datacommons.io"
-        ... auth = Gen3Auth(endpoint, refresh_file="credentials.json")
-        ... sub = Gen3Submission(endpoint, auth)
+        >>> auth = Gen3Auth(refresh_file="credentials.json")
+        ... sub = Gen3Submission(auth.endpoint, auth)
 
     """
 
-    def __init__(self, endpoint, auth_provider=None, service_location="index"):
+    def __init__(self, endpoint=None, auth_provider=None, service_location="index"):
+        if auth_provider and isinstance(auth_provider,Gen3Auth):
+            endpoint = auth_provider.endpoint
         endpoint = endpoint.strip("/")
         # if running locally, indexd is deployed by itself without a location relative
         # to the commons

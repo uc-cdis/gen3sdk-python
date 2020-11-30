@@ -25,28 +25,25 @@ class Gen3Submission:
     Supports GraphQL queries through Peregrine.
 
     Args:
-        endpoint (str): The URL of the data commons.
         auth_provider (Gen3Auth): A Gen3Auth class instance.
 
     Examples:
         This generates the Gen3Submission class pointed at the sandbox commons while
         using the credentials.json downloaded from the commons profile page.
 
-        >>> endpoint = "https://nci-crdc-demo.datacommons.io"
-        ... auth = Gen3Auth(endpoint, refresh_file="credentials.json")
-        ... sub = Gen3Submission(endpoint, auth)
+        >>> auth = Gen3Auth(refresh_file="credentials.json")
+        ... sub = Gen3Submission(auth)
 
     """
 
-    def __init__(self, endpoint, auth_provider):
-        self._auth_provider = auth_provider
-        self._endpoint = endpoint
+    def __init__(self, endpoint=None, auth_provider=None):
+        self._auth_provider = auth_provider or endpoint
+        self._endpoint = self._auth_provider.endpoint
 
     def __export_file(self, filename, output):
         """Writes an API response to a file."""
-        outfile = open(filename, "w")
-        outfile.write(output)
-        outfile.close
+        with open(filename, "w") as outfile:
+            outfile.write(output)
         print("\nOutput written to file: " + filename)
 
     ### Program functions

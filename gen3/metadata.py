@@ -19,9 +19,8 @@ class Gen3Metadata:
         This generates the Gen3Metadata class pointed at the sandbox commons while
         using the credentials.json downloaded from the commons profile page.
 
-        >>> endpoint = "https://nci-crdc-demo.datacommons.io"
-        ... auth = Gen3Auth(endpoint, refresh_file="credentials.json")
-        ... sub = Gen3Metadata(endpoint, auth)
+        >>> auth = Gen3Auth(endpoint, refresh_file="credentials.json")
+        ... sub = Gen3Metadata(auth.endpoint, auth)
 
     Attributes:
         admin_endpoint (str): endpoint for admin functionality (Create/Update/Delete)
