@@ -29,7 +29,7 @@ class Gen3Auth(AuthBase):
 
         If working in a Gen3 Workspace, initialize as follows:
 
-        >>> auth = Gen3Auth() # in a Gen3 Workspace
+        >>> auth = Gen3Auth()
     """
 
     def __init__(self, endpoint=None, refresh_file=None, refresh_token=None, idp=None):
