@@ -27,6 +27,9 @@ class Gen3Auth(AuthBase):
 
         >>> auth = Gen3Auth("https://nci-crdc-demo.datacommons.io", refresh_file="credentials.json")
 
+        If working in a Gen3 Workspace, initialize as follows:
+
+        >>> auth = Gen3Auth() # in a Gen3 Workspace
     """
 
     def __init__(self, endpoint=None, refresh_file=None, refresh_token=None, idp=None):
