@@ -6,7 +6,6 @@ on:
 
 jobs:
   build_docs:
-
     runs-on: ubuntu-latest
 
     steps:
