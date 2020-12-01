@@ -46,11 +46,23 @@ To get the latest released version of the SDK:
 
 `pip install gen3`
 
-To use the latest code in this repo you can clone this and then run:
+This is an SDK that also exposes a Command Line Interface (CLI). You can now import functions from `gen3` into your own Python scripts or you can use the command line interface:
 
-`python setup.py install`
+`gen3 --help`
 
-> Developer Note: If you want to edit this SDK and test it you can do a development install with `python setup.py develop`.
+## Development
+
+To use the latest code in this repo (or to develop new features) you can clone this repo, install `poetry`:
+
+```
+curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+```
+
+and then use `poetry` to install this package:
+
+```
+poetry install -vv
+```
 
 ## Quickstart Example
 
@@ -1225,7 +1237,7 @@ if __name__ == "__main__":
 
 ## Bundle Tools
 ### Ingest Manifest
-The only required columns are `bundle_name` and `ids`(list of object or bundles). The order of bundles in the manifest matters: you can reference a `bundle_name` in the `ids` list if that bundle_name appears before the bundle containing it. Lowest level bundles should only contain GUIDs to File Objects and should live at the top of the manifest. If a GUID is not provided for a bundle, indexd will assign a GUID for the bundle. Within the manifest `bundle_names` is to be used as a unique identifier. 
+The only required columns are `bundle_name` and `ids`(list of object or bundles). The order of bundles in the manifest matters: you can reference a `bundle_name` in the `ids` list if that bundle_name appears before the bundle containing it. Lowest level bundles should only contain GUIDs to File Objects and should live at the top of the manifest. If a GUID is not provided for a bundle, indexd will assign a GUID for the bundle. Within the manifest `bundle_names` is to be used as a unique identifier.
 
 #### Example Bundle:
 To create the following bundle:
@@ -1249,7 +1261,7 @@ The following is an example csv manifest:
 ```
 bundle_name,ids,GUID,size,type,checksum,description
 A,[dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2],,,,,some description
-B,['dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2' 'dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b'],,789,,,something 
+B,['dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2' 'dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b'],,789,,,something
 C,[A 'B' dg.TEST/ed8f4658-6acd-4f96-9dd8-3709890c959e],,120,,,lalala
 D,[A B C],,,[md5 sha256],[1234567 abc12345],
 E,[A B],dg.xxxx/590ee63d-2790-477a-bbf8-d53873ca4933,,md5 sha256,abcdefg abcd123,

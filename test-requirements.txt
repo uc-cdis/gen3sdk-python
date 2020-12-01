@@ -1,8 +1,0 @@
-pytest>=3.2.3
-mock
-
--e git+https://github.com/uc-cdis/cdisutils-test.git@1.0.0#egg=cdisutilstest
--e git+https://github.com/uc-cdis/doiclient.git@1.0.0#egg=doiclient
--e git+https://github.com/uc-cdis/dosclient.git@1.0.0#egg=dosclient
--e git+https://github.com/uc-cdis/hsclient.git@1.0.0#egg=hsclient
--e git+https://github.com/uc-cdis/indexd.git@2.14.1#egg=indexd
