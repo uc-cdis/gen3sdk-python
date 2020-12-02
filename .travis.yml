@@ -14,7 +14,7 @@ script:
 before_deploy:
 - poetry config repositories.testpypi https://test.pypi.org/legacy/ # remove
 - poetry config pypi-token.testpypi $PYPI_API_TOKEN # poetry config pypi-token.pypi $PYPI_API_TOKEN
-- poetry build -f sdist
+- poetry build
 deploy:
   skip_cleanup: true
   provider: script
