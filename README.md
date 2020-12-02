@@ -151,6 +151,14 @@ if __name__ == "__main__":
 
 This contains an auth wrapper for supporting JWT based authentication with `requests`. The access token is generated from the refresh token and is regenerated on expiration.
 
+Outside of a Gen3 Workspace, a `Gen3Auth` instance can be initialized with parameter `endpoint` and either parameter `refresh_file` (see example above) or parameter `refresh_token`. When working in a Gen3 Workspace, all parameters are optional and the `Gen3Auth` instance should be initialized as follows:
+
+```
+auth = Gen3Auth()
+```
+
+See [detailed Gen3Auth documentation](https://uc-cdis.github.io/gen3sdk-python/_build/html/auth.html) for more details.
+
 ### Gen3Index
 
 This is the client for interacting with the Indexd service for GUID brokering and resolution.
