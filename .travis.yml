@@ -20,6 +20,7 @@ deploy:
   provider: script
   script: poetry publish -n -vv -r testpypi # poetry publish -n -vv
   on:
+    branch: chore/poetry # remove
     python: 3.6
     repo: uc-cdis/gen3sdk-python
     # tags: true
