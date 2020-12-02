@@ -17,13 +17,7 @@ before_deploy:
 - poetry config pypi-token.pypi $PYPI_PROD_API_TOKEN
 - poetry build
 deploy:
-# - provider: script
-#   skip_cleanup: true
-#   script: poetry publish -n -vv
-#   on:
-#     python: 3.6
-#     repo: uc-cdis/gen3sdk-python
-#     tags: true
+# test pypi deployment on branches that are not master
 - provider: script
   skip_cleanup: true
   script: poetry publish -n -vv -r testpypi || true
@@ -33,6 +27,14 @@ deploy:
     tags: false
     all_branches: true
     condition: "$TRAVIS_BRANCH != master"
+# real pypi deployment on tags on master
+- provider: script
+  skip_cleanup: true
+  script: poetry publish -n -vv
+  on:
+    python: 3.6
+    repo: uc-cdis/gen3sdk-python
+    tags: true
 env:
   global:
   - secure: jCslhsRF+cpozrC75nmYkBizmdBL/01StonnarwaWmCFBEzX22i6XklpUyROYRpvHTQ7SHJlFh+kmvptT4UmRxFCqKq/RNFq2We0rRhnfWNRsQOok5ENU5MDMgD0kl3RUeEElpVk36aQ8cUyybNyuel0ZFC1F+C5GOUKaCtiDrcX9RVu5jYbydi1W1RfsCNkmyJND8efdqBXD81BueXqP7xYxdyqz+f3du/1qIx5GR/X+jv6WE2Oum6EMq5tbiWf3qc6OnxNdNd0p/O7seBIZyvOZvFvX8Cx3PsCfSbWyeX0hcZCDIhnG5YTah944MplvVR70lOx0GvzmxHZCpxffUfliXLJCrBQy9RZbomXcXI6c1h88DMt6odYNDlZJpcV12sQypbWBr7FJb1En93FcSqpdoPKEU9eR+WzQ0/GNFL5KibZ95yQdwT31gnlnz7NLQz8ubdkrKMpZTbDM1HCAgLN326jMwYpn/RxRtXFcrxvA6sTxpsCQhWssIBRHv5sY0c5vlDkLADNAeA1s9+SOKWAKHJh5NzFby+vt59vi5QSkdWRsKwZsk01NNrBUFcJuDxsp9wTEO3NigzoYrnZXk2ews9+WRaiTmsEWa4/LSfY0afQA4ezbGVT4yY/tje2XFhsaYCT/JsJpHBgyNDadX6FaAraKw4oqsQDu76/KjU=
