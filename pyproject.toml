@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "gen3"
 homepage = "https://gen3.org/"
-version = "0.0.2"
+version = "0.0.3"
 description = "Gen3 CLI and Python SDK"
 authors = ["Center for Translational Data Science at the University of Chicago <support@datacommons.io>"]
 license = "Apache-2.0"
@@ -26,7 +26,7 @@ aiohttp = "*"
 backoff = "*"
 click = "*"
 pandas = "*"
-pypfb = "^0.5.0"
+pypfb = "<1.0.0"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=3.2.3"
