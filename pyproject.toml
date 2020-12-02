@@ -41,7 +41,6 @@ indexd = { git = "https://github.com/uc-cdis/indexd.git", tag = "2.14.1" }
 gen3 = 'gen3.cli:main'
 
 [tool.poetry.plugins."gen3.plugins"]
-"show" = "gen3.cli.show"
 
 [build-system]
 requires = ["poetry>=0.12"]
