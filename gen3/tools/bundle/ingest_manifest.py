@@ -23,7 +23,7 @@ from gen3.tools.indexing.manifest_columns import (
 
 """
 NOTES:
-- Assumption is that the user creates the manifest with the correct hierarchy. 
+- Assumption is that the user creates the manifest with the correct hierarchy.
 
 Bundle manifest format
 
@@ -33,7 +33,7 @@ Bundle-C, [File-3-GUID, File-4-GUID],
 Bundle-A, [Bundle-B, Bundle-C],
 
 json representaion:
-[ 
+[
   {
     "Bundle_name": "Bundle-B",
     "Ids": [ "File-1-GUID", "File-2-GUID" ],
@@ -88,7 +88,7 @@ def _replace_bundle_name_with_guid(bundles, bundle_name_to_guid):
 def _join_type_and_checksum(type_list, checksum_list):
     """
     Join checksum and their correlated type together to the following format:
-    "checksums": [{"type":"md5", "checksum":"abcdefg}, {"type":"sha256", "checksum":"abcd12345"}]
+    "checksums": [{"type":"md5", "checksum":"abcdefg}, {"type":"sha256", "checksum":"abcd12345"}] # pragma: allowlist secret
     """
     checksums = [
         {
@@ -215,7 +215,9 @@ def _verify_and_process_bundle_manifest(manifest_file, manifest_file_delimiter="
             if "checksum" in record and "type" in record:
                 if len(record["type"]) != len(record["checksum"]):
                     logging.error(
-                        "ERROR: Number of checksum types ({}) and checksums ({}) does not match for row {}.".format(len(record["type"]), len(record["checksum"]), row_n)
+                        "ERROR: Number of checksum types ({}) and checksums ({}) does not match for row {}.".format(
+                            len(record["type"]), len(record["checksum"]), row_n
+                        )
                     )
                     pass_verification = False
                 elif not validate_hashes(dict(zip(record["type"], record["checksum"]))):

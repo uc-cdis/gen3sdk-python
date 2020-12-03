@@ -1,20 +1,44 @@
 language: python
 python:
 - 3.6
+before_install:
+- 'curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -'
+- source $HOME/.poetry/env
+- which poetry
+- poetry --version
 install:
-- pip install -r requirements.txt
-- pip install -r test-requirements.txt
-- pip list
+- poetry install -vv
+- poetry show
 script:
-- sed -i.bak "s/0.1.0/$(git describe --tags --abbrev=0 --match=[0-9]*)/g" setup.py
-- python setup.py install
-- pytest -vv tests
+- poetry run pytest -vv ./tests
+before_deploy:
+- poetry config repositories.testpypi https://test.pypi.org/legacy/
+- poetry config pypi-token.testpypi $PYPI_API_TOKEN
+- poetry config pypi-token.pypi $PYPI_PROD_API_TOKEN
+- poetry build
 deploy:
+# test pypi deployment on branches that are not master
+- provider: script
   skip_cleanup: true
-  provider: pypi
-  user: uccdistravis
-  password:
-    secure: Av0fwc8xHYWpsvamlBQH/+HsPjCW8OIpUzPN2QAOWFXY4LzJmVI7FOHfTanYCQkFjoAFu/57r0ZKf1Y4wxHDvMZtqZGJzZa8ChRgFFIVcZ8qGmXvjgjczrmR3Nxx28pAluIAtLtYSRfLKq+ckPmEmBK3r4rngErgeOnQ+DI+3vbQFOq1XgoLlLD6FQZjMAQAGnil99TK0KJblH5nXzX3lk9/+vvEclxg1Ud9K3ALWobfcuT1O2SL2MuwrDu4qw9ppNvQMr3mvRWpIFpJH1nu9AEeHq4NoM0xLrWQf+9s9WzC4bSbiVTEwsXOwZ0AZTDKWWaqEzAO5VB1QIclhI5fcOP4dDCTcGvgCmkMbV4Hdpy5oecNDoJfvBmP91quccE1pvuTFuCWXNKPscLRLSHep5zwy4DUQ2ODyIy04XYoufQOGwXVtpDhLQ7zEVWRFGcAMAjXjfU3ZBD/nolQg5cnkZN+jCos/xa+5GFsuP0ExSCSV+/ctYTi2BMXhO3kcf727DpnRYAbkj3bB56vLxjwRJXf64jMC/+mTommiRV4b3QaWxkP/mNYx58tdCCckhRRoyLnf/nOeGPP0mpyULxq2t5oU2TZZbv5H7eMWB9DiRmC+6lweMDjRh1QsMVCr9HSU0A4cSEA98VPdF7LiaKqIL68BQQ/lnLuDPjIS0fq838=
+  script: poetry publish -n -vv -r testpypi || true
   on:
+    python: 3.6
+    repo: uc-cdis/gen3sdk-python
+    tags: false
+    all_branches: true
+    condition: "$TRAVIS_BRANCH != master"
+# real pypi deployment on tags on master
+- provider: script
+  skip_cleanup: true
+  script: poetry publish -n -vv
+  on:
+    python: 3.6
+    repo: uc-cdis/gen3sdk-python
     tags: true
-    python: '3.6'
+env:
+  global:
+  - secure: jCslhsRF+cpozrC75nmYkBizmdBL/01StonnarwaWmCFBEzX22i6XklpUyROYRpvHTQ7SHJlFh+kmvptT4UmRxFCqKq/RNFq2We0rRhnfWNRsQOok5ENU5MDMgD0kl3RUeEElpVk36aQ8cUyybNyuel0ZFC1F+C5GOUKaCtiDrcX9RVu5jYbydi1W1RfsCNkmyJND8efdqBXD81BueXqP7xYxdyqz+f3du/1qIx5GR/X+jv6WE2Oum6EMq5tbiWf3qc6OnxNdNd0p/O7seBIZyvOZvFvX8Cx3PsCfSbWyeX0hcZCDIhnG5YTah944MplvVR70lOx0GvzmxHZCpxffUfliXLJCrBQy9RZbomXcXI6c1h88DMt6odYNDlZJpcV12sQypbWBr7FJb1En93FcSqpdoPKEU9eR+WzQ0/GNFL5KibZ95yQdwT31gnlnz7NLQz8ubdkrKMpZTbDM1HCAgLN326jMwYpn/RxRtXFcrxvA6sTxpsCQhWssIBRHv5sY0c5vlDkLADNAeA1s9+SOKWAKHJh5NzFby+vt59vi5QSkdWRsKwZsk01NNrBUFcJuDxsp9wTEO3NigzoYrnZXk2ews9+WRaiTmsEWa4/LSfY0afQA4ezbGVT4yY/tje2XFhsaYCT/JsJpHBgyNDadX6FaAraKw4oqsQDu76/KjU=
+  - secure: cFv/73omvtKB7/3OYuIodzNwSLUlqJuGgtyTf0W6pN5oJSpcE9U4Ti/ub2aUABaH15e0Fdp+MxaL+j4x5/TmzGwrmpP8Ts2nueJNh1XeC2aO2S+YevRuV+8L4rwbFvZzYe/rL9hbKx9Ghiatc/fk147j4Svf/ZNWPBHgBloZaXWGR2kRxrRrjnogXceTR6K2mPUMUr0+azYDH0Zwuu3Y5HF/CT5DpxWGs657VjM6EiGsZ6UUq4sqj4XZKKjTtp/I8zPH1z6NliBDqVtASX3UsZewbiDaa1DIs4NBN5QDSR3/vQfVoouPFy7M/oIqIpvDFOWfHahA8ac3/CdlMAT64KknRodpm/s2uUxJOtrDOSBMtdREEc+yMuBPf85+s+Vk6B8upkIYnpI2d7vDaHSFBIlQk/IbaoUsRUVeacQ6b20JhPyYMrKnvG9/aW7KfYJr23SpRwjwvh6D4ejbmFtePrU/uk1Js81lCUkYHBBqDvRXW/BNMKxyXTyMlCL4om4gIlQpBmru+vpDGoHHLzO+I9axmBBKWq1HgR5nF89Nd6AMoSTzAwt+7xmMsgaDaMewZczBnLyeGiKNKATkQ66qdhqUB+6dmKpTyDCFOwRaDUOaH71f3wVamOQpoHUdCPNnIh1B6RuZaXylGyO2qtsr65bC2uZCHVw9dk3eeqL2TUU=
+after_deploy:
+- pip install gen3git
+- gen3git release

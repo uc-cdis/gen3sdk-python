@@ -6,7 +6,6 @@ on:
 
 jobs:
   build_docs:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -19,9 +18,9 @@ jobs:
         python-version: 3.6
     - name: Install dependencies (allow "failures" and attempt to continue)
       run: |
-        python -m pip install --upgrade pip || true
-        pip install -r requirements.txt || true
-        pip install -r test-requirements.txt || true
+        curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+        source $HOME/.poetry/env
+        poetry install -vv || true
         pip install sphinx || true
     - name: Build docs
       run: |
