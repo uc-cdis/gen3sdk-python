@@ -21,9 +21,10 @@ jobs:
         curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
         source $HOME/.poetry/env
         poetry install -vv || true
-        sphinx-build --version
+        apt-get install python3-sphinx
     - name: Build docs
       run: |
+        sphinx-build --version
         cd docs
         make html
         cd ..
