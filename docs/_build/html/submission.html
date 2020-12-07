@@ -35,6 +35,338 @@
             
   <div class="section" id="gen3-submission-class">
 <h1>Gen3 Submission Class<a class="headerlink" href="#gen3-submission-class" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="gen3.submission.Gen3Submission">
+<em class="property">class </em><code class="sig-prename descclassname">gen3.submission.</code><code class="sig-name descname">Gen3Submission</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">endpoint</span></em>, <em class="sig-param"><span class="n">auth_provider</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Submit/Export/Query data from a Gen3 Submission system.</p>
+<p>A class for interacting with the Gen3 submission services.
+Supports submitting and exporting from Sheepdog.
+Supports GraphQL queries through Peregrine.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>endpoint</strong> (<em>str</em>) – The URL of the data commons.</p></li>
+<li><p><strong>auth_provider</strong> (<a class="reference internal" href="auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><em>Gen3Auth</em></a>) – A Gen3Auth class instance.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>This generates the Gen3Submission class pointed at the sandbox commons while
+using the credentials.json downloaded from the commons profile page.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">endpoint</span> <span class="o">=</span> <span class="s2">&quot;https://nci-crdc-demo.datacommons.io&quot;</span>
+<span class="gp">... </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
+<span class="gp">... </span><span class="n">sub</span> <span class="o">=</span> <span class="n">Gen3Submission</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">auth</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt id="gen3.submission.Gen3Submission.create_program">
+<code class="sig-name descname">create_program</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">json</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.create_program"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.create_program" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a program.
+:param json: The json of the program to create
+:type json: object</p>
+<p class="rubric">Examples</p>
+<p>This creates a program in the sandbox commons.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">create_program</span><span class="p">(</span><span class="n">json</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.submission.Gen3Submission.create_project">
+<code class="sig-name descname">create_project</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">program</span></em>, <em class="sig-param"><span class="n">json</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.create_project"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.create_project" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a project.
+:param program: The program to create a project on
+:type program: str
+:param json: The json of the project to create
+:type json: object</p>
+<p class="rubric">Examples</p>
+<p>This creates a project on the DCF program in the sandbox commons.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">create_project</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="n">json</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.submission.Gen3Submission.delete_program">
+<code class="sig-name descname">delete_program</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">program</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.delete_program"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.delete_program" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete a program.</p>
+<p>This deletes an empty program from the commons.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>program</strong> (<em>str</em>) – The program to delete.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>This deletes the “DCF” program.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_program</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.submission.Gen3Submission.delete_project">
+<code class="sig-name descname">delete_project</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">program</span></em>, <em class="sig-param"><span class="n">project</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.delete_project"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.delete_project" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete a project.</p>
+<p>This deletes an empty project from the commons.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>program</strong> (<em>str</em>) – The program containing the project to delete.</p></li>
+<li><p><strong>project</strong> (<em>str</em>) – The project to delete.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>This deletes the “CCLE” project from the “DCF” program.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_project</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.submission.Gen3Submission.delete_record">
+<code class="sig-name descname">delete_record</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">program</span></em>, <em class="sig-param"><span class="n">project</span></em>, <em class="sig-param"><span class="n">uuid</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.delete_record"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.delete_record" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete a record from a project.
+:param program: The program to delete from.
+:type program: str
+:param project: The project to delete from.
+:type project: str
+:param uuid: The uuid of the record to delete
+:type uuid: str</p>
+<p class="rubric">Examples</p>
+<p>This deletes a record from the CCLE project in the sandbox commons.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_record</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">,</span> <span class="n">uuid</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.submission.Gen3Submission.export_node">
+<code class="sig-name descname">export_node</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">program</span></em>, <em class="sig-param"><span class="n">project</span></em>, <em class="sig-param"><span class="n">node_type</span></em>, <em class="sig-param"><span class="n">fileformat</span></em>, <em class="sig-param"><span class="n">filename</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.export_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.export_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Export all records in a single node type of a project.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>program</strong> (<em>str</em>) – The program to which records belong.</p></li>
+<li><p><strong>project</strong> (<em>str</em>) – The project to which records belong.</p></li>
+<li><p><strong>node_type</strong> (<em>str</em>) – The name of the node to export.</p></li>
+<li><p><strong>fileformat</strong> (<em>str</em>) – Export data as either ‘json’ or ‘tsv’</p></li>
+<li><p><strong>filename</strong> (<em>str</em>) – Name of the file to export to; if no filename is provided, prints data to screen</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>This exports all records in the “sample” node from the CCLE project in the sandbox commons.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">export_node</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">,</span> <span class="s2">&quot;sample&quot;</span><span class="p">,</span> <span class="s2">&quot;tsv&quot;</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s2">&quot;DCF-CCLE_sample_node.tsv&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.submission.Gen3Submission.export_record">
+<code class="sig-name descname">export_record</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">program</span></em>, <em class="sig-param"><span class="n">project</span></em>, <em class="sig-param"><span class="n">uuid</span></em>, <em class="sig-param"><span class="n">fileformat</span></em>, <em class="sig-param"><span class="n">filename</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.export_record"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.export_record" title="Permalink to this definition">¶</a></dt>
+<dd><p>Export a single record into json.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>program</strong> (<em>str</em>) – The program the record is under.</p></li>
+<li><p><strong>project</strong> (<em>str</em>) – The project the record is under.</p></li>
+<li><p><strong>uuid</strong> (<em>str</em>) – The UUID of the record to export.</p></li>
+<li><p><strong>fileformat</strong> (<em>str</em>) – Export data as either ‘json’ or ‘tsv’</p></li>
+<li><p><strong>filename</strong> (<em>str</em>) – Name of the file to export to; if no filename is provided, prints data to screen</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>This exports a single record from the sandbox commons.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">export_record</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">,</span> <span class="s2">&quot;d70b41b9-6f90-4714-8420-e043ab8b77b9&quot;</span><span class="p">,</span> <span class="s2">&quot;json&quot;</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s2">&quot;DCF-CCLE_one_record.json&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.submission.Gen3Submission.get_dictionary_all">
+<code class="sig-name descname">get_dictionary_all</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.get_dictionary_all"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.get_dictionary_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the entire dictionary object for a commons.</p>
+<p>This gets a json of the current dictionary schema for a commons.</p>
+<p class="rubric">Examples</p>
+<p>This returns the dictionary schema for a commons.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">get_dictionary_all</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.submission.Gen3Submission.get_dictionary_node">
+<code class="sig-name descname">get_dictionary_node</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">node_type</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.get_dictionary_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.get_dictionary_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the dictionary schema for a specific node.</p>
+<p>This gets the current json dictionary schema for a specific node type in a commons.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>node_type</strong> (<em>str</em>) – The node_type (or name of the node) to retrieve.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>This returns the dictionary schema the “subject” node.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">get_dictionary_node</span><span class="p">(</span><span class="s2">&quot;subject&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.submission.Gen3Submission.get_graphql_schema">
+<code class="sig-name descname">get_graphql_schema</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.get_graphql_schema"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.get_graphql_schema" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the GraphQL schema for a commons.</p>
+<p>This runs the GraphQL introspection query against a commons and returns the results.</p>
+<p class="rubric">Examples</p>
+<p>This returns the GraphQL schema.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">get_graphql_schema</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.submission.Gen3Submission.get_programs">
+<code class="sig-name descname">get_programs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.get_programs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.get_programs" title="Permalink to this definition">¶</a></dt>
+<dd><p>List registered programs</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.submission.Gen3Submission.get_project_dictionary">
+<code class="sig-name descname">get_project_dictionary</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">program</span></em>, <em class="sig-param"><span class="n">project</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.get_project_dictionary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.get_project_dictionary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get dictionary schema for a given project</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>program</strong> – the name of the program the project is from</p></li>
+<li><p><strong>project</strong> – the name of the project you want the dictionary schema from</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">get_project_dictionary</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.submission.Gen3Submission.get_project_manifest">
+<code class="sig-name descname">get_project_manifest</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">program</span></em>, <em class="sig-param"><span class="n">project</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.get_project_manifest"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.get_project_manifest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a projects file manifest</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>program</strong> – the name of the program the project is from</p></li>
+<li><p><strong>project</strong> – the name of the project you want the manifest from</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">get_project_manifest</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.submission.Gen3Submission.get_projects">
+<code class="sig-name descname">get_projects</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">program</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.get_projects"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.get_projects" title="Permalink to this definition">¶</a></dt>
+<dd><p>List registered projects for a given program</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>program</strong> – the name of the program you want the projects from</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<p>This lists all the projects under the DCF program</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">get_projects</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.submission.Gen3Submission.open_project">
+<code class="sig-name descname">open_project</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">program</span></em>, <em class="sig-param"><span class="n">project</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.open_project"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.open_project" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mark a project <code class="docutils literal notranslate"><span class="pre">open</span></code>. Opening a project means uploads, deletions, etc. are allowed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>program</strong> – the name of the program the project is from</p></li>
+<li><p><strong>project</strong> – the name of the project you want to ‘open’</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">get_project_manifest</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.submission.Gen3Submission.query">
+<code class="sig-name descname">query</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">query_txt</span></em>, <em class="sig-param"><span class="n">variables</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">max_tries</span><span class="o">=</span><span class="default_value">1</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.query" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute a GraphQL query against a data commons.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>query_txt</strong> (<em>str</em>) – Query text.</p></li>
+<li><p><strong>variables</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">object</span></code>, optional) – Dictionary of variables to pass with the query.</p></li>
+<li><p><strong>max_tries</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code>, optional) – Number of times to retry if the request fails.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>This executes a query to get the list of all the project codes for all the projects
+in the data commons.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;{ project(first:0) { code } }&quot;</span>
+<span class="gp">... </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.submission.Gen3Submission.submit_file">
+<code class="sig-name descname">submit_file</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">project_id</span></em>, <em class="sig-param"><span class="n">filename</span></em>, <em class="sig-param"><span class="n">chunk_size</span><span class="o">=</span><span class="default_value">30</span></em>, <em class="sig-param"><span class="n">row_offset</span><span class="o">=</span><span class="default_value">0</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.submit_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.submit_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>project_id</strong> (<em>str</em>) – The project_id to submit to.</p></li>
+<li><p><strong>filename</strong> (<em>str</em>) – The file containing data to submit. The format can be TSV, CSV or XLSX (first worksheet only for now).</p></li>
+<li><p><strong>chunk_size</strong> (<em>integer</em>) – The number of rows of data to submit for each request to the API.</p></li>
+<li><p><strong>row_offset</strong> (<em>integer</em>) – The number of rows of data to skip; ‘0’ starts submission from the first row and submits all data.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>This submits a spreadsheet file containing multiple records in rows to the CCLE project in the sandbox commons.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">submit_file</span><span class="p">(</span><span class="s2">&quot;DCF-CCLE&quot;</span><span class="p">,</span><span class="s2">&quot;data_spreadsheet.tsv&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.submission.Gen3Submission.submit_record">
+<code class="sig-name descname">submit_record</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">program</span></em>, <em class="sig-param"><span class="n">project</span></em>, <em class="sig-param"><span class="n">json</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.submit_record"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.submit_record" title="Permalink to this definition">¶</a></dt>
+<dd><p>Submit record(s) to a project as json.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>program</strong> (<em>str</em>) – The program to submit to.</p></li>
+<li><p><strong>project</strong> (<em>str</em>) – The project to submit to.</p></li>
+<li><p><strong>json</strong> (<em>object</em>) – The json defining the record(s) to submit. For multiple records, the json should be an array of records.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>This submits records to the CCLE project in the sandbox commons.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">submit_record</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">,</span> <span class="n">json</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 
 
