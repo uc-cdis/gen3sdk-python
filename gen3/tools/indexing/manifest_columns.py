@@ -31,7 +31,7 @@ URLS_STANDARD_KEY = "urls"
 AUTHZ_COLUMN_NAMES = ["authz"]
 AUTHZ_STANDARD_KEY = "authz"
 
-BUNDLENAME_COLUMN_NAME = ["bundle_name", "name"]
+BUNDLENAME_COLUMN_NAME = ["bundle_name", "name", "bundle_names"]
 
 IDS_COLUMN_NAME = ["ids", "bundle_ids"]
 
