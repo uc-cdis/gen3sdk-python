@@ -30,6 +30,8 @@ jobs:
     - name: Build docs
       run: |
         sphinx-build --version
+        pip show aiohttp
+        $HOME/.poetry/bin/poetry show
         cd docs
         $HOME/.poetry/bin/poetry run make html
         cd ..

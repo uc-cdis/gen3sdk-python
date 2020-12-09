@@ -1,3 +1,6 @@
+import sys
+print('sys.path', sys.path)
+
 help('modules')
 
 import aiohttp
