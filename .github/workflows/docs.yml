@@ -26,7 +26,7 @@ jobs:
       run: |
         curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
 
-
+        echo "$HOME/.poetry/bin" >> $GITHUB_PATH
         source $HOME/.poetry/env
         poetry config virtualenvs.create true
         poetry config virtualenvs.in-project false
@@ -40,6 +40,7 @@ jobs:
         source $HOME/.poetry/env
         poetry env info --path
         pip show aiohttp || true
+        echo GITHUB_PATH $GITHUB_PATH
         poetry show
         cd docs
         poetry run make html
