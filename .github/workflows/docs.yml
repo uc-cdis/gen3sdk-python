@@ -37,6 +37,7 @@ jobs:
     - name: Build docs
       run: |
         sphinx-build --version
+        source $HOME/.poetry/env
         poetry env info --path
         pip show aiohttp || true
         poetry show
