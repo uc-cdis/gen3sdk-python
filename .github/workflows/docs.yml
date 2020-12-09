@@ -25,13 +25,14 @@ jobs:
     - name: Install dependencies (allow "failures" and attempt to continue)
       run: |
         curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
-        $HOME/.poetry/bin/poetry install -vv || true
+        source $HOME/.poetry/env
+        poetry install -vv || true
         sudo apt-get install python3-sphinx
     - name: Build docs
       run: |
         sphinx-build --version
         cd docs
-        $HOME/.poetry/bin/poetry run make html
+        poetry run make html
         cd ..
 
     - uses: stefanzweifel/git-auto-commit-action@v4.1.2
