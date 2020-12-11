@@ -43,7 +43,7 @@ jobs:
         echo GITHUB_PATH $GITHUB_PATH
         poetry show
         cd docs
-        poetry run make html
+        POETRY_VIRTUAL_ENV=$(source $HOME/.poetry/env) poetry run make html
         cd ..
 
     - uses: stefanzweifel/git-auto-commit-action@v4.1.2
