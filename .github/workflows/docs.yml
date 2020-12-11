@@ -31,7 +31,6 @@ jobs:
         poetry config virtualenvs.create false
 
         poetry install -vv
-        echo ${{ env.pythonLocation }}/python3.6/site-packages
         pip show aiohttp || true
         poetry show
         sudo apt-get install python3-sphinx
@@ -39,10 +38,8 @@ jobs:
       run: |
         sphinx-build --version
         source $HOME/.poetry/env
-        ls ${{ env.pythonLocation }}/python3.6/site-packages || true
-        echo "==========="
-        ls ${{ env.pythonLocation }}
-        export PYTHONPATH="${PYTHONPATH}:${{ env.pythonLocation }}/python3.6/site-packages"
+        ls ${{ env.pythonLocation }}/lib/python3.6/site-packages || true
+        export PYTHONPATH="${PYTHONPATH}:${{ env.pythonLocation }}/lib/python3.6/site-packages"
         cd docs
         poetry run make html
         cd ..
