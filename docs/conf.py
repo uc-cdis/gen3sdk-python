@@ -22,6 +22,7 @@ project = "Gen3 SDK"
 copyright = "2020, Center for Translational Data Science"
 author = "Center for Translational Data Science"
 
+master_doc = "index"
 
 # -- General configuration ---------------------------------------------------
 
