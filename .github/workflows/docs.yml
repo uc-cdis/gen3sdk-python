@@ -39,7 +39,7 @@ jobs:
       run: |
         sphinx-build --version
         source $HOME/.poetry/env
-        ls ${{ env.pythonLocation }}/python3.6/site-packages
+        ls ${{ env.pythonLocation }}/python3.6/site-packages || true
         echo "==========="
         ls ${{ env.pythonLocation }}
         export PYTHONPATH="${PYTHONPATH}:${{ env.pythonLocation }}/python3.6/site-packages"
