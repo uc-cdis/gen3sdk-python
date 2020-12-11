@@ -1,18 +1,26 @@
 
-<!DOCTYPE html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>Gen3 Jobs Class &#8212; Gen3 SDK  documentation</title>
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-    <script src="_static/jquery.js"></script>
-    <script src="_static/underscore.js"></script>
-    <script src="_static/doctools.js"></script>
-    <script src="_static/language_data.js"></script>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Gen3 Metadata Class" href="metadata.html" />
@@ -20,119 +28,129 @@
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
-  
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head><body>
+  </head>
+  <body>
   
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          
-
           <div class="body" role="main">
             
   <div class="section" id="gen3-jobs-class">
 <h1>Gen3 Jobs Class<a class="headerlink" href="#gen3-jobs-class" title="Permalink to this headline">¶</a></h1>
-<dl class="py class">
+<dl class="class">
 <dt id="gen3.jobs.Gen3Jobs">
-<em class="property">class </em><code class="sig-prename descclassname">gen3.jobs.</code><code class="sig-name descname">Gen3Jobs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">endpoint</span></em>, <em class="sig-param"><span class="n">auth_provider</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">service_location</span><span class="o">=</span><span class="default_value">'job'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<em class="property">class </em><code class="descclassname">gen3.jobs.</code><code class="descname">Gen3Jobs</code><span class="sig-paren">(</span><em>endpoint</em>, <em>auth_provider=None</em>, <em>service_location='job'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
 <p>A class for interacting with the Gen3’s Job Dispatching Service(s).</p>
 <p class="rubric">Examples</p>
 <p>This generates the Gen3Jobs class pointed at the sandbox commons while
 using the credentials.json downloaded from the commons profile page.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">endpoint</span> <span class="o">=</span> <span class="s2">&quot;https://nci-crdc-demo.datacommons.io&quot;</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">endpoint</span> <span class="o">=</span> <span class="s2">&quot;https://nci-crdc-demo.datacommons.io&quot;</span>
 <span class="gp">... </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
 <span class="gp">... </span><span class="n">sub</span> <span class="o">=</span> <span class="n">Gen3Jobs</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">auth</span><span class="p">)</span>
 </pre></div>
 </div>
-<dl class="py method">
+<dl class="method">
 <dt id="gen3.jobs.Gen3Jobs.async_run_job_and_wait">
-<em class="property">async </em><code class="sig-name descname">async_run_job_and_wait</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">job_name</span></em>, <em class="sig-param"><span class="n">job_input</span></em>, <em class="sig-param"><span class="n">_ssl</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.async_run_job_and_wait"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.async_run_job_and_wait" title="Permalink to this definition">¶</a></dt>
+<code class="descname">async_run_job_and_wait</code><span class="sig-paren">(</span><em>job_name</em>, <em>job_input</em>, <em>_ssl=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.async_run_job_and_wait"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.async_run_job_and_wait" title="Permalink to this definition">¶</a></dt>
 <dd><p>Asynchronous function to create a job, wait for output, and return. Will
 sleep in a linear delay until the job is done, starting with 1 second.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>_ssl</strong> (<em>None</em><em>, </em><em>optional</em>) – whether or not to use ssl</p></li>
-<li><p><strong>job_name</strong> (<em>str</em>) – name for the job, can use globals in this file</p></li>
-<li><p><strong>job_input</strong> (<em>Dict</em>) – dictionary of input for the job</p></li>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>_ssl</strong> (<em>None</em><em>, </em><em>optional</em>) – whether or not to use ssl</li>
+<li><strong>job_name</strong> (<em>str</em>) – name for the job, can use globals in this file</li>
+<li><strong>job_input</strong> (<em>Dict</em>) – dictionary of input for the job</li>
 </ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>Response from the endpoint</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>Dict</p>
-</dd>
-</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Response from the endpoint</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Dict</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
-<dl class="py method">
+<dl class="method">
 <dt id="gen3.jobs.Gen3Jobs.create_job">
-<code class="sig-name descname">create_job</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">job_name</span></em>, <em class="sig-param"><span class="n">job_input</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.create_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.create_job" title="Permalink to this definition">¶</a></dt>
+<code class="descname">create_job</code><span class="sig-paren">(</span><em>job_name</em>, <em>job_input</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.create_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.create_job" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a job with given name and input</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>job_name</strong> (<em>str</em>) – name for the job, can use globals in this file</p></li>
-<li><p><strong>job_input</strong> (<em>Dict</em>) – dictionary of input for the job</p></li>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>job_name</strong> (<em>str</em>) – name for the job, can use globals in this file</li>
+<li><strong>job_input</strong> (<em>Dict</em>) – dictionary of input for the job</li>
 </ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>Response from the endpoint</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>Dict</p>
-</dd>
-</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Response from the endpoint</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Dict</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
-<dl class="py method">
+<dl class="method">
 <dt id="gen3.jobs.Gen3Jobs.get_output">
-<code class="sig-name descname">get_output</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">job_id</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.get_output"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.get_output" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_output</code><span class="sig-paren">(</span><em>job_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.get_output"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.get_output" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the output of a previously completed job</p>
 </dd></dl>
 
-<dl class="py method">
+<dl class="method">
 <dt id="gen3.jobs.Gen3Jobs.get_status">
-<code class="sig-name descname">get_status</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">job_id</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.get_status"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.get_status" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_status</code><span class="sig-paren">(</span><em>job_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.get_status"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.get_status" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the status of a previously created job</p>
 </dd></dl>
 
-<dl class="py method">
+<dl class="method">
 <dt id="gen3.jobs.Gen3Jobs.get_version">
-<code class="sig-name descname">get_version</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.get_version"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.get_version" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_version</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.get_version"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.get_version" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return the version</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>the version</p>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>str</p>
-</dd>
-</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">the version</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">str</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
-<dl class="py method">
+<dl class="method">
 <dt id="gen3.jobs.Gen3Jobs.is_healthy">
-<code class="sig-name descname">is_healthy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.is_healthy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.is_healthy" title="Permalink to this definition">¶</a></dt>
+<code class="descname">is_healthy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.is_healthy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.is_healthy" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return if is healthy or not</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>True if healthy</p>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>bool</p>
-</dd>
-</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">True if healthy</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
-<dl class="py method">
+<dl class="method">
 <dt id="gen3.jobs.Gen3Jobs.list_jobs">
-<code class="sig-name descname">list_jobs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.list_jobs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.list_jobs" title="Permalink to this definition">¶</a></dt>
+<code class="descname">list_jobs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.list_jobs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.list_jobs" title="Permalink to this definition">¶</a></dt>
 <dd><p>List all jobs</p>
 </dd></dl>
 
@@ -142,39 +160,10 @@ sleep in a linear delay until the job is done, starting with 1 second.</p>
 
 
           </div>
-          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="index.html">Gen3 SDK</a></h1>
-
-
-
-
-
-
-<p>
-<iframe src="https://ghbtns.com/github-btn.html?user=uc-cdis&repo=gen3sdk-python&type=watch&count=true&size=large&v=2"
-  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
-</p>
-
-
-
-
-
-<h3>Navigation</h3>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="auth.html">Gen3 Auth Helper</a></li>
-<li class="toctree-l1"><a class="reference internal" href="file.html">Gen3 File Class</a></li>
-<li class="toctree-l1"><a class="reference internal" href="indexing.html">Gen3 Index Class</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Gen3 Jobs Class</a></li>
-<li class="toctree-l1"><a class="reference internal" href="metadata.html">Gen3 Metadata Class</a></li>
-<li class="toctree-l1"><a class="reference internal" href="submission.html">Gen3 Submission Class</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tools.html">Gen3 Tools</a></li>
-</ul>
-
-<div class="relations">
+        <div class="sphinxsidebarwrapper"><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -183,24 +172,23 @@ sleep in a linear delay until the job is done, starting with 1 second.</p>
   </ul></li>
 </ul>
 </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/jobs.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3 id="searchlabel">Quick search</h3>
-    <div class="searchformwrapper">
+  <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
     </form>
-    </div>
 </div>
-<script>$('#searchbox').show(0);</script>
-
-
-
-
-
-
-
-
+<script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
