@@ -38,11 +38,9 @@ jobs:
       run: |
         sphinx-build --version
         source $HOME/.poetry/env
-        poetry env info --path
-        ls $(poetry env info --path)
         poetry show
         cd docs
-        POETRY_VIRTUAL_ENV=$(source $HOME/.poetry/env) poetry run make html
+        poetry run make html
         cd ..
 
     - uses: stefanzweifel/git-auto-commit-action@v4.1.2

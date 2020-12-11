@@ -14,8 +14,8 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath(".."))
-print('os.environ["POETRY_VIRTUAL_ENV"]', os.environ["POETRY_VIRTUAL_ENV"])
-sys.path.insert(0, os.environ["POETRY_VIRTUAL_ENV"])
+# print('os.environ["POETRY_VIRTUAL_ENV"]', os.environ["POETRY_VIRTUAL_ENV"])
+# sys.path.insert(0, os.environ["POETRY_VIRTUAL_ENV"])
 
 
 # -- Project information -----------------------------------------------------
