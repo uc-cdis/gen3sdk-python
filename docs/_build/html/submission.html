@@ -98,6 +98,30 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="gen3.submission.Gen3Submission.delete_nodes">
+<code class="descname">delete_nodes</code><span class="sig-paren">(</span><em>program</em>, <em>project</em>, <em>ordered_node_list</em>, <em>batch_size=100</em>, <em>verbose=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.delete_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.delete_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete all records for a list of nodes from a project.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>program</strong> (<em>str</em>) – The program to delete from.</li>
+<li><strong>project</strong> (<em>str</em>) – The project to delete from.</li>
+<li><strong>ordered_node_list</strong> (<em>list</em>) – The list of nodes to delete, in reverse graph submission order</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<p>This deletes a list of nodes from the CCLE project in the sandbox commons.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_record</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;demographic&quot;</span><span class="p">,</span> <span class="s2">&quot;subject&quot;</span><span class="p">,</span> <span class="s2">&quot;experiment&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
 <dt id="gen3.submission.Gen3Submission.delete_program">
 <code class="descname">delete_program</code><span class="sig-paren">(</span><em>program</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.delete_program"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.delete_program" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete a program.</p>
@@ -144,16 +168,47 @@ using the credentials.json downloaded from the commons profile page.</p>
 <dl class="method">
 <dt id="gen3.submission.Gen3Submission.delete_record">
 <code class="descname">delete_record</code><span class="sig-paren">(</span><em>program</em>, <em>project</em>, <em>uuid</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.delete_record"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.delete_record" title="Permalink to this definition">¶</a></dt>
-<dd><p>Delete a record from a project.
-:param program: The program to delete from.
-:type program: str
-:param project: The project to delete from.
-:type project: str
-:param uuid: The uuid of the record to delete
-:type uuid: str</p>
+<dd><p>Delete a record from a project.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>program</strong> (<em>str</em>) – The program to delete from.</li>
+<li><strong>project</strong> (<em>str</em>) – The project to delete from.</li>
+<li><strong>uuid</strong> (<em>str</em>) – The uuid of the record to delete</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
 <p class="rubric">Examples</p>
 <p>This deletes a record from the CCLE project in the sandbox commons.</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_record</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">,</span> <span class="n">uuid</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.submission.Gen3Submission.delete_records">
+<code class="descname">delete_records</code><span class="sig-paren">(</span><em>program</em>, <em>project</em>, <em>uuids</em>, <em>batch_size=100</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.delete_records"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.delete_records" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete a list of records from a project.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>program</strong> (<em>str</em>) – The program to delete from.</li>
+<li><strong>project</strong> (<em>str</em>) – The project to delete from.</li>
+<li><strong>uuids</strong> (<em>list</em>) – The list of uuids of the records to delete</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<p>This deletes a list of records from the CCLE project in the sandbox commons.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_record</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;uuid1&quot;</span><span class="p">,</span> <span class="s2">&quot;uuid2&quot;</span><span class="p">])</span>
 </pre></div>
 </div>
 </dd></dl>

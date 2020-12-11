@@ -38,7 +38,8 @@
           <div class="body" role="main">
             
   <h1>Source code for gen3.submission</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">json</span>
+<span></span><span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">requests</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="kn">import</span> <span class="nn">os</span>
@@ -242,7 +243,9 @@
         <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Gen3Submission.delete_record"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.delete_record">[docs]</a>    <span class="k">def</span> <span class="nf">delete_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">uuid</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Delete a record from a project.</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Delete a record from a project.</span>
+
 <span class="sd">        Args:</span>
 <span class="sd">            program (str): The program to delete from.</span>
 <span class="sd">            project (str): The project to delete from.</span>
@@ -253,12 +256,75 @@
 
 <span class="sd">            &gt;&gt;&gt; Gen3Submission.delete_record(&quot;DCF&quot;, &quot;CCLE&quot;, uuid)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/api/v0/submission/</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/entities/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">uuid</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">delete_records</span><span class="p">(</span><span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="p">[</span><span class="n">uuid</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="Gen3Submission.delete_records"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.delete_records">[docs]</a>    <span class="k">def</span> <span class="nf">delete_records</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">uuids</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Delete a list of records from a project.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            program (str): The program to delete from.</span>
+<span class="sd">            project (str): The project to delete from.</span>
+<span class="sd">            uuids (list): The list of uuids of the records to delete</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            This deletes a list of records from the CCLE project in the sandbox commons.</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.delete_record(&quot;DCF&quot;, &quot;CCLE&quot;, [&quot;uuid1&quot;, &quot;uuid2&quot;])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/api/v0/submission/</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/entities&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span>
         <span class="p">)</span>
-        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
-        <span class="n">output</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">count</span><span class="p">():</span>
+            <span class="n">uuids_to_delete</span> <span class="o">=</span> <span class="n">uuids</span><span class="p">[</span><span class="n">batch_size</span> <span class="o">*</span> <span class="n">i</span> <span class="p">:</span> <span class="n">batch_size</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">uuids_to_delete</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
+                <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">uuids_to_delete</span><span class="p">)),</span>
+                <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">output</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+            <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">HTTPError</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Failed to delete uuids: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">uuids_to_delete</span><span class="p">))</span>
+                <span class="k">raise</span>
         <span class="k">return</span> <span class="n">output</span></div>
+
+<div class="viewcode-block" id="Gen3Submission.delete_nodes"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.delete_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">delete_nodes</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">ordered_node_list</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Delete all records for a list of nodes from a project.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            program (str): The program to delete from.</span>
+<span class="sd">            project (str): The project to delete from.</span>
+<span class="sd">            ordered_node_list (list): The list of nodes to delete, in reverse graph submission order</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            This deletes a list of nodes from the CCLE project in the sandbox commons.</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.delete_record(&quot;DCF&quot;, &quot;CCLE&quot;, [&quot;demographic&quot;, &quot;subject&quot;, &quot;experiment&quot;])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">project_id</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{program}</span><span class="s2">-</span><span class="si">{project}</span><span class="s2">&quot;</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">ordered_node_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">query_string</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;&quot;&quot;{{</span>
+<span class="s2">                    </span><span class="si">{node}</span><span class="s2"> (first: </span><span class="si">{batch_size}</span><span class="s2">, project_id: &quot;</span><span class="si">{project_id}</span><span class="s2">&quot;) {{</span>
+<span class="s2">                        id</span>
+<span class="s2">                    }}</span>
+<span class="s2">                }}&quot;&quot;&quot;</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">query_string</span><span class="p">)</span>
+                <span class="n">uuids</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">res</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">][</span><span class="n">node</span><span class="p">]]</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">uuids</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">break</span>
+                <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">delete_records</span><span class="p">(</span><span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">uuids</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Gen3Submission.export_record"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.export_record">[docs]</a>    <span class="k">def</span> <span class="nf">export_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">uuid</span><span class="p">,</span> <span class="n">fileformat</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Export a single record into json.</span>
