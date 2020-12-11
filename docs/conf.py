@@ -14,6 +14,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, "/opt/hostedtoolcache/Python/3.6.12/x64/python3.6/site-packages")
 # print('os.environ["POETRY_VIRTUAL_ENV"]', os.environ["POETRY_VIRTUAL_ENV"])
 # sys.path.insert(0, os.environ["POETRY_VIRTUAL_ENV"])
 

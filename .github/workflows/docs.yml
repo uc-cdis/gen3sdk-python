@@ -33,13 +33,13 @@ jobs:
         poetry install -vv
         echo ${{ env.pythonLocation }}/python3.6/site-packages
         pip show aiohttp || true
+        poetry show
         sudo apt-get install python3-sphinx
     - name: Build docs
       run: |
         sphinx-build --version
-        source $HOME/.poetry/env
-        poetry show
         export PYTHONPATH="${PYTHONPATH}:${{ env.pythonLocation }}/python3.6/site-packages"
+        ls ${{ env.pythonLocation }}/python3.6/site-packages
         cd docs
         poetry run make html
         cd ..
