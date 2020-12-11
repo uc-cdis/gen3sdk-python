@@ -13,7 +13,7 @@
 import os
 import sys
 
-print(sys.path)
+sys.path.insert(0. os.path.abspath("$HOME/.poetry/env"))
 sys.path.insert(0, os.path.abspath(".."))
 
 
