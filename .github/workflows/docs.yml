@@ -28,7 +28,7 @@ jobs:
 
         echo "$HOME/.poetry/bin" >> $GITHUB_PATH
         source $HOME/.poetry/env
-        poetry config virtualenvs.create true
+        poetry config virtualenvs.create false
         poetry config virtualenvs.in-project false
         poetry config virtualenvs.path {cache-dir}/virtualenvs
 
@@ -39,8 +39,7 @@ jobs:
         sphinx-build --version
         source $HOME/.poetry/env
         poetry env info --path
-        pip show aiohttp || true
-        echo GITHUB_PATH $GITHUB_PATH
+        ls $(poetry env info --path)
         poetry show
         cd docs
         POETRY_VIRTUAL_ENV=$(source $HOME/.poetry/env) poetry run make html
