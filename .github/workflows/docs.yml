@@ -38,8 +38,11 @@ jobs:
     - name: Build docs
       run: |
         sphinx-build --version
-        export PYTHONPATH="${PYTHONPATH}:${{ env.pythonLocation }}/python3.6/site-packages"
+        source $HOME/.poetry/env
         ls ${{ env.pythonLocation }}/python3.6/site-packages
+        echo "==========="
+        ls ${{ env.pythonLocation }}
+        export PYTHONPATH="${PYTHONPATH}:${{ env.pythonLocation }}/python3.6/site-packages"
         cd docs
         poetry run make html
         cd ..
