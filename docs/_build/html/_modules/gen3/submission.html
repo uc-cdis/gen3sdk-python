@@ -290,6 +290,22 @@
                 <span class="k">raise</span>
         <span class="k">return</span> <span class="n">output</span></div>
 
+<div class="viewcode-block" id="Gen3Submission.delete_node"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.delete_node">[docs]</a>    <span class="k">def</span> <span class="nf">delete_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">node_name</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Delete all records for a node from a project.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            program (str): The program to delete from.</span>
+<span class="sd">            project (str): The project to delete from.</span>
+<span class="sd">            node_name (str): Name of the node to delete</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            This deletes a node from the CCLE project in the sandbox commons.</span>
+
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.delete_record(&quot;DCF&quot;, &quot;CCLE&quot;, &quot;demographic&quot;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">delete_nodes</span><span class="p">(</span><span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="p">[</span><span class="n">node_name</span><span class="p">],</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="Gen3Submission.delete_nodes"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.delete_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">delete_nodes</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">ordered_node_list</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span>
     <span class="p">):</span>
@@ -310,6 +326,7 @@
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">ordered_node_list</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
                 <span class="nb">print</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">first_uuid</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
             <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
                 <span class="n">query_string</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;&quot;&quot;{{</span>
 <span class="s2">                    </span><span class="si">{node}</span><span class="s2"> (first: </span><span class="si">{batch_size}</span><span class="s2">, project_id: &quot;</span><span class="si">{project_id}</span><span class="s2">&quot;) {{</span>
@@ -319,7 +336,10 @@
                 <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">query_string</span><span class="p">)</span>
                 <span class="n">uuids</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">res</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">][</span><span class="n">node</span><span class="p">]]</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">uuids</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="k">break</span>
+                    <span class="k">break</span>  <span class="c1"># all done</span>
+                <span class="k">if</span> <span class="n">first_uuid</span> <span class="o">==</span> <span class="n">uuids</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Failed to delete. Exiting&quot;</span><span class="p">)</span>
+                <span class="n">first_uuid</span> <span class="o">=</span> <span class="n">uuids</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                 <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
                     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">delete_records</span><span class="p">(</span><span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">uuids</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">)</span>

@@ -98,6 +98,30 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="gen3.submission.Gen3Submission.delete_node">
+<code class="descname">delete_node</code><span class="sig-paren">(</span><em>program</em>, <em>project</em>, <em>node_name</em>, <em>verbose=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.delete_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.delete_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete all records for a node from a project.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>program</strong> (<em>str</em>) – The program to delete from.</li>
+<li><strong>project</strong> (<em>str</em>) – The project to delete from.</li>
+<li><strong>node_name</strong> (<em>str</em>) – Name of the node to delete</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<p>This deletes a node from the CCLE project in the sandbox commons.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_record</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">,</span> <span class="s2">&quot;demographic&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
 <dt id="gen3.submission.Gen3Submission.delete_nodes">
 <code class="descname">delete_nodes</code><span class="sig-paren">(</span><em>program</em>, <em>project</em>, <em>ordered_node_list</em>, <em>batch_size=100</em>, <em>verbose=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.delete_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.delete_nodes" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete all records for a list of nodes from a project.</p>
