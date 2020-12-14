@@ -12,7 +12,7 @@ from drsclient.client import DrsClient
 
 @pytest.fixture
 def sub():
-    return Gen3Submission("http://localhost/api", None)
+    return Gen3Submission("http://localhost", None)
 
 
 # for unittest with mock server

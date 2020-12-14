@@ -250,6 +250,22 @@ class Gen3Submission:
                 raise
         return output
 
+    def delete_node(self, program, project, node_name, verbose=True):
+        """
+        Delete all records for a node from a project.
+
+        Args:
+            program (str): The program to delete from.
+            project (str): The project to delete from.
+            node_name (str): Name of the node to delete
+
+        Examples:
+            This deletes a node from the CCLE project in the sandbox commons.
+
+            >>> Gen3Submission.delete_record("DCF", "CCLE", "demographic")
+        """
+        return self.delete_nodes(program, project, [node_name], verbose=verbose)
+
     def delete_nodes(
         self, program, project, ordered_node_list, batch_size=100, verbose=True
     ):
@@ -270,6 +286,7 @@ class Gen3Submission:
         for node in ordered_node_list:
             if verbose:
                 print(node, end="", flush=True)
+            first_uuid = ""
             while True:
                 query_string = f"""{{
                     {node} (first: {batch_size}, project_id: "{project_id}") {{
@@ -279,7 +296,10 @@ class Gen3Submission:
                 res = self.query(query_string)
                 uuids = [x["id"] for x in res["data"][node]]
                 if len(uuids) == 0:
-                    break
+                    break  # all done
+                if first_uuid == uuids[0]:
+                    raise Exception("Failed to delete. Exiting")
+                first_uuid = uuids[0]
                 if verbose:
                     print(".", end="", flush=True)
                 self.delete_records(program, project, uuids, batch_size)
