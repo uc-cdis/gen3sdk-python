@@ -30,7 +30,6 @@ pypfb = "<1.0.0"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=3.2.3"
-mock = "*"
 cdisutilstest = { git = "https://github.com/uc-cdis/cdisutils-test.git", tag = "1.0.0" }
 doiclient = { git = "https://github.com/uc-cdis/doiclient.git", tag = "1.0.0" }
 dosclient = { git = "https://github.com/uc-cdis/dosclient.git", tag = "1.0.0" }

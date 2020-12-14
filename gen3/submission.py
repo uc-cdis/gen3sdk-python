@@ -1,3 +1,4 @@
+import itertools
 import json
 import requests
 import pandas as pd
@@ -202,7 +203,9 @@ class Gen3Submission:
         return output.json()
 
     def delete_record(self, program, project, uuid):
-        """Delete a record from a project.
+        """
+        Delete a record from a project.
+
         Args:
             program (str): The program to delete from.
             project (str): The project to delete from.
@@ -213,12 +216,95 @@ class Gen3Submission:
 
             >>> Gen3Submission.delete_record("DCF", "CCLE", uuid)
         """
-        api_url = "{}/api/v0/submission/{}/{}/entities/{}".format(
-            self._endpoint, program, project, uuid
+        return self.delete_records(program, project, [uuid])
+
+    def delete_records(self, program, project, uuids, batch_size=100):
+        """
+        Delete a list of records from a project.
+
+        Args:
+            program (str): The program to delete from.
+            project (str): The project to delete from.
+            uuids (list): The list of uuids of the records to delete
+
+        Examples:
+            This deletes a list of records from the CCLE project in the sandbox commons.
+
+            >>> Gen3Submission.delete_record("DCF", "CCLE", ["uuid1", "uuid2"])
+        """
+        api_url = "{}/api/v0/submission/{}/{}/entities".format(
+            self._endpoint, program, project
         )
-        output = requests.delete(api_url, auth=self._auth_provider)
-        output.raise_for_status()
+        for i in itertools.count():
+            uuids_to_delete = uuids[batch_size * i : batch_size * (i + 1)]
+            if len(uuids_to_delete) == 0:
+                break
+            output = requests.delete(
+                "{}/{}".format(api_url, ",".join(uuids_to_delete)),
+                auth=self._auth_provider,
+            )
+            try:
+                output.raise_for_status()
+            except requests.exceptions.HTTPError:
+                print("\nFailed to delete uuids: {}".format(uuids_to_delete))
+                raise
         return output
+
+    def delete_node(self, program, project, node_name, verbose=True):
+        """
+        Delete all records for a node from a project.
+
+        Args:
+            program (str): The program to delete from.
+            project (str): The project to delete from.
+            node_name (str): Name of the node to delete
+
+        Examples:
+            This deletes a node from the CCLE project in the sandbox commons.
+
+            >>> Gen3Submission.delete_record("DCF", "CCLE", "demographic")
+        """
+        return self.delete_nodes(program, project, [node_name], verbose=verbose)
+
+    def delete_nodes(
+        self, program, project, ordered_node_list, batch_size=100, verbose=True
+    ):
+        """
+        Delete all records for a list of nodes from a project.
+
+        Args:
+            program (str): The program to delete from.
+            project (str): The project to delete from.
+            ordered_node_list (list): The list of nodes to delete, in reverse graph submission order
+
+        Examples:
+            This deletes a list of nodes from the CCLE project in the sandbox commons.
+
+            >>> Gen3Submission.delete_record("DCF", "CCLE", ["demographic", "subject", "experiment"])
+        """
+        project_id = f"{program}-{project}"
+        for node in ordered_node_list:
+            if verbose:
+                print(node, end="", flush=True)
+            first_uuid = ""
+            while True:
+                query_string = f"""{{
+                    {node} (first: {batch_size}, project_id: "{project_id}") {{
+                        id
+                    }}
+                }}"""
+                res = self.query(query_string)
+                uuids = [x["id"] for x in res["data"][node]]
+                if len(uuids) == 0:
+                    break  # all done
+                if first_uuid == uuids[0]:
+                    raise Exception("Failed to delete. Exiting")
+                first_uuid = uuids[0]
+                if verbose:
+                    print(".", end="", flush=True)
+                self.delete_records(program, project, uuids, batch_size)
+            if verbose:
+                print()
 
     def export_record(self, program, project, uuid, fileformat, filename=None):
         """Export a single record into json.

@@ -615,7 +615,7 @@ class Gen3Index:
             json["authz"] = authz
 
         response = self.client._put(
-            "index/blank/",
+            "index/blank",
             guid,
             headers={"content-type": "application/json"},
             params=params,

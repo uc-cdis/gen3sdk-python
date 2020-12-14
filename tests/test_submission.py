@@ -1,5 +1,6 @@
+import json
 import pytest, os, requests
-from unittest.mock import patch
+from unittest.mock import call, MagicMock, patch
 
 
 def test_get(sub):
@@ -24,7 +25,7 @@ def test_get(sub):
             assert False
 
 
-def test_exportnode(sub):
+def test_export_node(sub):
     """
     tests:
     export_node
@@ -129,19 +130,46 @@ def test_delete_record(sub):
         sub.delete_record("prog1", "proj1", "id")
 
 
+@patch("gen3.jobs.requests.post")
+@patch("gen3.jobs.requests.delete")
+def test_delete_nodes(requests_delete_mock, requests_post_mock, sub):
+    def get_mocked_query_response(node_name, uuids):
+        content = {"data": {node_name: [{"id": uuid} for uuid in uuids]}}
+        return MagicMock(requests.Response, status_code=200, text=json.dumps(content))
+
+    requests_post_mock.side_effect = [
+        get_mocked_query_response("node1", ["id1", "id2"]),
+        get_mocked_query_response("node1", []),
+        get_mocked_query_response("node2", ["id3", "id4", "id5"]),
+        get_mocked_query_response("node2", []),
+    ]
+    requests_delete_mock.side_effect = MagicMock(requests.Response)
+
+    sub.delete_nodes(
+        "program", "project", ["node1", "node2"], batch_size=2, verbose=False
+    )
+
+    requests_delete_mock.assert_has_calls(
+        [
+            call(
+                "http://localhost/api/v0/submission/program/project/entities/id1,id2",
+                auth=None,
+            ),
+            call(
+                "http://localhost/api/v0/submission/program/project/entities/id3,id4",
+                auth=None,
+            ),
+            call(
+                "http://localhost/api/v0/submission/program/project/entities/id5",
+                auth=None,
+            ),
+        ]
+    )
+
+
 def test_query(sub):
     with patch("gen3.submission.requests") as mock_request:
         mock_request.status_code = 200
         mock_request.post().text = '{ "key": "value" }'
         res = sub.query("{ experiment { submitter_id } }")
         assert res == {"key": "value"}
-
-
-""" Not tested:
-
-    - query : more tests
-    - get_project_manifest: lack of swagger documentation. 
-      error about not submitting ids
-    - submit_file
-
-"""
