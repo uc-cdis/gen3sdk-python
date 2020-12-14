@@ -198,8 +198,6 @@ def test_versions(gen3_index):
     assert drec._deleted
 
 
-# TODO: FIXME: the endpoint /blank is having some sort of authorization problem
-# it asks for username and password even when given auth file
 def test_blank(gen3_index):
     """
 
