@@ -1,7 +1,5 @@
 import requests
 
-from gen3.submission import Gen3Error
-
 
 class Gen3Query:
     """
@@ -27,7 +25,7 @@ class Gen3Query:
     def query(
         self,
         data_type,
-        fields=None,
+        fields,
         first=None,
         offset=None,
         filters=None,
@@ -41,7 +39,7 @@ class Gen3Query:
 
         Args:
             data_type (str): Data type to query.
-            fields (list, optional): List of fields to return. If not set, will return all fields.
+            fields (list): List of fields to return.
             first (int, optional): Number of rows to return (default: 10).
             offset (int, optional): Starting position (default: 0).
             filters: (object, optional): { field: sort method } object. Will filter data with ALL fields EQUAL to the provided respective value. If more complex filters are needed, use the `filter_object` parameter instead.
@@ -161,7 +159,7 @@ class Gen3Query:
 
         Args:
             data_type (str): Data type to download from.
-            fields (list, optional): List of fields to return. If not set, will return all fields.
+            fields (list): List of fields to return.
             filter_object (object, optional): Filter to apply. For syntax details, see https://github.com/uc-cdis/guppy/blob/master/doc/queries.md#filter.
             sort_fields (list, optional): List of { field: sort method } objects.
             accessibility (list, optional): One of ["accessible" (default), "unaccessible", "all"]. Only valid when downloading from a data type in "regular" tier access mode.
@@ -189,9 +187,7 @@ class Gen3Query:
         if not offset:
             offset = 0
 
-        body = {"type": data_type, "accessibility": accessibility}
-        if fields:
-            body["fields"] = fields
+        body = {"type": data_type, "fields": fields, "accessibility": accessibility}
         if filter_object:
             body["filter"] = filter_object
         if sort_fields:
