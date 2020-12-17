@@ -39,7 +39,7 @@ class Gen3Jobs:
         Initialization for instance of the class to setup basic endpoint info.
 
         Args:
-            endpoint (str): URL for a data commons that has jobs service(s) deployed
+            endpoint (str): URL for a Data Commons that has jobs service(s) deployed
             auth_provider (Gen3Auth, optional): Gen3Auth class to handle passing your
                 token, required for admin endpoints
             service_location (str, optional): deployment location relative to the

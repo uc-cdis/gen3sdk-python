@@ -13,7 +13,7 @@ class Gen3File:
     Supports getting presigned urls right now.
 
     Args:
-        endpoint (str): The URL of the data commons.
+        endpoint (str): The URL of the Data Commons.
         auth_provider (Gen3Auth): A Gen3Auth class instance.
 
     Examples:

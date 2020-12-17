@@ -16,7 +16,7 @@ class Gen3Auth(AuthBase):
     Automatically refreshes access tokens when they expire.
 
     Args:
-        endpoint (str, opt): The URL of the data commons. Optional if working in a Gen3 Workspace.
+        endpoint (str, opt): The URL of the Data Commons. Optional if working in a Gen3 Workspace.
         refresh_file (str, opt): The file containing the downloaded JSON web token. Optional if working in a Gen3 Workspace.
         refresh_token (str, opt): The JSON web token. Optional if working in a Gen3 Workspace.
         idp (str, opt): If working in a Gen3 Workspace, the IDP to use can be specified.

@@ -39,7 +39,7 @@ class Gen3Metadata:
         Initialization for instance of the class to setup basic endpoint info.
 
         Args:
-            endpoint (str): URL for a data commons that has metadata service deployed
+            endpoint (str): URL for a Data Commons that has metadata service deployed
             auth_provider (Gen3Auth, optional): Gen3Auth class to handle passing your
                 token, required for admin endpoints
             service_location (str, optional): deployment location relative to the
@@ -110,9 +110,6 @@ class Gen3Metadata:
 
         Args:
             path (str): metadata key path
-
-        Returns:
-            TYPE: Description
         """
         response = requests.post(
             self.admin_endpoint + f"/metadata_index/{path}", auth=self._auth_provider
@@ -127,9 +124,6 @@ class Gen3Metadata:
 
         Args:
             path (str): metadata key path
-
-        Returns:
-            TYPE: Description
         """
         response = requests.delete(
             self.admin_endpoint + f"/metadata_index/{path}", auth=self._auth_provider

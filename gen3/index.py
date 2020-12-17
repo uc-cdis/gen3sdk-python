@@ -16,7 +16,7 @@ class Gen3Index:
     A class for interacting with the Gen3 Index services.
 
     Args:
-        endpoint (str): The URL of the data commons.
+        endpoint (str): The URL of the Data Commons.
         auth_provider (Gen3Auth): A Gen3Auth class instance.
 
     Examples:

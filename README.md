@@ -20,6 +20,7 @@ The docs here contain general descriptions of the different pieces of the SDK an
     - [Gen3Auth](#gen3auth)
     - [Gen3Index](#gen3index)
     - [Gen3Submission](#gen3submission)
+    - [Gen3Query](#gen3query)
     - [Gen3Jobs](#gen3jobs)
   - [Metadata](#metadata)
   - [Indexing Tools](#indexing-tools)
@@ -167,9 +168,13 @@ This is the client for interacting with the Indexd service for GUID brokering an
 
 This is the client for interacting with the Gen3 submission service including GraphQL queries.
 
+### Gen3Query
+
+This is the client for interacting with the Gen3 ElasticSearch query service.
+
 ### Gen3Jobs
 
-This is client for interacting with Gen3's job dispatching service. A complex example script which calls a job that combines dbGaP data with indexed file objects can be seen below:
+This is the client for interacting with Gen3's job dispatching service. A complex example script which calls a job that combines dbGaP data with indexed file objects can be seen below:
 
 
 ```python
