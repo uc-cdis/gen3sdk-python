@@ -65,7 +65,7 @@
 <span class="sd">    Supports GraphQL queries through Peregrine.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        endpoint (str): The URL of the data commons.</span>
+<span class="sd">        endpoint (str): The URL of the Data Commons.</span>
 <span class="sd">        auth_provider (Gen3Auth): A Gen3Auth class instance.</span>
 
 <span class="sd">    Examples:</span>
@@ -413,7 +413,7 @@
     <span class="c1">### Query functions</span>
 
 <div class="viewcode-block" id="Gen3Submission.query"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.query">[docs]</a>    <span class="k">def</span> <span class="nf">query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query_txt</span><span class="p">,</span> <span class="n">variables</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_tries</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Execute a GraphQL query against a data commons.</span>
+        <span class="sd">&quot;&quot;&quot;Execute a GraphQL query against a Data Commons.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            query_txt (str): Query text.</span>
@@ -422,7 +422,7 @@
 
 <span class="sd">        Examples:</span>
 <span class="sd">            This executes a query to get the list of all the project codes for all the projects</span>
-<span class="sd">            in the data commons.</span>
+<span class="sd">            in the Data Commons.</span>
 
 <span class="sd">            &gt;&gt;&gt; query = &quot;{ project(first:0) { code } }&quot;</span>
 <span class="sd">            ... Gen3Submission.query(query)</span>

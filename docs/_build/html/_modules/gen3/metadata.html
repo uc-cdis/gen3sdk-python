@@ -79,7 +79,7 @@
 <span class="sd">        Initialization for instance of the class to setup basic endpoint info.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            endpoint (str): URL for a data commons that has metadata service deployed</span>
+<span class="sd">            endpoint (str): URL for a Data Commons that has metadata service deployed</span>
 <span class="sd">            auth_provider (Gen3Auth, optional): Gen3Auth class to handle passing your</span>
 <span class="sd">                token, required for admin endpoints</span>
 <span class="sd">            service_location (str, optional): deployment location relative to the</span>
@@ -150,9 +150,6 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            path (str): metadata key path</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            TYPE: Description</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="n">f</span><span class="s2">&quot;/metadata_index/</span><span class="si">{path}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
@@ -167,9 +164,6 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            path (str): metadata key path</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            TYPE: Description</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="n">f</span><span class="s2">&quot;/metadata_index/</span><span class="si">{path}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>

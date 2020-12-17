@@ -54,7 +54,7 @@ Supports GraphQL queries through Peregrine.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>endpoint</strong> (<em>str</em>) – The URL of the data commons.</li>
+<li><strong>endpoint</strong> (<em>str</em>) – The URL of the Data Commons.</li>
 <li><strong>auth_provider</strong> (<a class="reference internal" href="auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><em>Gen3Auth</em></a>) – A Gen3Auth class instance.</li>
 </ul>
 </td>
@@ -427,7 +427,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <dl class="method">
 <dt id="gen3.submission.Gen3Submission.query">
 <code class="descname">query</code><span class="sig-paren">(</span><em>query_txt</em>, <em>variables=None</em>, <em>max_tries=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.query" title="Permalink to this definition">¶</a></dt>
-<dd><p>Execute a GraphQL query against a data commons.</p>
+<dd><p>Execute a GraphQL query against a Data Commons.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -443,7 +443,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 </table>
 <p class="rubric">Examples</p>
 <p>This executes a query to get the list of all the project codes for all the projects
-in the data commons.</p>
+in the Data Commons.</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;{ project(first:0) { code } }&quot;</span>
 <span class="gp">... </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
 </pre></div>
