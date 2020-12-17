@@ -25,7 +25,7 @@ class Gen3Index:
 
         >>> endpoint = "https://nci-crdc-demo.datacommons.io"
         ... auth = Gen3Auth(endpoint, refresh_file="credentials.json")
-        ... sub = Gen3Submission(endpoint, auth)
+        ... sub = Gen3Index(endpoint, auth)
 
     """
 
