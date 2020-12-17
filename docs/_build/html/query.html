@@ -1,0 +1,239 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Gen3 Query Class &#8212; Gen3 SDK  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Gen3 Submission Class" href="submission.html" />
+    <link rel="prev" title="Gen3 Metadata Class" href="metadata.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="gen3-query-class">
+<h1>Gen3 Query Class<a class="headerlink" href="#gen3-query-class" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="gen3.query.Gen3Query">
+<em class="property">class </em><code class="descclassname">gen3.query.</code><code class="descname">Gen3Query</code><span class="sig-paren">(</span><em>endpoint</em>, <em>auth_provider</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/query.html#Gen3Query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.query.Gen3Query" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Query ElasticSearch data from a Gen3 system.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>endpoint</strong> (<em>str</em>) – The URL of the Data Commons.</li>
+<li><strong>auth_provider</strong> (<a class="reference internal" href="auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><em>Gen3Auth</em></a>) – A Gen3Auth class instance.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<p>This generates the Gen3Query class pointed at the sandbox commons while
+using the credentials.json downloaded from the commons profile page.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">endpoint</span> <span class="o">=</span> <span class="s2">&quot;https://nci-crdc-demo.datacommons.io&quot;</span>
+<span class="gp">... </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
+<span class="gp">... </span><span class="n">query</span> <span class="o">=</span> <span class="n">Gen3Query</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">auth</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="gen3.query.Gen3Query.graphql_query">
+<code class="descname">graphql_query</code><span class="sig-paren">(</span><em>query_string</em>, <em>variables=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/query.html#Gen3Query.graphql_query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.query.Gen3Query.graphql_query" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute a GraphQL query against a Data Commons.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>query_txt</strong> (<em>str</em>) – GraphQL query as text. For syntax details, see <a class="reference external" href="https://github.com/uc-cdis/guppy/blob/master/doc/queries.md">https://github.com/uc-cdis/guppy/blob/master/doc/queries.md</a>.</li>
+<li><strong>variables</strong> (<code class="xref py py-obj docutils literal"><span class="pre">object</span></code>, optional) – Dictionary of variables to pass with the query.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">{“data”: {&lt;data_type&gt;: [&lt;record&gt;, &lt;record&gt;, …]}}</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Object</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">query_string</span> <span class="o">=</span> <span class="s2">&quot;{ my_index { my_field } }&quot;</span>
+<span class="gp">... </span><span class="n">Gen3Query</span><span class="o">.</span><span class="n">graphql_query</span><span class="p">(</span><span class="n">query_string</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.query.Gen3Query.query">
+<code class="descname">query</code><span class="sig-paren">(</span><em>data_type</em>, <em>fields</em>, <em>first=None</em>, <em>offset=None</em>, <em>filters=None</em>, <em>filter_object=None</em>, <em>sort_object=None</em>, <em>accessibility=None</em>, <em>verbose=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/query.html#Gen3Query.query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.query.Gen3Query.query" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute a query against a Data Commons.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data_type</strong> (<em>str</em>) – Data type to query.</li>
+<li><strong>fields</strong> (<em>list</em>) – List of fields to return.</li>
+<li><strong>first</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of rows to return (default: 10).</li>
+<li><strong>offset</strong> (<em>int</em><em>, </em><em>optional</em>) – Starting position (default: 0).</li>
+<li><strong>filters</strong> – (object, optional): { field: sort method } object. Will filter data with ALL fields EQUAL to the provided respective value. If more complex filters are needed, use the <cite>filter_object</cite> parameter instead.</li>
+<li><strong>filter_object</strong> (<em>object</em><em>, </em><em>optional</em>) – Filter to apply. For syntax details, see <a class="reference external" href="https://github.com/uc-cdis/guppy/blob/master/doc/queries.md#filter">https://github.com/uc-cdis/guppy/blob/master/doc/queries.md#filter</a>.</li>
+<li><strong>sort_object</strong> (<em>object</em><em>, </em><em>optional</em>) – { field: sort method } object.</li>
+<li><strong>accessibility</strong> (<em>list</em><em>, </em><em>optional</em>) – One of [“accessible” (default), “unaccessible”, “all”]. Only valid when querying a data type in “regular” tier access mode.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">{“data”: {&lt;data_type&gt;: [&lt;record&gt;, &lt;record&gt;, …]}}</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Object</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Query</span><span class="o">.</span><span class="n">query</span><span class="p">(</span>
+<span class="go">    data_type=&quot;subject&quot;,</span>
+<span class="go">    first=50,</span>
+<span class="go">    fields=[</span>
+<span class="go">        &quot;vital_status&quot;,</span>
+<span class="go">        &quot;submitter_id&quot;,</span>
+<span class="go">    ],</span>
+<span class="go">    filters={&quot;vital_status&quot;: &quot;Alive&quot;},</span>
+<span class="go">    sort_object={&quot;submitter_id&quot;: &quot;asc&quot;},</span>
+<span class="go">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.query.Gen3Query.raw_data_download">
+<code class="descname">raw_data_download</code><span class="sig-paren">(</span><em>data_type</em>, <em>fields</em>, <em>filter_object=None</em>, <em>sort_fields=None</em>, <em>accessibility=None</em>, <em>first=None</em>, <em>offset=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/query.html#Gen3Query.raw_data_download"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.query.Gen3Query.raw_data_download" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute a raw data download against a Data Commons.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data_type</strong> (<em>str</em>) – Data type to download from.</li>
+<li><strong>fields</strong> (<em>list</em>) – List of fields to return.</li>
+<li><strong>filter_object</strong> (<em>object</em><em>, </em><em>optional</em>) – Filter to apply. For syntax details, see <a class="reference external" href="https://github.com/uc-cdis/guppy/blob/master/doc/queries.md#filter">https://github.com/uc-cdis/guppy/blob/master/doc/queries.md#filter</a>.</li>
+<li><strong>sort_fields</strong> (<em>list</em><em>, </em><em>optional</em>) – List of { field: sort method } objects.</li>
+<li><strong>accessibility</strong> (<em>list</em><em>, </em><em>optional</em>) – One of [“accessible” (default), “unaccessible”, “all”]. Only valid when downloading from a data type in “regular” tier access mode.</li>
+<li><strong>first</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of rows to return (default: all rows).</li>
+<li><strong>offset</strong> (<em>int</em><em>, </em><em>optional</em>) – Starting position (default: 0).</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">[&lt;record&gt;, &lt;record&gt;, …]</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">List</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Query</span><span class="o">.</span><span class="n">raw_data_download</span><span class="p">(</span>
+<span class="go">        data_type=&quot;subject&quot;,</span>
+<span class="go">        fields=[</span>
+<span class="go">            &quot;vital_status&quot;,</span>
+<span class="go">            &quot;submitter_id&quot;,</span>
+<span class="go">            &quot;project_id&quot;</span>
+<span class="go">        ],</span>
+<span class="go">        filter_object={&quot;=&quot;: {&quot;project_id&quot;: &quot;my_program-my_project&quot;}},</span>
+<span class="go">        sort_fields=[{&quot;submitter_id&quot;: &quot;asc&quot;}],</span>
+<span class="go">        accessibility=&quot;accessible&quot;</span>
+<span class="go">    )</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="metadata.html" title="previous chapter">Gen3 Metadata Class</a></li>
+      <li>Next: <a href="submission.html" title="next chapter">Gen3 Submission Class</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/query.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Center for Translational Data Science.
+      
+      |
+      <a href="_sources/query.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/uc-cdis/gen3sdk-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
