@@ -93,6 +93,21 @@ def delete_uploaded_files(guids):
 
         if (response.status_code == 204):
             print("Successfully deleted GUID {}".format(guid))
+
+        elif (response.status_code == 500):
+            # delete from indexd endpoint
+            index_url = "{}/index/index/{}".format(args.api,guid)
+            response = requests.get(index_url)
+            irec = json.loads(response.text)
+            rev = irec['rev']
+            index_url = "{}/index/index/{}?rev={}".format(args.api,guid,rev)
+            try:
+                response = requests.delete(index_url, headers=headers)
+            except requests.exceptions.ConnectionError as e:
+                raise Gen3Error(e)
+            if response.status_code == 200:
+                print("\tSuccessfully deleted GUID {}".format(guid))
+
         else:
             print("Error deleting GUID {}:".format(guid))
             print(response.reason)
