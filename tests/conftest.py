@@ -6,6 +6,7 @@ from cdisutilstest.code.indexd_fixture import (
 )
 from gen3.index import Gen3Index
 from gen3.submission import Gen3Submission
+from gen3.query import Gen3Query
 import pytest
 from drsclient.client import DrsClient
 
@@ -42,6 +43,11 @@ def index_client(indexd_server):
 @pytest.fixture
 def gen3_index(index_client):
     return index_client
+
+
+@pytest.fixture
+def gen3query():
+    return Gen3Query("http://localhost", None)
 
 
 @pytest.fixture(scope="function")

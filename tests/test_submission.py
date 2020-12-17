@@ -1,5 +1,7 @@
 import json
-import pytest, os, requests
+import os
+import pytest
+import requests
 from unittest.mock import call, MagicMock, patch
 
 
