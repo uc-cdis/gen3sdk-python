@@ -230,7 +230,7 @@ class Gen3Submission:
         Examples:
             This deletes a list of records from the CCLE project in the sandbox commons.
 
-            >>> Gen3Submission.delete_record("DCF", "CCLE", ["uuid1", "uuid2"])
+            >>> Gen3Submission.delete_records("DCF", "CCLE", ["uuid1", "uuid2"])
         """
         api_url = "{}/api/v0/submission/{}/{}/entities".format(
             self._endpoint, program, project
@@ -262,7 +262,7 @@ class Gen3Submission:
         Examples:
             This deletes a node from the CCLE project in the sandbox commons.
 
-            >>> Gen3Submission.delete_record("DCF", "CCLE", "demographic")
+            >>> Gen3Submission.delete_node("DCF", "CCLE", "demographic")
         """
         return self.delete_nodes(program, project, [node_name], verbose=verbose)
 
@@ -280,7 +280,7 @@ class Gen3Submission:
         Examples:
             This deletes a list of nodes from the CCLE project in the sandbox commons.
 
-            >>> Gen3Submission.delete_record("DCF", "CCLE", ["demographic", "subject", "experiment"])
+            >>> Gen3Submission.delete_nodes("DCF", "CCLE", ["demographic", "subject", "experiment"])
         """
         project_id = f"{program}-{project}"
         for node in ordered_node_list:
