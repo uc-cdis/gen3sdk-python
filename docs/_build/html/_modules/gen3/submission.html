@@ -270,7 +270,7 @@
 <span class="sd">        Examples:</span>
 <span class="sd">            This deletes a list of records from the CCLE project in the sandbox commons.</span>
 
-<span class="sd">            &gt;&gt;&gt; Gen3Submission.delete_record(&quot;DCF&quot;, &quot;CCLE&quot;, [&quot;uuid1&quot;, &quot;uuid2&quot;])</span>
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.delete_records(&quot;DCF&quot;, &quot;CCLE&quot;, [&quot;uuid1&quot;, &quot;uuid2&quot;])</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/api/v0/submission/</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/entities&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span>
@@ -302,7 +302,7 @@
 <span class="sd">        Examples:</span>
 <span class="sd">            This deletes a node from the CCLE project in the sandbox commons.</span>
 
-<span class="sd">            &gt;&gt;&gt; Gen3Submission.delete_record(&quot;DCF&quot;, &quot;CCLE&quot;, &quot;demographic&quot;)</span>
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.delete_node(&quot;DCF&quot;, &quot;CCLE&quot;, &quot;demographic&quot;)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">delete_nodes</span><span class="p">(</span><span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="p">[</span><span class="n">node_name</span><span class="p">],</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span></div>
 
@@ -320,7 +320,7 @@
 <span class="sd">        Examples:</span>
 <span class="sd">            This deletes a list of nodes from the CCLE project in the sandbox commons.</span>
 
-<span class="sd">            &gt;&gt;&gt; Gen3Submission.delete_record(&quot;DCF&quot;, &quot;CCLE&quot;, [&quot;demographic&quot;, &quot;subject&quot;, &quot;experiment&quot;])</span>
+<span class="sd">            &gt;&gt;&gt; Gen3Submission.delete_nodes(&quot;DCF&quot;, &quot;CCLE&quot;, [&quot;demographic&quot;, &quot;subject&quot;, &quot;experiment&quot;])</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">project_id</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{program}</span><span class="s2">-</span><span class="si">{project}</span><span class="s2">&quot;</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">ordered_node_list</span><span class="p">:</span>
