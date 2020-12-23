@@ -1,13 +1,13 @@
 ## Metadata Tools
 
 TOC
-    - [Ingest Manifest](#ingest-manifest)
-    - [Searching Indexd to get GUID for Metadata Ingestion](#searching-indexd-to-get-guid-for-metadata-ingestion)
-    - [Manifest Merge](#manifest-merge)
-      - [Ideal Scenario (Column to Column Match, Indexing:Metadata Manifest Rows)](#ideal-scenario-column-to-column-match-indexingmetadata-manifest-rows)
-      - [Non-Ideal Scenario (Partial URL Matching)](#non-ideal-scenario-partial-url-matching)
-    - [Using Gen3 Jobs](#using-gen3-jobs)
-    - [Verify Metadata Manifest](#verify-metadata-manifest)
+- [Ingest Manifest](#ingest-manifest)
+- [Searching Indexd to get GUID for Metadata Ingestion](#searching-indexd-to-get-guid-for-metadata-ingestion)
+- [Manifest Merge](#manifest-merge)
+  - [Ideal Scenario (Column to Column Match, Indexing:Metadata Manifest Rows)](#ideal-scenario-column-to-column-match-indexingmetadata-manifest-rows)
+  - [Non-Ideal Scenario (Partial URL Matching)](#non-ideal-scenario-partial-url-matching)
+- [Using Gen3 Jobs](#using-gen3-jobs)
+- [Verify Metadata Manifest](#verify-metadata-manifest)
 
 
 ### Ingest Manifest

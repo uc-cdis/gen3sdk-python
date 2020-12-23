@@ -119,8 +119,8 @@ class Gen3Auth(AuthBase):
         refresh_file (str, opt): The file containing the downloaded JSON web token. Optional if working in a Gen3 Workspace.
                 Defaults to (env["GEN3_API_KEY"] || "credentials") if refresh_token and idp not set.
                 Includes ~/.gen3/ in search path if value does not include /.
-                Interprets "idp://wts/idp" as an idp.
-                Interprets "accesstoken:///token" as an access token
+                Interprets "idp://wts/<idp>" as an idp.
+                Interprets "accesstoken:///<token>" as an access token
         refresh_token (str, opt): The JSON web token. Optional if working in a Gen3 Workspace.
         idp (str, opt): If working in a Gen3 Workspace, the IDP to use can be specified - 
                 "local" indicates the local environment fence idp
@@ -301,7 +301,7 @@ class Gen3Auth(AuthBase):
 
 
     def curl(self, path, request=None, data=None):
-        """Get an access token suitable to pass as an Authorization header bearer"""
+        """Curl the given endpoint - ex: gen3 curl /user/user"""
         try:
             if not request:
                 request = "GET"

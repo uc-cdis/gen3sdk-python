@@ -1,8 +1,8 @@
 ## Bundle Tools
 
 TOC
-- [Ingest Manifest](#ingest-manifest-1)
-    - [Example Bundle:](#example-bundle)
+- [Ingest Manifest](#ingest-manifest)
+    - [Example Bundle](#example-bundle)
 
 ### Ingest Manifest
 

@@ -14,7 +14,7 @@ def stderr(*str):
 @click.argument("path")
 @click.pass_context
 def curl(ctx, path, request=None, data=None):
-    """Get an access token suitable to pass as an Authorization header bearer"""
+    """Curl the endpoint with a token - ex: gen3 curl /user/user"""
     auth_provider = ctx.obj["auth_factory"].get()
     output = auth_provider.curl(path, request, data)
     print(output.text)
@@ -25,7 +25,7 @@ def curl(ctx, path, request=None, data=None):
 @click.command()
 @click.pass_context
 def endpoint(ctx):
-    """Get an access token suitable to pass as an Authorization header bearer"""
+    """Get the endpoint associated with the active authenticator"""
     print(ctx.obj["auth_factory"].get().endpoint)
 
 @click.command()

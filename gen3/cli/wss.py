@@ -27,7 +27,7 @@ def ls(ctx, path=""):
 @click.argument("path")
 @click.pass_context
 def rm(ctx, path):
-    """List the given workspace key"""
+    """Remove the given workspace key"""
     clean = clean_path(path)
     auth_provider = ctx.obj["auth_factory"].get()
     wss = Gen3WsStorage(auth_provider)

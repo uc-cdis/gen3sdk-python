@@ -5,7 +5,7 @@ The Gen3 Software Development Kit (SDK) for Python provides classes and function
 The API for a commons can be overwhelming, so this SDK/CLI aims
 to simplify communication with various microservices.
 
-This [bLog](https://documentation.divio.com/introduction/) introduces the different types of documentation (explanation, how-to, tutorial, reference).
+This [blog](https://documentation.divio.com/introduction/) introduces the different types of documentation (explanation, how-to, tutorial, reference).
 The docs here contain general descriptions of the different pieces of the SDK and example scripts. For detailed API documentation, see the link below:
 
 * [Detailed API Documentation](https://uc-cdis.github.io/gen3sdk-python/_build/html/index.html)
@@ -34,4 +34,3 @@ To get the latest released version of the SDK:
 This SDK exposes a Command Line Interface (CLI). You can now import functions from `gen3` into your own Python scripts or you can use the command line interface:
 
 `gen3 --help`
-

@@ -52,7 +52,7 @@ class Gen3WsStorage:
         using the credentials.json downloaded from the commons profile page.
 
         >>> auth = Gen3Auth(endpoint, refresh_file="credentials.json")
-        ... sub = Gen3Metadata(auth.endpoint, auth)
+        ... wss = Gen3WsStorage(auth)
     """
 
     def __init__(
