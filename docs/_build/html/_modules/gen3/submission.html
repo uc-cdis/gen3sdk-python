@@ -287,7 +287,11 @@
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">output</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
             <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">HTTPError</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{}</span><span class="se">\n</span><span class="s2">Failed to delete uuids: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">uuids_to_delete</span><span class="p">))</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="s2">&quot;</span><span class="se">\n</span><span class="si">{}</span><span class="se">\n</span><span class="s2">Failed to delete uuids: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">output</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">uuids_to_delete</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
                 <span class="k">raise</span>
         <span class="k">return</span> <span class="n">output</span></div>
 
@@ -307,7 +311,9 @@
 
 <span class="sd">            &gt;&gt;&gt; Gen3Submission.delete_node(&quot;DCF&quot;, &quot;CCLE&quot;, &quot;demographic&quot;)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">delete_nodes</span><span class="p">(</span><span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="p">[</span><span class="n">node_name</span><span class="p">],</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">delete_nodes</span><span class="p">(</span>
+            <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="p">[</span><span class="n">node_name</span><span class="p">],</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Gen3Submission.delete_nodes"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.delete_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">delete_nodes</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">ordered_node_list</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span>
