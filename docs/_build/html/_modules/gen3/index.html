@@ -48,7 +48,7 @@
 <span class="kn">import</span> <span class="nn">indexclient.client</span> <span class="k">as</span> <span class="nn">client</span>
 
 <span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="k">import</span> <span class="n">DEFAULT_BACKOFF_SETTINGS</span>
-
+<span class="kn">from</span> <span class="nn">gen3.auth</span> <span class="k">import</span> <span class="n">Gen3Auth</span>
 
 <div class="viewcode-block" id="Gen3Index"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index">[docs]</a><span class="k">class</span> <span class="nc">Gen3Index</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -56,20 +56,20 @@
 <span class="sd">    A class for interacting with the Gen3 Index services.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        endpoint (str): The URL of the data commons.</span>
-<span class="sd">        auth_provider (Gen3Auth): A Gen3Auth class instance.</span>
+<span class="sd">        auth_provider (Gen3Auth): A Gen3Auth class instance or indexd basic creds tuple</span>
 
 <span class="sd">    Examples:</span>
 <span class="sd">        This generates the Gen3Index class pointed at the sandbox commons while</span>
 <span class="sd">        using the credentials.json downloaded from the commons profile page.</span>
 
-<span class="sd">        &gt;&gt;&gt; endpoint = &quot;https://nci-crdc-demo.datacommons.io&quot;</span>
-<span class="sd">        ... auth = Gen3Auth(endpoint, refresh_file=&quot;credentials.json&quot;)</span>
-<span class="sd">        ... sub = Gen3Submission(endpoint, auth)</span>
+<span class="sd">        &gt;&gt;&gt; auth = Gen3Auth(refresh_file=&quot;credentials.json&quot;)</span>
+<span class="sd">        ... sub = Gen3Submission(auth.endpoint, auth)</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">,</span> <span class="n">auth_provider</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">service_location</span><span class="o">=</span><span class="s2">&quot;index&quot;</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">auth_provider</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">service_location</span><span class="o">=</span><span class="s2">&quot;index&quot;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">auth_provider</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">auth_provider</span><span class="p">,</span><span class="n">Gen3Auth</span><span class="p">):</span>
+            <span class="n">endpoint</span> <span class="o">=</span> <span class="n">auth_provider</span><span class="o">.</span><span class="n">endpoint</span>
         <span class="n">endpoint</span> <span class="o">=</span> <span class="n">endpoint</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
         <span class="c1"># if running locally, indexd is deployed by itself without a location relative</span>
         <span class="c1"># to the commons</span>

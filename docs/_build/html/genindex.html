@@ -53,6 +53,7 @@
  | <a href="#M"><strong>M</strong></a>
  | <a href="#O"><strong>O</strong></a>
  | <a href="#Q"><strong>Q</strong></a>
+ | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
  | <a href="#T"><strong>T</strong></a>
  | <a href="#U"><strong>U</strong></a>
@@ -113,6 +114,8 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="tools/metadata.html#gen3.tools.metadata.ingest_manifest.COLUMN_TO_USE_AS_GUID">COLUMN_TO_USE_AS_GUID (in module gen3.tools.metadata.ingest_manifest)</a>
 </li>
+      <li><a href="wss.html#gen3.wss.Gen3WsStorage.copy">copy() (gen3.wss.Gen3WsStorage method)</a>
+</li>
       <li><a href="metadata.html#gen3.metadata.Gen3Metadata.create">create() (gen3.metadata.Gen3Metadata method)</a>
 </li>
       <li><a href="indexing.html#gen3.index.Gen3Index.create_blank">create_blank() (gen3.index.Gen3Index method)</a>
@@ -130,6 +133,8 @@
       <li><a href="submission.html#gen3.submission.Gen3Submission.create_project">create_project() (gen3.submission.Gen3Submission method)</a>
 </li>
       <li><a href="indexing.html#gen3.index.Gen3Index.create_record">create_record() (gen3.index.Gen3Index method)</a>
+</li>
+      <li><a href="auth.html#gen3.auth.Gen3Auth.curl">curl() (gen3.auth.Gen3Auth method)</a>
 </li>
       <li><a href="tools/indexing.html#gen3.tools.indexing.download_manifest.CURRENT_DIR">CURRENT_DIR (in module gen3.tools.indexing.download_manifest)</a>
 
@@ -153,10 +158,10 @@
 </li>
       <li><a href="submission.html#gen3.submission.Gen3Submission.delete_nodes">delete_nodes() (gen3.submission.Gen3Submission method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="submission.html#gen3.submission.Gen3Submission.delete_program">delete_program() (gen3.submission.Gen3Submission method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="submission.html#gen3.submission.Gen3Submission.delete_project">delete_project() (gen3.submission.Gen3Submission method)</a>
 </li>
       <li><a href="indexing.html#gen3.index.Gen3Index.delete_record">delete_record() (gen3.index.Gen3Index method)</a>
@@ -166,6 +171,10 @@
 </li>
       </ul></li>
       <li><a href="submission.html#gen3.submission.Gen3Submission.delete_records">delete_records() (gen3.submission.Gen3Submission method)</a>
+</li>
+      <li><a href="wss.html#gen3.wss.Gen3WsStorage.download">download() (gen3.wss.Gen3WsStorage method)</a>
+</li>
+      <li><a href="wss.html#gen3.wss.Gen3WsStorage.download_url">download_url() (gen3.wss.Gen3WsStorage method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -209,12 +218,16 @@
 </li>
       <li><a href="submission.html#gen3.submission.Gen3Submission">Gen3Submission (class in gen3.submission)</a>
 </li>
+      <li><a href="wss.html#gen3.wss.Gen3WsStorage">Gen3WsStorage (class in gen3.wss)</a>
+</li>
       <li><a href="indexing.html#gen3.index.Gen3Index.get">get() (gen3.index.Gen3Index method)</a>
 
       <ul>
         <li><a href="metadata.html#gen3.metadata.Gen3Metadata.get">(gen3.metadata.Gen3Metadata method)</a>
 </li>
       </ul></li>
+      <li><a href="auth.html#gen3.auth.Gen3Auth.get_access_token">get_access_token() (gen3.auth.Gen3Auth method)</a>
+</li>
       <li><a href="indexing.html#gen3.index.Gen3Index.get_all_records">get_all_records() (gen3.index.Gen3Index method)</a>
 </li>
       <li><a href="tools/indexing.html#gen3.tools.indexing.index_manifest.get_and_verify_fileinfos_from_manifest">get_and_verify_fileinfos_from_manifest() (in module gen3.tools.indexing.index_manifest)</a>
@@ -229,10 +242,10 @@
 </li>
       <li><a href="metadata.html#gen3.metadata.Gen3Metadata.get_index_key_paths">get_index_key_paths() (gen3.metadata.Gen3Metadata method)</a>
 </li>
-      <li><a href="indexing.html#gen3.index.Gen3Index.get_latest_version">get_latest_version() (gen3.index.Gen3Index method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="indexing.html#gen3.index.Gen3Index.get_latest_version">get_latest_version() (gen3.index.Gen3Index method)</a>
+</li>
       <li><a href="jobs.html#gen3.jobs.Gen3Jobs.get_output">get_output() (gen3.jobs.Gen3Jobs method)</a>
 </li>
       <li><a href="file.html#gen3.file.Gen3File.get_presigned_url">get_presigned_url() (gen3.file.Gen3File method)</a>
@@ -306,6 +319,12 @@
       <li><a href="jobs.html#gen3.jobs.Gen3Jobs.list_jobs">list_jobs() (gen3.jobs.Gen3Jobs method)</a>
 </li>
   </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="wss.html#gen3.wss.Gen3WsStorage.ls">ls() (gen3.wss.Gen3WsStorage method)</a>
+</li>
+      <li><a href="wss.html#gen3.wss.Gen3WsStorage.ls_path">ls_path() (gen3.wss.Gen3WsStorage method)</a>
+</li>
+  </ul></td>
 </tr></table>
 
 <h2 id="M">M</h2>
@@ -350,6 +369,20 @@
   </ul></td>
 </tr></table>
 
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="auth.html#gen3.auth.Gen3Auth.refresh_access_token">refresh_access_token() (gen3.auth.Gen3Auth method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="wss.html#gen3.wss.Gen3WsStorage.rm">rm() (gen3.wss.Gen3WsStorage method)</a>
+</li>
+      <li><a href="wss.html#gen3.wss.Gen3WsStorage.rm_path">rm_path() (gen3.wss.Gen3WsStorage method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -383,9 +416,13 @@
 </li>
       <li><a href="indexing.html#gen3.index.Gen3Index.update_blank">update_blank() (gen3.index.Gen3Index method)</a>
 </li>
+      <li><a href="indexing.html#gen3.index.Gen3Index.update_record">update_record() (gen3.index.Gen3Index method)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="indexing.html#gen3.index.Gen3Index.update_record">update_record() (gen3.index.Gen3Index method)</a>
+      <li><a href="wss.html#gen3.wss.Gen3WsStorage.upload">upload() (gen3.wss.Gen3WsStorage method)</a>
+</li>
+      <li><a href="wss.html#gen3.wss.Gen3WsStorage.upload_url">upload_url() (gen3.wss.Gen3WsStorage method)</a>
 </li>
       <li><a href="tools/indexing.html#gen3.tools.indexing.index_manifest.URLS">URLS (in module gen3.tools.indexing.index_manifest)</a>
 </li>

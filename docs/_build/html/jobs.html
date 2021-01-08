@@ -43,15 +43,14 @@
 <h1>Gen3 Jobs Class<a class="headerlink" href="#gen3-jobs-class" title="Permalink to this headline">¶</a></h1>
 <dl class="class">
 <dt id="gen3.jobs.Gen3Jobs">
-<em class="property">class </em><code class="descclassname">gen3.jobs.</code><code class="descname">Gen3Jobs</code><span class="sig-paren">(</span><em>endpoint</em>, <em>auth_provider=None</em>, <em>service_location='job'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">gen3.jobs.</code><code class="descname">Gen3Jobs</code><span class="sig-paren">(</span><em>endpoint=None</em>, <em>auth_provider=None</em>, <em>service_location='job'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
 <p>A class for interacting with the Gen3’s Job Dispatching Service(s).</p>
 <p class="rubric">Examples</p>
 <p>This generates the Gen3Jobs class pointed at the sandbox commons while
 using the credentials.json downloaded from the commons profile page.</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">endpoint</span> <span class="o">=</span> <span class="s2">&quot;https://nci-crdc-demo.datacommons.io&quot;</span>
-<span class="gp">... </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
-<span class="gp">... </span><span class="n">sub</span> <span class="o">=</span> <span class="n">Gen3Jobs</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">auth</span><span class="p">)</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
+<span class="gp">... </span><span class="n">sub</span> <span class="o">=</span> <span class="n">Gen3Jobs</span><span class="p">(</span><span class="n">auth</span><span class="p">)</span>
 </pre></div>
 </div>
 <dl class="method">
