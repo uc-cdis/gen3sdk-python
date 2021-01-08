@@ -37,11 +37,6 @@ def put_url(urlstr, src_path):
     with open(src_path, 'rb') as f:
         res = requests.put(urlstr, data=f)
     check_curl_status(res)
-
-def trim_leading_slash(str):
-    while str and str[0] == "/":
-        str = str[1:]
-    return str
         
 
 class Gen3WsStorage:
@@ -72,8 +67,12 @@ class Gen3WsStorage:
     def upload_url(self, ws, wskey):
         """
         Get a upload url for the given workspace key
+
+        Args:
+          ws (string): name of the workspace
+          wskey (string): key of the object in the workspace
         """
-        wskey = trim_leading_slash(wskey)
+        wskey = wskey.lstrip("/")
         res = self._auth_provider.curl("/ws-storage/upload/{}/{}".format(ws, wskey))
         check_curl_status(res)
         return res.json()
@@ -91,8 +90,12 @@ class Gen3WsStorage:
     def download_url(self, ws, wskey):
         """
         Get a download url for the given workspace key
+
+        Args:
+          ws (string): name of the workspace
+          wskey (string): key of the object in the workspace
         """
-        wskey = trim_leading_slash(wskey)
+        wskey = wskey.lstrip("/")
         res = self._auth_provider.curl("/ws-storage/download/{}/{}".format(ws, wskey))
         check_curl_status(res)
         return res.json()
@@ -101,6 +104,11 @@ class Gen3WsStorage:
     def download(self, src_ws, src_wskey, dest_path):
         """
         Download a file from the workspace to local disk
+
+        Args:
+          src_ws (string): name of the workspace
+          src_wskey (string): key of the object in the workspace
+          dest_path (string): to download the file to
         """
         durl = self.download_url(src_ws, src_wskey)["Data"]
         get_url(durl, dest_path)
@@ -124,8 +132,12 @@ class Gen3WsStorage:
     def ls(self, ws, wskey):
         """
         List the contents under the given workspace path
+
+        Args:
+          ws (string): name of the workspace
+          wskey (string): key of the object in the workspace
         """
-        wskey = trim_leading_slash(wskey)
+        wskey = wskey.lstrip("/")
         res = self._auth_provider.curl("/ws-storage/list/{}/{}".format(ws, wskey))
         check_curl_status(res)
         return res.json()
@@ -135,6 +147,10 @@ class Gen3WsStorage:
         """
         Same as ls - but parses ws_urlstr argument of form:
           ws:///workspace/key
+
+        Args:
+          ws (string): name of the workspace
+          wskey (string): key of the object in the workspace
         """
         pathparts = wsurl_to_tokens(ws_urlstr)
         return self.ls(pathparts[0], pathparts[1])
@@ -143,8 +159,12 @@ class Gen3WsStorage:
     def rm(self, ws, wskey):
         """
         Remove the given workspace key
+
+        Args:
+          ws (string): name of the workspace
+          wskey (string): key of the object in the workspace
         """
-        wskey = trim_leading_slash(wskey)
+        wskey = wskey.lstrip("/")
         res = self._auth_provider.curl("/ws-storage/list/{}/{}".format(ws, wskey), request="DELETE")
         check_curl_status(res)
         return res.json()
