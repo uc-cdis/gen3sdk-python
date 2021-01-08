@@ -247,7 +247,11 @@ class Gen3Submission:
             try:
                 output.raise_for_status()
             except requests.exceptions.HTTPError:
-                print("\n{}\nFailed to delete uuids: {}".format(output.text, uuids_to_delete))
+                print(
+                    "\n{}\nFailed to delete uuids: {}".format(
+                        output.text, uuids_to_delete
+                    )
+                )
                 raise
         return output
 
@@ -267,7 +271,9 @@ class Gen3Submission:
 
             >>> Gen3Submission.delete_node("DCF", "CCLE", "demographic")
         """
-        return self.delete_nodes(program, project, [node_name], batch_size, verbose=verbose)
+        return self.delete_nodes(
+            program, project, [node_name], batch_size, verbose=verbose
+        )
 
     def delete_nodes(
         self, program, project, ordered_node_list, batch_size=100, verbose=True
