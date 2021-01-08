@@ -226,6 +226,7 @@ class Gen3Submission:
             program (str): The program to delete from.
             project (str): The project to delete from.
             uuids (list): The list of uuids of the records to delete
+            batch_size (int, optional, default: 100): how many records to delete at a time
 
         Examples:
             This deletes a list of records from the CCLE project in the sandbox commons.
@@ -246,11 +247,15 @@ class Gen3Submission:
             try:
                 output.raise_for_status()
             except requests.exceptions.HTTPError:
-                print("\nFailed to delete uuids: {}".format(uuids_to_delete))
+                print(
+                    "\n{}\nFailed to delete uuids: {}".format(
+                        output.text, uuids_to_delete
+                    )
+                )
                 raise
         return output
 
-    def delete_node(self, program, project, node_name, verbose=True):
+    def delete_node(self, program, project, node_name, batch_size=100, verbose=True):
         """
         Delete all records for a node from a project.
 
@@ -258,13 +263,17 @@ class Gen3Submission:
             program (str): The program to delete from.
             project (str): The project to delete from.
             node_name (str): Name of the node to delete
+            batch_size (int, optional, default: 100): how many records to query and delete at a time
+            verbose (bool, optional, default: True): whether to print progress logs
 
         Examples:
             This deletes a node from the CCLE project in the sandbox commons.
 
             >>> Gen3Submission.delete_node("DCF", "CCLE", "demographic")
         """
-        return self.delete_nodes(program, project, [node_name], verbose=verbose)
+        return self.delete_nodes(
+            program, project, [node_name], batch_size, verbose=verbose
+        )
 
     def delete_nodes(
         self, program, project, ordered_node_list, batch_size=100, verbose=True
@@ -276,6 +285,8 @@ class Gen3Submission:
             program (str): The program to delete from.
             project (str): The project to delete from.
             ordered_node_list (list): The list of nodes to delete, in reverse graph submission order
+            batch_size (int, optional, default: 100): how many records to query and delete at a time
+            verbose (bool, optional, default: True): whether to print progress logs
 
         Examples:
             This deletes a list of nodes from the CCLE project in the sandbox commons.
