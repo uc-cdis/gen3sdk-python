@@ -53,13 +53,6 @@
 <span class="k">class</span> <span class="nc">Gen3AuthError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
     <span class="k">pass</span>
 
-<span class="k">class</span> <span class="nc">Gen3CurlError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Custom exception for capturing backoff and retry&quot;&quot;&quot;</span>
-    <span class="k">pass</span>
-
-<span class="k">class</span> <span class="nc">Gen3CurlStatusError</span><span class="p">(</span><span class="n">Gen3CurlError</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Custom exception for status &gt; 399&quot;&quot;&quot;</span>
-    <span class="k">pass</span>
 
 <span class="k">def</span> <span class="nf">decode_token</span><span class="p">(</span><span class="n">token_str</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -75,7 +68,7 @@
 
 <span class="k">def</span> <span class="nf">endpoint_from_token</span><span class="p">(</span><span class="n">token_str</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Extract the endpoint from a JWT issuer - ex:</span>
+<span class="sd">    Extract the endpoint from a JWT issue (&quot;iss&quot; property)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">info</span> <span class="o">=</span> <span class="n">decode_token</span><span class="p">(</span><span class="n">token_str</span><span class="p">)</span>
     <span class="n">urlparts</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;iss&quot;</span><span class="p">])</span>
@@ -115,8 +108,7 @@
 
 <span class="k">def</span> <span class="nf">get_wts_idps</span><span class="p">(</span><span class="n">namespace</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;NAMESPACE&quot;</span><span class="p">,</span> <span class="s2">&quot;default&quot;</span><span class="p">)):</span>
     <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">get_wts_endpoint</span><span class="p">(</span><span class="n">namespace</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;/external_oidc&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;non-200 status </span><span class="si">{}</span><span class="s2"> - </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span> <span class="n">resp</span><span class="o">.</span><span class="n">text</span><span class="p">))</span>
+    <span class="n">resp</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
 
 <span class="k">def</span> <span class="nf">get_access_token_from_wts</span><span class="p">(</span><span class="n">namespace</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;NAMESPACE&quot;</span><span class="p">,</span> <span class="s2">&quot;default&quot;</span><span class="p">),</span> <span class="n">idp</span><span class="o">=</span><span class="s2">&quot;local&quot;</span><span class="p">):</span>
@@ -130,11 +122,6 @@
         <span class="n">auth_url</span> <span class="o">+=</span> <span class="s2">&quot;?idp=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">idp</span><span class="p">)</span>
     <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">auth_url</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">_handle_access_token_response</span><span class="p">(</span><span class="n">resp</span><span class="p">,</span> <span class="s2">&quot;token&quot;</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">check_curl_status</span><span class="p">(</span><span class="n">res</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Raise Gen3CurlError if status is not &lt; 400&quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">res</span><span class="o">.</span><span class="n">status_code</span> <span class="o">&gt;</span> <span class="mi">399</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">Gen3CurlStatusError</span><span class="p">(</span><span class="s2">&quot;Got status: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">status_code</span><span class="p">))</span>
 
 
 <span class="k">def</span> <span class="nf">token_cache_file</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
@@ -238,6 +225,7 @@
                     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">refresh_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
                         <span class="n">file_data</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">file_data</span><span class="p">)</span>
+                    <span class="k">assert</span> <span class="s2">&quot;api_key&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span>
                 <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                         <span class="s2">&quot;Couldn&#39;t load your refresh token file: </span><span class="si">{}</span><span class="se">\n</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
@@ -341,30 +329,34 @@
 
 
 <div class="viewcode-block" id="Gen3Auth.curl"><a class="viewcode-back" href="../../auth.html#gen3.auth.Gen3Auth.curl">[docs]</a>    <span class="k">def</span> <span class="nf">curl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Curl the given endpoint - ex: gen3 curl /user/user&quot;&quot;&quot;</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">request</span><span class="p">:</span>
-                <span class="n">request</span> <span class="o">=</span> <span class="s2">&quot;GET&quot;</span>
-                <span class="k">if</span> <span class="n">data</span><span class="p">:</span>
-                    <span class="n">request</span> <span class="o">=</span> <span class="s2">&quot;POST&quot;</span>
-            <span class="n">json_data</span> <span class="o">=</span> <span class="n">data</span>
-            <span class="n">output</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="k">if</span> <span class="n">data</span> <span class="ow">and</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;@&quot;</span><span class="p">:</span>
-                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                    <span class="n">json_data</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">request</span> <span class="o">==</span> <span class="s2">&quot;GET&quot;</span><span class="p">:</span>
-                <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">path</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="n">request</span> <span class="o">==</span> <span class="s2">&quot;POST&quot;</span><span class="p">:</span>
-                <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">path</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">json_data</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="n">request</span> <span class="o">==</span> <span class="s2">&quot;PUT&quot;</span><span class="p">:</span>
-                <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">path</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">json_data</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="n">request</span> <span class="o">==</span> <span class="s2">&quot;DELETE&quot;</span><span class="p">:</span>
-                <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">path</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Invalid request type: &quot;</span> <span class="o">+</span> <span class="n">request</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">output</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">Gen3CurlError</span> <span class="kn">from</span> <span class="nn">ex</span></div></div>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Curl the given endpoint - ex: gen3 curl /user/user.  Return requests.Response</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            path (str): path under the commons to curl (/user/user, /index/index, /authz/mapping, ...)</span>
+<span class="sd">            request (str in GET|POST|PUT|DELETE): default to GET if data is not set, else default to POST</span>
+<span class="sd">            data (str): json string or &quot;@filename&quot; of a json file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">request</span><span class="p">:</span>
+            <span class="n">request</span> <span class="o">=</span> <span class="s2">&quot;GET&quot;</span>
+            <span class="k">if</span> <span class="n">data</span><span class="p">:</span>
+                <span class="n">request</span> <span class="o">=</span> <span class="s2">&quot;POST&quot;</span>
+        <span class="n">json_data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">and</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;@&quot;</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">json_data</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">request</span> <span class="o">==</span> <span class="s2">&quot;GET&quot;</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">path</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">request</span> <span class="o">==</span> <span class="s2">&quot;POST&quot;</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">path</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">json_data</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">request</span> <span class="o">==</span> <span class="s2">&quot;PUT&quot;</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">path</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">json_data</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">request</span> <span class="o">==</span> <span class="s2">&quot;DELETE&quot;</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">path</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Invalid request type: &quot;</span> <span class="o">+</span> <span class="n">request</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">output</span></div></div>
 </pre></div>
 
           </div>

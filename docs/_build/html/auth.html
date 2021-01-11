@@ -92,7 +92,20 @@ constructor.</p>
 <dl class="method">
 <dt id="gen3.auth.Gen3Auth.curl">
 <code class="descname">curl</code><span class="sig-paren">(</span><em>path</em>, <em>request=None</em>, <em>data=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/auth.html#Gen3Auth.curl"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.auth.Gen3Auth.curl" title="Permalink to this definition">¶</a></dt>
-<dd><p>Curl the given endpoint - ex: gen3 curl /user/user</p>
+<dd><p>Curl the given endpoint - ex: gen3 curl /user/user.  Return requests.Response</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>path</strong> (<em>str</em>) – path under the commons to curl (/user/user, /index/index, /authz/mapping, …)</li>
+<li><strong>request</strong> (<em>str in GET|POST|PUT|DELETE</em>) – default to GET if data is not set, else default to POST</li>
+<li><strong>data</strong> (<em>str</em>) – json string or “&#64;filename” of a json file</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">

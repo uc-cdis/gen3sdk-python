@@ -43,26 +43,26 @@
 <h1>Gen3 Metadata Class<a class="headerlink" href="#gen3-metadata-class" title="Permalink to this headline">¶</a></h1>
 <dl class="class">
 <dt id="gen3.metadata.Gen3Metadata">
-<em class="property">class </em><code class="descclassname">gen3.metadata.</code><code class="descname">Gen3Metadata</code><span class="sig-paren">(</span><em>endpoint</em>, <em>auth_provider=None</em>, <em>service_location='mds'</em>, <em>admin_endpoint_suffix='-admin'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">gen3.metadata.</code><code class="descname">Gen3Metadata</code><span class="sig-paren">(</span><em>endpoint=None</em>, <em>auth_provider=None</em>, <em>service_location='mds'</em>, <em>admin_endpoint_suffix='-admin'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
 <p>A class for interacting with the Gen3 Metadata services.</p>
 <p class="rubric">Examples</p>
 <p>This generates the Gen3Metadata class pointed at the sandbox commons while
 using the credentials.json downloaded from the commons profile page.</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
-<span class="gp">... </span><span class="n">sub</span> <span class="o">=</span> <span class="n">Gen3Metadata</span><span class="p">(</span><span class="n">auth</span><span class="o">.</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">auth</span><span class="p">)</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
+<span class="gp">... </span><span class="n">sub</span> <span class="o">=</span> <span class="n">Gen3Metadata</span><span class="p">(</span><span class="n">auth</span><span class="p">)</span>
 </pre></div>
 </div>
 <dl class="attribute">
-<dt id="gen3.metadata.Gen3Metadata.admin_endpoint">
-<code class="descname">admin_endpoint</code><a class="headerlink" href="#gen3.metadata.Gen3Metadata.admin_endpoint" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>str</em> – endpoint for admin functionality (Create/Update/Delete)</p>
+<dt id="gen3.metadata.Gen3Metadata.endpoint">
+<code class="descname">endpoint</code><a class="headerlink" href="#gen3.metadata.Gen3Metadata.endpoint" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em> – public endpoint for reading/querying metadata - only necessary if auth_provider not provided</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="gen3.metadata.Gen3Metadata.endpoint">
-<code class="descname">endpoint</code><a class="headerlink" href="#gen3.metadata.Gen3Metadata.endpoint" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>str</em> – public endpoint for reading/querying metadata</p>
+<dt id="gen3.metadata.Gen3Metadata.auth_provider">
+<code class="descname">auth_provider</code><a class="headerlink" href="#gen3.metadata.Gen3Metadata.auth_provider" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>Gen3Auth</em> – auth manager</p>
 </dd></dl>
 
 <dl class="method">
