@@ -16,6 +16,7 @@ class Gen3Index:
     A class for interacting with the Gen3 Index services.
 
     Args:
+        endpoint (str): public endpoint for reading/querying indexd - only necessary if auth_provider not provided
         auth_provider (Gen3Auth): A Gen3Auth class instance or indexd basic creds tuple
 
     Examples:
@@ -23,11 +24,15 @@ class Gen3Index:
         using the credentials.json downloaded from the commons profile page.
 
         >>> auth = Gen3Auth(refresh_file="credentials.json")
-        ... sub = Gen3Submission(auth.endpoint, auth)
+        ... sub = Gen3Submission(auth)
 
     """
 
     def __init__(self, endpoint=None, auth_provider=None, service_location="index"):
+        # legacy interface required endpoint as 1st arg
+        if endpoint and isinstance(endpoint,Gen3Auth):
+            auth_provider = endpoint
+            endpoint = None
         if auth_provider and isinstance(auth_provider,Gen3Auth):
             endpoint = auth_provider.endpoint
         endpoint = endpoint.strip("/")

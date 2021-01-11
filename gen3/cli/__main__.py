@@ -20,7 +20,13 @@ class AuthFactory:
 
 
 @click.group()
-@click.option("--auth", 'auth_config', default=os.getenv("GEN3_API_KEY", None), help="path to api key, or shorthand for key in ~/.gen3/, or idp: identifier if in workspace")
+@click.option("--auth", 'auth_config', default=os.getenv("GEN3_API_KEY", None), 
+    help="""authentication source: 
+    "idp://wts/<idp>" is an identity provider in a Gen3 workspace,
+    "accesstoken:///<token>" is an access token,
+    otherwise a path to an api key or basename of key under ~/.gen3/;
+    default value is "credentials" if ~/.gen3/credentials.json exists, otherwise "idp://wts/local"
+    """)
 @click.option("--endpoint", 'endpoint', default=os.getenv("GEN3_ENDPOINT", "default"), help="commons hostname - optional if API Key given")
 @click.pass_context
 def main(ctx=None, auth_config=None, endpoint=None):

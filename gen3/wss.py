@@ -6,7 +6,6 @@ import sys
 from urllib.parse import urlparse
 
 from gen3.utils import append_query_params, DEFAULT_BACKOFF_SETTINGS
-from gen3.auth import Gen3CurlError, check_curl_status
 
 
 def wsurl_to_tokens(ws_urlstr):
@@ -20,23 +19,23 @@ def wsurl_to_tokens(ws_urlstr):
         raise Exception("invalid path {}".format(ws_urlstr))
     return (pathparts[0], "/".join(pathparts[1:]))
 
-@backoff.on_exception(backoff.expo, Gen3CurlError, **DEFAULT_BACKOFF_SETTINGS)
+@backoff.on_exception(backoff.expo, requests.HTTPError, **DEFAULT_BACKOFF_SETTINGS)
 def get_url(urlstr, dest_path):
     """Simple url fetch to dest_path with backoff"""
     res = requests.get(urlstr)
-    check_curl_status(res)
+    res.raise_for_status()
     if dest_path == "-":
         sys.stdout.write(res.text)
     else:
         with open(dest_path, 'wb') as f:
             f.write(res.content)
 
-@backoff.on_exception(backoff.expo, Gen3CurlError, **DEFAULT_BACKOFF_SETTINGS)
+@backoff.on_exception(backoff.expo, requests.HTTPError, **DEFAULT_BACKOFF_SETTINGS)
 def put_url(urlstr, src_path):
     """Simple put src_path to url with backoff"""
     with open(src_path, 'rb') as f:
         res = requests.put(urlstr, data=f)
-    check_curl_status(res)
+    res.raise_for_status()
         
 
 class Gen3WsStorage:
@@ -63,7 +62,7 @@ class Gen3WsStorage:
         """
         self._auth_provider = auth_provider
 
-    @backoff.on_exception(backoff.expo, Gen3CurlError, **DEFAULT_BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, requests.HTTPError, **DEFAULT_BACKOFF_SETTINGS)
     def upload_url(self, ws, wskey):
         """
         Get a upload url for the given workspace key
@@ -74,11 +73,11 @@ class Gen3WsStorage:
         """
         wskey = wskey.lstrip("/")
         res = self._auth_provider.curl("/ws-storage/upload/{}/{}".format(ws, wskey))
-        check_curl_status(res)
+        res.raise_for_status()
         return res.json()
 
 
-    @backoff.on_exception(backoff.expo, Gen3CurlError, **DEFAULT_BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, requests.HTTPError, **DEFAULT_BACKOFF_SETTINGS)
     def upload(self, src_path, dest_ws, dest_wskey):
         """
         Upload a local file to the specified workspace path
@@ -86,7 +85,7 @@ class Gen3WsStorage:
         url = self.upload_url(dest_ws, dest_wskey)["Data"]
         put_url(url, src_path)
 
-    @backoff.on_exception(backoff.expo, Gen3CurlError, **DEFAULT_BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, requests.HTTPError, **DEFAULT_BACKOFF_SETTINGS)
     def download_url(self, ws, wskey):
         """
         Get a download url for the given workspace key
@@ -97,7 +96,7 @@ class Gen3WsStorage:
         """
         wskey = wskey.lstrip("/")
         res = self._auth_provider.curl("/ws-storage/download/{}/{}".format(ws, wskey))
-        check_curl_status(res)
+        res.raise_for_status()
         return res.json()
 
 
@@ -128,7 +127,7 @@ class Gen3WsStorage:
             return self.upload(src_urlstr, pathparts[0], pathparts[1])
         raise Exception("source and destination may not both be local")
 
-    @backoff.on_exception(backoff.expo, Gen3CurlError, **DEFAULT_BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, requests.HTTPError, **DEFAULT_BACKOFF_SETTINGS)
     def ls(self, ws, wskey):
         """
         List the contents under the given workspace path
@@ -139,7 +138,7 @@ class Gen3WsStorage:
         """
         wskey = wskey.lstrip("/")
         res = self._auth_provider.curl("/ws-storage/list/{}/{}".format(ws, wskey))
-        check_curl_status(res)
+        res.raise_for_status()
         return res.json()
 
 
@@ -155,7 +154,7 @@ class Gen3WsStorage:
         pathparts = wsurl_to_tokens(ws_urlstr)
         return self.ls(pathparts[0], pathparts[1])
 
-    @backoff.on_exception(backoff.expo, Gen3CurlError, **DEFAULT_BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, requests.HTTPError, **DEFAULT_BACKOFF_SETTINGS)
     def rm(self, ws, wskey):
         """
         Remove the given workspace key
@@ -166,7 +165,7 @@ class Gen3WsStorage:
         """
         wskey = wskey.lstrip("/")
         res = self._auth_provider.curl("/ws-storage/list/{}/{}".format(ws, wskey), request="DELETE")
-        check_curl_status(res)
+        res.raise_for_status()
         return res.json()
 
     def rm_path(self, ws_urlstr):

@@ -59,7 +59,6 @@ def test_auth_init_in_workspace(monkeypatch):
         mocked_response.json.return_value = {
             "token": access_token
         }
-        #mocked_response.raise_for_status.side_effect = lambda *args: None
         return mocked_response
 
     with patch("gen3.auth.requests") as mock_request:

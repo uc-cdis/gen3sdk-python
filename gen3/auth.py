@@ -13,13 +13,6 @@ from urllib.parse import urlparse
 class Gen3AuthError(Exception):
     pass
 
-class Gen3CurlError(Exception):
-    """ Custom exception for capturing backoff and retry"""
-    pass
-
-class Gen3CurlStatusError(Gen3CurlError):
-    """ Custom exception for status > 399"""
-    pass
 
 def decode_token(token_str):
     """
@@ -35,7 +28,7 @@ def decode_token(token_str):
 
 def endpoint_from_token(token_str):
     """
-    Extract the endpoint from a JWT issuer - ex:
+    Extract the endpoint from a JWT issue ("iss" property)
     """
     info = decode_token(token_str)
     urlparts = urlparse(info["iss"])
@@ -75,8 +68,7 @@ def get_wts_endpoint(namespace=os.getenv("NAMESPACE", "default")):
 
 def get_wts_idps(namespace=os.getenv("NAMESPACE", "default")):
     resp = requests.get(get_wts_endpoint(namespace) + "/external_oidc")
-    if resp.status_code != 200:
-        raise Exception("non-200 status {} - {}".format(resp.status_code, resp.text))
+    resp.raise_for_status()
     return resp.json()
 
 def get_access_token_from_wts(namespace=os.getenv("NAMESPACE", "default"), idp="local"):
@@ -90,11 +82,6 @@ def get_access_token_from_wts(namespace=os.getenv("NAMESPACE", "default"), idp="
         auth_url += "?idp={}".format(idp)
     resp = requests.get(auth_url)
     return _handle_access_token_response(resp, "token")
-
-def check_curl_status(res):
-    """Raise Gen3CurlError if status is not < 400"""
-    if res.status_code > 399:
-        raise Gen3CurlStatusError("Got status: " + str(res.status_code))
 
 
 def token_cache_file(key):
@@ -198,6 +185,7 @@ class Gen3Auth(AuthBase):
                     with open(refresh_file) as f:
                         file_data = f.read()
                     self._refresh_token = json.loads(file_data)
+                    assert "api_key" in self._refresh_token
                 except Exception as e:
                     raise ValueError(
                         "Couldn't load your refresh token file: {}\n{}".format(
@@ -301,27 +289,31 @@ class Gen3Auth(AuthBase):
 
 
     def curl(self, path, request=None, data=None):
-        """Curl the given endpoint - ex: gen3 curl /user/user"""
-        try:
-            if not request:
-                request = "GET"
-                if data:
-                    request = "POST"
-            json_data = data
-            output = None
-            if data and data[0] == "@":
-                with open(data[1:]) as f:
-                    json_data = f.read()
-            if request == "GET":
-                output = requests.get(self.endpoint + "/" + path, auth=self)
-            elif request == "POST":
-                output = requests.post(self.endpoint + "/" + path, json=json_data, auth=self)
-            elif request == "PUT":
-                output = requests.put(self.endpoint + "/" + path, json=json_data, auth=self)
-            elif request == "DELETE":
-                output = requests.delete(self.endpoint + "/" + path, auth=self)
-            else:
-                raise Exception("Invalid request type: " + request)
-            return output
-        except Exception as ex:
-            raise Gen3CurlError from ex
+        """
+        Curl the given endpoint - ex: gen3 curl /user/user.  Return requests.Response
+
+        Args:
+            path (str): path under the commons to curl (/user/user, /index/index, /authz/mapping, ...)
+            request (str in GET|POST|PUT|DELETE): default to GET if data is not set, else default to POST
+            data (str): json string or "@filename" of a json file
+        """
+        if not request:
+            request = "GET"
+            if data:
+                request = "POST"
+        json_data = data
+        output = None
+        if data and data[0] == "@":
+            with open(data[1:]) as f:
+                json_data = f.read()
+        if request == "GET":
+            output = requests.get(self.endpoint + "/" + path, auth=self)
+        elif request == "POST":
+            output = requests.post(self.endpoint + "/" + path, json=json_data, auth=self)
+        elif request == "PUT":
+            output = requests.put(self.endpoint + "/" + path, json=json_data, auth=self)
+        elif request == "DELETE":
+            output = requests.delete(self.endpoint + "/" + path, auth=self)
+        else:
+            raise Exception("Invalid request type: " + request)
+        return output

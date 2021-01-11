@@ -43,6 +43,7 @@ class Gen3Jobs:
             service_location (str, optional): deployment location relative to the
                 endpoint provided
         """
+        # auth_provider legacy interface required endpoint as 1st arg
         auth_provider = auth_provider or endpoint
         endpoint = auth_provider.endpoint.strip("/")
         # if running locally, mds is deployed by itself without a location relative

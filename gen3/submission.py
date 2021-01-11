@@ -37,6 +37,7 @@ class Gen3Submission:
     """
 
     def __init__(self, endpoint=None, auth_provider=None):
+        # auth_provider legacy interface required endpoint as 1st arg
         self._auth_provider = auth_provider or endpoint
         self._endpoint = self._auth_provider.endpoint
 

@@ -56,12 +56,6 @@ def wts_list():
     """list the idp's available from the wts in a Gen3 workspace environment """
     print(json.dumps(auth_tool.get_wts_idps(), indent=2))
 
-@click.command()
-@click.pass_context
-def info(ctx):
-    """Info about the current authentication mechanism"""
-    print(ctx.obj["auth_factory"].get().get_access_token())
-
 @click.group()
 def auth():
     """Gen3 sdk auth commands"""
