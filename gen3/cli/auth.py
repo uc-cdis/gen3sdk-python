@@ -48,7 +48,7 @@ def token_decode(token_file):
 
 @click.command()
 def wts_endpoint():
-    """list the idp's available from the wts in a Gen3 workspace environment """
+    """Get the wts endpoint"""
     print(auth_tool.get_wts_endpoint())
 
 @click.command()
