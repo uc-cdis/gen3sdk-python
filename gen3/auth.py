@@ -34,7 +34,7 @@ def endpoint_from_token(token_str):
     urlparts = urlparse(info["iss"])
     endpoint = urlparts.scheme + "://" + urlparts.hostname
     if urlparts.port:
-        endpoint += str(urlparts.port)
+        endpoint += ":" + str(urlparts.port)
     return endpoint
 
 def _handle_access_token_response(resp, token_key):
