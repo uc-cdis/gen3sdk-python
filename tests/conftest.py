@@ -6,6 +6,7 @@ from cdisutilstest.code.indexd_fixture import (
 )
 from gen3.index import Gen3Index
 from gen3.submission import Gen3Submission
+from gen3.query import Gen3Query
 import pytest
 from drsclient.client import DrsClient
 
@@ -14,13 +15,16 @@ class MockAuth:
     def __init__(self):
         self.endpoint = "https://example.commons.com"
 
+
 @pytest.fixture
 def sub():
     return Gen3Submission(MockAuth())
 
+
 @pytest.fixture
 def gen3_auth():
     return MockAuth()
+
 
 # for unittest with mock server
 @pytest.fixture
@@ -49,6 +53,11 @@ def index_client(indexd_server):
 @pytest.fixture
 def gen3_index(index_client):
     return index_client
+
+
+@pytest.fixture
+def gen3_query(gen3_auth):
+    return Gen3Query(gen3_auth)
 
 
 @pytest.fixture(scope="function")

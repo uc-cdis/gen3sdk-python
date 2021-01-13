@@ -382,7 +382,7 @@ class Gen3Submission:
     ### Query functions
 
     def query(self, query_txt, variables=None, max_tries=1):
-        """Execute a GraphQL query against a data commons.
+        """Execute a GraphQL query against a Data Commons.
 
         Args:
             query_txt (str): Query text.
@@ -391,7 +391,7 @@ class Gen3Submission:
 
         Examples:
             This executes a query to get the list of all the project codes for all the projects
-            in the data commons.
+            in the Data Commons.
 
             >>> query = "{ project(first:0) { code } }"
             ... Gen3Submission.query(query)
