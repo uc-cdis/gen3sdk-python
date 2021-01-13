@@ -15,13 +15,16 @@ class MockAuth:
     def __init__(self):
         self.endpoint = "https://example.commons.com"
 
+
 @pytest.fixture
 def sub():
     return Gen3Submission(MockAuth())
 
+
 @pytest.fixture
 def gen3_auth():
     return MockAuth()
+
 
 # for unittest with mock server
 @pytest.fixture

@@ -46,10 +46,10 @@ class Gen3Metadata:
                 endpoint provided
         """
         # legacy interface required endpoint as 1st arg
-        if endpoint and isinstance(endpoint,Gen3Auth):
+        if endpoint and isinstance(endpoint, Gen3Auth):
             auth_provider = endpoint
             endpoint = None
-        if auth_provider and isinstance(auth_provider,Gen3Auth):
+        if auth_provider and isinstance(auth_provider, Gen3Auth):
             endpoint = auth_provider.endpoint
         endpoint = endpoint.strip("/")
         # if running locally, mds is deployed by itself without a location relative

@@ -20,14 +20,23 @@ class AuthFactory:
 
 
 @click.group()
-@click.option("--auth", 'auth_config', default=os.getenv("GEN3_API_KEY", None), 
+@click.option(
+    "--auth",
+    "auth_config",
+    default=os.getenv("GEN3_API_KEY", None),
     help="""authentication source: 
     "idp://wts/<idp>" is an identity provider in a Gen3 workspace,
     "accesstoken:///<token>" is an access token,
     otherwise a path to an api key or basename of key under ~/.gen3/;
     default value is "credentials" if ~/.gen3/credentials.json exists, otherwise "idp://wts/local"
-    """)
-@click.option("--endpoint", 'endpoint', default=os.getenv("GEN3_ENDPOINT", "default"), help="commons hostname - optional if API Key given")
+    """,
+)
+@click.option(
+    "--endpoint",
+    "endpoint",
+    default=os.getenv("GEN3_ENDPOINT", "default"),
+    help="commons hostname - optional if API Key given",
+)
 @click.pass_context
 def main(ctx=None, auth_config=None, endpoint=None):
     """Gen3 sdk commands"""
@@ -35,6 +44,7 @@ def main(ctx=None, auth_config=None, endpoint=None):
     ctx.obj["auth_config"] = auth_config
     ctx.obj["endpoint"] = endpoint
     ctx.obj["auth_factory"] = AuthFactory(auth_config)
+
 
 main.add_command(auth.auth)
 main.add_command(pfb.pfb)
