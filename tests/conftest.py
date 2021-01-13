@@ -53,8 +53,8 @@ def gen3_index(index_client):
 
 
 @pytest.fixture
-def gen3query():
-    return Gen3Query("http://localhost", None)
+def gen3_query(gen3_auth):
+    return Gen3Query(gen3_auth)
 
 
 @pytest.fixture(scope="function")

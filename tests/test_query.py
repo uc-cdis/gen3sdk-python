@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 
 @patch("gen3.jobs.requests.post")
-def test_query(requests_post_mock, gen3query):
+def test_query(requests_post_mock, gen3_query):
     data_type = "subject"
     records = [
         {"id": "uuid1", "vital_status": "Alive"},
@@ -29,7 +29,7 @@ def test_query(requests_post_mock, gen3query):
 
     # hit "/guppy/graphql" endpoint. Use "filters" param, which should
     # be converted to a filter object
-    data = gen3query.query(
+    data = gen3_query.query(
         data_type=data_type,
         fields=["id", "vital_status"],
         first=4,
@@ -41,7 +41,7 @@ def test_query(requests_post_mock, gen3query):
     assert data == {"data": {data_type: records}}
 
     # hit "/guppy/graphql" endpoint. Use "filter_object" param
-    data = gen3query.query(
+    data = gen3_query.query(
         data_type=data_type,
         fields=["id", "vital_status"],
         first=4,
@@ -54,7 +54,7 @@ def test_query(requests_post_mock, gen3query):
 
     # first + offset > 10,000 triggers use of the "/guppy/download"
     # endpoint instead of the "/guppy/graphql" endpoint
-    data = gen3query.query(
+    data = gen3_query.query(
         data_type=data_type,
         fields=["id", "vital_status"],
         first=9999,

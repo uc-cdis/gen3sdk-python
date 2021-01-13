@@ -24,7 +24,7 @@ class Gen3Index:
         using the credentials.json downloaded from the commons profile page.
 
         >>> auth = Gen3Auth(refresh_file="credentials.json")
-        ... sub = Gen3Submission(auth)
+        ... index = Gen3Index(auth)
 
     """
 

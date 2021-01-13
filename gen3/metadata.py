@@ -21,7 +21,7 @@ class Gen3Metadata:
         using the credentials.json downloaded from the commons profile page.
 
         >>> auth = Gen3Auth(refresh_file="credentials.json")
-        ... sub = Gen3Metadata(auth)
+        ... metadata = Gen3Metadata(auth)
 
     Attributes:
         endpoint (str): public endpoint for reading/querying metadata - only necessary if auth_provider not provided

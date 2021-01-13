@@ -6,21 +6,18 @@ class Gen3Query:
     Query ElasticSearch data from a Gen3 system.
 
     Args:
-        endpoint (str): The URL of the Data Commons.
         auth_provider (Gen3Auth): A Gen3Auth class instance.
 
     Examples:
         This generates the Gen3Query class pointed at the sandbox commons while
         using the credentials.json downloaded from the commons profile page.
 
-        >>> endpoint = "https://nci-crdc-demo.datacommons.io"
-        ... auth = Gen3Auth(endpoint, refresh_file="credentials.json")
-        ... query = Gen3Query(endpoint, auth)
+        >>> auth = Gen3Auth(endpoint, refresh_file="credentials.json")
+        ... query = Gen3Query(auth)
     """
 
-    def __init__(self, endpoint, auth_provider):
+    def __init__(self, auth_provider):
         self._auth_provider = auth_provider
-        self._endpoint = endpoint
 
     def query(
         self,
@@ -125,7 +122,7 @@ class Gen3Query:
             >>> query_string = "{ my_index { my_field } }"
             ... Gen3Query.graphql_query(query_string)
         """
-        url = f"{self._endpoint}/guppy/graphql"
+        url = f"{self._auth_provider.endpoint}/guppy/graphql"
         response = requests.post(
             url,
             json={"query": query_string, "variables": variables},
@@ -193,7 +190,7 @@ class Gen3Query:
         if sort_fields:
             body["sort"] = sort_fields
 
-        url = f"{self._endpoint}/guppy/download"
+        url = f"{self._auth_provider.endpoint}/guppy/download"
         response = requests.post(
             url,
             json=body,
