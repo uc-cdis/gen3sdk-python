@@ -16,11 +16,11 @@ CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 @patch("gen3.jobs.requests.get")
 @patch("gen3.jobs.requests.post")
-def test_full_job_flow(requests_post_mock, requests_get_mock):
+def test_full_job_flow(requests_post_mock, requests_get_mock, gen3_auth):
     """
     Test whole flow of creating a job, polling status, and getting output
     """
-    jobs = Gen3Jobs("https://example.com")
+    jobs = Gen3Jobs(gen3_auth)
     job_input = {
         "phsid_list": "phs000956 phs000920",
         "indexing_manifest_url": "https://example.com/public_indexing_manifest.csv",
@@ -95,11 +95,11 @@ def test_full_job_flow(requests_post_mock, requests_get_mock):
 
 
 @patch("gen3.jobs.requests.get")
-def test_is_healthy(requests_mock):
+def test_is_healthy(requests_mock, gen3_auth):
     """
     Test is healthy response
     """
-    jobs = Gen3Jobs("https://example.com")
+    jobs = Gen3Jobs(gen3_auth)
 
     def _mock_request(url, **kwargs):
         assert url.endswith("/_status")
@@ -119,11 +119,11 @@ def test_is_healthy(requests_mock):
 
 
 @patch("gen3.jobs.requests.get")
-def test_is_not_healthy(requests_mock):
+def test_is_not_healthy(requests_mock, gen3_auth):
     """
     Test is not healthy response
     """
-    jobs = Gen3Jobs("https://example.com")
+    jobs = Gen3Jobs(gen3_auth)
 
     def _mock_request(url, **kwargs):
         assert url.endswith("/_status")
@@ -144,11 +144,11 @@ def test_is_not_healthy(requests_mock):
 
 
 @patch("gen3.jobs.requests.get")
-def test_get_version(requests_mock):
+def test_get_version(requests_mock, gen3_auth):
     """
     Test getting version
     """
-    jobs = Gen3Jobs("https://example.com")
+    jobs = Gen3Jobs(gen3_auth)
 
     def _mock_request(url, **kwargs):
         assert url.endswith("version")
