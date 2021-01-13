@@ -1,0 +1,873 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>gen3.index &#8212; Gen3 SDK  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for gen3.index</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">aiohttp</span>
+<span class="kn">import</span> <span class="nn">backoff</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">urllib.parse</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">import</span> <span class="nn">indexclient.client</span> <span class="k">as</span> <span class="nn">client</span>
+
+<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="k">import</span> <span class="n">DEFAULT_BACKOFF_SETTINGS</span>
+<span class="kn">from</span> <span class="nn">gen3.auth</span> <span class="k">import</span> <span class="n">Gen3Auth</span>
+
+
+<div class="viewcode-block" id="Gen3Index"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index">[docs]</a><span class="k">class</span> <span class="nc">Gen3Index</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    A class for interacting with the Gen3 Index services.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        endpoint (str): public endpoint for reading/querying indexd - only necessary if auth_provider not provided</span>
+<span class="sd">        auth_provider (Gen3Auth): A Gen3Auth class instance or indexd basic creds tuple</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        This generates the Gen3Index class pointed at the sandbox commons while</span>
+<span class="sd">        using the credentials.json downloaded from the commons profile page.</span>
+
+<span class="sd">        &gt;&gt;&gt; auth = Gen3Auth(refresh_file=&quot;credentials.json&quot;)</span>
+<span class="sd">        ... index = Gen3Index(auth)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">auth_provider</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">service_location</span><span class="o">=</span><span class="s2">&quot;index&quot;</span><span class="p">):</span>
+        <span class="c1"># legacy interface required endpoint as 1st arg</span>
+        <span class="k">if</span> <span class="n">endpoint</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">Gen3Auth</span><span class="p">):</span>
+            <span class="n">auth_provider</span> <span class="o">=</span> <span class="n">endpoint</span>
+            <span class="n">endpoint</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">auth_provider</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">auth_provider</span><span class="p">,</span> <span class="n">Gen3Auth</span><span class="p">):</span>
+            <span class="n">endpoint</span> <span class="o">=</span> <span class="n">auth_provider</span><span class="o">.</span><span class="n">endpoint</span>
+        <span class="n">endpoint</span> <span class="o">=</span> <span class="n">endpoint</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+        <span class="c1"># if running locally, indexd is deployed by itself without a location relative</span>
+        <span class="c1"># to the commons</span>
+        <span class="k">if</span> <span class="s2">&quot;http://localhost&quot;</span> <span class="ow">in</span> <span class="n">endpoint</span><span class="p">:</span>
+            <span class="n">service_location</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">endpoint</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">service_location</span><span class="p">):</span>
+            <span class="n">endpoint</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">service_location</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">IndexClient</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="n">auth_provider</span><span class="p">)</span>
+
+    <span class="c1">### Get Requests</span>
+<div class="viewcode-block" id="Gen3Index.is_healthy"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.is_healthy">[docs]</a>    <span class="k">def</span> <span class="nf">is_healthy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Return if indexd is healthy or not</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;_status&quot;</span><span class="p">)</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span> <span class="o">==</span> <span class="s2">&quot;Healthy&quot;</span></div>
+
+<div class="viewcode-block" id="Gen3Index.get_version"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.get_version">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_version</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Return the version of indexd</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;_version&quot;</span><span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Index.get_stats"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.get_stats">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Return basic info about the records in indexd</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;_stats&quot;</span><span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Index.get_all_records"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.get_all_records">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_all_records</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">paginate</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Get a list of all records</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">all_records</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;index/&quot;</span>
+
+        <span class="k">if</span> <span class="n">limit</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">+=</span> <span class="n">f</span><span class="s2">&quot;?limit=</span><span class="si">{limit}</span><span class="s2">&quot;</span>
+
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+
+        <span class="n">records</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;records&quot;</span><span class="p">)</span>
+        <span class="n">all_records</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">records</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">paginate</span> <span class="ow">and</span> <span class="n">records</span><span class="p">:</span>
+            <span class="n">previous_did</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">start_did</span> <span class="o">=</span> <span class="n">records</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;did&quot;</span><span class="p">)</span>
+
+            <span class="k">while</span> <span class="n">start_did</span> <span class="o">!=</span> <span class="n">previous_did</span><span class="p">:</span>
+                <span class="n">previous_did</span> <span class="o">=</span> <span class="n">start_did</span>
+
+                <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;start&quot;</span><span class="p">:</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{start_did}</span><span class="s2">&quot;</span><span class="p">}</span>
+                <span class="n">url_parts</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlparse</span><span class="p">(</span><span class="n">url</span><span class="p">))</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">parse_qsl</span><span class="p">(</span><span class="n">url_parts</span><span class="p">[</span><span class="mi">4</span><span class="p">]))</span>
+                <span class="n">query</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+                <span class="n">url_parts</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlencode</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+
+                <span class="n">url</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlunparse</span><span class="p">(</span><span class="n">url_parts</span><span class="p">)</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+
+                <span class="n">records</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;records&quot;</span><span class="p">)</span>
+                <span class="n">all_records</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">records</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">records</span><span class="p">:</span>
+                    <span class="n">start_did</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;records&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;did&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">all_records</span></div>
+
+<div class="viewcode-block" id="Gen3Index.get_records_on_page"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.get_records_on_page">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_records_on_page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">page</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Get a list of all records given the page and page size limit</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;index/&quot;</span>
+
+        <span class="k">if</span> <span class="n">limit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">params</span><span class="p">[</span><span class="s2">&quot;limit&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">limit</span>
+
+        <span class="k">if</span> <span class="n">page</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">params</span><span class="p">[</span><span class="s2">&quot;page&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">page</span>
+
+        <span class="n">query</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlencode</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">url</span> <span class="o">+</span> <span class="s2">&quot;?&quot;</span> <span class="o">+</span> <span class="n">query</span><span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;records&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Gen3Index.async_get_record"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.async_get_record">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">async_get_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Asynchronous function to request a record from indexd.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guid (str): record guid</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: indexd record</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.client.url}</span><span class="s2">/index/</span><span class="si">{guid}</span><span class="s2">&quot;</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span><span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">response</span></div>
+
+<div class="viewcode-block" id="Gen3Index.async_get_records_on_page"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.async_get_records_on_page">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">async_get_records_on_page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">page</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Asynchronous function to request a page from indexd.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            page (int/str): indexd page to request</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[dict]: List of indexd records from the page</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">all_records</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">if</span> <span class="n">limit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">params</span><span class="p">[</span><span class="s2">&quot;limit&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">limit</span>
+
+        <span class="k">if</span> <span class="n">page</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">params</span><span class="p">[</span><span class="s2">&quot;page&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">page</span>
+
+        <span class="n">query</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlencode</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+        <span class="n">url</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.client.url}</span><span class="s2">/index&quot;</span> <span class="o">+</span> <span class="s2">&quot;?&quot;</span> <span class="o">+</span> <span class="n">query</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span><span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;records&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Gen3Index.get"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.get">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">dist_resolution</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Get the metadata associated with the given id, alias, or</span>
+<span class="sd">        distributed identifier</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">             guid: string</span>
+<span class="sd">                 - record id</span>
+<span class="sd">             dist_resolution: boolean</span>
+<span class="sd">                - *optional* Specify if we want distributed dist_resolution or not</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">global_get</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">dist_resolution</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">rec</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">rec</span>
+
+        <span class="k">return</span> <span class="n">rec</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Index.get_urls"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.get_urls">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_urls</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">hashes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">guids</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Get a list of urls that match query params</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            size: integer</span>
+<span class="sd">                - object size</span>
+<span class="sd">            hashes: string</span>
+<span class="sd">                - hashes specified as algorithm:value</span>
+<span class="sd">            guids: list</span>
+<span class="sd">                - list of ids</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">guids</span><span class="p">:</span>
+            <span class="n">guids</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">guids</span><span class="p">)</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="n">size</span><span class="p">,</span> <span class="s2">&quot;hash&quot;</span><span class="p">:</span> <span class="n">hashes</span><span class="p">,</span> <span class="s2">&quot;ids&quot;</span><span class="p">:</span> <span class="n">guids</span><span class="p">}</span>
+        <span class="n">urls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;urls&quot;</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">p</span><span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">url</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">urls</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span></div>
+
+<div class="viewcode-block" id="Gen3Index.get_record"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.get_record">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Get the metadata associated with a given id</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">guid</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">rec</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">rec</span>
+
+        <span class="k">return</span> <span class="n">rec</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Index.get_record_doc"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.get_record_doc">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_record_doc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Get the metadata associated with a given id</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">guid</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Gen3Index.get_with_params"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.get_with_params">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_with_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Return a document object corresponding to the supplied parameters, such</span>
+<span class="sd">        as ``{&#39;hashes&#39;: {&#39;md5&#39;: &#39;...&#39;}, &#39;size&#39;: &#39;...&#39;, &#39;metadata&#39;: {&#39;file_state&#39;: &#39;...&#39;}}``.</span>
+
+<span class="sd">            - need to include all the hashes in the request</span>
+<span class="sd">            - index client like signpost or indexd will need to handle the</span>
+<span class="sd">              query param `&#39;hash&#39;: &#39;hash_type:hash&#39;`</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">get_with_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">rec</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">rec</span>
+
+        <span class="k">return</span> <span class="n">rec</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Index.async_get_with_params"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.async_get_with_params">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">async_get_with_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Return a document object corresponding to the supplied parameter</span>
+
+<span class="sd">        - need to include all the hashes in the request</span>
+<span class="sd">        - need to handle the query param `&#39;hash&#39;: &#39;hash_type:hash&#39;`</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            params (dict): params to search with</span>
+<span class="sd">            _ssl (None, optional): whether or not to use ssl</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Document: json representation of an entry in indexd</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">query_params</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlencode</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.client.url}</span><span class="s2">/index/?</span><span class="si">{query_params}</span><span class="s2">&quot;</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span><span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+                <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">response</span></div>
+
+<div class="viewcode-block" id="Gen3Index.get_latest_version"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.get_latest_version">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_latest_version</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">has_version</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Get the metadata of the latest index record version associated</span>
+<span class="sd">        with the given id</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guid: string</span>
+<span class="sd">                - record id</span>
+<span class="sd">            has_version: boolean</span>
+<span class="sd">                - *optional* exclude entries without a version</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">get_latest_version</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">has_version</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">rec</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">rec</span>
+
+        <span class="k">return</span> <span class="n">rec</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Index.get_versions"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.get_versions">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_versions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Get the metadata of index record version associated with the</span>
+<span class="sd">        given id</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guid: string</span>
+<span class="sd">                - record id</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;/index/</span><span class="si">{guid}</span><span class="s2">/versions&quot;</span><span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="n">versions</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">versions</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span></div>
+
+    <span class="c1">### Post Requests</span>
+
+<div class="viewcode-block" id="Gen3Index.create_record"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.create_record">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">create_record</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">hashes</span><span class="p">,</span>
+        <span class="n">size</span><span class="p">,</span>
+        <span class="n">did</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">urls</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">file_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">baseid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">acl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">urls_metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">authz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Create a new record and add it to the index</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            hashes (dict): {hash type: hash value,}</span>
+<span class="sd">                eg ``hashes={&#39;md5&#39;: ab167e49d25b488939b1ede42752458b&#39;}``</span>
+<span class="sd">            size (int): file size metadata associated with a given uuid</span>
+<span class="sd">            did (str): provide a UUID for the new indexd to be made</span>
+<span class="sd">            urls (list): list of URLs where you can download the UUID</span>
+<span class="sd">            acl (list): access control list</span>
+<span class="sd">            authz (str): RBAC string</span>
+<span class="sd">            file_name (str): name of the file associated with a given UUID</span>
+<span class="sd">            metadata (dict): additional key value metadata for this entry</span>
+<span class="sd">            urls_metadata (dict): metadata attached to each url</span>
+<span class="sd">            baseid (str): optional baseid to group with previous entries versions</span>
+<span class="sd">            version (str): entry version string</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Document: json representation of an entry in indexd</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+            <span class="n">hashes</span><span class="p">,</span>
+            <span class="n">size</span><span class="p">,</span>
+            <span class="n">did</span><span class="p">,</span>
+            <span class="n">urls</span><span class="p">,</span>
+            <span class="n">file_name</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="p">,</span>
+            <span class="n">baseid</span><span class="p">,</span>
+            <span class="n">acl</span><span class="p">,</span>
+            <span class="n">urls_metadata</span><span class="p">,</span>
+            <span class="n">version</span><span class="p">,</span>
+            <span class="n">authz</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">rec</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Index.async_create_record"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.async_create_record">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">async_create_record</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">hashes</span><span class="p">,</span>
+        <span class="n">size</span><span class="p">,</span>
+        <span class="n">did</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">urls</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">file_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">baseid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">acl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">urls_metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">authz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Asynchronous function to create a record in indexd.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            hashes (dict): {hash type: hash value,}</span>
+<span class="sd">                eg ``hashes={&#39;md5&#39;: ab167e49d25b488939b1ede42752458b&#39;}``</span>
+<span class="sd">            size (int): file size metadata associated with a given uuid</span>
+<span class="sd">            did (str): provide a UUID for the new indexd to be made</span>
+<span class="sd">            urls (list): list of URLs where you can download the UUID</span>
+<span class="sd">            acl (list): access control list</span>
+<span class="sd">            authz (str): RBAC string</span>
+<span class="sd">            file_name (str): name of the file associated with a given UUID</span>
+<span class="sd">            metadata (dict): additional key value metadata for this entry</span>
+<span class="sd">            urls_metadata (dict): metadata attached to each url</span>
+<span class="sd">            baseid (str): optional baseid to group with previous entries versions</span>
+<span class="sd">            version (str): entry version string</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Document: json representation of an entry in indexd</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">urls</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">urls</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="n">json</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;urls&quot;</span><span class="p">:</span> <span class="n">urls</span><span class="p">,</span>
+                <span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;hashes&quot;</span><span class="p">:</span> <span class="n">hashes</span><span class="p">,</span>
+                <span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="n">size</span><span class="p">,</span>
+                <span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="n">file_name</span><span class="p">,</span>
+                <span class="s2">&quot;metadata&quot;</span><span class="p">:</span> <span class="n">metadata</span><span class="p">,</span>
+                <span class="s2">&quot;urls_metadata&quot;</span><span class="p">:</span> <span class="n">urls_metadata</span><span class="p">,</span>
+                <span class="s2">&quot;baseid&quot;</span><span class="p">:</span> <span class="n">baseid</span><span class="p">,</span>
+                <span class="s2">&quot;acl&quot;</span><span class="p">:</span> <span class="n">acl</span><span class="p">,</span>
+                <span class="s2">&quot;authz&quot;</span><span class="p">:</span> <span class="n">authz</span><span class="p">,</span>
+                <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="n">version</span><span class="p">,</span>
+            <span class="p">}</span>
+
+            <span class="k">if</span> <span class="n">did</span><span class="p">:</span>
+                <span class="n">json</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">did</span>
+
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+                <span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.client.url}</span><span class="s2">/index/&quot;</span><span class="p">,</span>
+                <span class="n">json</span><span class="o">=</span><span class="n">json</span><span class="p">,</span>
+                <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;content-type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">},</span>
+                <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span><span class="p">,</span>
+                <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">auth</span><span class="p">,</span>
+            <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">response</span></div>
+
+<div class="viewcode-block" id="Gen3Index.create_blank"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.create_blank">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">create_blank</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uploader</span><span class="p">,</span> <span class="n">file_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Create a blank record</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            json - json in the format:</span>
+<span class="sd">            {</span>
+<span class="sd">                &#39;uploader&#39;: type(string)</span>
+<span class="sd">                &#39;file_name&#39;: type(string) (optional*)</span>
+<span class="sd">            }</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">json</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;uploader&quot;</span><span class="p">:</span> <span class="n">uploader</span><span class="p">,</span> <span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="n">file_name</span><span class="p">}</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span>
+            <span class="s2">&quot;index/blank&quot;</span><span class="p">,</span>
+            <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;content-type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">},</span>
+            <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">auth</span><span class="p">,</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">client</span><span class="o">.</span><span class="n">json_dumps</span><span class="p">(</span><span class="n">json</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="n">rec</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_record</span><span class="p">(</span><span class="n">rec</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="Gen3Index.create_new_version"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.create_new_version">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">create_new_version</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">guid</span><span class="p">,</span>
+        <span class="n">hashes</span><span class="p">,</span>
+        <span class="n">size</span><span class="p">,</span>
+        <span class="n">did</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">urls</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">file_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">acl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">urls_metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">authz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Add new version for the document associated to the provided uuid</span>
+
+<span class="sd">        Since data content is immutable, when you want to change the</span>
+<span class="sd">        size or hash, a new index document with a new uuid needs to be</span>
+<span class="sd">        created as its new version. That uuid is returned in the did</span>
+<span class="sd">        field of the response. The old index document is not deleted.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guid: (string): record id</span>
+<span class="sd">            hashes (dict): {hash type: hash value,}</span>
+<span class="sd">                eg ``hashes={&#39;md5&#39;: ab167e49d25b488939b1ede42752458b&#39;}``</span>
+<span class="sd">            size (int): file size metadata associated with a given uuid</span>
+<span class="sd">            did (str): provide a UUID for the new indexd to be made</span>
+<span class="sd">            urls (list): list of URLs where you can download the UUID</span>
+<span class="sd">            file_name (str): name of the file associated with a given UUID</span>
+<span class="sd">            metadata (dict): additional key value metadata for this entry</span>
+<span class="sd">            acl (list): access control list</span>
+<span class="sd">            urls_metadata (dict): metadata attached to each url</span>
+<span class="sd">            version (str): entry version string</span>
+<span class="sd">            authz (str): RBAC string</span>
+
+<span class="sd">            body: json/dictionary format</span>
+<span class="sd">            - Metadata object that needs to be added to the store.</span>
+<span class="sd">              Providing size and at least one hash is necessary and</span>
+<span class="sd">              sufficient. Note: it is a good idea to add a version</span>
+<span class="sd">              number</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">urls</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">urls</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">json</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;urls&quot;</span><span class="p">:</span> <span class="n">urls</span><span class="p">,</span>
+            <span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;hashes&quot;</span><span class="p">:</span> <span class="n">hashes</span><span class="p">,</span>
+            <span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="n">size</span><span class="p">,</span>
+            <span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="n">file_name</span><span class="p">,</span>
+            <span class="s2">&quot;metadata&quot;</span><span class="p">:</span> <span class="n">metadata</span><span class="p">,</span>
+            <span class="s2">&quot;urls_metadata&quot;</span><span class="p">:</span> <span class="n">urls_metadata</span><span class="p">,</span>
+            <span class="s2">&quot;acl&quot;</span><span class="p">:</span> <span class="n">acl</span><span class="p">,</span>
+            <span class="s2">&quot;authz&quot;</span><span class="p">:</span> <span class="n">authz</span><span class="p">,</span>
+            <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="n">version</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="n">did</span><span class="p">:</span>
+            <span class="n">json</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">did</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span>
+            <span class="s2">&quot;index&quot;</span><span class="p">,</span>
+            <span class="n">guid</span><span class="p">,</span>
+            <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;content-type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">},</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">client</span><span class="o">.</span><span class="n">json_dumps</span><span class="p">(</span><span class="n">json</span><span class="p">),</span>
+            <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">auth</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="n">rec</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">rec</span> <span class="ow">and</span> <span class="s2">&quot;did&quot;</span> <span class="ow">in</span> <span class="n">rec</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_record</span><span class="p">(</span><span class="n">rec</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="Gen3Index.get_records"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.get_records">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_records</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dids</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Get a list of documents given a list of dids</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            dids: list</span>
+<span class="sd">                 - a list of record ids</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list: json representing index records</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span>
+                <span class="s2">&quot;bulk/documents&quot;</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">dids</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">auth</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">HTTPError</span> <span class="k">as</span> <span class="n">exception</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">exception</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">404</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">exception</span>
+
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+    <span class="c1">### Put Requests</span>
+
+<div class="viewcode-block" id="Gen3Index.update_blank"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.update_blank">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">update_blank</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">rev</span><span class="p">,</span> <span class="n">hashes</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">urls</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">authz</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Update only hashes and size for a blank index</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guid (string): record id</span>
+<span class="sd">            rev (string): data revision - simple consistency mechanism</span>
+<span class="sd">            hashes (dict): {hash type: hash value,}</span>
+<span class="sd">                eg ``hashes={&#39;md5&#39;: ab167e49d25b488939b1ede42752458b&#39;}``</span>
+<span class="sd">            size (int): file size metadata associated with a given uuid</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;rev&quot;</span><span class="p">:</span> <span class="n">rev</span><span class="p">}</span>
+        <span class="n">json</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;hashes&quot;</span><span class="p">:</span> <span class="n">hashes</span><span class="p">,</span> <span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="n">size</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">urls</span><span class="p">:</span>
+            <span class="n">json</span><span class="p">[</span><span class="s2">&quot;urls&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">urls</span>
+        <span class="k">if</span> <span class="n">authz</span><span class="p">:</span>
+            <span class="n">json</span><span class="p">[</span><span class="s2">&quot;authz&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">authz</span>
+
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_put</span><span class="p">(</span>
+            <span class="s2">&quot;index/blank&quot;</span><span class="p">,</span>
+            <span class="n">guid</span><span class="p">,</span>
+            <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;content-type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">},</span>
+            <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span>
+            <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">auth</span><span class="p">,</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">client</span><span class="o">.</span><span class="n">json_dumps</span><span class="p">(</span><span class="n">json</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="n">rec</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_record</span><span class="p">(</span><span class="n">rec</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="Gen3Index.update_record"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.update_record">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">update_record</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">guid</span><span class="p">,</span>
+        <span class="n">file_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">urls</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">acl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">authz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">urls_metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Update an existing entry in the index</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">             guid: string</span>
+<span class="sd">                 - record id</span>
+<span class="sd">             body: json/dictionary format</span>
+<span class="sd">                 - index record information that needs to be updated.</span>
+<span class="sd">                 - can not update size or hash, use new version for that</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">updatable_attrs</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="n">file_name</span><span class="p">,</span>
+            <span class="s2">&quot;urls&quot;</span><span class="p">:</span> <span class="n">urls</span><span class="p">,</span>
+            <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="n">version</span><span class="p">,</span>
+            <span class="s2">&quot;metadata&quot;</span><span class="p">:</span> <span class="n">metadata</span><span class="p">,</span>
+            <span class="s2">&quot;acl&quot;</span><span class="p">:</span> <span class="n">acl</span><span class="p">,</span>
+            <span class="s2">&quot;authz&quot;</span><span class="p">:</span> <span class="n">authz</span><span class="p">,</span>
+            <span class="s2">&quot;urls_metadata&quot;</span><span class="p">:</span> <span class="n">urls_metadata</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">rec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">guid</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">updatable_attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">exec</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;rec.</span><span class="si">{k}</span><span class="s2"> = v&quot;</span><span class="p">)</span>
+        <span class="n">rec</span><span class="o">.</span><span class="n">patch</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">rec</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Index.async_update_record"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.async_update_record">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">async_update_record</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">guid</span><span class="p">,</span>
+        <span class="n">file_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">urls</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">acl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">authz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">urls_metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Asynchronous function to update a record in indexd.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">             guid: string</span>
+<span class="sd">                 - record id</span>
+<span class="sd">             body: json/dictionary format</span>
+<span class="sd">                 - index record information that needs to be updated.</span>
+<span class="sd">                 - can not update size or hash, use new version for that</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+            <span class="n">updatable_attrs</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="n">file_name</span><span class="p">,</span>
+                <span class="s2">&quot;urls&quot;</span><span class="p">:</span> <span class="n">urls</span><span class="p">,</span>
+                <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="n">version</span><span class="p">,</span>
+                <span class="s2">&quot;metadata&quot;</span><span class="p">:</span> <span class="n">metadata</span><span class="p">,</span>
+                <span class="s2">&quot;acl&quot;</span><span class="p">:</span> <span class="n">acl</span><span class="p">,</span>
+                <span class="s2">&quot;authz&quot;</span><span class="p">:</span> <span class="n">authz</span><span class="p">,</span>
+                <span class="s2">&quot;urls_metadata&quot;</span><span class="p">:</span> <span class="n">urls_metadata</span><span class="p">,</span>
+            <span class="p">}</span>
+            <span class="n">record</span> <span class="o">=</span> <span class="k">await</span> <span class="n">async_get_record</span><span class="p">(</span><span class="n">guid</span><span class="p">)</span>
+            <span class="n">revision</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;rev&quot;</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">updatable_attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">record</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">put</span><span class="p">(</span>
+                <span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.client.url}</span><span class="s2">/index/</span><span class="si">{guid}</span><span class="s2">/rev=</span><span class="si">{revision}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">json</span><span class="o">=</span><span class="n">record</span><span class="p">,</span>
+                <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;content-type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">},</span>
+                <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span><span class="p">,</span>
+                <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">auth</span><span class="p">,</span>
+            <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">response</span></div>
+
+    <span class="c1">### Delete Requests</span>
+
+<div class="viewcode-block" id="Gen3Index.delete_record"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.delete_record">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">delete_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Delete an entry from the index</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guid: string</span>
+<span class="sd">                 - record id</span>
+
+<span class="sd">        Returns: Nothing</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">guid</span><span class="p">)</span>
+        <span class="n">rec</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">rec</span></div>
+
+    <span class="c1">### Query Requests</span>
+
+<div class="viewcode-block" id="Gen3Index.query_urls"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.query_urls">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">query_urls</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Query all record URLs for given pattern</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pattern (str): pattern to match against indexd urls</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[records]: indexd records with urls matching pattern</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;/_query/urls/q?include=</span><span class="si">{pattern}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Gen3Index.async_query_urls"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.async_query_urls">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">async_query_urls</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Asynchronous function to query urls from indexd.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pattern (str): pattern to match against indexd urls</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[records]: indexd records with urls matching pattern</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.client.url}</span><span class="s2">/_query/urls/q?include=</span><span class="si">{pattern}</span><span class="s2">&quot;</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;request: </span><span class="si">{url}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span><span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">response</span></div></div>
+
+
+<span class="k">def</span> <span class="nf">_print_func_name</span><span class="p">(</span><span class="n">function</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">.</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">function</span><span class="o">.</span><span class="vm">__module__</span><span class="p">,</span> <span class="n">function</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_print_kwargs</span><span class="p">(</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">v</span><span class="p">))</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Center for Translational Data Science.
+      
+    </div>
+
+    
+    <a href="https://github.com/uc-cdis/gen3sdk-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

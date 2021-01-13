@@ -1,0 +1,417 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Gen3 Metadata Class &#8212; Gen3 SDK  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Gen3 Query Class" href="query.html" />
+    <link rel="prev" title="Gen3 Jobs Class" href="jobs.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="gen3-metadata-class">
+<h1>Gen3 Metadata Class<a class="headerlink" href="#gen3-metadata-class" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="gen3.metadata.Gen3Metadata">
+<em class="property">class </em><code class="descclassname">gen3.metadata.</code><code class="descname">Gen3Metadata</code><span class="sig-paren">(</span><em>endpoint=None</em>, <em>auth_provider=None</em>, <em>service_location='mds'</em>, <em>admin_endpoint_suffix='-admin'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>A class for interacting with the Gen3 Metadata services.</p>
+<p class="rubric">Examples</p>
+<p>This generates the Gen3Metadata class pointed at the sandbox commons while
+using the credentials.json downloaded from the commons profile page.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
+<span class="gp">... </span><span class="n">metadata</span> <span class="o">=</span> <span class="n">Gen3Metadata</span><span class="p">(</span><span class="n">auth</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="attribute">
+<dt id="gen3.metadata.Gen3Metadata.endpoint">
+<code class="descname">endpoint</code><a class="headerlink" href="#gen3.metadata.Gen3Metadata.endpoint" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em> – public endpoint for reading/querying metadata - only necessary if auth_provider not provided</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="gen3.metadata.Gen3Metadata.auth_provider">
+<code class="descname">auth_provider</code><a class="headerlink" href="#gen3.metadata.Gen3Metadata.auth_provider" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>Gen3Auth</em> – auth manager</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.metadata.Gen3Metadata.async_create">
+<code class="descname">async_create</code><span class="sig-paren">(</span><em>guid</em>, <em>metadata</em>, <em>overwrite=False</em>, <em>_ssl=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.async_create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.async_create" title="Permalink to this definition">¶</a></dt>
+<dd><p>Asynchronous function to create metadata</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>guid</strong> (<em>str</em>) – guid to use</li>
+<li><strong>metadata</strong> (<em>Dict</em>) – dictionary representing what will end up a JSON blob
+attached to the provided GUID as metadata</li>
+<li><strong>overwrite</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether or not to overwrite existing data</li>
+<li><strong>_ssl</strong> (<em>None</em><em>, </em><em>optional</em>) – whether or not to use ssl</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.metadata.Gen3Metadata.async_get">
+<code class="descname">async_get</code><span class="sig-paren">(</span><em>guid</em>, <em>_ssl=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.async_get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.async_get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Asynchronous function to get metadata</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>guid</strong> (<em>str</em>) – guid to use</li>
+<li><strong>_ssl</strong> (<em>None</em><em>, </em><em>optional</em>) – whether or not to use ssl</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">metadata for given guid</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Dict</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.metadata.Gen3Metadata.async_update">
+<code class="descname">async_update</code><span class="sig-paren">(</span><em>guid</em>, <em>metadata</em>, <em>_ssl=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.async_update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.async_update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Asynchronous function to update metadata</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>guid</strong> (<em>str</em>) – guid to use</li>
+<li><strong>metadata</strong> (<em>Dict</em>) – dictionary representing what will end up a JSON blob
+attached to the provided GUID as metadata</li>
+<li><strong>_ssl</strong> (<em>None</em><em>, </em><em>optional</em>) – whether or not to use ssl</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.metadata.Gen3Metadata.batch_create">
+<code class="descname">batch_create</code><span class="sig-paren">(</span><em>metadata_list</em>, <em>overwrite=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.batch_create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.batch_create" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the list of metadata associated with the list of guids</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>(</strong><strong>List</strong><strong>[</strong><strong>Dict{&quot;guid&quot;</strong> (<em>metadata_list</em>) – “”, “data”: {}}]): list of metadata
+objects in a specific format. Expects a dict with “guid” and “data”
+fields where “data” is another JSON blob to add to the mds</li>
+<li><strong>overwrite</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether or not to overwrite existing data</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.metadata.Gen3Metadata.create">
+<code class="descname">create</code><span class="sig-paren">(</span><em>guid</em>, <em>metadata</em>, <em>overwrite=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the metadata associated with the guid</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>guid</strong> (<em>str</em>) – guid to use</li>
+<li><strong>metadata</strong> (<em>Dict</em>) – dictionary representing what will end up a JSON blob
+attached to the provided GUID as metadata</li>
+<li><strong>overwrite</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether or not to overwrite existing data</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.metadata.Gen3Metadata.create_index_key_path">
+<code class="descname">create_index_key_path</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.create_index_key_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.create_index_key_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a metadata key path indexed in the database.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> (<em>str</em>) – metadata key path</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.metadata.Gen3Metadata.delete">
+<code class="descname">delete</code><span class="sig-paren">(</span><em>guid</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete the metadata associated with the guid</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>guid</strong> (<em>str</em>) – guid to use</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.metadata.Gen3Metadata.delete_index_key_path">
+<code class="descname">delete_index_key_path</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.delete_index_key_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.delete_index_key_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>List all the metadata key paths indexed in the database.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> (<em>str</em>) – metadata key path</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.metadata.Gen3Metadata.get">
+<code class="descname">get</code><span class="sig-paren">(</span><em>guid</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the metadata associated with the guid</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>guid</strong> (<em>str</em>) – guid to use</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">metadata for given guid</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.metadata.Gen3Metadata.get_index_key_paths">
+<code class="descname">get_index_key_paths</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.get_index_key_paths"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.get_index_key_paths" title="Permalink to this definition">¶</a></dt>
+<dd><p>List all the metadata key paths indexed in the database.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">list of metadata key paths</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">List</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.metadata.Gen3Metadata.get_version">
+<code class="descname">get_version</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.get_version"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.get_version" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the version</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">the version</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">str</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.metadata.Gen3Metadata.is_healthy">
+<code class="descname">is_healthy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.is_healthy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.is_healthy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return if is healthy or not</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">True if healthy</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.metadata.Gen3Metadata.query">
+<code class="descname">query</code><span class="sig-paren">(</span><em>query</em>, <em>return_full_metadata=False</em>, <em>limit=10</em>, <em>offset=0</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.query" title="Permalink to this definition">¶</a></dt>
+<dd><p>Query the metadata given a query.</p>
+<dl class="docutils">
+<dt>Query format is based off the logic used in the service:</dt>
+<dd><p class="first">‘’’
+Without filters, this will return all data. Add filters as query strings like this:</p>
+<p class="last">GET /metadata?a=1&amp;b=2</p>
+</dd>
+<dt>This will match all records that have metadata containing all of:</dt>
+<dd><p class="first">{“a”: 1, “b”: 2}
+The values are always treated as strings for filtering. Nesting is supported:</p>
+<p class="last">GET /metadata?a.b.c=3</p>
+</dd>
+<dt>Matching records containing:</dt>
+<dd><p class="first">{“a”: {“b”: {“c”: 3}}}
+Providing the same key with more than one value filters records whose value of the given key matches any of the given values. But values of different keys must all match. For example:</p>
+<p class="last">GET /metadata?a.b.c=3&amp;a.b.c=33&amp;a.b.d=4</p>
+</dd>
+<dt>Matches these:</dt>
+<dd><p class="first">{“a”: {“b”: {“c”: 3, “d”: 4}}}
+{“a”: {“b”: {“c”: 33, “d”: 4}}}
+{“a”: {“b”: {“c”: “3”, “d”: 4, “e”: 5}}}
+But won’t match these:</p>
+<p class="last">{“a”: {“b”: {“c”: 3}}}
+{“a”: {“b”: {“c”: 3, “d”: 5}}}
+{“a”: {“b”: {“d”: 5}}}
+{“a”: {“b”: {“c”: “333”, “d”: 4}}}
+‘’‘</p>
+</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>query</strong> (<em>str</em>) – mds query as defined by the metadata api</li>
+<li><strong>return_full_metadata</strong> (<em>bool</em><em>, </em><em>optional</em>) – if False will just return a list of guids</li>
+<li><strong>limit</strong> (<em>int</em><em>, </em><em>optional</em>) – max num records to return</li>
+<li><strong>offset</strong> (<em>int</em><em>, </em><em>optional</em>) – offset for output</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><dl class="docutils">
+<dt>list of guids matching query</dt>
+<dd><p class="first last">OR if return_full_metadata=True</p>
+</dd>
+<dt>Dict{guid: {metadata}}: Dictionary with GUIDs as keys and associated</dt>
+<dd><p class="first last">metadata JSON blobs as values</p>
+</dd>
+</dl>
+</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">List</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.metadata.Gen3Metadata.update">
+<code class="descname">update</code><span class="sig-paren">(</span><em>guid</em>, <em>metadata</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the metadata associated with the guid</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>guid</strong> (<em>str</em>) – guid to use</li>
+<li><strong>metadata</strong> (<em>Dict</em>) – dictionary representing what will end up a JSON blob
+attached to the provided GUID as metadata</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="jobs.html" title="previous chapter">Gen3 Jobs Class</a></li>
+      <li>Next: <a href="query.html" title="next chapter">Gen3 Query Class</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/metadata.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Center for Translational Data Science.
+      
+      |
+      <a href="_sources/metadata.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/uc-cdis/gen3sdk-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
