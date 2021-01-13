@@ -10,10 +10,17 @@ import pytest
 from drsclient.client import DrsClient
 
 
+class MockAuth:
+    def __init__(self):
+        self.endpoint = "https://example.commons.com"
+
 @pytest.fixture
 def sub():
-    return Gen3Submission("http://localhost", None)
+    return Gen3Submission(MockAuth())
 
+@pytest.fixture
+def gen3_auth():
+    return MockAuth()
 
 # for unittest with mock server
 @pytest.fixture

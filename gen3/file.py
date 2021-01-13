@@ -13,22 +13,21 @@ class Gen3File:
     Supports getting presigned urls right now.
 
     Args:
-        endpoint (str): The URL of the data commons.
         auth_provider (Gen3Auth): A Gen3Auth class instance.
 
     Examples:
         This generates the Gen3File class pointed at the sandbox commons while
         using the credentials.json downloaded from the commons profile page.
 
-        >>> endpoint = "https://nci-crdc-demo.datacommons.io"
-        ... auth = Gen3Auth(endpoint, refresh_file="credentials.json")
-        ... sub = Gen3File(endpoint, auth)
+        >>> auth = Gen3Auth(refresh_file="credentials.json")
+        ... sub = Gen3File(auth)
 
     """
 
-    def __init__(self, endpoint, auth_provider):
-        self._auth_provider = auth_provider
-        self._endpoint = endpoint
+    def __init__(self, endpoint=None, auth_provider=None):
+        # auth_provider legacy interface required endpoint as 1st arg
+        self._auth_provider = auth_provider or endpoint
+        self._endpoint = self._auth_provider.endpoint
 
     def get_presigned_url(self, guid, protocol="http"):
         """Generates a presigned URL for a file.

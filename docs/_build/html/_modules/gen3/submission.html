@@ -65,28 +65,26 @@
 <span class="sd">    Supports GraphQL queries through Peregrine.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        endpoint (str): The URL of the data commons.</span>
 <span class="sd">        auth_provider (Gen3Auth): A Gen3Auth class instance.</span>
 
 <span class="sd">    Examples:</span>
 <span class="sd">        This generates the Gen3Submission class pointed at the sandbox commons while</span>
 <span class="sd">        using the credentials.json downloaded from the commons profile page.</span>
 
-<span class="sd">        &gt;&gt;&gt; endpoint = &quot;https://nci-crdc-demo.datacommons.io&quot;</span>
-<span class="sd">        ... auth = Gen3Auth(endpoint, refresh_file=&quot;credentials.json&quot;)</span>
-<span class="sd">        ... sub = Gen3Submission(endpoint, auth)</span>
+<span class="sd">        &gt;&gt;&gt; auth = Gen3Auth(refresh_file=&quot;credentials.json&quot;)</span>
+<span class="sd">        ... sub = Gen3Submission(auth)</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">,</span> <span class="n">auth_provider</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span> <span class="o">=</span> <span class="n">auth_provider</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span> <span class="o">=</span> <span class="n">endpoint</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">auth_provider</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="c1"># auth_provider legacy interface required endpoint as 1st arg</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span> <span class="o">=</span> <span class="n">auth_provider</span> <span class="ow">or</span> <span class="n">endpoint</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">endpoint</span>
 
     <span class="k">def</span> <span class="nf">__export_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">output</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Writes an API response to a file.&quot;&quot;&quot;</span>
-        <span class="n">outfile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span>
-        <span class="n">outfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
-        <span class="n">outfile</span><span class="o">.</span><span class="n">close</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
+            <span class="n">outfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Output written to file: &quot;</span> <span class="o">+</span> <span class="n">filename</span><span class="p">)</span>
 
     <span class="c1">### Program functions</span>

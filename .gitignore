@@ -109,3 +109,12 @@ tests/resources/keys/*.pem
 
 # graphql schema
 schema.json
+
+# pytest outputs
+*.sq3
+merged-output-test-manifest.*
+gen3/tools/indexing/tmp/
+indexing-output-manifest.csv
+object-manifest.csv
+output_manifest.csv
+
