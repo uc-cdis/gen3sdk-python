@@ -13,7 +13,9 @@ cd "$( dirname "${BASH_SOURCE[0]}" )"
 cd ..
 export PATH="/var/jenkins_home/.local/bin:$PATH"
 export GEN3_API_KEY="accesstoken:///$(gen3 api access-token cdis.autotest@gmail.com)"
-virtualenv "$WORKSPACE/virtenv"
-source "$WORKSPACE/virtenv/bin/activate"
+
+poetry config virtualenvs.path "${WORKSPACE}/pysdkvirtenv" --local  
+poetry env use python3.6
 poetry install -vv
 poetry run bash tests/smokeTest.sh test-all
+
