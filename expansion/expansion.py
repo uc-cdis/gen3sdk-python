@@ -5,6 +5,7 @@ from pandas.io.json import json_normalize
 from collections import Counter
 from statistics import mean
 from io import StringIO
+from IPython.utils import io
 
 import numpy as np
 import scipy
@@ -388,6 +389,59 @@ class Gen3Expansion:
             output = "ERROR:" + e.output.decode("UTF-8")
 
         return output
+
+    # Query Functions
+    def query_counts(
+        self,
+        nodes,
+        project_id=None,
+        chunk_size=2500,
+        format="json",
+        args=None,
+    ):
+        """Function to paginate a query to avoid time-outs.
+        Returns a json of all the records in the node.
+
+        Args:
+            nodes (list): The nodes to get counts for.
+            project_id(str): The project_id to limit the query to. Default is None.
+            chunk_size(int): The number of records to return per query. Default is 10000.
+            args(str): Put graphQL arguments here. For example, 'with_path_to:{type:"case",submitter_id:"case-01"}', etc. Don't enclose in parentheses.
+        Example:
+            exp.query_counts(project_id='Exhale-Tempus',nodes='case')
+        """
+
+        counts = {}
+
+        if isinstance(nodes,str):
+            nodes = [nodes]
+
+        for node in nodes:
+            if project_id is not None:
+                program, project = project_id.split("-", 1)
+                if args is None:
+                    query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
+                else:
+                    query_txt = """{_%s_count (project_id:"%s", %s)}""" % (node, project_id, args)
+            else:
+                if args is None:
+                    query_txt = """{_%s_count}""" % (node)
+                else:
+                    query_txt = """{_%s_count (%s)}""" % (node, args)
+
+            # First query the node count to get the expected number of results for the requested query:
+
+            try:
+                res = self.sub.query(query_txt)
+                count_name = "_".join(map(str, ["", node, "count"]))
+                qsize = res["data"][count_name]
+                counts[node] = qsize
+            except:
+                print("\n\tQuery to get _{}_count failed! {}".format(node, query_txt))
+
+
+        return counts
+
 
     # Query Functions
     def paginate_query(
@@ -2570,9 +2624,138 @@ class Gen3Expansion:
         for file_name in file_names:
             index_url = "{}/index/index/?file_name={}".format(self._endpoint, file_name)
             response = requests.get(index_url, auth=self._auth_provider).text
-            index_records.append(json.loads(response))
+            response = json.loads(response)
+            if 'records' in response:
+                records = response['records']
+                if len(records) == 1:
+                    irec = records[0]
+                else:
+                    print("\tMultiple indexd records found for file_name '{}'!\n\t{}\n".format(file_name,records))
+            else:
+                print("\tNo indexd records found for file_name '{}'!".format(file_name))
+            index_records.append(irec)
 
         return index_records
+
+    def get_index_for_authz(self, authz, format="tsv",page=0,limit=100):
+        # Get GUIDs for a particular project (authz)
+        # https://data.bloodpac.org/index/index/?authz=/programs/bpa/projects/UAMS_P0001_T1
+        # exp.get_index_for_authz(authz='/programs/bpa/projects/UAMS_P0001_T1')
+
+        if isinstance(authz,list):
+            authz=authz[0]
+
+        all_records,records = [],[]
+        done = False
+        while done is False:
+
+            index_url = "{}/index/index/?limit={}&page={}&authz={}".format(self._endpoint,limit,page,authz)
+            #index_url = "{}/index/index/?limit={}&page={}&authz={}".format(api,limit,page,authz)
+            response = requests.get(index_url, auth=self._auth_provider).text
+            #response = requests.get(index_url, auth=auth).text
+            data = json.loads(response)
+            if "records" in data:
+                records = data['records']
+                all_records.extend(records)
+
+                if len(records) == 0:
+                    done = True
+
+            print(
+                "\tPage {}: {} records ({} total)".format(
+                    page, len(records), len(all_records)
+                )
+            )
+            page += 1
+
+        print(
+            "\t\tScript finished. Total records retrieved: {}".format(len(all_records))
+        )
+
+
+        # index_url = "{}/index/index/?authz={}".format(self._endpoint, authz)
+        # response = requests.get(index_url, auth=self._auth_provider).text
+        # records = json.loads(response)["records"]
+        # data.append(records)
+        #
+
+        if all_records is None:
+            print("No records in the index with authz {}.".format(authz))
+
+        elif format is "tsv":
+            df = json_normalize(all_records)
+            filename = "indexd_records_for_{}.tsv".format(authz.split("/")[-1])
+            df.to_csv(filename, sep="\t", index=False, encoding="utf-8")
+            return df
+
+        elif format is "guids":
+            guids = []
+            for record in all_records:
+                guids.append(record["did"])
+            return guids
+
+        else:
+            return all_records
+
+        return all_records
+
+
+
+    def get_index_for_acl(self, acl, format="guids",page=0,limit=100):
+        # Get GUIDs for a particular project (acl)
+        # https://data.bloodpac.org/index/index/?acl=UAMS_P0001_T1,bpa
+        # exp.get_index_for_acl(acl='UAMS_P0001_T1,bpa')
+
+        if isinstance(acl,list):
+            acl="{},{}".format(acl[0],acl[1])
+
+        all_records,records = [],[]
+        done = False
+        while done is False:
+
+            index_url = "{}/index/index/?limit={}&page={}&acl={}".format(self._endpoint,limit,page,acl)
+            #index_url = "{}/index/index/?limit={}&page={}&acl={}".format(api,limit,page,acl)
+            response = requests.get(index_url, auth=self._auth_provider).text
+            #response = requests.get(index_url, auth=auth).text
+            data = json.loads(response)
+            if "records" in data:
+                records = data['records']
+                all_records.extend(records)
+
+                if len(records) == 0:
+                    done = True
+
+            print(
+                "\tPage {}: {} records ({} total)".format(
+                    page, len(records), len(all_records)
+                )
+            )
+            page += 1
+
+        print(
+            "\t\tScript finished. Total records retrieved: {}".format(len(all_records))
+        )
+
+        if all_records is None:
+            print("No records in the index with acl {}.".format(acl))
+
+        elif format is "tsv":
+            df = json_normalize(all_records)
+            filename = "indexd_records_for_{}.tsv".format(acl)
+            df.to_csv(filename, sep="\t", index=False, encoding="utf-8")
+            return df
+
+        elif format is "guids":
+            guids = []
+            for record in all_records:
+                guids.append(record["did"])
+            return guids
+
+        else:
+            return all_records
+
+        return all_records
+
 
     def get_index_for_url(self, url):
         """Returns the indexd record for a file's storage location URL ('urls' in indexd)
@@ -3664,7 +3847,7 @@ class Gen3Expansion:
 
 
 ### look up files in indexd by md5 sum
-# index_url = "{}/index?hash=md5:{}".format(api, md5sum)
+# index_url = "{}/index/index?hash=md5:{}".format(api, md5sum)
 
 
 ### Add function to update indexd:
