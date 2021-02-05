@@ -64,7 +64,7 @@
 <span class="sd">    ACLS (list(string)): supported acl column names</span>
 <span class="sd">    URLS (list(string)): supported url column names</span>
 <span class="sd">    AUTHZ (list(string)): supported authz column names</span>
-
+<span class="sd">    PREV_GUID (list(string)): supported previous guid column names</span>
 
 <span class="sd">Usages:</span>
 <span class="sd">    python index_manifest.py --commons_url https://giangb.planx-pla.net  --manifest_file path_to_manifest --auth &quot;admin,admin&quot; --replace_urls False --thread_num 10</span>
@@ -97,6 +97,8 @@
     <span class="n">URLS_STANDARD_KEY</span><span class="p">,</span>
     <span class="n">AUTHZ_COLUMN_NAMES</span><span class="p">,</span>
     <span class="n">AUTHZ_STANDARD_KEY</span><span class="p">,</span>
+    <span class="n">PREV_GUID_COLUMN_NAMES</span><span class="p">,</span>
+    <span class="n">PREV_GUID_STANDARD_KEY</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="k">import</span> <span class="p">(</span>
     <span class="n">UUID_FORMAT</span><span class="p">,</span>
@@ -109,6 +111,7 @@
     <span class="n">_standardize_str</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">import</span> <span class="nn">indexclient.client</span> <span class="k">as</span> <span class="nn">client</span>
+<span class="kn">from</span> <span class="nn">indexclient.client</span> <span class="k">import</span> <span class="n">Document</span>
 
 
 <span class="n">CURRENT_DIR</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
@@ -215,6 +218,16 @@
                     <span class="k">if</span> <span class="ow">not</span> <span class="n">_verify_format</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">current_column_name</span><span class="p">],</span> <span class="n">SIZE_FORMAT</span><span class="p">):</span>
                         <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
                             <span class="n">f</span><span class="s2">&quot;ERROR: </span><span class="si">{row[current_column_name]}</span><span class="s2"> is not in int format&quot;</span>
+                        <span class="p">)</span>
+                        <span class="n">is_row_valid</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">elif</span> <span class="n">current_column_name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">PREV_GUID_COLUMN_NAMES</span><span class="p">:</span>
+                    <span class="n">fieldnames</span><span class="p">[</span>
+                        <span class="n">fieldnames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">current_column_name</span><span class="p">)</span>
+                    <span class="p">]</span> <span class="o">=</span> <span class="n">PREV_GUID_STANDARD_KEY</span>
+                    <span class="n">output_column_name</span> <span class="o">=</span> <span class="n">PREV_GUID_STANDARD_KEY</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">_verify_format</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">current_column_name</span><span class="p">],</span> <span class="n">UUID_FORMAT</span><span class="p">):</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                            <span class="n">f</span><span class="s2">&quot;ERROR: </span><span class="si">{row[current_column_name]}</span><span class="s2"> is not in UUID_FORMAT format&quot;</span>
                         <span class="p">)</span>
                         <span class="n">is_row_valid</span> <span class="o">=</span> <span class="kc">False</span>
                 <span class="k">elif</span> <span class="n">include_additional_columns</span><span class="p">:</span>
@@ -381,6 +394,11 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">file_name</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
 
+        <span class="k">if</span> <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">PREV_GUID_STANDARD_KEY</span><span class="p">):</span>
+            <span class="n">prev_guid</span> <span class="o">=</span> <span class="n">fi</span><span class="p">[</span><span class="n">PREV_GUID_STANDARD_KEY</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">prev_guid</span> <span class="o">=</span> <span class="kc">None</span>
+
         <span class="n">doc</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="k">if</span> <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">GUID_STANDARD_KEY</span><span class="p">):</span>
@@ -446,8 +464,24 @@
                 <span class="n">URLS_STANDARD_KEY</span><span class="p">:</span> <span class="n">urls</span><span class="p">,</span>
                 <span class="n">FILENAME_STANDARD_KEY</span><span class="p">:</span> <span class="n">file_name</span><span class="p">,</span>
             <span class="p">}</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;creating: </span><span class="si">{record}</span><span class="s2">&quot;</span><span class="p">)</span>
-            <span class="n">doc</span> <span class="o">=</span> <span class="n">indexclient</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="o">**</span><span class="n">record</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">prev_guid</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;creating new version of </span><span class="si">{prev_guid}</span><span class="s2">: </span><span class="si">{record}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+                <span class="c1"># indexd exports a &quot;form&quot; field that gets populated in create but not here</span>
+                <span class="n">record</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">})</span>
+
+                <span class="c1"># new version expects empty instead of none for some reason</span>
+                <span class="n">new_guid</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">]</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">]:</span>
+                    <span class="k">del</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">]</span>
+                    <span class="n">new_guid</span> <span class="o">=</span> <span class="kc">None</span>
+
+                <span class="n">new_doc</span> <span class="o">=</span> <span class="n">Document</span><span class="p">(</span><span class="n">client</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">did</span><span class="o">=</span><span class="n">new_guid</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">record</span><span class="p">)</span>
+                <span class="n">doc</span> <span class="o">=</span> <span class="n">indexclient</span><span class="o">.</span><span class="n">add_version</span><span class="p">(</span><span class="n">current_did</span><span class="o">=</span><span class="n">prev_guid</span><span class="p">,</span> <span class="n">new_doc</span><span class="o">=</span><span class="n">new_doc</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;creating: </span><span class="si">{record}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">doc</span> <span class="o">=</span> <span class="n">indexclient</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="o">**</span><span class="n">record</span><span class="p">)</span>
 
             <span class="n">fi</span><span class="p">[</span><span class="n">GUID_STANDARD_KEY</span><span class="p">]</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">did</span>
 
