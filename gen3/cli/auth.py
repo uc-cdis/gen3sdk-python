@@ -5,12 +5,16 @@ import requests
 import sys
 import gen3.auth as auth_tool
 
+
 def stderr(*str):
     print(*str, sys.stderr)
 
+
 @click.command()
-@click.option("--request", 'request', help="HTTP Method - GET, PUT, POST, DELETE")
-@click.option("--data", 'data', help="json data to post - read from file if starts with @")
+@click.option("--request", "request", help="HTTP Method - GET, PUT, POST, DELETE")
+@click.option(
+    "--data", "data", help="json data to post - read from file if starts with @"
+)
 @click.argument("path")
 @click.pass_context
 def curl(ctx, path, request=None, data=None):
@@ -22,17 +26,20 @@ def curl(ctx, path, request=None, data=None):
         stderr("err status code %i" % output.status_code)
         sys.exit(1)
 
+
 @click.command()
 @click.pass_context
 def endpoint(ctx):
     """Get the endpoint associated with the active authenticator"""
     print(ctx.obj["auth_factory"].get().endpoint)
 
+
 @click.command()
 @click.pass_context
 def get_access_token(ctx):
     """Get an access token suitable to pass as an Authorization header bearer"""
     print(ctx.obj["auth_factory"].get().get_access_token())
+
 
 @click.command()
 @click.argument("token_file")
@@ -46,20 +53,24 @@ def token_decode(token_file):
     token = auth_tool.decode_token(tokenStr)
     print(json.dumps(token, indent=2))
 
+
 @click.command()
 def wts_endpoint():
     """Get the wts endpoint"""
     print(auth_tool.get_wts_endpoint())
+
 
 @click.command()
 def wts_list():
     """list the idp's available from the wts in a Gen3 workspace environment """
     print(json.dumps(auth_tool.get_wts_idps(), indent=2))
 
+
 @click.group()
 def auth():
     """Gen3 sdk auth commands"""
     pass
+
 
 auth.add_command(wts_endpoint, name="wts-endpoint")
 auth.add_command(wts_list, name="wts-list")

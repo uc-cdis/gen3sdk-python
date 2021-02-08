@@ -30,7 +30,7 @@ class Gen3Jobs:
         using the credentials.json downloaded from the commons profile page.
 
         >>> auth = Gen3Auth(refresh_file="credentials.json")
-        ... sub = Gen3Jobs(auth)
+        ... jobs = Gen3Jobs(auth)
     """
 
     def __init__(self, endpoint=None, auth_provider=None, service_location="job"):

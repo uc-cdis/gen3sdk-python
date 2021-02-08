@@ -20,7 +20,7 @@ class Gen3File:
         using the credentials.json downloaded from the commons profile page.
 
         >>> auth = Gen3Auth(refresh_file="credentials.json")
-        ... sub = Gen3File(auth)
+        ... file = Gen3File(auth)
 
     """
 

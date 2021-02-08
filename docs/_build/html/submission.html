@@ -24,7 +24,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Gen3 Tools" href="tools.html" />
-    <link rel="prev" title="Gen3 Metadata Class" href="metadata.html" />
+    <link rel="prev" title="Gen3 Query Class" href="query.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -427,7 +427,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <dl class="method">
 <dt id="gen3.submission.Gen3Submission.query">
 <code class="descname">query</code><span class="sig-paren">(</span><em>query_txt</em>, <em>variables=None</em>, <em>max_tries=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.query" title="Permalink to this definition">¶</a></dt>
-<dd><p>Execute a GraphQL query against a data commons.</p>
+<dd><p>Execute a GraphQL query against a Data Commons.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -443,7 +443,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 </table>
 <p class="rubric">Examples</p>
 <p>This executes a query to get the list of all the project codes for all the projects
-in the data commons.</p>
+in the Data Commons.</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;{ project(first:0) { code } }&quot;</span>
 <span class="gp">... </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
 </pre></div>
@@ -512,7 +512,7 @@ in the data commons.</p>
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="metadata.html" title="previous chapter">Gen3 Metadata Class</a></li>
+      <li>Previous: <a href="query.html" title="previous chapter">Gen3 Query Class</a></li>
       <li>Next: <a href="tools.html" title="next chapter">Gen3 Tools</a></li>
   </ul></li>
 </ul>

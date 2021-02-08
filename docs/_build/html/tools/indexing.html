@@ -160,12 +160,6 @@ See the Attributes session for supported column names.</p>
 <dd><p><em>list(string)</em> – supported authz column names</p>
 </dd></dl>
 
-<dl class="attribute">
-<dt id="gen3.tools.indexing.index_manifest.PREV_GUID">
-<code class="descclassname">gen3.tools.indexing.index_manifest.</code><code class="descname">PREV_GUID</code><a class="headerlink" href="#gen3.tools.indexing.index_manifest.PREV_GUID" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list(string)</em> – supported previous guid column names</p>
-</dd></dl>
-
 <dl class="docutils">
 <dt>Usages:</dt>
 <dd>python index_manifest.py –commons_url <a class="reference external" href="https://giangb.planx-pla.net">https://giangb.planx-pla.net</a>  –manifest_file path_to_manifest –auth “admin,admin” –replace_urls False –thread_num 10
@@ -314,7 +308,7 @@ processes/threads</p>
 
 <dl class="function">
 <dt id="gen3.tools.indexing.verify_manifest.async_verify_object_manifest">
-<code class="descclassname">gen3.tools.indexing.verify_manifest.</code><code class="descname">async_verify_object_manifest</code><span class="sig-paren">(</span><em>commons_url</em>, <em>manifest_file</em>, <em>max_concurrent_requests=24</em>, <em>manifest_row_parsers={'acl': &lt;function _get_acl_from_row at 0x7f1cefda5ae8&gt;</em>, <em>'authz': &lt;function _get_authz_from_row at 0x7f1cefda5b70&gt;</em>, <em>'file_name': &lt;function _get_file_name_from_row at 0x7f1cefda5c80&gt;</em>, <em>'file_size': &lt;function _get_file_size_from_row at 0x7f1cefda5950&gt;</em>, <em>'guid': &lt;function _get_guid_from_row at 0x7f1cefda5a60&gt;</em>, <em>'md5': &lt;function _get_md5_from_row at 0x7f1cefda59d8&gt;</em>, <em>'urls': &lt;function _get_urls_from_row at 0x7f1cefda5bf8&gt;}</em>, <em>manifest_file_delimiter=None</em>, <em>output_filename='verify-manifest-errors-1612561331.551143.log'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/verify_manifest.html#async_verify_object_manifest"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.tools.indexing.verify_manifest.async_verify_object_manifest" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">gen3.tools.indexing.verify_manifest.</code><code class="descname">async_verify_object_manifest</code><span class="sig-paren">(</span><em>commons_url</em>, <em>manifest_file</em>, <em>max_concurrent_requests=24</em>, <em>manifest_row_parsers={'acl': &lt;function _get_acl_from_row at 0x7fe024ae51e0&gt;</em>, <em>'authz': &lt;function _get_authz_from_row at 0x7fe024ae5268&gt;</em>, <em>'file_name': &lt;function _get_file_name_from_row at 0x7fe024ae5378&gt;</em>, <em>'file_size': &lt;function _get_file_size_from_row at 0x7fe024ae5048&gt;</em>, <em>'guid': &lt;function _get_guid_from_row at 0x7fe024ae5158&gt;</em>, <em>'md5': &lt;function _get_md5_from_row at 0x7fe024ae50d0&gt;</em>, <em>'urls': &lt;function _get_urls_from_row at 0x7fe024ae52f0&gt;}</em>, <em>manifest_file_delimiter=None</em>, <em>output_filename='verify-manifest-errors-1611859890.5345128.log'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/verify_manifest.html#async_verify_object_manifest"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.tools.indexing.verify_manifest.async_verify_object_manifest" title="Permalink to this definition">¶</a></dt>
 <dd><p>Verify all file object records into a manifest csv</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />

@@ -1,0 +1,240 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Gen3 Workspace Storage &#8212; Gen3 SDK  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Metadata Tools" href="tools/metadata.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="gen3-workspace-storage">
+<h1>Gen3 Workspace Storage<a class="headerlink" href="#gen3-workspace-storage" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="gen3.wss.Gen3WsStorage">
+<em class="property">class </em><code class="descclassname">gen3.wss.</code><code class="descname">Gen3WsStorage</code><span class="sig-paren">(</span><em>auth_provider=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>A class for interacting with the Gen3 workspace storage service.</p>
+<p class="rubric">Examples</p>
+<p>This generates the Gen3WsStorage class pointed at the sandbox commons while
+using the credentials.json downloaded from the commons profile page.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
+<span class="gp">... </span><span class="n">wss</span> <span class="o">=</span> <span class="n">Gen3WsStorage</span><span class="p">(</span><span class="n">auth</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="gen3.wss.Gen3WsStorage.copy">
+<code class="descname">copy</code><span class="sig-paren">(</span><em>src_urlstr</em>, <em>dest_urlstr</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.copy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.copy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse src_urlstr and dest_urlstr, and call upload or download
+as appropriate</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.wss.Gen3WsStorage.download">
+<code class="descname">download</code><span class="sig-paren">(</span><em>src_ws</em>, <em>src_wskey</em>, <em>dest_path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.download"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.download" title="Permalink to this definition">¶</a></dt>
+<dd><p>Download a file from the workspace to local disk</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>src_ws</strong> (<em>string</em>) – name of the workspace</li>
+<li><strong>src_wskey</strong> (<em>string</em>) – key of the object in the workspace</li>
+<li><strong>dest_path</strong> (<em>string</em>) – to download the file to</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.wss.Gen3WsStorage.download_url">
+<code class="descname">download_url</code><span class="sig-paren">(</span><em>ws</em>, <em>wskey</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.download_url"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.download_url" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a download url for the given workspace key</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>ws</strong> (<em>string</em>) – name of the workspace</li>
+<li><strong>wskey</strong> (<em>string</em>) – key of the object in the workspace</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.wss.Gen3WsStorage.ls">
+<code class="descname">ls</code><span class="sig-paren">(</span><em>ws</em>, <em>wskey</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.ls"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.ls" title="Permalink to this definition">¶</a></dt>
+<dd><p>List the contents under the given workspace path</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>ws</strong> (<em>string</em>) – name of the workspace</li>
+<li><strong>wskey</strong> (<em>string</em>) – key of the object in the workspace</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.wss.Gen3WsStorage.ls_path">
+<code class="descname">ls_path</code><span class="sig-paren">(</span><em>ws_urlstr</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.ls_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.ls_path" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Same as ls - but parses ws_urlstr argument of form:</dt>
+<dd>ws:///workspace/key</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>ws</strong> (<em>string</em>) – name of the workspace</li>
+<li><strong>wskey</strong> (<em>string</em>) – key of the object in the workspace</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.wss.Gen3WsStorage.rm">
+<code class="descname">rm</code><span class="sig-paren">(</span><em>ws</em>, <em>wskey</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.rm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.rm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove the given workspace key</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>ws</strong> (<em>string</em>) – name of the workspace</li>
+<li><strong>wskey</strong> (<em>string</em>) – key of the object in the workspace</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.wss.Gen3WsStorage.rm_path">
+<code class="descname">rm_path</code><span class="sig-paren">(</span><em>ws_urlstr</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.rm_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.rm_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as rm - but parses the ws_urlstr argument</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.wss.Gen3WsStorage.upload">
+<code class="descname">upload</code><span class="sig-paren">(</span><em>src_path</em>, <em>dest_ws</em>, <em>dest_wskey</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.upload"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.upload" title="Permalink to this definition">¶</a></dt>
+<dd><p>Upload a local file to the specified workspace path</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.wss.Gen3WsStorage.upload_url">
+<code class="descname">upload_url</code><span class="sig-paren">(</span><em>ws</em>, <em>wskey</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.upload_url"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.upload_url" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a upload url for the given workspace key</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>ws</strong> (<em>string</em>) – name of the workspace</li>
+<li><strong>wskey</strong> (<em>string</em>) – key of the object in the workspace</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="tools/metadata.html" title="previous chapter">Metadata Tools</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/wss.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Center for Translational Data Science.
+      
+      |
+      <a href="_sources/wss.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/uc-cdis/gen3sdk-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

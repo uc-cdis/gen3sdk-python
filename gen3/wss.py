@@ -9,15 +9,15 @@ from gen3.utils import append_query_params, DEFAULT_BACKOFF_SETTINGS
 
 
 def wsurl_to_tokens(ws_urlstr):
-    """Tokenize ws:/// paths - so ws:///@user/bla/foo returns ("@user", "bla/foo")
-    """
+    """Tokenize ws:/// paths - so ws:///@user/bla/foo returns ("@user", "bla/foo")"""
     urlparts = urlparse(ws_urlstr)
     if urlparts.scheme != "ws":
         raise Exception("invalid path {}".format(ws_urlstr))
-    pathparts = [ part for part in urlparts.path.split("/") if part ]
+    pathparts = [part for part in urlparts.path.split("/") if part]
     if len(pathparts) < 1:
         raise Exception("invalid path {}".format(ws_urlstr))
     return (pathparts[0], "/".join(pathparts[1:]))
+
 
 @backoff.on_exception(backoff.expo, requests.HTTPError, **DEFAULT_BACKOFF_SETTINGS)
 def get_url(urlstr, dest_path):
@@ -27,16 +27,17 @@ def get_url(urlstr, dest_path):
     if dest_path == "-":
         sys.stdout.write(res.text)
     else:
-        with open(dest_path, 'wb') as f:
+        with open(dest_path, "wb") as f:
             f.write(res.content)
+
 
 @backoff.on_exception(backoff.expo, requests.HTTPError, **DEFAULT_BACKOFF_SETTINGS)
 def put_url(urlstr, src_path):
     """Simple put src_path to url with backoff"""
-    with open(src_path, 'rb') as f:
+    with open(src_path, "rb") as f:
         res = requests.put(urlstr, data=f)
     res.raise_for_status()
-        
+
 
 class Gen3WsStorage:
     """A class for interacting with the Gen3 workspace storage service.
@@ -49,10 +50,7 @@ class Gen3WsStorage:
         ... wss = Gen3WsStorage(auth)
     """
 
-    def __init__(
-        self,
-        auth_provider=None
-    ):
+    def __init__(self, auth_provider=None):
         """
         Initialization for instance of the class to setup basic endpoint info.
 
@@ -76,7 +74,6 @@ class Gen3WsStorage:
         res.raise_for_status()
         return res.json()
 
-
     @backoff.on_exception(backoff.expo, requests.HTTPError, **DEFAULT_BACKOFF_SETTINGS)
     def upload(self, src_path, dest_ws, dest_wskey):
         """
@@ -99,7 +96,6 @@ class Gen3WsStorage:
         res.raise_for_status()
         return res.json()
 
-
     def download(self, src_ws, src_wskey, dest_path):
         """
         Download a file from the workspace to local disk
@@ -119,7 +115,9 @@ class Gen3WsStorage:
         """
         if src_urlstr[0:3] == "ws:":
             if dest_urlstr[0:3] == "ws:":
-                raise Exception("source and destination may not both reference a workspace")
+                raise Exception(
+                    "source and destination may not both reference a workspace"
+                )
             pathparts = wsurl_to_tokens(src_urlstr)
             return self.download(pathparts[0], pathparts[1], dest_urlstr)
         if dest_urlstr[0:3] == "ws:":
@@ -140,7 +138,6 @@ class Gen3WsStorage:
         res = self._auth_provider.curl("/ws-storage/list/{}/{}".format(ws, wskey))
         res.raise_for_status()
         return res.json()
-
 
     def ls_path(self, ws_urlstr):
         """
@@ -164,7 +161,9 @@ class Gen3WsStorage:
           wskey (string): key of the object in the workspace
         """
         wskey = wskey.lstrip("/")
-        res = self._auth_provider.curl("/ws-storage/list/{}/{}".format(ws, wskey), request="DELETE")
+        res = self._auth_provider.curl(
+            "/ws-storage/list/{}/{}".format(ws, wskey), request="DELETE"
+        )
         res.raise_for_status()
         return res.json()
 

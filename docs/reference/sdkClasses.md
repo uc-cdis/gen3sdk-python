@@ -5,6 +5,10 @@ TOC
 - [Gen3Index](#gen3index)
 - [Gen3Submission](#gen3submission)
 - [Gen3Jobs](#gen3jobs)
+- Gen3File
+- [Gen3Query](#gen3query)
+- Gen3Metadata
+- Gen3WsStorage
 
 ### Gen3Auth
 
@@ -30,6 +34,10 @@ This is the client for interacting with the Indexd service for GUID brokering an
 ### Gen3Submission
 
 This is the client for interacting with the Gen3 submission service including GraphQL queries.
+
+### Gen3Query
+
+This is the client for interacting with the Gen3 ElasticSearch query service.
 
 ### Gen3Jobs
 
