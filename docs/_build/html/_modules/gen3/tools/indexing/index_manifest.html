@@ -225,7 +225,10 @@
                         <span class="n">fieldnames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">current_column_name</span><span class="p">)</span>
                     <span class="p">]</span> <span class="o">=</span> <span class="n">PREV_GUID_STANDARD_KEY</span>
                     <span class="n">output_column_name</span> <span class="o">=</span> <span class="n">PREV_GUID_STANDARD_KEY</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="n">_verify_format</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">current_column_name</span><span class="p">],</span> <span class="n">UUID_FORMAT</span><span class="p">):</span>
+                    <span class="c1"># only validate format if value is provided (since this is optional)</span>
+                    <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="n">current_column_name</span><span class="p">]</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">_verify_format</span><span class="p">(</span>
+                        <span class="n">row</span><span class="p">[</span><span class="n">current_column_name</span><span class="p">],</span> <span class="n">UUID_FORMAT</span>
+                    <span class="p">):</span>
                         <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
                             <span class="n">f</span><span class="s2">&quot;ERROR: </span><span class="si">{row[current_column_name]}</span><span class="s2"> is not in UUID_FORMAT format&quot;</span>
                         <span class="p">)</span>
@@ -468,10 +471,12 @@
             <span class="k">if</span> <span class="n">prev_guid</span><span class="p">:</span>
                 <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;creating new version of </span><span class="si">{prev_guid}</span><span class="s2">: </span><span class="si">{record}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-                <span class="c1"># indexd exports a &quot;form&quot; field that gets populated in create but not here</span>
+                <span class="c1"># indexd exports a &quot;form&quot; field that gets populated in indexclient.create,</span>
+                <span class="c1"># but not indexclient.add_version, need to add manually here</span>
                 <span class="n">record</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">})</span>
 
-                <span class="c1"># new version expects empty instead of none for some reason</span>
+                <span class="c1"># to generate new GUID, new version indexd API expects body to not</span>
+                <span class="c1"># contain &quot;did&quot;, rather than have it be None or &quot;&quot;</span>
                 <span class="n">new_guid</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">]</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">]:</span>
                     <span class="k">del</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">]</span>
