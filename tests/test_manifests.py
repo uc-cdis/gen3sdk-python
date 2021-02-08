@@ -427,6 +427,9 @@ def test_index_manifest(gen3_index, indexd_server):
     assert rec6["urls"] == ["s3://pdcdatastore/test6 space.raw"]
     assert rec6["authz"] == ["/prog ram/DEV/project/test"]
 
+    # ensure prev_guid worked to create a new version with same baseid
+    assert rec6["baseid"] == rec2["baseid"]
+
 
 def test_index_manifest_with_replace_urls(gen3_index, indexd_server):
     rec1 = gen3_index.create_record(

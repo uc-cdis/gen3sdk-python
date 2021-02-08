@@ -185,7 +185,10 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                         fieldnames.index(current_column_name)
                     ] = PREV_GUID_STANDARD_KEY
                     output_column_name = PREV_GUID_STANDARD_KEY
-                    if not _verify_format(row[current_column_name], UUID_FORMAT):
+                    # only validate format if value is provided (since this is optional)
+                    if row[current_column_name] and not _verify_format(
+                        row[current_column_name], UUID_FORMAT
+                    ):
                         logging.error(
                             f"ERROR: {row[current_column_name]} is not in UUID_FORMAT format"
                         )
@@ -428,10 +431,12 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
             if prev_guid:
                 logging.info(f"creating new version of {prev_guid}: {record}")
 
-                # indexd exports a "form" field that gets populated in create but not here
+                # indexd exports a "form" field that gets populated in indexclient.create,
+                # but not indexclient.add_version, need to add manually here
                 record.update({"form": "object"})
 
-                # new version expects empty instead of none for some reason
+                # to generate new GUID, new version indexd API expects body to not
+                # contain "did", rather than have it be None or ""
                 new_guid = record["did"]
                 if not record["did"]:
                     del record["did"]
