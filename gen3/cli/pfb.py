@@ -25,8 +25,3 @@ for command in pfb_cli.main.commands:
 # load plug-ins from entry_points
 for ep in entry_points().get("gen3.plugins", []):
     ep.load()
-
-main.add_command(pfb)
-
-if __name__ == "__main__":
-    main()

@@ -1,5 +1,7 @@
 import json
-import pytest, os, requests
+import os
+import pytest
+import requests
 from unittest.mock import call, MagicMock, patch
 
 
@@ -152,16 +154,16 @@ def test_delete_nodes(requests_delete_mock, requests_post_mock, sub):
     requests_delete_mock.assert_has_calls(
         [
             call(
-                "http://localhost/api/v0/submission/program/project/entities/id1,id2",
-                auth=None,
+                "https://example.commons.com/api/v0/submission/program/project/entities/id1,id2",
+                auth=sub._auth_provider,
             ),
             call(
-                "http://localhost/api/v0/submission/program/project/entities/id3,id4",
-                auth=None,
+                "https://example.commons.com/api/v0/submission/program/project/entities/id3,id4",
+                auth=sub._auth_provider,
             ),
             call(
-                "http://localhost/api/v0/submission/program/project/entities/id5",
-                auth=None,
+                "https://example.commons.com/api/v0/submission/program/project/entities/id5",
+                auth=sub._auth_provider,
             ),
         ]
     )

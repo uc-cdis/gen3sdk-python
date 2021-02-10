@@ -43,7 +43,7 @@
 <h1>Gen3 Index Class<a class="headerlink" href="#gen3-index-class" title="Permalink to this headline">¶</a></h1>
 <dl class="class">
 <dt id="gen3.index.Gen3Index">
-<em class="property">class </em><code class="descclassname">gen3.index.</code><code class="descname">Gen3Index</code><span class="sig-paren">(</span><em>endpoint</em>, <em>auth_provider=None</em>, <em>service_location='index'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">gen3.index.</code><code class="descname">Gen3Index</code><span class="sig-paren">(</span><em>endpoint=None</em>, <em>auth_provider=None</em>, <em>service_location='index'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
 <p>A class for interacting with the Gen3 Index services.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -51,8 +51,8 @@
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>endpoint</strong> (<em>str</em>) – The URL of the data commons.</li>
-<li><strong>auth_provider</strong> (<a class="reference internal" href="auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><em>Gen3Auth</em></a>) – A Gen3Auth class instance.</li>
+<li><strong>endpoint</strong> (<em>str</em>) – public endpoint for reading/querying indexd - only necessary if auth_provider not provided</li>
+<li><strong>auth_provider</strong> (<a class="reference internal" href="auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><em>Gen3Auth</em></a>) – A Gen3Auth class instance or indexd basic creds tuple</li>
 </ul>
 </td>
 </tr>
@@ -61,9 +61,8 @@
 <p class="rubric">Examples</p>
 <p>This generates the Gen3Index class pointed at the sandbox commons while
 using the credentials.json downloaded from the commons profile page.</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">endpoint</span> <span class="o">=</span> <span class="s2">&quot;https://nci-crdc-demo.datacommons.io&quot;</span>
-<span class="gp">... </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
-<span class="gp">... </span><span class="n">sub</span> <span class="o">=</span> <span class="n">Gen3Submission</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">auth</span><span class="p">)</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
+<span class="gp">... </span><span class="n">index</span> <span class="o">=</span> <span class="n">Gen3Index</span><span class="p">(</span><span class="n">auth</span><span class="p">)</span>
 </pre></div>
 </div>
 <dl class="method">

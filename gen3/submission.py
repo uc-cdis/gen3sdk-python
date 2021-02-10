@@ -25,28 +25,26 @@ class Gen3Submission:
     Supports GraphQL queries through Peregrine.
 
     Args:
-        endpoint (str): The URL of the data commons.
         auth_provider (Gen3Auth): A Gen3Auth class instance.
 
     Examples:
         This generates the Gen3Submission class pointed at the sandbox commons while
         using the credentials.json downloaded from the commons profile page.
 
-        >>> endpoint = "https://nci-crdc-demo.datacommons.io"
-        ... auth = Gen3Auth(endpoint, refresh_file="credentials.json")
-        ... sub = Gen3Submission(endpoint, auth)
+        >>> auth = Gen3Auth(refresh_file="credentials.json")
+        ... sub = Gen3Submission(auth)
 
     """
 
-    def __init__(self, endpoint, auth_provider):
-        self._auth_provider = auth_provider
-        self._endpoint = endpoint
+    def __init__(self, endpoint=None, auth_provider=None):
+        # auth_provider legacy interface required endpoint as 1st arg
+        self._auth_provider = auth_provider or endpoint
+        self._endpoint = self._auth_provider.endpoint
 
     def __export_file(self, filename, output):
         """Writes an API response to a file."""
-        outfile = open(filename, "w")
-        outfile.write(output)
-        outfile.close
+        with open(filename, "w") as outfile:
+            outfile.write(output)
         print("\nOutput written to file: " + filename)
 
     ### Program functions
@@ -226,6 +224,7 @@ class Gen3Submission:
             program (str): The program to delete from.
             project (str): The project to delete from.
             uuids (list): The list of uuids of the records to delete
+            batch_size (int, optional, default: 100): how many records to delete at a time
 
         Examples:
             This deletes a list of records from the CCLE project in the sandbox commons.
@@ -246,11 +245,15 @@ class Gen3Submission:
             try:
                 output.raise_for_status()
             except requests.exceptions.HTTPError:
-                print("\nFailed to delete uuids: {}".format(uuids_to_delete))
+                print(
+                    "\n{}\nFailed to delete uuids: {}".format(
+                        output.text, uuids_to_delete
+                    )
+                )
                 raise
         return output
 
-    def delete_node(self, program, project, node_name, verbose=True):
+    def delete_node(self, program, project, node_name, batch_size=100, verbose=True):
         """
         Delete all records for a node from a project.
 
@@ -258,13 +261,17 @@ class Gen3Submission:
             program (str): The program to delete from.
             project (str): The project to delete from.
             node_name (str): Name of the node to delete
+            batch_size (int, optional, default: 100): how many records to query and delete at a time
+            verbose (bool, optional, default: True): whether to print progress logs
 
         Examples:
             This deletes a node from the CCLE project in the sandbox commons.
 
             >>> Gen3Submission.delete_node("DCF", "CCLE", "demographic")
         """
-        return self.delete_nodes(program, project, [node_name], verbose=verbose)
+        return self.delete_nodes(
+            program, project, [node_name], batch_size, verbose=verbose
+        )
 
     def delete_nodes(
         self, program, project, ordered_node_list, batch_size=100, verbose=True
@@ -276,6 +283,8 @@ class Gen3Submission:
             program (str): The program to delete from.
             project (str): The project to delete from.
             ordered_node_list (list): The list of nodes to delete, in reverse graph submission order
+            batch_size (int, optional, default: 100): how many records to query and delete at a time
+            verbose (bool, optional, default: True): whether to print progress logs
 
         Examples:
             This deletes a list of nodes from the CCLE project in the sandbox commons.
@@ -373,7 +382,7 @@ class Gen3Submission:
     ### Query functions
 
     def query(self, query_txt, variables=None, max_tries=1):
-        """Execute a GraphQL query against a data commons.
+        """Execute a GraphQL query against a Data Commons.
 
         Args:
             query_txt (str): Query text.
@@ -382,7 +391,7 @@ class Gen3Submission:
 
         Examples:
             This executes a query to get the list of all the project codes for all the projects
-            in the data commons.
+            in the Data Commons.
 
             >>> query = "{ project(first:0) { code } }"
             ... Gen3Submission.query(query)

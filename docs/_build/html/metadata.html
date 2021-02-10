@@ -23,7 +23,7 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Gen3 Submission Class" href="submission.html" />
+    <link rel="next" title="Gen3 Query Class" href="query.html" />
     <link rel="prev" title="Gen3 Jobs Class" href="jobs.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
@@ -43,27 +43,26 @@
 <h1>Gen3 Metadata Class<a class="headerlink" href="#gen3-metadata-class" title="Permalink to this headline">¶</a></h1>
 <dl class="class">
 <dt id="gen3.metadata.Gen3Metadata">
-<em class="property">class </em><code class="descclassname">gen3.metadata.</code><code class="descname">Gen3Metadata</code><span class="sig-paren">(</span><em>endpoint</em>, <em>auth_provider=None</em>, <em>service_location='mds'</em>, <em>admin_endpoint_suffix='-admin'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">gen3.metadata.</code><code class="descname">Gen3Metadata</code><span class="sig-paren">(</span><em>endpoint=None</em>, <em>auth_provider=None</em>, <em>service_location='mds'</em>, <em>admin_endpoint_suffix='-admin'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
 <p>A class for interacting with the Gen3 Metadata services.</p>
 <p class="rubric">Examples</p>
 <p>This generates the Gen3Metadata class pointed at the sandbox commons while
 using the credentials.json downloaded from the commons profile page.</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">endpoint</span> <span class="o">=</span> <span class="s2">&quot;https://nci-crdc-demo.datacommons.io&quot;</span>
-<span class="gp">... </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
-<span class="gp">... </span><span class="n">sub</span> <span class="o">=</span> <span class="n">Gen3Metadata</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">auth</span><span class="p">)</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
+<span class="gp">... </span><span class="n">metadata</span> <span class="o">=</span> <span class="n">Gen3Metadata</span><span class="p">(</span><span class="n">auth</span><span class="p">)</span>
 </pre></div>
 </div>
 <dl class="attribute">
-<dt id="gen3.metadata.Gen3Metadata.admin_endpoint">
-<code class="descname">admin_endpoint</code><a class="headerlink" href="#gen3.metadata.Gen3Metadata.admin_endpoint" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>str</em> – endpoint for admin functionality (Create/Update/Delete)</p>
+<dt id="gen3.metadata.Gen3Metadata.endpoint">
+<code class="descname">endpoint</code><a class="headerlink" href="#gen3.metadata.Gen3Metadata.endpoint" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em> – public endpoint for reading/querying metadata - only necessary if auth_provider not provided</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="gen3.metadata.Gen3Metadata.endpoint">
-<code class="descname">endpoint</code><a class="headerlink" href="#gen3.metadata.Gen3Metadata.endpoint" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>str</em> – public endpoint for reading/querying metadata</p>
+<dt id="gen3.metadata.Gen3Metadata.auth_provider">
+<code class="descname">auth_provider</code><a class="headerlink" href="#gen3.metadata.Gen3Metadata.auth_provider" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>Gen3Auth</em> – auth manager</p>
 </dd></dl>
 
 <dl class="method">
@@ -181,10 +180,6 @@ attached to the provided GUID as metadata</li>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> (<em>str</em>) – metadata key path</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Description</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">TYPE</td>
-</tr>
 </tbody>
 </table>
 </dd></dl>
@@ -212,10 +207,6 @@ attached to the provided GUID as metadata</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> (<em>str</em>) – metadata key path</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Description</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">TYPE</td>
 </tr>
 </tbody>
 </table>
@@ -382,7 +373,7 @@ attached to the provided GUID as metadata</li>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
       <li>Previous: <a href="jobs.html" title="previous chapter">Gen3 Jobs Class</a></li>
-      <li>Next: <a href="submission.html" title="next chapter">Gen3 Submission Class</a></li>
+      <li>Next: <a href="query.html" title="next chapter">Gen3 Query Class</a></li>
   </ul></li>
 </ul>
 </div>

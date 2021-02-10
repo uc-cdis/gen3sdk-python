@@ -9,6 +9,7 @@ import logging
 import sys
 
 from gen3.utils import append_query_params, DEFAULT_BACKOFF_SETTINGS
+from gen3.auth import Gen3Auth
 
 
 class Gen3Metadata:
@@ -19,18 +20,17 @@ class Gen3Metadata:
         This generates the Gen3Metadata class pointed at the sandbox commons while
         using the credentials.json downloaded from the commons profile page.
 
-        >>> endpoint = "https://nci-crdc-demo.datacommons.io"
-        ... auth = Gen3Auth(endpoint, refresh_file="credentials.json")
-        ... sub = Gen3Metadata(endpoint, auth)
+        >>> auth = Gen3Auth(refresh_file="credentials.json")
+        ... metadata = Gen3Metadata(auth)
 
     Attributes:
-        admin_endpoint (str): endpoint for admin functionality (Create/Update/Delete)
-        endpoint (str): public endpoint for reading/querying metadata
+        endpoint (str): public endpoint for reading/querying metadata - only necessary if auth_provider not provided
+        auth_provider (Gen3Auth): auth manager
     """
 
     def __init__(
         self,
-        endpoint,
+        endpoint=None,
         auth_provider=None,
         service_location="mds",
         admin_endpoint_suffix="-admin",
@@ -39,12 +39,18 @@ class Gen3Metadata:
         Initialization for instance of the class to setup basic endpoint info.
 
         Args:
-            endpoint (str): URL for a data commons that has metadata service deployed
+            endpoint (str): URL for a Data Commons that has metadata service deployed
             auth_provider (Gen3Auth, optional): Gen3Auth class to handle passing your
                 token, required for admin endpoints
             service_location (str, optional): deployment location relative to the
                 endpoint provided
         """
+        # legacy interface required endpoint as 1st arg
+        if endpoint and isinstance(endpoint, Gen3Auth):
+            auth_provider = endpoint
+            endpoint = None
+        if auth_provider and isinstance(auth_provider, Gen3Auth):
+            endpoint = auth_provider.endpoint
         endpoint = endpoint.strip("/")
         # if running locally, mds is deployed by itself without a location relative
         # to the commons
@@ -110,9 +116,6 @@ class Gen3Metadata:
 
         Args:
             path (str): metadata key path
-
-        Returns:
-            TYPE: Description
         """
         response = requests.post(
             self.admin_endpoint + f"/metadata_index/{path}", auth=self._auth_provider
@@ -127,9 +130,6 @@ class Gen3Metadata:
 
         Args:
             path (str): metadata key path
-
-        Returns:
-            TYPE: Description
         """
         response = requests.delete(
             self.admin_endpoint + f"/metadata_index/{path}", auth=self._auth_provider

@@ -49,6 +49,7 @@
 <span class="kn">import</span> <span class="nn">sys</span>
 
 <span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="k">import</span> <span class="n">append_query_params</span><span class="p">,</span> <span class="n">DEFAULT_BACKOFF_SETTINGS</span>
+<span class="kn">from</span> <span class="nn">gen3.auth</span> <span class="k">import</span> <span class="n">Gen3Auth</span>
 
 
 <div class="viewcode-block" id="Gen3Metadata"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata">[docs]</a><span class="k">class</span> <span class="nc">Gen3Metadata</span><span class="p">:</span>
@@ -59,18 +60,17 @@
 <span class="sd">        This generates the Gen3Metadata class pointed at the sandbox commons while</span>
 <span class="sd">        using the credentials.json downloaded from the commons profile page.</span>
 
-<span class="sd">        &gt;&gt;&gt; endpoint = &quot;https://nci-crdc-demo.datacommons.io&quot;</span>
-<span class="sd">        ... auth = Gen3Auth(endpoint, refresh_file=&quot;credentials.json&quot;)</span>
-<span class="sd">        ... sub = Gen3Metadata(endpoint, auth)</span>
+<span class="sd">        &gt;&gt;&gt; auth = Gen3Auth(refresh_file=&quot;credentials.json&quot;)</span>
+<span class="sd">        ... metadata = Gen3Metadata(auth)</span>
 
 <span class="sd">    Attributes:</span>
-<span class="sd">        admin_endpoint (str): endpoint for admin functionality (Create/Update/Delete)</span>
-<span class="sd">        endpoint (str): public endpoint for reading/querying metadata</span>
+<span class="sd">        endpoint (str): public endpoint for reading/querying metadata - only necessary if auth_provider not provided</span>
+<span class="sd">        auth_provider (Gen3Auth): auth manager</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">endpoint</span><span class="p">,</span>
+        <span class="n">endpoint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">auth_provider</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">service_location</span><span class="o">=</span><span class="s2">&quot;mds&quot;</span><span class="p">,</span>
         <span class="n">admin_endpoint_suffix</span><span class="o">=</span><span class="s2">&quot;-admin&quot;</span><span class="p">,</span>
@@ -79,12 +79,18 @@
 <span class="sd">        Initialization for instance of the class to setup basic endpoint info.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            endpoint (str): URL for a data commons that has metadata service deployed</span>
+<span class="sd">            endpoint (str): URL for a Data Commons that has metadata service deployed</span>
 <span class="sd">            auth_provider (Gen3Auth, optional): Gen3Auth class to handle passing your</span>
 <span class="sd">                token, required for admin endpoints</span>
 <span class="sd">            service_location (str, optional): deployment location relative to the</span>
 <span class="sd">                endpoint provided</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># legacy interface required endpoint as 1st arg</span>
+        <span class="k">if</span> <span class="n">endpoint</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">Gen3Auth</span><span class="p">):</span>
+            <span class="n">auth_provider</span> <span class="o">=</span> <span class="n">endpoint</span>
+            <span class="n">endpoint</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">auth_provider</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">auth_provider</span><span class="p">,</span> <span class="n">Gen3Auth</span><span class="p">):</span>
+            <span class="n">endpoint</span> <span class="o">=</span> <span class="n">auth_provider</span><span class="o">.</span><span class="n">endpoint</span>
         <span class="n">endpoint</span> <span class="o">=</span> <span class="n">endpoint</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
         <span class="c1"># if running locally, mds is deployed by itself without a location relative</span>
         <span class="c1"># to the commons</span>
@@ -150,9 +156,6 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            path (str): metadata key path</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            TYPE: Description</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="n">f</span><span class="s2">&quot;/metadata_index/</span><span class="si">{path}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
@@ -167,9 +170,6 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            path (str): metadata key path</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            TYPE: Description</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="n">f</span><span class="s2">&quot;/metadata_index/</span><span class="si">{path}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>

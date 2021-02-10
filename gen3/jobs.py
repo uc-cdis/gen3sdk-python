@@ -29,23 +29,23 @@ class Gen3Jobs:
         This generates the Gen3Jobs class pointed at the sandbox commons while
         using the credentials.json downloaded from the commons profile page.
 
-        >>> endpoint = "https://nci-crdc-demo.datacommons.io"
-        ... auth = Gen3Auth(endpoint, refresh_file="credentials.json")
-        ... sub = Gen3Jobs(endpoint, auth)
+        >>> auth = Gen3Auth(refresh_file="credentials.json")
+        ... jobs = Gen3Jobs(auth)
     """
 
-    def __init__(self, endpoint, auth_provider=None, service_location="job"):
+    def __init__(self, endpoint=None, auth_provider=None, service_location="job"):
         """
         Initialization for instance of the class to setup basic endpoint info.
 
         Args:
-            endpoint (str): URL for a data commons that has jobs service(s) deployed
             auth_provider (Gen3Auth, optional): Gen3Auth class to handle passing your
                 token, required for admin endpoints
             service_location (str, optional): deployment location relative to the
                 endpoint provided
         """
-        endpoint = endpoint.strip("/")
+        # auth_provider legacy interface required endpoint as 1st arg
+        auth_provider = auth_provider or endpoint
+        endpoint = auth_provider.endpoint.strip("/")
         # if running locally, mds is deployed by itself without a location relative
         # to the commons
         if "http://localhost" in endpoint:

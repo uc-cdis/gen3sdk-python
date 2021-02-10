@@ -54,10 +54,14 @@ Automatically refreshes access tokens when they expire.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>endpoint</strong> (<em>str</em><em>, </em><em>opt</em>) – The URL of the data commons. Optional if working in a Gen3 Workspace.</li>
-<li><strong>refresh_file</strong> (<em>str</em><em>, </em><em>opt</em>) – The file containing the downloaded JSON web token. Optional if working in a Gen3 Workspace.</li>
+<li><strong>refresh_file</strong> (<em>str</em><em>, </em><em>opt</em>) – The file containing the downloaded JSON web token. Optional if working in a Gen3 Workspace.
+Defaults to (env[“GEN3_API_KEY”] || “credentials”) if refresh_token and idp not set.
+Includes ~/.gen3/ in search path if value does not include /.
+Interprets “idp://wts/&lt;idp&gt;” as an idp.
+Interprets “accesstoken:///&lt;token&gt;” as an access token</li>
 <li><strong>refresh_token</strong> (<em>str</em><em>, </em><em>opt</em>) – The JSON web token. Optional if working in a Gen3 Workspace.</li>
-<li><strong>idp</strong> (<em>str</em><em>, </em><em>opt</em>) – If working in a Gen3 Workspace, the IDP to use can be specified.</li>
+<li><strong>idp</strong> (<em>str</em><em>, </em><em>opt</em>) – If working in a Gen3 Workspace, the IDP to use can be specified -
+“local” indicates the local environment fence idp</li>
 </ul>
 </td>
 </tr>
@@ -65,14 +69,57 @@ Automatically refreshes access tokens when they expire.</p>
 </table>
 <p class="rubric">Examples</p>
 <p>This generates the Gen3Auth class pointed at the sandbox commons while
-using the credentials.json downloaded from the commons profile page.</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="s2">&quot;https://nci-crdc-demo.datacommons.io&quot;</span><span class="p">,</span> <span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
+using the credentials.json downloaded from the commons profile page
+and installed in ~/.gen3/credentials.json</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">()</span>
 </pre></div>
 </div>
+<p>or use ~/.gen3/crdc.json:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;crdc&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>or use some arbitrary file:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;./key.json&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>or set the GEN3_API_KEY environment variable rather
+than pass the refresh_file argument to the Gen3Auth
+constructor.</p>
 <p>If working in a Gen3 Workspace, initialize as follows:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">()</span>
 </pre></div>
 </div>
+<dl class="method">
+<dt id="gen3.auth.Gen3Auth.curl">
+<code class="descname">curl</code><span class="sig-paren">(</span><em>path</em>, <em>request=None</em>, <em>data=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/auth.html#Gen3Auth.curl"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.auth.Gen3Auth.curl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Curl the given endpoint - ex: gen3 curl /user/user.  Return requests.Response</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>path</strong> (<em>str</em>) – path under the commons to curl (/user/user, /index/index, /authz/mapping, …)</li>
+<li><strong>request</strong> (<em>str in GET|POST|PUT|DELETE</em>) – default to GET if data is not set, else default to POST</li>
+<li><strong>data</strong> (<em>str</em>) – json string or “&#64;filename” of a json file</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.auth.Gen3Auth.get_access_token">
+<code class="descname">get_access_token</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/auth.html#Gen3Auth.get_access_token"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.auth.Gen3Auth.get_access_token" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the access token - auto refresh if within 5 minutes of expiration</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gen3.auth.Gen3Auth.refresh_access_token">
+<code class="descname">refresh_access_token</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/auth.html#Gen3Auth.refresh_access_token"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.auth.Gen3Auth.refresh_access_token" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a new access token</p>
+</dd></dl>
+
 </dd></dl>
 
 </div>

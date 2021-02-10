@@ -65,28 +65,26 @@
 <span class="sd">    Supports GraphQL queries through Peregrine.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        endpoint (str): The URL of the data commons.</span>
 <span class="sd">        auth_provider (Gen3Auth): A Gen3Auth class instance.</span>
 
 <span class="sd">    Examples:</span>
 <span class="sd">        This generates the Gen3Submission class pointed at the sandbox commons while</span>
 <span class="sd">        using the credentials.json downloaded from the commons profile page.</span>
 
-<span class="sd">        &gt;&gt;&gt; endpoint = &quot;https://nci-crdc-demo.datacommons.io&quot;</span>
-<span class="sd">        ... auth = Gen3Auth(endpoint, refresh_file=&quot;credentials.json&quot;)</span>
-<span class="sd">        ... sub = Gen3Submission(endpoint, auth)</span>
+<span class="sd">        &gt;&gt;&gt; auth = Gen3Auth(refresh_file=&quot;credentials.json&quot;)</span>
+<span class="sd">        ... sub = Gen3Submission(auth)</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">,</span> <span class="n">auth_provider</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span> <span class="o">=</span> <span class="n">auth_provider</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span> <span class="o">=</span> <span class="n">endpoint</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">auth_provider</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="c1"># auth_provider legacy interface required endpoint as 1st arg</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span> <span class="o">=</span> <span class="n">auth_provider</span> <span class="ow">or</span> <span class="n">endpoint</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">endpoint</span>
 
     <span class="k">def</span> <span class="nf">__export_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">output</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Writes an API response to a file.&quot;&quot;&quot;</span>
-        <span class="n">outfile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span>
-        <span class="n">outfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
-        <span class="n">outfile</span><span class="o">.</span><span class="n">close</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
+            <span class="n">outfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Output written to file: &quot;</span> <span class="o">+</span> <span class="n">filename</span><span class="p">)</span>
 
     <span class="c1">### Program functions</span>
@@ -266,6 +264,7 @@
 <span class="sd">            program (str): The program to delete from.</span>
 <span class="sd">            project (str): The project to delete from.</span>
 <span class="sd">            uuids (list): The list of uuids of the records to delete</span>
+<span class="sd">            batch_size (int, optional, default: 100): how many records to delete at a time</span>
 
 <span class="sd">        Examples:</span>
 <span class="sd">            This deletes a list of records from the CCLE project in the sandbox commons.</span>
@@ -286,11 +285,15 @@
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">output</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
             <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">HTTPError</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Failed to delete uuids: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">uuids_to_delete</span><span class="p">))</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="s2">&quot;</span><span class="se">\n</span><span class="si">{}</span><span class="se">\n</span><span class="s2">Failed to delete uuids: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">output</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">uuids_to_delete</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
                 <span class="k">raise</span>
         <span class="k">return</span> <span class="n">output</span></div>
 
-<div class="viewcode-block" id="Gen3Submission.delete_node"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.delete_node">[docs]</a>    <span class="k">def</span> <span class="nf">delete_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">node_name</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<div class="viewcode-block" id="Gen3Submission.delete_node"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.delete_node">[docs]</a>    <span class="k">def</span> <span class="nf">delete_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">node_name</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Delete all records for a node from a project.</span>
 
@@ -298,13 +301,17 @@
 <span class="sd">            program (str): The program to delete from.</span>
 <span class="sd">            project (str): The project to delete from.</span>
 <span class="sd">            node_name (str): Name of the node to delete</span>
+<span class="sd">            batch_size (int, optional, default: 100): how many records to query and delete at a time</span>
+<span class="sd">            verbose (bool, optional, default: True): whether to print progress logs</span>
 
 <span class="sd">        Examples:</span>
 <span class="sd">            This deletes a node from the CCLE project in the sandbox commons.</span>
 
 <span class="sd">            &gt;&gt;&gt; Gen3Submission.delete_node(&quot;DCF&quot;, &quot;CCLE&quot;, &quot;demographic&quot;)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">delete_nodes</span><span class="p">(</span><span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="p">[</span><span class="n">node_name</span><span class="p">],</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">delete_nodes</span><span class="p">(</span>
+            <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="p">[</span><span class="n">node_name</span><span class="p">],</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Gen3Submission.delete_nodes"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.delete_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">delete_nodes</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">ordered_node_list</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span>
@@ -316,6 +323,8 @@
 <span class="sd">            program (str): The program to delete from.</span>
 <span class="sd">            project (str): The project to delete from.</span>
 <span class="sd">            ordered_node_list (list): The list of nodes to delete, in reverse graph submission order</span>
+<span class="sd">            batch_size (int, optional, default: 100): how many records to query and delete at a time</span>
+<span class="sd">            verbose (bool, optional, default: True): whether to print progress logs</span>
 
 <span class="sd">        Examples:</span>
 <span class="sd">            This deletes a list of nodes from the CCLE project in the sandbox commons.</span>
@@ -413,7 +422,7 @@
     <span class="c1">### Query functions</span>
 
 <div class="viewcode-block" id="Gen3Submission.query"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.query">[docs]</a>    <span class="k">def</span> <span class="nf">query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query_txt</span><span class="p">,</span> <span class="n">variables</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_tries</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Execute a GraphQL query against a data commons.</span>
+        <span class="sd">&quot;&quot;&quot;Execute a GraphQL query against a Data Commons.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            query_txt (str): Query text.</span>
@@ -422,7 +431,7 @@
 
 <span class="sd">        Examples:</span>
 <span class="sd">            This executes a query to get the list of all the project codes for all the projects</span>
-<span class="sd">            in the data commons.</span>
+<span class="sd">            in the Data Commons.</span>
 
 <span class="sd">            &gt;&gt;&gt; query = &quot;{ project(first:0) { code } }&quot;</span>
 <span class="sd">            ... Gen3Submission.query(query)</span>
