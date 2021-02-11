@@ -31,6 +31,9 @@ URLS_STANDARD_KEY = "urls"
 AUTHZ_COLUMN_NAMES = ["authz"]
 AUTHZ_STANDARD_KEY = "authz"
 
+PREV_GUID_COLUMN_NAMES = ["previous_guid", "prev_guid", "prev_id"]
+PREV_GUID_STANDARD_KEY = "prev_guid"
+
 BUNDLENAME_COLUMN_NAME = ["bundle_name", "name"]
 
 IDS_COLUMN_NAME = ["ids", "bundle_ids"]

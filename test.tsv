@@ -1,7 +1,7 @@
-guid	md5	size	authz	acl	url	file_name
-255e396f-f1f8-11e9-9a07-0a80fada099c	473d83400bc1bc9dc635e334faddf33c	363455714		['Open']	[s3://pdcdatastore/test1.raw]	
-255e396f-f1f8-11e9-9a07-0a80fada098c	473d83400bc1bc9dc635e334faddd33c	343434344	/program/DEV/project/test	Open	s3://pdcdatastore/test2.raw	
-255e396f-f1f8-11e9-9a07-0a80fada097c	473d83400bc1bc9dc635e334fadd433c	543434443	/program/DEV/project/test	phs0001 phs0002	s3://pdcdatastore/test3.raw	
-255e396f-f1f8-11e9-9a07-0a80fada096c	473d83400bc1bc9dc635e334fadd133c	363455714	/program/DEV/project/test	['phs0001', 'phs0002']	['s3://pdcdatastore/test4.raw']	test4_file.raw
-255e396f-f1f8-11e9-9a07-0a80fada010c	473d83400bc1bc9dc635e334fadde33c	363455714	/program/DEV/project/test	['Open']	s3://pdcdatastore/test5.raw	
-255e396f-f1f8-11e9-9a07-0a80fada012c	473d83400bc1bc9dc635e334fadde33c	363455714	/prog%20ram/DEV/project/test	['Op%20en']	s3://pdcdatastore/test6%20space.raw	
+guid	md5	size	authz	acl	url	file_name	prev_guid
+255e396f-f1f8-11e9-9a07-0a80fada099c	473d83400bc1bc9dc635e334faddf33c	363455714		['Open']	[s3://pdcdatastore/test1.raw]		
+255e396f-f1f8-11e9-9a07-0a80fada098c	473d83400bc1bc9dc635e334faddd33c	343434344	/program/DEV/project/test	Open	s3://pdcdatastore/test2.raw		
+255e396f-f1f8-11e9-9a07-0a80fada097c	473d83400bc1bc9dc635e334fadd433c	543434443	/program/DEV/project/test	phs0001 phs0002	s3://pdcdatastore/test3.raw		
+255e396f-f1f8-11e9-9a07-0a80fada096c	473d83400bc1bc9dc635e334fadd133c	363455714	/program/DEV/project/test	['phs0001', 'phs0002']	['s3://pdcdatastore/test4.raw']	test4_file.raw	
+255e396f-f1f8-11e9-9a07-0a80fada010c	473d83400bc1bc9dc635e334fadde33c	363455714	/program/DEV/project/test	['Open']	s3://pdcdatastore/test5.raw		
+255e396f-f1f8-11e9-9a07-0a80fada012c	473d83400bc1bc9dc635e334fadde33c	363455714	/prog%20ram/DEV/project/test	['Op%20en']	s3://pdcdatastore/test6%20space.raw		255e396f-f1f8-11e9-9a07-0a80fada010c

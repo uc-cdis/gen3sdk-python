@@ -24,7 +24,7 @@ Attributes:
     ACLS (list(string)): supported acl column names
     URLS (list(string)): supported url column names
     AUTHZ (list(string)): supported authz column names
-
+    PREV_GUID (list(string)): supported previous guid column names
 
 Usages:
     python index_manifest.py --commons_url https://giangb.planx-pla.net  --manifest_file path_to_manifest --auth "admin,admin" --replace_urls False --thread_num 10
@@ -57,6 +57,8 @@ from gen3.tools.indexing.manifest_columns import (
     URLS_STANDARD_KEY,
     AUTHZ_COLUMN_NAMES,
     AUTHZ_STANDARD_KEY,
+    PREV_GUID_COLUMN_NAMES,
+    PREV_GUID_STANDARD_KEY,
 )
 from gen3.utils import (
     UUID_FORMAT,
@@ -69,6 +71,7 @@ from gen3.utils import (
     _standardize_str,
 )
 import indexclient.client as client
+from indexclient.client import Document
 
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -175,6 +178,19 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                     if not _verify_format(row[current_column_name], SIZE_FORMAT):
                         logging.error(
                             f"ERROR: {row[current_column_name]} is not in int format"
+                        )
+                        is_row_valid = False
+                elif current_column_name.lower() in PREV_GUID_COLUMN_NAMES:
+                    fieldnames[
+                        fieldnames.index(current_column_name)
+                    ] = PREV_GUID_STANDARD_KEY
+                    output_column_name = PREV_GUID_STANDARD_KEY
+                    # only validate format if value is provided (since this is optional)
+                    if row[current_column_name] and not _verify_format(
+                        row[current_column_name], UUID_FORMAT
+                    ):
+                        logging.error(
+                            f"ERROR: {row[current_column_name]} is not in UUID_FORMAT format"
                         )
                         is_row_valid = False
                 elif include_additional_columns:
@@ -341,6 +357,11 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
         else:
             file_name = ""
 
+        if fi.get(PREV_GUID_STANDARD_KEY):
+            prev_guid = fi[PREV_GUID_STANDARD_KEY]
+        else:
+            prev_guid = None
+
         doc = None
 
         if fi.get(GUID_STANDARD_KEY):
@@ -406,8 +427,26 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
                 URLS_STANDARD_KEY: urls,
                 FILENAME_STANDARD_KEY: file_name,
             }
-            logging.info(f"creating: {record}")
-            doc = indexclient.create(**record)
+
+            if prev_guid:
+                logging.info(f"creating new version of {prev_guid}: {record}")
+
+                # indexd exports a "form" field that gets populated in indexclient.create,
+                # but not indexclient.add_version, need to add manually here
+                record.update({"form": "object"})
+
+                # to generate new GUID, new version indexd API expects body to not
+                # contain "did", rather than have it be None or ""
+                new_guid = record["did"]
+                if not record["did"]:
+                    del record["did"]
+                    new_guid = None
+
+                new_doc = Document(client=None, did=new_guid, json=record)
+                doc = indexclient.add_version(current_did=prev_guid, new_doc=new_doc)
+            else:
+                logging.info(f"creating: {record}")
+                doc = indexclient.create(**record)
 
             fi[GUID_STANDARD_KEY] = doc.did
 
