@@ -149,6 +149,7 @@ async def async_ingest_metadata_manifest(
     manifest_file_delimiter=None,
     output_filename=f"ingest-metadata-manifest-errors-{time.time()}.log",
     get_guid_from_file=True,
+    metadata_type=None,
 ):
     """
     Ingest all metadata records into a manifest csv
@@ -167,6 +168,10 @@ async def async_ingest_metadata_manifest(
             NOTE: When this is True, will use the function in
                   manifest_row_parsers["guid_for_row"] to determine the GUID
                   (usually just a specific column in the file row like "guid")
+        metadata_type (str): the type of metadata to be filled into the _guid_type field.
+            If provided, will override the default logic per GUID: (GUID_TYPE_FOR_INDEXED_FILE_OBJECT
+                if is_indexed_file_object
+                else GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT)
     """
     # if delimter not specified, try to get based on file ext
     if not manifest_file_delimiter:
@@ -186,6 +191,7 @@ async def async_ingest_metadata_manifest(
         max_concurrent_requests,
         output_filename.split("/")[-1],
         get_guid_from_file,
+        metadata_type,
     )
 
 
@@ -198,6 +204,7 @@ async def _ingest_all_metadata_in_file(
     max_concurrent_requests,
     output_filename,
     get_guid_from_file,
+    metadata_type,
 ):
     """
     Ingest metadata from file into metadata service. This function
@@ -221,6 +228,10 @@ async def _ingest_all_metadata_in_file(
             NOTE: When this is True, will use the function in
                   manifest_row_parsers["guid_for_row"] to determine the GUID
                   (usually just a specific column in the file row like "guid")
+        metadata_type (str): the type of metadata to be filled into the _guid_type field.
+            If provided, will override the default logic per GUID: (GUID_TYPE_FOR_INDEXED_FILE_OBJECT
+                if is_indexed_file_object
+                else GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT)
     """
     max_requests = int(max_concurrent_requests)
     logging.debug(f"max concurrent requests: {max_requests}")
@@ -258,6 +269,7 @@ async def _ingest_all_metadata_in_file(
                 auth,
                 get_guid_from_file,
                 metadata_source,
+                metadata_type,
             )
             # why "+ (max_concurrent_requests / 4)"?
             # This is because the max requests at any given time could be
@@ -299,7 +311,14 @@ async def _ingest_all_metadata_in_file(
 
 
 async def _parse_from_queue(
-    queue, lock, commons_url, output_queue, auth, get_guid_from_file, metadata_source
+    queue,
+    lock,
+    commons_url,
+    output_queue,
+    auth,
+    get_guid_from_file,
+    metadata_source,
+    metadata_type,
 ):
     """
     Keep getting items from the queue and checking if indexd contains a record with
@@ -319,6 +338,10 @@ async def _parse_from_queue(
                   (usually just a specific column in the file row like "guid")
         metadata_source (str): the name of the source of metadata (used to namespace
             in the metadata service) ex: dbgap
+        metadata_type (str): the type of metadata to be filled into the _guid_type field.
+            If provided, will override the default logic per GUID: (GUID_TYPE_FOR_INDEXED_FILE_OBJECT
+                if is_indexed_file_object
+                else GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT)
     """
     while not queue.empty():
         row = await queue.get()
@@ -362,11 +385,14 @@ async def _parse_from_queue(
             # namespace by metadata source
             metadata = {metadata_source: metadata_from_file}
 
-            metadata["_guid_type"] = (
-                GUID_TYPE_FOR_INDEXED_FILE_OBJECT
-                if is_indexed_file_object
-                else GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT
-            )
+            if metadata_type:
+                metadata["_guid_type"] = metadata_type
+            else:
+                metadata["_guid_type"] = (
+                    GUID_TYPE_FOR_INDEXED_FILE_OBJECT
+                    if is_indexed_file_object
+                    else GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT
+                )
 
             logging.debug(f"metadata: {metadata}")
 
