@@ -59,6 +59,22 @@ def test_same_guid_for_same_hash():
     )
 
 
+def test_column_mismatch():
+    """
+    Test that rearranged columns within manifests with different names match up
+    """
+
+    merge_bucket_manifests(
+        directory="tests/merge_manifests/column_mismatch/input",
+        output_manifest="merged-output-test-manifest.tsv",
+    )
+    tsv_data = _get_tsv_data("merged-output-test-manifest.tsv")
+    expected = _get_tsv_data(
+        "tests/merge_manifests/column_mismatch/expected-merged-output-manifest.tsv"
+    )
+    assert tsv_data == expected
+
+
 def test_multiple_urls():
     """
     Test input manifest having a row with multiple urls.
