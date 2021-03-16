@@ -1,5 +1,7 @@
 import requests
 
+from gen3.utils import raise_for_status
+
 
 class Gen3Query:
     """
@@ -129,7 +131,7 @@ class Gen3Query:
             auth=self._auth_provider,
         )
         try:
-            response.raise_for_status()
+            raise_for_status(response)
         except Exception:
             print(
                 f"Unable to query.\nQuery: {query_string}\nVariables: {variables}\n{response.text}"
@@ -197,7 +199,7 @@ class Gen3Query:
             auth=self._auth_provider,
         )
         try:
-            response.raise_for_status()
+            raise_for_status(response)
         except Exception:
             print(f"Unable to download.\nBody: {body}\n{response.text}")
             raise

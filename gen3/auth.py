@@ -9,6 +9,8 @@ import time
 import logging
 from urllib.parse import urlparse
 
+from gen3.utils import raise_for_status
+
 
 class Gen3AuthError(Exception):
     pass
@@ -73,7 +75,7 @@ def get_wts_endpoint(namespace=os.getenv("NAMESPACE", "default")):
 
 def get_wts_idps(namespace=os.getenv("NAMESPACE", "default")):
     resp = requests.get(get_wts_endpoint(namespace) + "/external_oidc")
-    resp.raise_for_status()
+    raise_for_status(resp)
     return resp.json()
 
 
