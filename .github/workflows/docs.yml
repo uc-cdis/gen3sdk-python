@@ -28,9 +28,9 @@ jobs:
         source $HOME/.poetry/env
         poetry config virtualenvs.create false
         poetry install -vv
-        # install sphinx from source (as of 03/16/21 python3-sphinx is broken)
+        # install sphinx from PyPI (as of 03/16/21 python3-sphinx is broken)
         # sudo apt-get install python3-sphinx
-        pip install git+https://github.com/sphinx-doc/sphinx
+        pip install 'sphinx<4.0.0'
     - name: Build docs
       run: |
         sphinx-build --version
