@@ -1,26 +1,17 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gen3 Index Class &#8212; Gen3 SDK  documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Gen3 Jobs Class" href="jobs.html" />
@@ -28,499 +19,442 @@
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
+  
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
+          
+
           <div class="body" role="main">
             
   <div class="section" id="gen3-index-class">
 <h1>Gen3 Index Class<a class="headerlink" href="#gen3-index-class" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
+<dl class="py class">
 <dt id="gen3.index.Gen3Index">
-<em class="property">class </em><code class="descclassname">gen3.index.</code><code class="descname">Gen3Index</code><span class="sig-paren">(</span><em>endpoint=None</em>, <em>auth_provider=None</em>, <em>service_location='index'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.index.</span></code><code class="sig-name descname"><span class="pre">Gen3Index</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">endpoint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth_provider</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service_location</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'index'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>A class for interacting with the Gen3 Index services.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>endpoint</strong> (<em>str</em>) – public endpoint for reading/querying indexd - only necessary if auth_provider not provided</li>
-<li><strong>auth_provider</strong> (<a class="reference internal" href="auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><em>Gen3Auth</em></a>) – A Gen3Auth class instance or indexd basic creds tuple</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>endpoint</strong> (<em>str</em>) – public endpoint for reading/querying indexd - only necessary if auth_provider not provided</p></li>
+<li><p><strong>auth_provider</strong> (<a class="reference internal" href="auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><em>Gen3Auth</em></a>) – A Gen3Auth class instance or indexd basic creds tuple</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 <p class="rubric">Examples</p>
 <p>This generates the Gen3Index class pointed at the sandbox commons while
 using the credentials.json downloaded from the commons profile page.</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
 <span class="gp">... </span><span class="n">index</span> <span class="o">=</span> <span class="n">Gen3Index</span><span class="p">(</span><span class="n">auth</span><span class="p">)</span>
 </pre></div>
 </div>
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.async_create_record">
-<code class="descname">async_create_record</code><span class="sig-paren">(</span><em>hashes</em>, <em>size</em>, <em>did=None</em>, <em>urls=None</em>, <em>file_name=None</em>, <em>metadata=None</em>, <em>baseid=None</em>, <em>acl=None</em>, <em>urls_metadata=None</em>, <em>version=None</em>, <em>authz=None</em>, <em>_ssl=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.async_create_record"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.async_create_record" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">async_create_record</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hashes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">did</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">urls</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">urls_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">authz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.async_create_record"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.async_create_record" title="Permalink to this definition">¶</a></dt>
 <dd><p>Asynchronous function to create a record in indexd.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>hashes</strong> (<em>dict</em>) – {hash type: hash value,}
-eg <code class="docutils literal"><span class="pre">hashes={'md5':</span> <span class="pre">ab167e49d25b488939b1ede42752458b'}</span></code></li>
-<li><strong>size</strong> (<em>int</em>) – file size metadata associated with a given uuid</li>
-<li><strong>did</strong> (<em>str</em>) – provide a UUID for the new indexd to be made</li>
-<li><strong>urls</strong> (<em>list</em>) – list of URLs where you can download the UUID</li>
-<li><strong>acl</strong> (<em>list</em>) – access control list</li>
-<li><strong>authz</strong> (<em>str</em>) – RBAC string</li>
-<li><strong>file_name</strong> (<em>str</em>) – name of the file associated with a given UUID</li>
-<li><strong>metadata</strong> (<em>dict</em>) – additional key value metadata for this entry</li>
-<li><strong>urls_metadata</strong> (<em>dict</em>) – metadata attached to each url</li>
-<li><strong>baseid</strong> (<em>str</em>) – optional baseid to group with previous entries versions</li>
-<li><strong>version</strong> (<em>str</em>) – entry version string</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>hashes</strong> (<em>dict</em>) – {hash type: hash value,}
+eg <code class="docutils literal notranslate"><span class="pre">hashes={'md5':</span> <span class="pre">ab167e49d25b488939b1ede42752458b'}</span></code></p></li>
+<li><p><strong>size</strong> (<em>int</em>) – file size metadata associated with a given uuid</p></li>
+<li><p><strong>did</strong> (<em>str</em>) – provide a UUID for the new indexd to be made</p></li>
+<li><p><strong>urls</strong> (<em>list</em>) – list of URLs where you can download the UUID</p></li>
+<li><p><strong>acl</strong> (<em>list</em>) – access control list</p></li>
+<li><p><strong>authz</strong> (<em>str</em>) – RBAC string</p></li>
+<li><p><strong>file_name</strong> (<em>str</em>) – name of the file associated with a given UUID</p></li>
+<li><p><strong>metadata</strong> (<em>dict</em>) – additional key value metadata for this entry</p></li>
+<li><p><strong>urls_metadata</strong> (<em>dict</em>) – metadata attached to each url</p></li>
+<li><p><strong>baseid</strong> (<em>str</em>) – optional baseid to group with previous entries versions</p></li>
+<li><p><strong>version</strong> (<em>str</em>) – entry version string</p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">json representation of an entry in indexd</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Document</p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>json representation of an entry in indexd</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Document</p>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.async_get_record">
-<code class="descname">async_get_record</code><span class="sig-paren">(</span><em>guid=None</em>, <em>_ssl=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.async_get_record"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.async_get_record" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">async_get_record</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.async_get_record"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.async_get_record" title="Permalink to this definition">¶</a></dt>
 <dd><p>Asynchronous function to request a record from indexd.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>guid</strong> (<em>str</em>) – record guid</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">indexd record</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>guid</strong> (<em>str</em>) – record guid</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>indexd record</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.async_get_records_on_page">
-<code class="descname">async_get_records_on_page</code><span class="sig-paren">(</span><em>limit=None</em>, <em>page=None</em>, <em>_ssl=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.async_get_records_on_page"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.async_get_records_on_page" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">async_get_records_on_page</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">page</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.async_get_records_on_page"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.async_get_records_on_page" title="Permalink to this definition">¶</a></dt>
 <dd><p>Asynchronous function to request a page from indexd.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>page</strong> (<em>int/str</em>) – indexd page to request</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">List of indexd records from the page</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">List[dict]</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>page</strong> (<em>int/str</em>) – indexd page to request</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>List of indexd records from the page</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>List[dict]</p>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.async_get_with_params">
-<code class="descname">async_get_with_params</code><span class="sig-paren">(</span><em>params</em>, <em>_ssl=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.async_get_with_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.async_get_with_params" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">async_get_with_params</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.async_get_with_params"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.async_get_with_params" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a document object corresponding to the supplied parameter</p>
 <ul class="simple">
-<li>need to include all the hashes in the request</li>
-<li>need to handle the query param <cite>‘hash’: ‘hash_type:hash’</cite></li>
+<li><p>need to include all the hashes in the request</p></li>
+<li><p>need to handle the query param <cite>‘hash’: ‘hash_type:hash’</cite></p></li>
 </ul>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>params</strong> (<em>dict</em>) – params to search with</li>
-<li><strong>_ssl</strong> (<em>None</em><em>, </em><em>optional</em>) – whether or not to use ssl</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>params</strong> (<em>dict</em>) – params to search with</p></li>
+<li><p><strong>_ssl</strong> (<em>None</em><em>, </em><em>optional</em>) – whether or not to use ssl</p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">json representation of an entry in indexd</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Document</p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>json representation of an entry in indexd</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Document</p>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.async_query_urls">
-<code class="descname">async_query_urls</code><span class="sig-paren">(</span><em>pattern</em>, <em>_ssl=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.async_query_urls"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.async_query_urls" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">async_query_urls</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pattern</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.async_query_urls"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.async_query_urls" title="Permalink to this definition">¶</a></dt>
 <dd><p>Asynchronous function to query urls from indexd.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>pattern</strong> (<em>str</em>) – pattern to match against indexd urls</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">indexd records with urls matching pattern</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">List[records]</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>pattern</strong> (<em>str</em>) – pattern to match against indexd urls</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>indexd records with urls matching pattern</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>List[records]</p>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.async_update_record">
-<code class="descname">async_update_record</code><span class="sig-paren">(</span><em>guid</em>, <em>file_name=None</em>, <em>urls=None</em>, <em>version=None</em>, <em>metadata=None</em>, <em>acl=None</em>, <em>authz=None</em>, <em>urls_metadata=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.async_update_record"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.async_update_record" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">async_update_record</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">urls</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">authz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">urls_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.async_update_record"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.async_update_record" title="Permalink to this definition">¶</a></dt>
 <dd><p>Asynchronous function to update a record in indexd.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>guid</strong> – string
-- record id</li>
-<li><strong>body</strong> – json/dictionary format
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>guid</strong> – string
+- record id</p></li>
+<li><p><strong>body</strong> – json/dictionary format
 - index record information that needs to be updated.
-- can not update size or hash, use new version for that</li>
+- can not update size or hash, use new version for that</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.create_blank">
-<code class="descname">create_blank</code><span class="sig-paren">(</span><em>uploader</em>, <em>file_name=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.create_blank"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.create_blank" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">create_blank</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">uploader</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.create_blank"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.create_blank" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a blank record</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>- json in the format</strong> (<em>json</em>) – </li>
-<li><strong>{</strong> – ‘uploader’: type(string)
-‘file_name’: type(string) (optional*)</li>
-<li><strong>}</strong> – </li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>- json in the format</strong> (<em>json</em>) – </p></li>
+<li><p><strong>{</strong> – ‘uploader’: type(string)
+‘file_name’: type(string) (optional*)</p></li>
+<li><p><strong>}</strong> – </p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.create_new_version">
-<code class="descname">create_new_version</code><span class="sig-paren">(</span><em>guid</em>, <em>hashes</em>, <em>size</em>, <em>did=None</em>, <em>urls=None</em>, <em>file_name=None</em>, <em>metadata=None</em>, <em>acl=None</em>, <em>urls_metadata=None</em>, <em>version=None</em>, <em>authz=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.create_new_version"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.create_new_version" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">create_new_version</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hashes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">did</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">urls</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">urls_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">authz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.create_new_version"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.create_new_version" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add new version for the document associated to the provided uuid</p>
 <p>Since data content is immutable, when you want to change the
 size or hash, a new index document with a new uuid needs to be
 created as its new version. That uuid is returned in the did
 field of the response. The old index document is not deleted.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>guid</strong> – (string): record id</li>
-<li><strong>hashes</strong> (<em>dict</em>) – {hash type: hash value,}
-eg <code class="docutils literal"><span class="pre">hashes={'md5':</span> <span class="pre">ab167e49d25b488939b1ede42752458b'}</span></code></li>
-<li><strong>size</strong> (<em>int</em>) – file size metadata associated with a given uuid</li>
-<li><strong>did</strong> (<em>str</em>) – provide a UUID for the new indexd to be made</li>
-<li><strong>urls</strong> (<em>list</em>) – list of URLs where you can download the UUID</li>
-<li><strong>file_name</strong> (<em>str</em>) – name of the file associated with a given UUID</li>
-<li><strong>metadata</strong> (<em>dict</em>) – additional key value metadata for this entry</li>
-<li><strong>acl</strong> (<em>list</em>) – access control list</li>
-<li><strong>urls_metadata</strong> (<em>dict</em>) – metadata attached to each url</li>
-<li><strong>version</strong> (<em>str</em>) – entry version string</li>
-<li><strong>authz</strong> (<em>str</em>) – RBAC string</li>
-<li><strong>body</strong> – json/dictionary format</li>
-<li><strong>Metadata object that needs to be added to the store.</strong> (<em>-</em>) – Providing size and at least one hash is necessary and
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>guid</strong> – (string): record id</p></li>
+<li><p><strong>hashes</strong> (<em>dict</em>) – {hash type: hash value,}
+eg <code class="docutils literal notranslate"><span class="pre">hashes={'md5':</span> <span class="pre">ab167e49d25b488939b1ede42752458b'}</span></code></p></li>
+<li><p><strong>size</strong> (<em>int</em>) – file size metadata associated with a given uuid</p></li>
+<li><p><strong>did</strong> (<em>str</em>) – provide a UUID for the new indexd to be made</p></li>
+<li><p><strong>urls</strong> (<em>list</em>) – list of URLs where you can download the UUID</p></li>
+<li><p><strong>file_name</strong> (<em>str</em>) – name of the file associated with a given UUID</p></li>
+<li><p><strong>metadata</strong> (<em>dict</em>) – additional key value metadata for this entry</p></li>
+<li><p><strong>acl</strong> (<em>list</em>) – access control list</p></li>
+<li><p><strong>urls_metadata</strong> (<em>dict</em>) – metadata attached to each url</p></li>
+<li><p><strong>version</strong> (<em>str</em>) – entry version string</p></li>
+<li><p><strong>authz</strong> (<em>str</em>) – RBAC string</p></li>
+<li><p><strong>body</strong> – json/dictionary format</p></li>
+<li><p><strong>Metadata object that needs to be added to the store.</strong> (<em>-</em>) – Providing size and at least one hash is necessary and
 sufficient. Note: it is a good idea to add a version
-number</li>
+number</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.create_record">
-<code class="descname">create_record</code><span class="sig-paren">(</span><em>hashes</em>, <em>size</em>, <em>did=None</em>, <em>urls=None</em>, <em>file_name=None</em>, <em>metadata=None</em>, <em>baseid=None</em>, <em>acl=None</em>, <em>urls_metadata=None</em>, <em>version=None</em>, <em>authz=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.create_record"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.create_record" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">create_record</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hashes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">did</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">urls</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">urls_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">authz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.create_record"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.create_record" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a new record and add it to the index</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>hashes</strong> (<em>dict</em>) – {hash type: hash value,}
-eg <code class="docutils literal"><span class="pre">hashes={'md5':</span> <span class="pre">ab167e49d25b488939b1ede42752458b'}</span></code></li>
-<li><strong>size</strong> (<em>int</em>) – file size metadata associated with a given uuid</li>
-<li><strong>did</strong> (<em>str</em>) – provide a UUID for the new indexd to be made</li>
-<li><strong>urls</strong> (<em>list</em>) – list of URLs where you can download the UUID</li>
-<li><strong>acl</strong> (<em>list</em>) – access control list</li>
-<li><strong>authz</strong> (<em>str</em>) – RBAC string</li>
-<li><strong>file_name</strong> (<em>str</em>) – name of the file associated with a given UUID</li>
-<li><strong>metadata</strong> (<em>dict</em>) – additional key value metadata for this entry</li>
-<li><strong>urls_metadata</strong> (<em>dict</em>) – metadata attached to each url</li>
-<li><strong>baseid</strong> (<em>str</em>) – optional baseid to group with previous entries versions</li>
-<li><strong>version</strong> (<em>str</em>) – entry version string</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>hashes</strong> (<em>dict</em>) – {hash type: hash value,}
+eg <code class="docutils literal notranslate"><span class="pre">hashes={'md5':</span> <span class="pre">ab167e49d25b488939b1ede42752458b'}</span></code></p></li>
+<li><p><strong>size</strong> (<em>int</em>) – file size metadata associated with a given uuid</p></li>
+<li><p><strong>did</strong> (<em>str</em>) – provide a UUID for the new indexd to be made</p></li>
+<li><p><strong>urls</strong> (<em>list</em>) – list of URLs where you can download the UUID</p></li>
+<li><p><strong>acl</strong> (<em>list</em>) – access control list</p></li>
+<li><p><strong>authz</strong> (<em>str</em>) – RBAC string</p></li>
+<li><p><strong>file_name</strong> (<em>str</em>) – name of the file associated with a given UUID</p></li>
+<li><p><strong>metadata</strong> (<em>dict</em>) – additional key value metadata for this entry</p></li>
+<li><p><strong>urls_metadata</strong> (<em>dict</em>) – metadata attached to each url</p></li>
+<li><p><strong>baseid</strong> (<em>str</em>) – optional baseid to group with previous entries versions</p></li>
+<li><p><strong>version</strong> (<em>str</em>) – entry version string</p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">json representation of an entry in indexd</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Document</p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>json representation of an entry in indexd</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Document</p>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.delete_record">
-<code class="descname">delete_record</code><span class="sig-paren">(</span><em>guid</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.delete_record"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.delete_record" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">delete_record</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.delete_record"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.delete_record" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete an entry from the index</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>guid</strong> – string
-- record id</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>guid</strong> – string
+- record id</p>
+</dd>
+</dl>
 <p>Returns: Nothing</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.get">
-<code class="descname">get</code><span class="sig-paren">(</span><em>guid</em>, <em>dist_resolution=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.get" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">get</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dist_resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.get" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the metadata associated with the given id, alias, or
 distributed identifier</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>guid</strong> – string
-- record id</li>
-<li><strong>dist_resolution</strong> – boolean
-- <em>optional</em> Specify if we want distributed dist_resolution or not</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>guid</strong> – string
+- record id</p></li>
+<li><p><strong>dist_resolution</strong> – boolean
+- <em>optional</em> Specify if we want distributed dist_resolution or not</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.get_all_records">
-<code class="descname">get_all_records</code><span class="sig-paren">(</span><em>limit=None</em>, <em>paginate=False</em>, <em>start=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_all_records"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_all_records" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">get_all_records</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">paginate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_all_records"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_all_records" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get a list of all records</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.get_latest_version">
-<code class="descname">get_latest_version</code><span class="sig-paren">(</span><em>guid</em>, <em>has_version=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_latest_version"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_latest_version" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">get_latest_version</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">has_version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_latest_version"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_latest_version" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the metadata of the latest index record version associated
 with the given id</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>guid</strong> – string
-- record id</li>
-<li><strong>has_version</strong> – boolean
-- <em>optional</em> exclude entries without a version</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>guid</strong> – string
+- record id</p></li>
+<li><p><strong>has_version</strong> – boolean
+- <em>optional</em> exclude entries without a version</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.get_record">
-<code class="descname">get_record</code><span class="sig-paren">(</span><em>guid</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_record"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_record" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">get_record</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_record"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_record" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the metadata associated with a given id</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.get_record_doc">
-<code class="descname">get_record_doc</code><span class="sig-paren">(</span><em>guid</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_record_doc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_record_doc" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">get_record_doc</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_record_doc"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_record_doc" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the metadata associated with a given id</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.get_records">
-<code class="descname">get_records</code><span class="sig-paren">(</span><em>dids</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_records"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_records" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">get_records</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dids</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_records"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_records" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get a list of documents given a list of dids</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dids</strong> – list
-- a list of record ids</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">json representing index records</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">list</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>dids</strong> – list
+- a list of record ids</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>json representing index records</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.get_records_on_page">
-<code class="descname">get_records_on_page</code><span class="sig-paren">(</span><em>limit=None</em>, <em>page=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_records_on_page"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_records_on_page" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">get_records_on_page</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">page</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_records_on_page"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_records_on_page" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get a list of all records given the page and page size limit</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.get_stats">
-<code class="descname">get_stats</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_stats"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_stats" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">get_stats</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_stats"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_stats" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return basic info about the records in indexd</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.get_urls">
-<code class="descname">get_urls</code><span class="sig-paren">(</span><em>size=None</em>, <em>hashes=None</em>, <em>guids=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_urls"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_urls" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">get_urls</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hashes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">guids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_urls"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_urls" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get a list of urls that match query params</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>size</strong> – integer
-- object size</li>
-<li><strong>hashes</strong> – string
-- hashes specified as algorithm:value</li>
-<li><strong>guids</strong> – list
-- list of ids</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>size</strong> – integer
+- object size</p></li>
+<li><p><strong>hashes</strong> – string
+- hashes specified as algorithm:value</p></li>
+<li><p><strong>guids</strong> – list
+- list of ids</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.get_version">
-<code class="descname">get_version</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_version"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_version" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">get_version</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_version"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_version" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return the version of indexd</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.get_versions">
-<code class="descname">get_versions</code><span class="sig-paren">(</span><em>guid</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_versions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_versions" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">get_versions</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_versions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_versions" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the metadata of index record version associated with the
 given id</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>guid</strong> – string
-- record id</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>guid</strong> – string
+- record id</p>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.get_with_params">
-<code class="descname">get_with_params</code><span class="sig-paren">(</span><em>params=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_with_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_with_params" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">get_with_params</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_with_params"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_with_params" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a document object corresponding to the supplied parameters, such
-as <code class="docutils literal"><span class="pre">{'hashes':</span> <span class="pre">{'md5':</span> <span class="pre">'...'},</span> <span class="pre">'size':</span> <span class="pre">'...',</span> <span class="pre">'metadata':</span> <span class="pre">{'file_state':</span> <span class="pre">'...'}}</span></code>.</p>
+as <code class="docutils literal notranslate"><span class="pre">{'hashes':</span> <span class="pre">{'md5':</span> <span class="pre">'...'},</span> <span class="pre">'size':</span> <span class="pre">'...',</span> <span class="pre">'metadata':</span> <span class="pre">{'file_state':</span> <span class="pre">'...'}}</span></code>.</p>
 <blockquote>
 <div><ul class="simple">
-<li>need to include all the hashes in the request</li>
-<li>index client like signpost or indexd will need to handle the
-query param <cite>‘hash’: ‘hash_type:hash’</cite></li>
+<li><p>need to include all the hashes in the request</p></li>
+<li><p>index client like signpost or indexd will need to handle the
+query param <cite>‘hash’: ‘hash_type:hash’</cite></p></li>
 </ul>
 </div></blockquote>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.is_healthy">
-<code class="descname">is_healthy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.is_healthy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.is_healthy" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">is_healthy</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.is_healthy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.is_healthy" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return if indexd is healthy or not</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.query_urls">
-<code class="descname">query_urls</code><span class="sig-paren">(</span><em>pattern</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.query_urls"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.query_urls" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">query_urls</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pattern</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.query_urls"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.query_urls" title="Permalink to this definition">¶</a></dt>
 <dd><p>Query all record URLs for given pattern</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>pattern</strong> (<em>str</em>) – pattern to match against indexd urls</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">indexd records with urls matching pattern</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">List[records]</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>pattern</strong> (<em>str</em>) – pattern to match against indexd urls</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>indexd records with urls matching pattern</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>List[records]</p>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.update_blank">
-<code class="descname">update_blank</code><span class="sig-paren">(</span><em>guid</em>, <em>rev</em>, <em>hashes</em>, <em>size</em>, <em>urls=None</em>, <em>authz=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.update_blank"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.update_blank" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">update_blank</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rev</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hashes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">urls</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">authz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.update_blank"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.update_blank" title="Permalink to this definition">¶</a></dt>
 <dd><p>Update only hashes and size for a blank index</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>guid</strong> (<em>string</em>) – record id</li>
-<li><strong>rev</strong> (<em>string</em>) – data revision - simple consistency mechanism</li>
-<li><strong>hashes</strong> (<em>dict</em>) – {hash type: hash value,}
-eg <code class="docutils literal"><span class="pre">hashes={'md5':</span> <span class="pre">ab167e49d25b488939b1ede42752458b'}</span></code></li>
-<li><strong>size</strong> (<em>int</em>) – file size metadata associated with a given uuid</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>guid</strong> (<em>string</em>) – record id</p></li>
+<li><p><strong>rev</strong> (<em>string</em>) – data revision - simple consistency mechanism</p></li>
+<li><p><strong>hashes</strong> (<em>dict</em>) – {hash type: hash value,}
+eg <code class="docutils literal notranslate"><span class="pre">hashes={'md5':</span> <span class="pre">ab167e49d25b488939b1ede42752458b'}</span></code></p></li>
+<li><p><strong>size</strong> (<em>int</em>) – file size metadata associated with a given uuid</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.update_record">
-<code class="descname">update_record</code><span class="sig-paren">(</span><em>guid</em>, <em>file_name=None</em>, <em>urls=None</em>, <em>version=None</em>, <em>metadata=None</em>, <em>acl=None</em>, <em>authz=None</em>, <em>urls_metadata=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.update_record"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.index.Gen3Index.update_record" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">update_record</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">urls</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">authz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">urls_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.update_record"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.update_record" title="Permalink to this definition">¶</a></dt>
 <dd><p>Update an existing entry in the index</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>guid</strong> – string
-- record id</li>
-<li><strong>body</strong> – json/dictionary format
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>guid</strong> – string
+- record id</p></li>
+<li><p><strong>body</strong> – json/dictionary format
 - index record information that needs to be updated.
-- can not update size or hash, use new version for that</li>
+- can not update size or hash, use new version for that</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -529,10 +463,41 @@ eg <code class="docutils literal"><span class="pre">hashes={'md5':</span> <span 
 
 
           </div>
+          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper"><div class="relations">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Gen3 SDK</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=uc-cdis&repo=gen3sdk-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="auth.html">Gen3 Auth Helper</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file.html">Gen3 File Class</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Gen3 Index Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jobs.html">Gen3 Jobs Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metadata.html">Gen3 Metadata Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="query.html">Gen3 Query Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="submission.html">Gen3 Submission Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tools.html">Gen3 Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="wss.html">Gen3 Workspace Storage</a></li>
+</ul>
+
+<div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -541,23 +506,24 @@ eg <code class="docutils literal"><span class="pre">hashes={'md5':</span> <span 
   </ul></li>
 </ul>
 </div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="_sources/indexing.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
         </div>
       </div>
       <div class="clearer"></div>

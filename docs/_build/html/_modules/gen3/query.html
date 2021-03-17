@@ -1,44 +1,39 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>gen3.query &#8212; Gen3 SDK  documentation</title>
-    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../../',
-        VERSION:     '',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="../../_static/jquery.js"></script>
-    <script type="text/javascript" src="../../_static/underscore.js"></script>
-    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
    
   <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
   
+  
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
+          
+
           <div class="body" role="main">
             
   <h1>Source code for gen3.query</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">requests</span>
+
+<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">raise_for_status</span>
 
 
 <div class="viewcode-block" id="Gen3Query"><a class="viewcode-back" href="../../query.html#gen3.query.Gen3Query">[docs]</a><span class="k">class</span> <span class="nc">Gen3Query</span><span class="p">:</span>
@@ -56,7 +51,7 @@
 <span class="sd">        ... query = Gen3Query(auth)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">auth_provider</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">auth_provider</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span> <span class="o">=</span> <span class="n">auth_provider</span>
 
 <div class="viewcode-block" id="Gen3Query.query"><a class="viewcode-back" href="../../query.html#gen3.query.Gen3Query.query">[docs]</a>    <span class="k">def</span> <span class="nf">query</span><span class="p">(</span>
@@ -130,20 +125,20 @@
             <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;subject&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">}}</span>
 
         <span class="c1"># convert sort_object to graphql: [ { field_name: &quot;sort_method&quot; } ]</span>
-        <span class="n">sorts</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="s1">&#39;{{</span><span class="si">{field}</span><span class="s1">: &quot;</span><span class="si">{val}</span><span class="s1">&quot;}}&#39;</span> <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">sort_object</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
-        <span class="n">sort_string</span> <span class="o">=</span> <span class="n">f</span><span class="s1">&#39;[{&quot;, &quot;.join(sorts)}]&#39;</span>
+        <span class="n">sorts</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s1">: &quot;</span><span class="si">{</span><span class="n">val</span><span class="si">}</span><span class="s1">&quot;</span><span class="se">}}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">sort_object</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+        <span class="n">sort_string</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;[</span><span class="si">{</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sorts</span><span class="p">)</span><span class="si">}</span><span class="s1">]&#39;</span>
 
-        <span class="n">query_string</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;&quot;&quot;query($filter: JSON) {{</span>
-<span class="s2">            </span><span class="si">{data_type}</span><span class="s2">(</span>
-<span class="s2">                first: </span><span class="si">{first}</span><span class="s2">,</span>
-<span class="s2">                offset: </span><span class="si">{offset}</span><span class="s2">,</span>
-<span class="s2">                sort: </span><span class="si">{sort_string}</span><span class="s2">,</span>
-<span class="s2">                accessibility: </span><span class="si">{accessibility}</span><span class="s2">,</span>
+        <span class="n">query_string</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;query($filter: JSON) </span><span class="se">{{</span><span class="s2"></span>
+<span class="s2">            </span><span class="si">{</span><span class="n">data_type</span><span class="si">}</span><span class="s2">(</span>
+<span class="s2">                first: </span><span class="si">{</span><span class="n">first</span><span class="si">}</span><span class="s2">,</span>
+<span class="s2">                offset: </span><span class="si">{</span><span class="n">offset</span><span class="si">}</span><span class="s2">,</span>
+<span class="s2">                sort: </span><span class="si">{</span><span class="n">sort_string</span><span class="si">}</span><span class="s2">,</span>
+<span class="s2">                accessibility: </span><span class="si">{</span><span class="n">accessibility</span><span class="si">}</span><span class="s2">,</span>
 <span class="s2">                filter: $filter</span>
-<span class="s2">            ) {{</span>
-<span class="s2">                {&quot; &quot;.join(fields)}</span>
-<span class="s2">            }}</span>
-<span class="s2">        }}&quot;&quot;&quot;</span>
+<span class="s2">            ) </span><span class="se">{{</span><span class="s2"></span>
+<span class="s2">                </span><span class="si">{</span><span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">fields</span><span class="p">)</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">            </span><span class="se">}}</span><span class="s2"></span>
+<span class="s2">        </span><span class="se">}}</span><span class="s2">&quot;&quot;&quot;</span>
         <span class="n">variables</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;filter&quot;</span><span class="p">:</span> <span class="n">filter_object</span><span class="p">}</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graphql_query</span><span class="p">(</span><span class="n">query_string</span><span class="o">=</span><span class="n">query_string</span><span class="p">,</span> <span class="n">variables</span><span class="o">=</span><span class="n">variables</span><span class="p">)</span></div>
 
@@ -162,23 +157,23 @@
 <span class="sd">            &gt;&gt;&gt; query_string = &quot;{ my_index { my_field } }&quot;</span>
 <span class="sd">            ... Gen3Query.graphql_query(query_string)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">url</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{self._auth_provider.endpoint}</span><span class="s2">/guppy/graphql&quot;</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">endpoint</span><span class="si">}</span><span class="s2">/guppy/graphql&quot;</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
             <span class="n">url</span><span class="p">,</span>
             <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="n">query_string</span><span class="p">,</span> <span class="s2">&quot;variables&quot;</span><span class="p">:</span> <span class="n">variables</span><span class="p">},</span>
             <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+            <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span>
-                <span class="n">f</span><span class="s2">&quot;Unable to query.</span><span class="se">\n</span><span class="s2">Query: </span><span class="si">{query_string}</span><span class="se">\n</span><span class="s2">Variables: </span><span class="si">{variables}</span><span class="se">\n</span><span class="si">{response.text}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Unable to query.</span><span class="se">\n</span><span class="s2">Query: </span><span class="si">{</span><span class="n">query_string</span><span class="si">}</span><span class="se">\n</span><span class="s2">Variables: </span><span class="si">{</span><span class="n">variables</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="p">)</span>
             <span class="k">raise</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
         <span class="k">except</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Did not receive JSON: </span><span class="si">{response.text}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Did not receive JSON: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">raise</span></div>
 
 <div class="viewcode-block" id="Gen3Query.raw_data_download"><a class="viewcode-back" href="../../query.html#gen3.query.Gen3Query.raw_data_download">[docs]</a>    <span class="k">def</span> <span class="nf">raw_data_download</span><span class="p">(</span>
@@ -230,21 +225,21 @@
         <span class="k">if</span> <span class="n">sort_fields</span><span class="p">:</span>
             <span class="n">body</span><span class="p">[</span><span class="s2">&quot;sort&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sort_fields</span>
 
-        <span class="n">url</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{self._auth_provider.endpoint}</span><span class="s2">/guppy/download&quot;</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">endpoint</span><span class="si">}</span><span class="s2">/guppy/download&quot;</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
             <span class="n">url</span><span class="p">,</span>
             <span class="n">json</span><span class="o">=</span><span class="n">body</span><span class="p">,</span>
             <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+            <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Unable to download.</span><span class="se">\n</span><span class="s2">Body: </span><span class="si">{body}</span><span class="se">\n</span><span class="si">{response.text}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unable to download.</span><span class="se">\n</span><span class="s2">Body: </span><span class="si">{</span><span class="n">body</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">raise</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
         <span class="k">except</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Did not receive JSON: </span><span class="si">{response.text}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Did not receive JSON: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">raise</span>
 
         <span class="k">if</span> <span class="n">offset</span><span class="p">:</span>
@@ -256,10 +251,41 @@
 </pre></div>
 
           </div>
+          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper"><div class="relations">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Gen3 SDK</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=uc-cdis&repo=gen3sdk-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../auth.html">Gen3 Auth Helper</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../file.html">Gen3 File Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../indexing.html">Gen3 Index Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../jobs.html">Gen3 Jobs Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../metadata.html">Gen3 Metadata Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../query.html">Gen3 Query Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../submission.html">Gen3 Submission Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools.html">Gen3 Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../wss.html">Gen3 Workspace Storage</a></li>
+</ul>
+
+<div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../../index.html">Documentation overview</a><ul>
@@ -269,15 +295,23 @@
 </ul>
 </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
         </div>
       </div>
       <div class="clearer"></div>
