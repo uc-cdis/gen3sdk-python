@@ -14,8 +14,7 @@ cd ..
 export PATH="/var/jenkins_home/.local/bin:$PATH"
 export GEN3_API_KEY="accesstoken:///$(gen3 api access-token cdis.autotest@gmail.com)"
 
-poetry config virtualenvs.path "${WORKSPACE}/pysdkvirtenv" --local  
-poetry env use python3.6
+poetry config virtualenvs.path "${WORKSPACE}/pysdkvirtenv" --local
+poetry env use python3.8
 poetry install -vv
 poetry run bash tests/smokeTest.sh test-all
-

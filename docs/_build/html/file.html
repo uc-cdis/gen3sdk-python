@@ -1,26 +1,17 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gen3 File Class &#8212; Gen3 SDK  documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Gen3 Index Class" href="indexing.html" />
@@ -28,60 +19,55 @@
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
+  
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
+          
+
           <div class="body" role="main">
             
   <div class="section" id="gen3-file-class">
 <h1>Gen3 File Class<a class="headerlink" href="#gen3-file-class" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
+<dl class="py class">
 <dt id="gen3.file.Gen3File">
-<em class="property">class </em><code class="descclassname">gen3.file.</code><code class="descname">Gen3File</code><span class="sig-paren">(</span><em>endpoint=None</em>, <em>auth_provider=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.file.Gen3File" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.file.</span></code><code class="sig-name descname"><span class="pre">Gen3File</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">endpoint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth_provider</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>For interacting with Gen3 file management features.</p>
 <p>A class for interacting with the Gen3 file download services.
 Supports getting presigned urls right now.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>auth_provider</strong> (<a class="reference internal" href="auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><em>Gen3Auth</em></a>) – A Gen3Auth class instance.</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>auth_provider</strong> (<a class="reference internal" href="auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><em>Gen3Auth</em></a>) – A Gen3Auth class instance.</p>
+</dd>
+</dl>
 <p class="rubric">Examples</p>
 <p>This generates the Gen3File class pointed at the sandbox commons while
 using the credentials.json downloaded from the commons profile page.</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
 <span class="gp">... </span><span class="n">file</span> <span class="o">=</span> <span class="n">Gen3File</span><span class="p">(</span><span class="n">auth</span><span class="p">)</span>
 </pre></div>
 </div>
-<dl class="method">
+<dl class="py method">
 <dt id="gen3.file.Gen3File.get_presigned_url">
-<code class="descname">get_presigned_url</code><span class="sig-paren">(</span><em>guid</em>, <em>protocol='http'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.get_presigned_url"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.file.Gen3File.get_presigned_url" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">get_presigned_url</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protocol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'http'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.get_presigned_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.get_presigned_url" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates a presigned URL for a file.</p>
 <p>Retrieves a presigned url for a file giving access to a file for a limited time.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>guid</strong> (<em>str</em>) – The GUID for the object to retrieve.</li>
-<li><strong>protocol</strong> (<code class="xref py py-obj docutils literal"><span class="pre">str</span></code>, optional) – The protocol to use for picking the available URL for generating the presigned URL.</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>guid</strong> (<em>str</em>) – The GUID for the object to retrieve.</p></li>
+<li><p><strong>protocol</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code>, optional) – The protocol to use for picking the available URL for generating the presigned URL.</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 <p class="rubric">Examples</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3File</span><span class="o">.</span><span class="n">get_presigned_url</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3File</span><span class="o">.</span><span class="n">get_presigned_url</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -92,10 +78,41 @@ using the credentials.json downloaded from the commons profile page.</p>
 
 
           </div>
+          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper"><div class="relations">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Gen3 SDK</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=uc-cdis&repo=gen3sdk-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="auth.html">Gen3 Auth Helper</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Gen3 File Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="indexing.html">Gen3 Index Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jobs.html">Gen3 Jobs Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metadata.html">Gen3 Metadata Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="query.html">Gen3 Query Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="submission.html">Gen3 Submission Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tools.html">Gen3 Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="wss.html">Gen3 Workspace Storage</a></li>
+</ul>
+
+<div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -104,23 +121,24 @@ using the credentials.json downloaded from the commons profile page.</p>
   </ul></li>
 </ul>
 </div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="_sources/file.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
         </div>
       </div>
       <div class="clearer"></div>

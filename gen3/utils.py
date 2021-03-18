@@ -1,7 +1,6 @@
 import logging
 import sys
 import re
-
 from urllib.parse import urlunsplit
 from urllib.parse import urlencode
 from urllib.parse import urlsplit
@@ -16,6 +15,18 @@ SIZE_FORMAT = r"^[0-9]*$"
 ACL_FORMAT = r"^.*$"
 URL_FORMAT = r"^.*$"
 AUTHZ_FORMAT = r"^.*$"
+
+
+def raise_for_status(response):
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as exception:
+        print(
+            "Error: status code {}; details:\n{}".format(
+                response.status_code, response.text
+            )
+        )
+        raise
 
 
 def append_query_params(original_url, **kwargs):
