@@ -97,7 +97,7 @@ class Gen3Expansion:
         ]  # filter output for lines with file info
         output = [line[3] for line in output]  # grab the filename only
         output = fnmatch.filter(output, pattern)  # if default '*', all files will match
-        if verbose is True:
+        if verbose == True:
             print("\nIndex \t Filename")
             for (i, item) in enumerate(output, start=0):
                 print(i, "\t", item)
@@ -132,7 +132,7 @@ class Gen3Expansion:
                     except Exception as e:
                         output = e.output.decode("UTF-8")
                         print("ERROR:" + output)
-        # If files is None, which syncs the s3_path 'directory'
+        # If files == None, which syncs the s3_path 'directory'
         else:
             print("Syncing directory " + s3_path)
             cmd = ["aws", "s3", "--profile", profile, "sync", s3_path, mydir]
@@ -198,7 +198,7 @@ class Gen3Expansion:
                 """{project (first:0, with_path_to:{type:"%s",submitter_id:"%s"}){project_id}}"""
                 % (node, name)
             )
-        elif isinstance(node, str) and name is None:
+        elif isinstance(node, str) and name == None:
             print(
                 "Getting all project_ids for projects with at least one record in the node '"
                 + node
@@ -243,7 +243,7 @@ class Gen3Expansion:
         if not os.path.exists(mydir):
             os.makedirs(mydir)
 
-        if projects is None:  # if no projects specified, get node for all projects
+        if projects == None:  # if no projects specified, get node for all projects
             projects = list(
                 json_normalize(
                     self.sub.query("""{project (first:0){project_id}}""")["data"][
@@ -258,7 +258,7 @@ class Gen3Expansion:
         df_len = 0
         for project in projects:
             filename = str(mydir + "/" + project + "_" + node + ".tsv")
-            if (os.path.isfile(filename)) and (overwrite is False):
+            if (os.path.isfile(filename)) and (overwrite == False):
                 print("File previously downloaded.")
             else:
                 prog, proj = project.split("-", 1)
@@ -270,7 +270,7 @@ class Gen3Expansion:
 
             print(filename + " has " + str(len(df1)) + " records.")
 
-            if remove_empty is True:
+            if remove_empty == True:
                 if df1.empty:
                     print("Removing empty file: " + filename)
                     cmd = ["rm", filename]  # look in the download directory
@@ -310,14 +310,14 @@ class Gen3Expansion:
         Args:
             projects (str/list): The project_id(s) of the project(s) to download. Can be a single project_id or a list of project_ids.
             nodes(str/list): The nodes to download from each project. If None, will try to download all nodes in the data model.
-            overwrite (boolean): If False, the TSV file is not downloaded if there is an existing file with the same name.
+            overwrite (boolean): If False, the TSV file != downloaded if there is an existing file with the same name.
             save_empty(boolean): If True, TSVs with no records, i.e., downloads an empty TSV template, will be downloaded.
             remove_nodes(list): A list of nodes in the data model that should not be downloaded per project.
         Example:
         >>> get_project_tsvs(projects = ['internal-test'])
 
         """
-        if nodes is None:
+        if nodes == None:
             nodes = sorted(
                 list(
                     set(
@@ -336,7 +336,7 @@ class Gen3Expansion:
             if node in nodes:
                 nodes.remove(node)
 
-        if projects is None:  # if no projects specified, get node for all projects
+        if projects == None:  # if no projects specified, get node for all projects
             projects = list(
                 json_normalize(
                     self.sub.query("""{project (first:0){project_id}}""")["data"][
@@ -357,7 +357,7 @@ class Gen3Expansion:
 
             for node in nodes:
                 filename = str(mydir + "/" + project_id + "_" + node + ".tsv")
-                if (os.path.isfile(filename)) and (overwrite is False):
+                if (os.path.isfile(filename)) and (overwrite == False):
                     print("\tPreviously downloaded: '{}'".format(filename))
                 else:
                     query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
@@ -365,7 +365,7 @@ class Gen3Expansion:
                         query_txt
                     )  #  {'data': {'_acknowledgement_count': 0}}
                     count = res["data"][str("_" + node + "_count")]  # count=int(0)
-                    if count > 0 or save_empty is True:
+                    if count > 0 or save_empty == True:
                         print(
                             "\nDownloading {} records in node '{}' of project '{}'.".format(
                                 count, node, project_id
@@ -404,7 +404,7 @@ class Gen3Expansion:
 
         Args:
             nodes (list): The nodes to get counts for.
-            project_id(str): The project_id to limit the query to. Default is None.
+            project_id(str): The project_id to limit the query to. Default == None.
             chunk_size(int): The number of records to return per query. Default is 10000.
             args(str): Put graphQL arguments here. For example, 'with_path_to:{type:"case",submitter_id:"case-01"}', etc. Don't enclose in parentheses.
         Example:
@@ -417,14 +417,14 @@ class Gen3Expansion:
             nodes = [nodes]
 
         for node in nodes:
-            if project_id is not None:
+            if project_id != None:
                 program, project = project_id.split("-", 1)
-                if args is None:
+                if args == None:
                     query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
                 else:
                     query_txt = """{_%s_count (project_id:"%s", %s)}""" % (node, project_id, args)
             else:
-                if args is None:
+                if args == None:
                     query_txt = """{_%s_count}""" % (node)
                 else:
                     query_txt = """{_%s_count (%s)}""" % (node, args)
@@ -458,7 +458,7 @@ class Gen3Expansion:
 
         Args:
             node (str): The node to query.
-            project_id (str): The project_id to limit the query to. Default is None.
+            project_id (str): The project_id to limit the query to. Default == None.
             props (list): A list of properties in the node to return.
             chunk_size (int): The number of records to return per query. Default is 2500.
             args (str): Put graphQL arguments here. For example, 'with_path_to:{type:"case",submitter_id:"case-01"}', etc. Don't enclose in parentheses.
@@ -483,9 +483,9 @@ class Gen3Expansion:
                 else:
                     return nodes
 
-        if project_id is not None:
+        if project_id != None:
             program, project = project_id.split("-", 1)
-            if args is None:
+            if args == None:
                 query_txt = """{_%s_count (project_id:"%s")}""" % (node, project_id)
             else:
                 query_txt = """{_%s_count (project_id:"%s", %s)}""" % (
@@ -494,7 +494,7 @@ class Gen3Expansion:
                     args,
                 )
         else:
-            if args is None:
+            if args == None:
                 query_txt = """{_%s_count}""" % (node)
             else:
                 query_txt = """{_%s_count (%s)}""" % (node, args)
@@ -522,8 +522,8 @@ class Gen3Expansion:
         count = 0
         while offset < qsize:
 
-            if project_id is not None:
-                if args is None:
+            if project_id != None:
+                if args == None:
                     query_txt = (
                         """{%s (first: %s, offset: %s, project_id:"%s"){%s}}"""
                         % (node, chunk_size, offset, project_id, properties)
@@ -534,7 +534,7 @@ class Gen3Expansion:
                         % (node, chunk_size, offset, project_id, args, properties)
                     )
             else:
-                if args is None:
+                if args == None:
                     query_txt = """{%s (first: %s, offset: %s){%s}}""" % (
                         node,
                         chunk_size,
@@ -578,7 +578,7 @@ class Gen3Expansion:
             # print(msg)
             sys.stdout.write("\r" + str(msg).ljust(200, " "))
 
-        if format is "tsv":
+        if format == "tsv":
             df = json_normalize(total["data"][node])
             return df
         else:
@@ -598,7 +598,7 @@ class Gen3Expansion:
         Returns a json of all the records in the node.
         Args:
             node (str): The node to query.
-            project_id(str): The project_id to limit the query to. Default is None.
+            project_id(str): The project_id to limit the query to. Default == None.
             props(list): A list of properties in the node to return.
             args(str): Put graphQL arguments here. For example, 'with_path_to:{type:"case",submitter_id:"case-01"}', etc. Don't enclose in parentheses.
             chunk_size(int): The number of records to return per query. Default is 10000.
@@ -610,9 +610,9 @@ class Gen3Expansion:
         props = list(set(["id", "submitter_id"] + props))
         properties = " ".join(map(str, props))
 
-        if project_id is not None:
+        if project_id != None:
             outname = "query_{}_{}.tsv".format(project_id, node)
-            if args is None:
+            if args == None:
                 query_txt = """{%s (first: %s, offset: %s, project_id:"%s"){%s}}""" % (
                     node,
                     chunk_size,
@@ -627,7 +627,7 @@ class Gen3Expansion:
                 )
         else:
             outname = "query_{}.tsv".format(node)
-            if args is None:
+            if args == None:
                 query_txt = """{%s (first: %s, offset: %s){%s}}""" % (
                     node,
                     chunk_size,
@@ -671,7 +671,7 @@ class Gen3Expansion:
 
             print("\tTotal records retrieved: {}".format(len(total["data"][node])))
 
-        if format is "tsv":
+        if format == "tsv":
             df = json_normalize(total["data"][node])
             df.to_csv(outname, sep="\t", index=False)
             return df
@@ -862,7 +862,7 @@ class Gen3Expansion:
                 output = json.loads(resp.text)
                 responses.append(output)
 
-                if output["success"]:  # 'success' is True or False in API response
+                if output["success"]:  # 'success' == True or False in API response
                     success = list(set(success + [x["id"] for x in output["entities"]]))
                 else:  # if one UUID fails to delete in the request, the entire request fails.
                     for entity in output["entities"]:
@@ -978,11 +978,11 @@ class Gen3Expansion:
         ]  # make a list of tuples with (node, order) where order is int
         while (
             len(submission_order) < len(nodes) + 1
-        ):  # "root_node" is not in "nodes", thus the +1
+        ):  # "root_node" != in "nodes", thus the +1
             for node in nodes:
                 if (
                     len([item for item in submission_order if node in item]) == 0
-                ):  # if the node is not in submission_order
+                ):  # if the node != in submission_order
                     # print("Node: {}".format(node))
                     node_links = dd[node]["links"]
                     parents = []
@@ -999,7 +999,7 @@ class Gen3Expansion:
                     if False in [
                         i in [i[0] for i in submission_order] for i in parents
                     ]:
-                        continue  # if any parent is not already in submission_order, skip this node for now
+                        continue  # if any parent != already in submission_order, skip this node for now
                     else:  # submit this node after the last parent to submit
                         parents_order = [
                             item for item in submission_order if item[0] in parents
@@ -1116,7 +1116,7 @@ class Gen3Expansion:
         )  # You can comment this line out if you don't need title
         plt.show(fig)
 
-        if by_project is True:
+        if by_project == True:
             projects = list(set(df["project_id"]))
             for project in projects:
                 proj_df = df[df["project_id"] == project]
@@ -1360,7 +1360,7 @@ class Gen3Expansion:
     def get_data_file_tsvs(self, projects=None, remove_empty=True):
         # Download TSVs for all data file nodes in the specified projects
         # if no projects specified, get node for all projects
-        if projects is None:
+        if projects == None:
             projects = list(
                 json_normalize(
                     self.sub.query("""{project (first:0){project_id}}""")["data"][
@@ -1422,7 +1422,7 @@ class Gen3Expansion:
                 dfs.append(df1)
                 df_len += len(df1)  # Counting the total number of records in the node
                 print(filename + " has " + str(len(df1)) + " records.")
-                if remove_empty is True:
+                if remove_empty == True:
                     if df1.empty:
                         print("Removing empty file: " + filename)
                         cmd = ["rm", filename]  # look in the download directory
@@ -1451,7 +1451,7 @@ class Gen3Expansion:
     def list_guids_in_nodes(self, nodes=None, projects=None):
         # Get GUIDs for node(s) in project(s)
         if (
-            nodes is None
+            nodes == None
         ):  # get all data_file/metadata_file/index_file 'node_id's in the data model
             categories = ["data_file", "metadata_file", "index_file"]
             nodes = []
@@ -1462,7 +1462,7 @@ class Gen3Expansion:
                     nodes = list(set(nodes + list(set(df["id"]))))
         elif isinstance(nodes, str):
             nodes = [nodes]
-        if projects is None:
+        if projects == None:
             projects = list(
                 json_normalize(
                     self.sub.query("""{project (first:0){project_id}}""")["data"][
@@ -1642,7 +1642,7 @@ class Gen3Expansion:
             node = list(response["data"])[0]
             records = response["data"][node]
 
-            if len(records) > 1 and all is False:
+            if len(records) > 1 and all == False:
                 print(
                     "\tWARNING - More than one record matched query for '{}' in '{}' node of project '{}'.".format(
                         file_name, node, project
@@ -1654,12 +1654,12 @@ class Gen3Expansion:
                     )
                 )
 
-            if len(records) >= 1 and all is False:
+            if len(records) >= 1 and all == False:
                 record = records[0]
                 guid = record["object_id"]
                 fname = self.download_file_endpoint(guid=guid)
 
-            elif all is True:
+            elif all == True:
                 guids = [record["object_id"] for record in records]
                 for guid in guids:
                     self.download_file_endpoint(guid=guid)
@@ -1720,7 +1720,7 @@ class Gen3Expansion:
     def get_duplicates(self, nodes, projects, api):
         # Get duplicate SUBMITTER_IDs in a node, which SHOULD NEVER HAPPEN but alas it has, thus this script
         # if no projects specified, get node for all projects
-        if projects is None:
+        if projects == None:
             projects = list(
                 json_normalize(
                     self.sub.query("""{project (first:0){project_id}}""")["data"][
@@ -1732,7 +1732,7 @@ class Gen3Expansion:
             projects = [projects]
 
         # if no nodes specified, get all nodes in data commons
-        if nodes is None:
+        if nodes == None:
             nodes = sorted(
                 list(
                     set(
@@ -1907,7 +1907,7 @@ class Gen3Expansion:
         results["missing"] = missing
 
         # Find the rows in submitted TSV that are not in either failed or succeeded, 8 time outs in test data, 8*30 = 240 records
-        if write_tsvs is True:
+        if write_tsvs == True:
             print("Writing TSVs: ")
             valid_df = df.loc[
                 df["submitter_id"].isin(valid)
@@ -2023,7 +2023,7 @@ class Gen3Expansion:
                 or "413 Request Entity Too Large" in response
                 or "Connection aborted." in response
                 or "service failure - try again later" in response
-            ):  # time-out, response is not valid JSON at the moment
+            ):  # time-out, response != valid JSON at the moment
 
                 print("\t Reducing Chunk Size: {}".format(response))
                 results["responses"].append("Reducing Chunk Size: {}".format(response))
@@ -2125,7 +2125,7 @@ class Gen3Expansion:
                     "Please check your data for correct file encoding, special characters, or duplicate submitter_ids or ids."
                 )
 
-            elif timeout is False:  # get new chunk if didn't timeout
+            elif timeout == False:  # get new chunk if didn't timeout
                 start += chunk_size
                 end = start + chunk_size
                 chunk = df[start:end]
@@ -2245,7 +2245,7 @@ class Gen3Expansion:
                 or "413 Request Entity Too Large" in response
                 or "Connection aborted." in response
                 or "service failure - try again later" in response
-            ):  # time-out, response is not valid JSON at the moment
+            ):  # time-out, response != valid JSON at the moment
 
                 print("\t Reducing Chunk Size: {}".format(response))
                 results["responses"].append("Reducing Chunk Size: {}".format(response))
@@ -2347,7 +2347,7 @@ class Gen3Expansion:
                     "Please check your data for correct file encoding, special characters, or duplicate submitter_ids or ids."
                 )
 
-            elif timeout is False:  # get new chunk if didn't timeout
+            elif timeout == False:  # get new chunk if didn't timeout
                 start += chunk_size
                 end = start + chunk_size
                 chunk = df[start:end]
@@ -2474,7 +2474,7 @@ class Gen3Expansion:
         all_records = []
 
         done = False
-        while done is False:
+        while done == False:
 
             records = self.query_indexd(limit=limit, page=page)
             all_records.extend(records)
@@ -2515,7 +2515,7 @@ class Gen3Expansion:
 
         else:
             print(
-                "\n\n'{}' is not a valid output format. Please provide a format of either 'JSON' or 'TSV'.\n\n".format(
+                "\n\n'{}' != a valid output format. Please provide a format of either 'JSON' or 'TSV'.\n\n".format(
                     format
                 )
             )
@@ -2639,16 +2639,16 @@ class Gen3Expansion:
             all_records.append(irec)
 
 
-        if all_records is None:
+        if all_records == None:
             print("No records in the index with authz {}.".format(authz))
 
-        elif format is "tsv":
+        elif format == "tsv":
             df = json_normalize(all_records)
             filename = "indexd_records_for_filenames.tsv"
             df.to_csv(filename, sep="\t", index=False, encoding="utf-8")
             return df
 
-        elif format is "guids":
+        elif format == "guids":
             guids = []
             for record in all_records:
                 guids.append(record["did"])
@@ -2670,7 +2670,7 @@ class Gen3Expansion:
 
         all_records,records = [],[]
         done = False
-        while done is False:
+        while done == False:
 
             index_url = "{}/index/index/?limit={}&page={}&authz={}".format(self._endpoint,limit,page,authz)
             #index_url = "{}/index/index/?limit={}&page={}&authz={}".format(api,limit,page,authz)
@@ -2702,16 +2702,16 @@ class Gen3Expansion:
         # data.append(records)
         #
 
-        if all_records is None:
+        if all_records == None:
             print("No records in the index with authz {}.".format(authz))
 
-        elif format is "tsv":
+        elif format == "tsv":
             df = json_normalize(all_records)
             filename = "indexd_records_for_{}.tsv".format(authz.split("/")[-1])
             df.to_csv(filename, sep="\t", index=False, encoding="utf-8")
             return df
 
-        elif format is "guids":
+        elif format == "guids":
             guids = []
             for record in all_records:
                 guids.append(record["did"])
@@ -2734,7 +2734,7 @@ class Gen3Expansion:
 
         all_records,records = [],[]
         done = False
-        while done is False:
+        while done == False:
 
             index_url = "{}/index/index/?limit={}&page={}&acl={}".format(self._endpoint,limit,page,acl)
             #index_url = "{}/index/index/?limit={}&page={}&acl={}".format(api,limit,page,acl)
@@ -2759,16 +2759,16 @@ class Gen3Expansion:
             "\t\tScript finished. Total records retrieved: {}".format(len(all_records))
         )
 
-        if all_records is None:
+        if all_records == None:
             print("No records in the index with acl {}.".format(acl))
 
-        elif format is "tsv":
+        elif format == "tsv":
             df = json_normalize(all_records)
             filename = "indexd_records_for_{}.tsv".format(acl)
             df.to_csv(filename, sep="\t", index=False, encoding="utf-8")
             return df
 
-        elif format is "guids":
+        elif format == "guids":
             guids = []
             for record in all_records:
                 guids.append(record["did"])
@@ -2813,7 +2813,7 @@ class Gen3Expansion:
             index_records.append(records)
         return index_records
 
-    # failed = [irec for irec in irecs if irec['size'] is None]
+    # failed = [irec for irec in irecs if irec['size'] == None]
     # failed_guids = [irec['did'] for irec in failed]
 
     def get_guid_for_url(self, url):
@@ -2883,7 +2883,7 @@ class Gen3Expansion:
             #data.bloodpac.org/index/index/?limit=1024&acl=null&uploader=cgmeyer@uchicago.edu
         """
 
-        if acl is not None:
+        if acl != None:
             index_url = "{}/index/index/?limit={}&acl={}&uploader={}".format(
                 self._endpoint, limit, acl, uploader
             )
@@ -2905,20 +2905,20 @@ class Gen3Expansion:
 
         records = data["records"]
 
-        if records is None:
+        if records == None:
             print(
                 "No records in the index for uploader {} with acl {}.".format(
                     uploader, acl
                 )
             )
 
-        elif format is "tsv":
+        elif format == "tsv":
             df = json_normalize(records)
             filename = "indexd_records_for_{}.tsv".format(uploader)
             df.to_csv(filename, sep="\t", index=False, encoding="utf-8")
             return df
 
-        elif format is "guids":
+        elif format == "guids":
             guids = []
             for record in records:
                 guids.append(record["did"])
@@ -3364,7 +3364,7 @@ class Gen3Expansion:
 
         summary["null_nodes"] = null_nodes
 
-        if write_report is True:
+        if write_report == True:
 
             self.create_output_dir(outdir=outdir)
 
@@ -3490,10 +3490,10 @@ class Gen3Expansion:
 
                     if (
                         df[stat][0] != df[stat][1]
-                    ):  # Note: if both values are "NaN" this is True; because NaN != NaN
+                    ):  # Note: if both values are "NaN" this == True; because NaN != NaN
                         if (
-                            list(df[stat].isna())[0] is True
-                            and list(df[stat].isna())[1] is True
+                            list(df[stat].isna())[0] == True
+                            and list(df[stat].isna())[1] == True
                         ):  # if stats are both "NaN", data are identical
                             same.append(True)
                         else:  # if stats are different AND both values aren't "NaN", data are different
@@ -3510,7 +3510,7 @@ class Gen3Expansion:
 
             else:
                 print(
-                    "\n\nThe number of instances of this prop_id '{}' is not 2!\n{}\n\n".format(
+                    "\n\nThe number of instances of this prop_id '{}' != 2!\n{}\n\n".format(
                         prop_id, df
                     )
                 )
@@ -3534,7 +3534,7 @@ class Gen3Expansion:
         comparison.columns = comparison.columns.str.strip()
         comparison.sort_values(by=["comparison", "node", "property"], inplace=True)
 
-        if write_report is True:
+        if write_report == True:
 
             self.create_output_dir(outdir)
 
@@ -3638,7 +3638,7 @@ class Gen3Expansion:
         """
         This function takes the submitter_id of a case or subject and checks for records in specified node(s) for matching value in the case_ids or subject_ids ubiquitous property.
         """
-        if nodes is None:
+        if nodes == None:
             nodes = self.list_nodes()
         elif isinstance(nodes, str):
             nodes = [nodes]
@@ -3648,7 +3648,7 @@ class Gen3Expansion:
         else:
             subject_node, subject_prop = "subject", "subject_ids"
 
-        # if projects is None: #if no projects specified, get node for all projects
+        # if projects == None: #if no projects specified, get node for all projects
         #     projects = list(json_normalize(self.sub.query("""{project (first:0){project_id}}""")['data']['project'])['project_id'])
         # elif isinstance(projects, str):
         #     projects = [projects]
@@ -3853,7 +3853,7 @@ class Gen3Expansion:
 #     node_props = [prop for prop in node_props if prop not in remove_props]
 #
 #     # remove links to parent nodes from the "properties" list
-#     if remove_parents is True:
+#     if remove_parents == True:
 #         parent_nodes = [link['name'] for link in dds[node]['links']]
 #         node_props = [prop for prop in node_props if prop not in parent_nodes]
 #
