@@ -176,6 +176,12 @@ sub = Gen3Submission(api, auth)
 !rm dataclient_linux.zip
 client = "{}/gen3-client".format(gen3_dir)
 
+curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | grep browser_download_url.*linux |  cut -d '"' -f 4 | wget -qi -
+unzip dataclient_linux.zip
+rm dataclient_linux.zip
+client = "{}/gen3-client".format(gen3_dir)
+
+
 #!/home/jovyan/gen3/gen3-client configure --profile=bpa --apiendpoint=https://data.bloodpac.org --cred=/home/jovyan/pd/bpa-credentials.json
 # Configure a profile
 config_cmd = client +' configure --profile='+profile+' --apiendpoint='+api+' --cred='+creds

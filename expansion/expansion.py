@@ -163,14 +163,14 @@ class Gen3Expansion:
         project_ids = []
         queries = []
         # Return all project_ids in the data commons if no node is provided or if node is program but no name provided
-        if name is None and ((node is None) or (node is "program")):
+        if name == None and ((node == None) or (node == "program")):
             print("Getting all project_ids you have access to in the data commons.")
             if node == "program":
                 print(
                     "Specify a list of program names (name = ['myprogram1','myprogram2']) to get only project_ids in particular programs."
                 )
             queries.append("""{project (first:0){project_id}}""")
-        elif name is not None and node == "program":
+        elif name != None and node == "program":
             if isinstance(name, list):
                 print(
                     "Getting all project_ids in the programs '" + ",".join(name) + "'"
@@ -458,12 +458,13 @@ class Gen3Expansion:
 
         Args:
             node (str): The node to query.
-            project_id(str): The project_id to limit the query to. Default is None.
-            props(list): A list of properties in the node to return.
-            chunk_size(int): The number of records to return per query. Default is 10000.
-            args(str): Put graphQL arguments here. For example, 'with_path_to:{type:"case",submitter_id:"case-01"}', etc. Don't enclose in parentheses.
+            project_id (str): The project_id to limit the query to. Default is None.
+            props (list): A list of properties in the node to return.
+            chunk_size (int): The number of records to return per query. Default is 2500.
+            args (str): Put graphQL arguments here. For example, 'with_path_to:{type:"case",submitter_id:"case-01"}', etc. Don't enclose in parentheses.
         Example:
-            paginate_query('demographic')
+            paginate_query('demographic',format='tsv')
+            paginate_query('',args='with_path_to:{type:"case",submitter_id:"case-01"}')
         """
 
         if node == "datanode":
@@ -1077,6 +1078,7 @@ class Gen3Expansion:
             )
 
         return project_table
+
 
     def plot_categorical_property(self, property, df):
         # plot a bar graph of categorical variable counts in a dataframe
@@ -2612,7 +2614,7 @@ class Gen3Expansion:
 
     # guids = exp.get_guids_for_file_names(file_names=file_names,method='sheepdog',match='submitter_id')
 
-    def get_index_for_file_names(self, file_names):
+    def get_index_for_file_names(self, file_names, format='tsv'):
         # Get GUIDs for a list of file_names
         if isinstance(file_names, str):
             file_names = [file_names]
@@ -2620,8 +2622,9 @@ class Gen3Expansion:
             print(
                 "Please provide one or a list of data file file_names: get_guid_for_filename\(file_names=file_name_list\)"
             )
-        index_records = []
+        all_records = []
         for file_name in file_names:
+            print("\tGetting indexd record for {}".format(file_name))
             index_url = "{}/index/index/?file_name={}".format(self._endpoint, file_name)
             response = requests.get(index_url, auth=self._auth_provider).text
             response = json.loads(response)
@@ -2633,9 +2636,29 @@ class Gen3Expansion:
                     print("\tMultiple indexd records found for file_name '{}'!\n\t{}\n".format(file_name,records))
             else:
                 print("\tNo indexd records found for file_name '{}'!".format(file_name))
-            index_records.append(irec)
+            all_records.append(irec)
 
-        return index_records
+
+        if all_records is None:
+            print("No records in the index with authz {}.".format(authz))
+
+        elif format is "tsv":
+            df = json_normalize(all_records)
+            filename = "indexd_records_for_filenames.tsv"
+            df.to_csv(filename, sep="\t", index=False, encoding="utf-8")
+            return df
+
+        elif format is "guids":
+            guids = []
+            for record in all_records:
+                guids.append(record["did"])
+            return guids
+
+        else:
+            return all_records
+
+        return all_records
+
 
     def get_index_for_authz(self, authz, format="tsv",page=0,limit=100):
         # Get GUIDs for a particular project (authz)
@@ -2847,9 +2870,7 @@ class Gen3Expansion:
                 print("Error deleting GUID {}:".format(guid))
                 print(response.reason)
 
-    def uploader_index(
-        self, uploader="cgmeyer@uchicago.edu", acl=None, limit=1024, format="guids"
-    ):
+    def uploader_index(self, uploader="cgmeyer@uchicago.edu", acl=None, limit=1024, format="tsv"):
         """Get records from indexd of the files uploaded by a particular user.
 
         Args:
