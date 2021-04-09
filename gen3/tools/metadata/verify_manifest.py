@@ -255,6 +255,10 @@ async def _parse_from_queue(queue, lock, commons_url, output_queue, metadata_sou
 
 
 def _are_matching_dicts(dict_a, dict_b):
+    # if one of these isn't a dict, just try a normal comparison
+    if not getattr(dict_a, "keys", None) or not getattr(dict_b, "keys", None):
+        return dict_a == dict_b
+
     if len(dict_a.keys()) != len(dict_b.keys()):
         return False
 
