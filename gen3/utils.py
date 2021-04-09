@@ -1,6 +1,7 @@
 import logging
 import sys
 import re
+import requests
 from urllib.parse import urlunsplit
 from urllib.parse import urlencode
 from urllib.parse import urlsplit
