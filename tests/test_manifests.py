@@ -391,7 +391,11 @@ def test_index_manifest(gen3_index, indexd_server):
         hashes={"md5": "473d83400bc1bc9dc635e334faddf33c"},
         acl=["DEV", "test"],
         size=363_455_714,
-        urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
+        urls=[
+            "s3://testaws/aws/test.txt",
+            "gs://test/test.txt",
+            "gs://test/test,with,comma.txt",
+        ],
     )
 
     index_object_manifest(
@@ -408,6 +412,8 @@ def test_index_manifest(gen3_index, indexd_server):
             "s3://testaws/aws/test.txt",
             "gs://test/test.txt",
             "s3://pdcdatastore/test1.raw",
+            # commas *are* allowed in values of arrays
+            "gs://test/test,with,comma.txt",
         ]
     )
 
@@ -422,7 +428,10 @@ def test_index_manifest(gen3_index, indexd_server):
     assert rec4["acl"] == ["phs0001", "phs0002"]
     assert rec5["urls"] == ["s3://pdcdatastore/test4.raw"]
     assert rec5["file_name"] == "test4_file.raw"
-    assert rec5["acl"] == ["phs0001", "phs0002"]
+
+    # commas *are* allowed in values of arrays
+    assert rec5["acl"] == ["phs0001,", "phs0002"]
+
     assert rec5["authz"] == ["/program/DEV/project/test"]
     assert rec6["urls"] == ["s3://pdcdatastore/test6 space.raw"]
     assert rec6["authz"] == ["/prog ram/DEV/project/test"]
