@@ -2,6 +2,7 @@ import logging
 import sys
 import re
 import requests
+
 from urllib.parse import urlunsplit
 from urllib.parse import urlencode
 from urllib.parse import urlsplit
@@ -141,6 +142,30 @@ def _standardize_str(s):
             res += c
             memory.append(" ")
     return res
+
+
+def get_urls(raw_urls_string):
+    """
+    Given raw string like "['gs://topmed-irc-share/genomes/NWD293573%20file.b38.irc.v1.cram', 's3://nih-nhlbi-datacommons/NWD293573.b38.irc.v1.cram']"
+    return a list of urls:
+
+    [
+        "gs://topmed-irc-share/genomes/NWD293573 file.b38.irc.v1.cram",
+        "s3://nih-nhlbi-datacommons/NWD293573.b38.irc.v1.cram"
+    ]
+    """
+    return [
+        element.strip()
+        .replace("'", "")
+        .replace('"', "")
+        .replace("%20", " ")
+        .rstrip(",")
+        for element in _standardize_str(raw_urls_string)
+        .strip()
+        .lstrip("[")
+        .rstrip("]")
+        .split(" ")
+    ]
 
 
 # Default settings to control usage of backoff library.
