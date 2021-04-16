@@ -126,13 +126,11 @@ def _verify_format(s, format):
 
 def _standardize_str(s):
     """
-    Remove unnecessary spaces, commas
+    Remove unnecessary spaces
 
     Ex. "abc    d" -> "abc d"
-        "abc, d" -> "abc d"
     """
     memory = []
-    s = s.replace(",", " ")
     res = ""
     for c in s:
         if c != " ":
