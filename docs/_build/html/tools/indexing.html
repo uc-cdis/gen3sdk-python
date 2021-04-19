@@ -4,8 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17: http://docutils.sourceforge.net/" />
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Indexing Tools &#8212; Gen3 SDK  documentation</title>
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
@@ -33,9 +32,9 @@
 
           <div class="body" role="main">
             
-  <section id="indexing-tools">
+  <div class="section" id="indexing-tools">
 <h1>Indexing Tools<a class="headerlink" href="#indexing-tools" title="Permalink to this headline">¶</a></h1>
-<section id="module-gen3.tools.indexing.download_manifest">
+<div class="section" id="module-gen3.tools.indexing.download_manifest">
 <span id="download"></span><h2>Download<a class="headerlink" href="#module-gen3.tools.indexing.download_manifest" title="Permalink to this headline">¶</a></h2>
 <p>Module for indexing actions for downloading a manifest of
 indexed file objects (against indexd’s API). Supports
@@ -114,8 +113,8 @@ determine how many requests a process should be making at one time</p></li>
 </dl>
 </dd></dl>
 
-</section>
-<section id="module-gen3.tools.indexing.index_manifest">
+</div>
+<div class="section" id="module-gen3.tools.indexing.index_manifest">
 <span id="index"></span><h2>Index<a class="headerlink" href="#module-gen3.tools.indexing.index_manifest" title="Permalink to this headline">¶</a></h2>
 <p>Module for indexing object files in a manifest (against indexd’s API).</p>
 <p>The default manifest format created is a Tab-Separated Value file (tsv)
@@ -310,8 +309,8 @@ headers(list(str)): list of fieldnames</p>
 </dl>
 </dd></dl>
 
-</section>
-<section id="module-gen3.tools.indexing.verify_manifest">
+</div>
+<div class="section" id="module-gen3.tools.indexing.verify_manifest">
 <span id="verify"></span><h2>Verify<a class="headerlink" href="#module-gen3.tools.indexing.verify_manifest" title="Permalink to this headline">¶</a></h2>
 <p>Module for indexing actions for verifying a manifest of
 indexed file objects (against indexd’s API). Supports
@@ -329,7 +328,7 @@ with a custom one. For example:</p>
 from gen3.tools import indexing
 from gen3.tools.indexing.verify_manifest import manifest_row_parsers</p>
 <dl class="simple">
-<dt>def _get_authz_from_row(row):</dt><dd><p>return [row.get(“authz”).strip().strip(“[“).strip(“]”).strip(”’”)]</p>
+<dt>def _get_authz_from_row(row):</dt><dd><p>return [row.get(“authz”).strip().strip(“[“).strip(“]”).strip(“’”)]</p>
 </dd>
 </dl>
 <p># override default parsers
@@ -365,7 +364,7 @@ processes/threads</p>
 
 <dl class="py function">
 <dt id="gen3.tools.indexing.verify_manifest.async_verify_object_manifest">
-<em class="property"><span class="pre">async</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.verify_manifest.</span></code><code class="sig-name descname"><span class="pre">async_verify_object_manifest</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="pre">commons_url</span></em>, <em class="sig-param"><span class="pre">manifest_file</span></em>, <em class="sig-param"><span class="pre">max_concurrent_requests=24</span></em>, <em class="sig-param"><span class="pre">manifest_row_parsers={'acl':</span> <span class="pre">&lt;function</span> <span class="pre">_get_acl_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'authz':</span> <span class="pre">&lt;function</span> <span class="pre">_get_authz_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'file_name':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_name_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'file_size':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_size_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'guid':</span> <span class="pre">&lt;function</span> <span class="pre">_get_guid_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'md5':</span> <span class="pre">&lt;function</span> <span class="pre">_get_md5_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'urls':</span> <span class="pre">&lt;function</span> <span class="pre">_get_urls_from_row&gt;}</span></em>, <em class="sig-param"><span class="pre">manifest_file_delimiter=None</span></em>, <em class="sig-param"><span class="pre">output_filename='verify-manifest-errors-1617997157.0938203.log'</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/verify_manifest.html#async_verify_object_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.indexing.verify_manifest.async_verify_object_manifest" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">async</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.verify_manifest.</span></code><code class="sig-name descname"><span class="pre">async_verify_object_manifest</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="pre">commons_url</span></em>, <em class="sig-param"><span class="pre">manifest_file</span></em>, <em class="sig-param"><span class="pre">max_concurrent_requests=24</span></em>, <em class="sig-param"><span class="pre">manifest_row_parsers={'acl':</span> <span class="pre">&lt;function</span> <span class="pre">_get_acl_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'authz':</span> <span class="pre">&lt;function</span> <span class="pre">_get_authz_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'file_name':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_name_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'file_size':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_size_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'guid':</span> <span class="pre">&lt;function</span> <span class="pre">_get_guid_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'md5':</span> <span class="pre">&lt;function</span> <span class="pre">_get_md5_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'urls':</span> <span class="pre">&lt;function</span> <span class="pre">_get_urls_from_row&gt;}</span></em>, <em class="sig-param"><span class="pre">manifest_file_delimiter=None</span></em>, <em class="sig-param"><span class="pre">output_filename='verify-manifest-errors-1618606085.2280114.log'</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/verify_manifest.html#async_verify_object_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.indexing.verify_manifest.async_verify_object_manifest" title="Permalink to this definition">¶</a></dt>
 <dd><p>Verify all file object records into a manifest csv</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -381,8 +380,8 @@ processes/threads</p>
 </dl>
 </dd></dl>
 
-</section>
-</section>
+</div>
+</div>
 
 
           </div>

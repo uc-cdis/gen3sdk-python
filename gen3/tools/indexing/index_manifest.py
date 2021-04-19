@@ -69,6 +69,7 @@ from gen3.utils import (
     SIZE_FORMAT,
     _verify_format,
     _standardize_str,
+    get_urls,
 )
 import indexclient.client as client
 from indexclient.client import Document
@@ -300,14 +301,7 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
 
     try:
         urls = (
-            [
-                element.strip().replace("'", "").replace('"', "").replace("%20", " ")
-                for element in _standardize_str(fi[URLS_STANDARD_KEY])
-                .strip()
-                .lstrip("[")
-                .rstrip("]")
-                .split(" ")
-            ]
+            get_urls(fi[URLS_STANDARD_KEY])
             if URLS_STANDARD_KEY in fi
             and fi[URLS_STANDARD_KEY] != "[]"
             and fi[URLS_STANDARD_KEY]
@@ -443,6 +437,13 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
                     new_guid = None
 
                 new_doc = Document(client=None, did=new_guid, json=record)
+
+                # TODO: in the case where a new GUID *is* provided AND a version with that
+                #       guid already exists AND you run this, it's gonna throw an error.
+                #       We need to gracefully handle the error from indexd. there will
+                #       be a conflict where a version with this GUID already exists...
+                #       but if we can verify that the version has the correct values
+                #       for all the fields, we can effectively ignore this error and continue
                 doc = indexclient.add_version(current_did=prev_guid, new_doc=new_doc)
             else:
                 logging.info(f"creating: {record}")
