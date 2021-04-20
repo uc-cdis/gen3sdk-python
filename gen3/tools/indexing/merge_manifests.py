@@ -9,8 +9,8 @@ Example:
     guid    md5    size    urls    authz    extra_data
     dg/123    f7cb...    42    s3://bucket/cats    /baz    stuff
 =
-    acl    authz    guid    md5   size    urls    extra_data    more_data
-    /baz /foo    dg/123    f7cb...    42    http://cats.com s3://bucket/cats    stuff    moredata
+    acl    authz    guid    md5    size    urls    extra_data    more_data
+        /baz /foo    dg/123    f7cb...    42    http://cats.com s3://bucket/cats    stuff    moredata
 
 Is able to handle situations where multiple different guids for the same hash is
 allowed. For example, if the following is valid:
@@ -104,131 +104,159 @@ def merge_bucket_manifests(
             manifest, include_additional_columns=True
         )
         for record in records_from_file:
-            record_to_write = copy.deepcopy(record)
             # simple case where this is the first time we've seen this hash
             if record[MD5_STANDARD_KEY] not in all_rows:
+                record_to_write = copy.deepcopy(record)
                 for key in record_to_write.keys():
                     headers.add(key)
                 all_rows[record_to_write[MD5_STANDARD_KEY]] = [record_to_write]
             else:
-                # import pdb; pdb.set_trace()
                 # if the hash already exists, we need to try and update existing
                 # entries with any new data (and ensure we don't add duplicates)
-                updated_records = {}
-                for existing_record in copy.deepcopy(
-                    all_rows[record[MD5_STANDARD_KEY]]
-                ):
-                    if SIZE_STANDARD_KEY in existing_record:
-                        size = existing_record[SIZE_STANDARD_KEY]
-
-                        if size != record[SIZE_STANDARD_KEY]:
-                            error_msg = (
-                                "Found two objects with the same hash but different sizes,"
-                                f" could not merge. Details: object {existing_record} could not be"
-                                f" merged with object {record} because {size} !="
-                                f" {record[SIZE_STANDARD_KEY]}."
-                            )
-                            logging.error(error_msg)
-
-                            if not continue_after_error:
-                                raise csv.Error(error_msg)
-
-                            # in the case we don't raise an error above, we need to continue
-                            continue
-
-                    # at this point, the record has the same hash and size as a previous guid
-                    # so either we're allowing an entry like that, or not
-                    guid = existing_record.get(GUID_STANDARD_KEY)
-                    new_guid = record.get(GUID_STANDARD_KEY)
-
-                    if GUID_STANDARD_KEY in existing_record:
-                        if guid and new_guid and guid != new_guid:
-                            warning_msg = (
-                                "Found two objects with the same hash but different guids,"
-                                f" could not merge. Details: object {existing_record} could not be"
-                                f" merged with object {record} because {guid} !="
-                                f" {new_guid}."
-                            )
-
-                            if not allow_mult_guids_per_hash:
-                                logging.error(warning_msg)
-                                raise csv.Error(error_msg)
-
-                            info_msg = (
-                                f"Allowing multiple GUIDs per hash. {new_guid} has same "
-                                f"hash as {guid}.\n    Details: {record} is a different "
-                                f"record with same hash as existing guid: {guid}."
-                            )
-                            logging.info(info_msg)
-
-                    if guid == new_guid:
-                        logging.debug(
-                            f"merging any new data from {record} with existing record: {existing_record}"
-                        )
-
-                        record_to_write = _get_updated_record(
-                            record,
-                            existing_record,
-                            continue_after_error=continue_after_error,
-                            columns_with_arrays=columns_with_arrays,
-                        )
-
-                        updated_records.setdefault(
-                            record_to_write.get(GUID_STANDARD_KEY), {}
-                        ).update(record_to_write)
-                    else:
-                        updated_records.setdefault(
-                            record_to_write.get(GUID_STANDARD_KEY), {}
-                        ).update(record_to_write)
-                        updated_records.setdefault(
-                            existing_record.get(GUID_STANDARD_KEY), {}
-                        ).update(existing_record)
-
-                    for key in record_to_write.keys():
-                        headers.add(key)
-
+                updated_records = _get_updated_records(
+                    record=record,
+                    existing_records=copy.deepcopy(all_rows[record[MD5_STANDARD_KEY]]),
+                    headers=headers,
+                    continue_after_error=continue_after_error,
+                    allow_mult_guids_per_hash=allow_mult_guids_per_hash,
+                    columns_with_arrays=columns_with_arrays,
+                )
                 all_rows[record[MD5_STANDARD_KEY]] = [
                     record for _, record in updated_records.items()
                 ]
 
-    if output_manifest_file_delimiter is None:
-        output_manifest_file_ext = os.path.splitext(output_manifest)
-        if output_manifest_file_ext[-1].lower() == ".tsv":
-            output_manifest_file_delimiter = "\t"
-        else:
-            output_manifest_file_delimiter = ","
-
-    # order headers with alphabetical for standard columns, followed by alphabetical for
-    # non-standard columns
-    stardard_headers = [
-        GUID_STANDARD_KEY,
-        SIZE_STANDARD_KEY,
-        MD5_STANDARD_KEY,
-        ACL_STANDARD_KEY,
-        AUTHZ_STANDARD_KEY,
-        URLS_STANDARD_KEY,
-    ]
-    non_standard_headers = sorted(
-        [header for header in headers if header not in stardard_headers]
+    _create_output_file(
+        output_manifest, headers, all_rows, output_manifest_file_delimiter
     )
 
-    headers = stardard_headers + non_standard_headers
-    with open(output_manifest, "w") as outfile:
-        logging.info(f"Writing merged manifest to {output_manifest}")
-        logging.info(f"Headers {headers}")
-        output_writer = csv.DictWriter(
-            outfile,
-            delimiter=output_manifest_file_delimiter,
-            fieldnames=headers,
-            extrasaction="ignore",
+
+def _get_updated_records(
+    record,
+    existing_records,
+    headers,
+    continue_after_error,
+    allow_mult_guids_per_hash,
+    columns_with_arrays,
+):
+    """
+    Return a dictionary of updated records with GUIDs as keys and full dictionaries
+    as values (with key/values for columns+value).
+
+    This handles the complexity of combining this new record with any existing record
+    where relevant, or fully adding a new entry.
+
+    Args:
+        record (dict): dictionary of new record keys/values
+        existing_records (list): existing records with this same hash
+        headers (list[str]): consolidation of all column names for final output
+            NOTE: this variable is owned outside of the scope of this call
+                  and we're updating the value within this function but not
+                  explicitly returning it
+        continue_after_error (bool): See calling function
+        allow_mult_guids_per_hash (bool): See calling function
+        columns_with_arrays (list[str]): See calling function
+
+    No Longer Returned:
+        dict: GUIDs with full metadtata values (dicts)
+
+        {
+            "dg/123": {
+                "acl":
+                "authz": "/baz /foo"
+                "guid": "dg/123"
+                "md5": "f7cb..."
+                "size": "42"
+                "urls": "http://cats.com s3://bucket/cats"
+                "extra_data": "stuff"
+                "more_data": "moredata"
+            },
+            "dg/456": { ... }
+        }
+
+    """
+    updated_records = {}
+    for existing_record in existing_records:
+        guid = existing_record.get(GUID_STANDARD_KEY)
+        new_guid = record.get(GUID_STANDARD_KEY)
+
+        _error_if_invalid_size_or_guid(
+            record, existing_record, continue_after_error, allow_mult_guids_per_hash
         )
-        output_writer.writeheader()
 
-        for hash_code, records in all_rows.items():
-            for record in records:
-                output_writer.writerow(record)
+        if guid == new_guid or not new_guid:
+            logging.debug(
+                f"merging any new data from {record} with existing record: {existing_record}"
+            )
 
-        logging.info(f"Finished writing merged manifest to {output_manifest}")
+            record_to_write = _get_updated_record(
+                record,
+                existing_record,
+                continue_after_error=continue_after_error,
+                columns_with_arrays=columns_with_arrays,
+            )
+
+            updated_records.setdefault(
+                record_to_write.get(GUID_STANDARD_KEY), {}
+            ).update(record_to_write)
+        else:
+            record_to_write = copy.deepcopy(record)
+
+            updated_records.setdefault(
+                record_to_write.get(GUID_STANDARD_KEY), {}
+            ).update(record_to_write)
+            updated_records.setdefault(
+                existing_record.get(GUID_STANDARD_KEY), {}
+            ).update(existing_record)
+
+        for key in record_to_write.keys():
+            headers.add(key)
+
+    return updated_records
+
+
+def _error_if_invalid_size_or_guid(
+    record, existing_record, continue_after_error, allow_mult_guids_per_hash
+):
+    """Log and raise errors based on cfg if hashes don't match or there's multiple GUIDs"""
+    guid = existing_record.get(GUID_STANDARD_KEY)
+    new_guid = record.get(GUID_STANDARD_KEY)
+
+    if SIZE_STANDARD_KEY in existing_record:
+        size = existing_record[SIZE_STANDARD_KEY]
+
+        if size != record[SIZE_STANDARD_KEY]:
+            error_msg = (
+                "Found two objects with the same hash but different sizes,"
+                f" could not merge. Details: object {existing_record} could not be"
+                f" merged with object {record} because {size} !="
+                f" {record[SIZE_STANDARD_KEY]}."
+            )
+            logging.error(error_msg)
+
+            if not continue_after_error:
+                raise csv.Error(error_msg)
+
+    # at this point, the record has the same hash and size as a previous guid
+    # so either we're allowing an entry like that, or not
+    if GUID_STANDARD_KEY in existing_record:
+        if guid and new_guid and guid != new_guid:
+            warning_msg = (
+                "Found two objects with the same hash but different guids,"
+                f" could not merge. Details: object {existing_record} could not be"
+                f" merged with object {record} because {guid} !="
+                f" {new_guid}."
+            )
+
+            if not allow_mult_guids_per_hash:
+                logging.error(warning_msg)
+                raise csv.Error(error_msg)
+
+            info_msg = (
+                f"Allowing multiple GUIDs per hash. {new_guid} has same "
+                f"hash as {guid}.\n    Details: {record} is a different "
+                f"record with same hash as existing guid: {guid}."
+            )
+            logging.info(info_msg)
 
 
 def _get_updated_record(
@@ -274,11 +302,13 @@ def _get_updated_record(
             if not existing_record.get(column_name) or (
                 existing_record.get(column_name) == new_record[column_name]
             ):
+                # use new record when nothing in existing record or it's the same data
                 record_to_write[column_name] = new_record[column_name]
             elif not new_record[column_name]:
+                # persist existing data if no new data
                 record_to_write[column_name] = existing_record.get(column_name, "")
             else:
-                # old and new have value, unsure how to merge
+                # old and new have different values, unsure how to merge
                 error_msg = (
                     f"NOT merging column {column_name} for "
                     f"existing {existing_record} and new "
@@ -294,3 +324,46 @@ def _get_updated_record(
                 # and add a row with the existing data
 
     return record_to_write
+
+
+def _create_output_file(
+    output_manifest, headers, all_rows, output_manifest_file_delimiter
+):
+    if output_manifest_file_delimiter is None:
+        output_manifest_file_ext = os.path.splitext(output_manifest)
+        if output_manifest_file_ext[-1].lower() == ".tsv":
+            output_manifest_file_delimiter = "\t"
+        else:
+            output_manifest_file_delimiter = ","
+
+    # order headers logically for standard columns, followed by alphabetical for
+    # non-standard columns
+    stardard_headers = [
+        GUID_STANDARD_KEY,
+        SIZE_STANDARD_KEY,
+        MD5_STANDARD_KEY,
+        ACL_STANDARD_KEY,
+        AUTHZ_STANDARD_KEY,
+        URLS_STANDARD_KEY,
+    ]
+    non_standard_headers = sorted(
+        [header for header in headers if header not in stardard_headers]
+    )
+
+    headers = stardard_headers + non_standard_headers
+    with open(output_manifest, "w") as outfile:
+        logging.info(f"Writing merged manifest to {output_manifest}")
+        logging.info(f"Headers {headers}")
+        output_writer = csv.DictWriter(
+            outfile,
+            delimiter=output_manifest_file_delimiter,
+            fieldnames=headers,
+            extrasaction="ignore",
+        )
+        output_writer.writeheader()
+
+        for hash_code, records in all_rows.items():
+            for record in records:
+                output_writer.writerow(record)
+
+        logging.info(f"Finished writing merged manifest to {output_manifest}")
