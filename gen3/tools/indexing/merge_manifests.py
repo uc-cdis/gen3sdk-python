@@ -175,15 +175,19 @@ def _get_updated_records(
 
     """
     updated_records = {}
-    for existing_record in existing_records:
-        guid = existing_record.get(GUID_STANDARD_KEY)
-        new_guid = record.get(GUID_STANDARD_KEY)
+    new_guid = record.get(GUID_STANDARD_KEY)
+    new_urls = record.get(URLS_STANDARD_KEY)
 
-        _error_if_invalid_size_or_guid(
-            record, existing_record, continue_after_error, allow_mult_guids_per_hash
-        )
+    # if there's no GUID and no URLs, we can assume this is metadata about
+    # existing records, so update *all* of them with this information
+    if not new_guid and not new_urls:
+        for existing_record in existing_records:
+            guid = existing_record.get(GUID_STANDARD_KEY)
 
-        if guid == new_guid or not new_guid:
+            _error_if_invalid_size_or_guid(
+                record, existing_record, continue_after_error, allow_mult_guids_per_hash
+            )
+
             logging.debug(
                 f"merging any new data from {record} with existing record: {existing_record}"
             )
@@ -198,18 +202,45 @@ def _get_updated_records(
             updated_records.setdefault(
                 record_to_write.get(GUID_STANDARD_KEY), {}
             ).update(record_to_write)
-        else:
-            record_to_write = copy.deepcopy(record)
 
-            updated_records.setdefault(
-                record_to_write.get(GUID_STANDARD_KEY), {}
-            ).update(record_to_write)
-            updated_records.setdefault(
-                existing_record.get(GUID_STANDARD_KEY), {}
-            ).update(existing_record)
+            for key in record_to_write.keys():
+                headers.add(key)
+    else:
+        # merge normally, combining
+        for existing_record in existing_records:
+            guid = existing_record.get(GUID_STANDARD_KEY)
 
-        for key in record_to_write.keys():
-            headers.add(key)
+            _error_if_invalid_size_or_guid(
+                record, existing_record, continue_after_error, allow_mult_guids_per_hash
+            )
+
+            if guid == new_guid:
+                logging.debug(
+                    f"merging any new data from {record} with existing record: {existing_record}"
+                )
+
+                record_to_write = _get_updated_record(
+                    record,
+                    existing_record,
+                    continue_after_error=continue_after_error,
+                    columns_with_arrays=columns_with_arrays,
+                )
+
+                updated_records.setdefault(
+                    record_to_write.get(GUID_STANDARD_KEY), {}
+                ).update(record_to_write)
+            else:
+                record_to_write = copy.deepcopy(record)
+
+                updated_records.setdefault(
+                    record_to_write.get(GUID_STANDARD_KEY), {}
+                ).update(record_to_write)
+                updated_records.setdefault(
+                    existing_record.get(GUID_STANDARD_KEY), {}
+                ).update(existing_record)
+
+            for key in record_to_write.keys():
+                headers.add(key)
 
     return updated_records
 
