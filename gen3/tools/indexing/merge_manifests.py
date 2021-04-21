@@ -103,6 +103,7 @@ def merge_bucket_manifests(
         records_from_file, _ = get_and_verify_fileinfos_from_manifest(
             manifest, include_additional_columns=True
         )
+        records_with_no_guid = []
         for record in records_from_file:
             # simple case where this is the first time we've seen this hash
             if record[MD5_STANDARD_KEY] not in all_rows:
@@ -113,6 +114,14 @@ def merge_bucket_manifests(
             else:
                 # if the hash already exists, we need to try and update existing
                 # entries with any new data (and ensure we don't add duplicates)
+                new_guid = record.get(GUID_STANDARD_KEY)
+
+                if not new_guid:
+                    # since there's no guid specified to differentiate this from other
+                    # entries, we will add metadata to all records later
+                    records_with_no_guid.append(record)
+                    continue
+
                 updated_records = _get_updated_records(
                     record=record,
                     existing_records=copy.deepcopy(all_rows[record[MD5_STANDARD_KEY]]),
@@ -124,6 +133,21 @@ def merge_bucket_manifests(
                 all_rows[record[MD5_STANDARD_KEY]] = [
                     record for _, record in updated_records.items()
                 ]
+
+        # for the entries where there was no GUID specified, we will add that metadata
+        # to all previous records
+        for record in records_with_no_guid:
+            updated_records = _get_updated_records(
+                record=record,
+                existing_records=copy.deepcopy(all_rows[record[MD5_STANDARD_KEY]]),
+                headers=headers,
+                continue_after_error=continue_after_error,
+                allow_mult_guids_per_hash=allow_mult_guids_per_hash,
+                columns_with_arrays=columns_with_arrays,
+            )
+            all_rows[record[MD5_STANDARD_KEY]] = [
+                record for _, record in updated_records.items()
+            ]
 
     _create_output_file(
         output_manifest, headers, all_rows, output_manifest_file_delimiter
@@ -178,10 +202,11 @@ def _get_updated_records(
     new_guid = record.get(GUID_STANDARD_KEY)
     new_urls = record.get(URLS_STANDARD_KEY)
 
-    # if there's no GUID and no URLs, we can assume this is metadata about
+    # if there's no GUID, we can assume this is metadata about
     # existing records, so update *all* of them with this information
-    if not new_guid and not new_urls:
+    if not new_guid:
         for existing_record in existing_records:
+            existing_urls = existing_record.get(URLS_STANDARD_KEY)
             guid = existing_record.get(GUID_STANDARD_KEY)
 
             _error_if_invalid_size_or_guid(

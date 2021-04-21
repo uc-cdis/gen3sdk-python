@@ -1,5 +1,5 @@
 guid	md5	size	urls	authz	extra_data
+	f7cbeb4f7fcc139d95cb9cc1cf0696ec	42		/foobar	stuff3
 dg/123	f7cbeb4f7fcc139d95cb9cc1cf0696ec	42	s3://bucket/cats	/baz	stuff
 dg/124	f7cbeb4f7fcc139d95cb9cc1cf0696ec	42	http://cats.com	/bar	
 dg/125	f7cbeb4f7fcc139d95cb9cc1cf0696ec	42	s3://bucket/duplicate	/baz	stuff2
-	f7cbeb4f7fcc139d95cb9cc1cf0696ec	42		/foobar	stuff3
