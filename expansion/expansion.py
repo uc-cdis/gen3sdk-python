@@ -2412,16 +2412,18 @@ class Gen3Expansion:
                 outfile.write(json.dumps(all_records))
         return all_records
 
-    def query_indexd(self, limit=100, page=0):
+    def query_indexd(self, limit=100, page=0, uploader=None):
         """Queries indexd with given records limit and page number.
         For example:
             records = query_indexd(api='https://icgc.bionimbus.org/',limit=1000,page=0)
             https://icgc.bionimbus.org/index/index/?limit=1000&page=0
         """
         data, records = {}, []
-        index_url = "{}/index/index/?limit={}&page={}".format(
-            self._endpoint, limit, page
-        )
+
+        if uploader == None:
+            index_url = "{}/index/index/?limit={}&page={}".format(self._endpoint, limit, page)
+        else:
+            index_url = "{}/index/index/?limit={}&page={}&uploader={}".format(self._endpoint, limit, page, uploader)
 
         try:
             response = requests.get(index_url).text
@@ -2442,7 +2444,7 @@ class Gen3Expansion:
 
         return records
 
-    def get_indexd(self, limit=100, page=0, outfile="JSON"):
+    def get_indexd(self, limit=100, page=0, outfile="JSON", uploader=None):
         """get all the records in indexd
             api = "https://icgc.bionimbus.org/"
             args = lambda: None
@@ -2470,6 +2472,75 @@ class Gen3Expansion:
                 limit, page
             )
         )
+
+        all_records = []
+
+        done = False
+        while done == False:
+
+            records = self.query_indexd(limit=limit, page=page, uploader=uploader)
+            all_records.extend(records)
+
+            if len(records) != limit:
+                print(
+                    "\tLength of returned records ({}) does not equal limit ({}).".format(
+                        len(records), limit
+                    )
+                )
+                if len(records) == 0:
+                    done = True
+
+            print(
+                "\tPage {}: {} records ({} total)".format(
+                    page, len(records), len(all_records)
+                )
+            )
+            page += 1
+
+        print(
+            "\t\tScript finished. Total records retrieved: {}".format(len(all_records))
+        )
+
+        if outfile in ["JSON", "TSV"]:
+            dc_regex = re.compile(r"https:\/\/(.+)\/?$")
+            dc = dc_regex.match(self._endpoint).groups()[0]
+
+            if outfile == "JSON":
+                outname = "{}_indexd_records.json".format(dc)
+                with open(outname, "w") as output:
+                    output.write(json.dumps(all_records))
+
+            if outfile == "TSV":
+                outname = "{}_indexd_records.tsv".format(dc)
+                idf = pd.DataFrame(all_records)
+                idf.to_csv(outname,sep='\t',index=False)
+
+        else:
+            print(
+                "\n\n'{}' != a valid output format. Please provide a format of either 'JSON' or 'TSV'.\n\n".format(
+                    format
+                )
+            )
+
+        return all_records
+
+
+
+    def uploader_index(self, uploader="cgmeyer@uchicago.edu", acl=None, limit=1024, format="tsv"):
+        """Get records from indexd of the files uploaded by a particular user.
+
+        Args:
+            uploader (str): The uploader's data commons login email.
+
+        Examples:
+            This returns all records of files that I uploaded to indexd.
+
+            >>> Gen3Submission.submit_file(uploader="cgmeyer@uchicago.edu")
+            #data.bloodpac.org/index/index/?limit=1024&acl=null&uploader=cgmeyer@uchicago.edu
+        """
+
+
+
 
         all_records = []
 
@@ -2521,6 +2592,55 @@ class Gen3Expansion:
             )
 
         return all_records
+
+
+
+
+        if acl != None:
+            index_url = "{}/index/index/?limit={}&acl={}&uploader={}".format(
+                self._endpoint, limit, acl, uploader
+            )
+        else:
+            index_url = "{}/index/index/?limit={}&uploader={}".format(
+                self._endpoint, limit, uploader
+            )
+        try:
+            response = requests.get(index_url, auth=self._auth_provider).text
+        except requests.exceptions.ConnectionError as e:
+            print(e)
+
+        try:
+            data = json.loads(response)
+        except JSONDecodeError as e:
+            print(response)
+            print(str(e))
+            raise Gen3Error("Unable to parse indexd response as JSON!")
+
+        records = data["records"]
+
+        if records == None:
+            print(
+                "No records in the index for uploader {} with acl {}.".format(
+                    uploader, acl
+                )
+            )
+
+        elif format == "tsv":
+            df = json_normalize(records)
+            filename = "indexd_records_for_{}.tsv".format(uploader)
+            df.to_csv(filename, sep="\t", index=False, encoding="utf-8")
+            return df
+
+        elif format == "guids":
+            guids = []
+            for record in records:
+                guids.append(record["did"])
+            return guids
+
+        else:
+            return records
+
+
 
     def get_urls(self, guids):
         # Get URLs for a list of GUIDs
@@ -2870,62 +2990,6 @@ class Gen3Expansion:
                 print("Error deleting GUID {}:".format(guid))
                 print(response.reason)
 
-    def uploader_index(self, uploader="cgmeyer@uchicago.edu", acl=None, limit=1024, format="tsv"):
-        """Get records from indexd of the files uploaded by a particular user.
-
-        Args:
-            uploader (str): The uploader's data commons login email.
-
-        Examples:
-            This returns all records of files that I uploaded to indexd.
-
-            >>> Gen3Submission.submit_file(uploader="cgmeyer@uchicago.edu")
-            #data.bloodpac.org/index/index/?limit=1024&acl=null&uploader=cgmeyer@uchicago.edu
-        """
-
-        if acl != None:
-            index_url = "{}/index/index/?limit={}&acl={}&uploader={}".format(
-                self._endpoint, limit, acl, uploader
-            )
-        else:
-            index_url = "{}/index/index/?limit={}&uploader={}".format(
-                self._endpoint, limit, uploader
-            )
-        try:
-            response = requests.get(index_url, auth=self._auth_provider).text
-        except requests.exceptions.ConnectionError as e:
-            print(e)
-
-        try:
-            data = json.loads(response)
-        except JSONDecodeError as e:
-            print(response)
-            print(str(e))
-            raise Gen3Error("Unable to parse indexd response as JSON!")
-
-        records = data["records"]
-
-        if records == None:
-            print(
-                "No records in the index for uploader {} with acl {}.".format(
-                    uploader, acl
-                )
-            )
-
-        elif format == "tsv":
-            df = json_normalize(records)
-            filename = "indexd_records_for_{}.tsv".format(uploader)
-            df.to_csv(filename, sep="\t", index=False, encoding="utf-8")
-            return df
-
-        elif format == "guids":
-            guids = []
-            for record in records:
-                guids.append(record["did"])
-            return guids
-
-        else:
-            return records
 
     # Data commons summary functions
 
