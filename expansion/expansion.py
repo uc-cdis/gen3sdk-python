@@ -2500,7 +2500,7 @@ class Gen3Expansion:
         )
 
         if outfile in ["JSON", "TSV"]:
-            dc_regex = re.compile(r"https:\/\/(.+)\/")
+            dc_regex = re.compile(r"https:\/\/(.+)\/?$")
             dc = dc_regex.match(self._endpoint).groups()[0]
 
             if outfile == "JSON":
