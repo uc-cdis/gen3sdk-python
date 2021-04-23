@@ -34,3 +34,36 @@ To get the latest released version of the SDK:
 This SDK exposes a Command Line Interface (CLI). You can now import functions from `gen3` into your own Python scripts or you can use the command line interface:
 
 `gen3 --help`
+
+
+## Local Development
+
+You can set up a Python development environment with a virtual environment:
+
+```bash
+python3 -m venv py38
+```
+
+Make sure that you have the virtual environment activated:
+
+```bash
+. py38/bin/activate
+```
+
+### Set up Poetry
+
+You can install Poetry and the project dependencies:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+source $HOME/.poetry/env
+poetry install -vv
+```
+
+### Run Tests
+
+Once the dependencies are installed, you can run tests using the following command from the repository root directory:
+
+```bash
+poetry run pytest -vv ./tests
+```

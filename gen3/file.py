@@ -46,7 +46,17 @@ class Gen3File:
         api_url = "{}/user/data/download/{}?protocol={}".format(
             self._endpoint, guid, protocol
         )
-        output = requests.get(api_url, auth=self._auth_provider).text
+        # include Authorization Header for Bearer tokens
+        headers = {}
+        if (
+            self._auth_provider is not None
+            and self._auth_provider.__dict__.get("_refresh_token")
+            and self._auth_provider._refresh_token.get("api_key")
+        ):
+            headers["Authorization"] = (
+                "Bearer " + self._auth_provider._refresh_token["api_key"]
+            )
+        output = requests.get(api_url, auth=self._auth_provider, headers=headers).text
         try:
             data = json.loads(output)
         except:

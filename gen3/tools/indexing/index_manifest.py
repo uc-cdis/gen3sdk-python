@@ -482,6 +482,7 @@ def index_object_manifest(
     replace_urls=True,
     manifest_file_delimiter=None,
     output_filename="indexing-output-manifest.csv",
+    include_service_location=False,
 ):
     """
     Loop through all the files in the manifest, update/create records in indexd
@@ -494,6 +495,8 @@ def index_object_manifest(
         auth(Gen3Auth): Gen3 auth or tuple with basic auth name and password
         replace_urls(bool): flag to indicate if replace urls or not
         manifest_file_delimiter(str): manifest's delimiter
+        output_filename(str): output file name for manifest
+        include_service_location(bool): Defaults to False, include "/index" in http://localhost for commons_url
 
     Returns:
         files(list(dict)): list of file info
@@ -514,11 +517,12 @@ def index_object_manifest(
     commons_url = commons_url.strip("/")
     # if running locally, indexd is deployed by itself without a location relative
     # to the commons
-    if "http://localhost" in commons_url:
-        service_location = ""
+    if "http://localhost" in commons_url and include_service_location:
+        # service_location = ""
+        commons_url += "/" + service_location  # + "/" + service_location
+    print(commons_url)
 
-    if not commons_url.endswith(service_location):
-        commons_url += "/" + service_location
+    logging.info("\nUsing URL {}\n".format(commons_url))
 
     indexclient = client.IndexClient(commons_url, "v0", auth=auth)
 
