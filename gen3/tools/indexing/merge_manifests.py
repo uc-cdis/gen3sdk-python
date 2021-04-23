@@ -124,30 +124,26 @@ def merge_bucket_manifests(
 
                 updated_records = _get_updated_records(
                     record=record,
-                    existing_records=copy.deepcopy(all_rows[record[MD5_STANDARD_KEY]]),
+                    existing_records=all_rows[record[MD5_STANDARD_KEY]],
                     headers=headers,
                     continue_after_error=continue_after_error,
                     allow_mult_guids_per_hash=allow_mult_guids_per_hash,
                     columns_with_arrays=columns_with_arrays,
                 )
-                all_rows[record[MD5_STANDARD_KEY]] = [
-                    record for _, record in updated_records.items()
-                ]
+                all_rows[record[MD5_STANDARD_KEY]] = updated_records.values()
 
         # for the entries where there was no GUID specified, we will add that metadata
         # to all previous records
         for record in records_with_no_guid:
             updated_records = _get_updated_records(
                 record=record,
-                existing_records=copy.deepcopy(all_rows[record[MD5_STANDARD_KEY]]),
+                existing_records=all_rows[record[MD5_STANDARD_KEY]],
                 headers=headers,
                 continue_after_error=continue_after_error,
                 allow_mult_guids_per_hash=allow_mult_guids_per_hash,
                 columns_with_arrays=columns_with_arrays,
             )
-            all_rows[record[MD5_STANDARD_KEY]] = [
-                record for _, record in updated_records.items()
-            ]
+            all_rows[record[MD5_STANDARD_KEY]] = updated_records.values()
 
     _create_output_file(
         output_manifest, headers, all_rows, output_manifest_file_delimiter
