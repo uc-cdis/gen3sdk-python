@@ -100,9 +100,12 @@ def test_open_project(sub):
 
 
 def test_submit_record(sub):
-    with patch("gen3.submission.requests") as mock_request:
-        mock_request.status_code = 200
-        mock_request.json.return_value = '{ "key": "value" }'
+    """
+    Make sure that you can submit a record
+    """
+    with patch("gen3.submission.requests.put") as mock_request:
+        mock_request().status_code = 200
+        mock_request().json.return_value = '{ "key": "value" }'
         rec = sub.submit_record(
             "prog1",
             "proj1",
@@ -112,7 +115,66 @@ def test_submit_record(sub):
                 "type": "experiment",
             },
         )
-        assert rec
+        assert rec == mock_request().json.return_value
+
+
+def test_submit_record_include_refresh_token(sub):
+    """
+    Make sure that you can submit a record and include a refresh token
+    """
+    sub._auth_provider._refresh_token = {"api_key": "123"}
+
+    with patch("gen3.submission.requests.put") as mock_request:
+        mock_request().status_code = 200
+        mock_request().json.return_value = '{ "key": "value" }'
+        rec = sub.submit_record(
+            "prog1",
+            "proj1",
+            {
+                "projects": [{"code": "proj1"}],
+                "submitter_id": "mjmartinson",
+                "type": "experiment",
+            },
+        )
+        assert rec == mock_request().json.return_value
+
+
+def test_submit_record_include_refresh_token_missing_api_key(sub):
+    """
+    Check that there's a KeyError when submitting a record while missing an api key
+    """
+    sub._auth_provider._refresh_token = {"missing_api_key": "123"}
+    with patch("gen3.submission.requests.put", side_effect=KeyError) as mock_request:
+        with pytest.raises(KeyError):
+            rec = sub.submit_record(
+                "prog1",
+                "proj1",
+                {
+                    "projects": [{"code": "proj1"}],
+                    "submitter_id": "mjmartinson",
+                    "type": "experiment",
+                },
+            )
+
+
+def test_submit_record_include_refresh_token_wrong_api_key(sub):
+    """
+    Check that there's an Exception when submitting a record with the wrong api key
+    """
+    sub._auth_provider._refresh_token = {"api_key": "wrong_api_key"}
+    with patch(
+        "gen3.submission.requests.put", side_effect=Exception("invalid jwt token")
+    ) as mock_request:
+        with pytest.raises(Exception):
+            rec = sub.submit_record(
+                "prog1",
+                "proj1",
+                {
+                    "projects": [{"code": "proj1"}],
+                    "submitter_id": "mjmartinson",
+                    "type": "experiment",
+                },
+            )
 
 
 def test_export_record(sub):

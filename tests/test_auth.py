@@ -38,6 +38,103 @@ def test_token_cache():
     assert cache_file == expected
 
 
+def test_refresh_access_token(mock_gen3_auth):
+    """
+    Make sure that access token ends up in header when refresh is called
+    """
+    with patch("gen3.auth.get_access_token_with_key") as mock_access_token:
+        mock_access_token.return_value = "new_access_token"
+        with patch("gen3.auth.decode_token") as mock_decode_token:
+            mock_decode_token().return_value = {"aud": "123"}
+            with patch("gen3.auth.Gen3Auth._write_to_file") as mock_write_to_file:
+                mock_write_to_file().return_value = True
+                with patch(
+                    "gen3.auth.Gen3Auth.__call__",
+                    return_value=MagicMock(
+                        headers={"Authorization": "Bearer new_access_token"}
+                    ),
+                ) as mock_call:
+                    access_token = mock_gen3_auth.refresh_access_token()
+                    assert (
+                        "Bearer " + access_token == mock_call().headers["Authorization"]
+                    )
+
+
+def test_refresh_access_token_no_cache_file(mock_gen3_auth):
+    """
+    Make sure that access token ends up in header when refresh is called after failing to write to cache file
+    """
+    with patch("gen3.auth.get_access_token_with_key") as mock_access_token:
+        mock_access_token.return_value = "new_access_token"
+        with patch("gen3.auth.decode_token") as mock_decode_token:
+            mock_decode_token().return_value = {"aud": "123"}
+            with patch("gen3.auth.Gen3Auth._write_to_file") as mock_write_to_file:
+                mock_write_to_file().return_value = False
+                with patch(
+                    "gen3.auth.Gen3Auth.__call__",
+                    return_value=MagicMock(
+                        headers={"Authorization": "Bearer new_access_token"}
+                    ),
+                ) as mock_call:
+                    access_token = mock_gen3_auth.refresh_access_token()
+                    assert (
+                        "Bearer " + access_token == mock_call().headers["Authorization"]
+                    )
+
+
+def test_write_to_file_success(mock_gen3_auth):
+    """
+    Make sure that you can write content to a file
+    """
+    with patch("builtins.open", create=True) as mock_open_file:
+        mock_open_file.return_value = MagicMock()
+        with patch("builtins.open.write") as mock_file_write:
+            mock_file_write.return_value = True
+            with patch("os.rename") as mock_os_rename:
+                mock_os_rename.return_value = True
+                result = mock_gen3_auth._write_to_file("some_file", "content")
+                assert result == True
+
+
+def test_write_to_file_permission_error(mock_gen3_auth):
+    """
+    Check that the file isn't written when there's a PermissionError
+    """
+    with patch("builtins.open", create=True) as mock_open_file:
+        mock_open_file.return_value = MagicMock()
+        with patch(
+            "builtins.open.write", side_effect=PermissionError
+        ) as mock_file_write:
+            with pytest.raises(FileNotFoundError):
+                result = mock_gen3_auth._write_to_file("some_file", "content")
+
+
+def test_write_to_file_rename_permission_error(mock_gen3_auth):
+    """
+    Check that the file isn't written when there's a PermissionError for renaming
+    """
+    with patch("builtins.open", create=True) as mock_open_file:
+        mock_open_file.return_value = MagicMock()
+        with patch("builtins.open.write") as mock_file_write:
+            mock_file_write.return_value = True
+            with patch("os.rename", side_effect=PermissionError) as mock_os_rename:
+                with pytest.raises(PermissionError):
+                    result = mock_gen3_auth._write_to_file("some_file", "content")
+
+
+def test_write_to_file_rename_file_not_found_error(mock_gen3_auth):
+    """
+    Check that the file isn't renamed when there's a FileNotFoundError
+    """
+    with patch("builtins.open", create=True) as mock_open_file:
+        mock_open_file.return_value = MagicMock()
+        with patch("builtins.open.write") as mock_file_write:
+            mock_file_write.return_value = True
+            with patch("os.rename", side_effect=FileNotFoundError) as mock_os_rename:
+                with pytest.raises(FileNotFoundError):
+                    result = mock_gen3_auth._write_to_file("some_file", "content")
+
+
 def test_auth_init_outside_workspace():
     """
     Test that a Gen3Auth instance can be initialized when the
