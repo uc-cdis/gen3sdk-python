@@ -124,6 +124,7 @@ def merge_bucket_manifests(
                 updated_records = _get_updated_records(
                     record=record,
                     existing_records=all_rows[record[MD5_STANDARD_KEY]],
+                    headers=headers,
                     continue_after_error=continue_after_error,
                     allow_mult_guids_per_hash=allow_mult_guids_per_hash,
                     columns_with_arrays=columns_with_arrays,
@@ -136,6 +137,7 @@ def merge_bucket_manifests(
             updated_records = _get_updated_records(
                 record=record,
                 existing_records=all_rows[record[MD5_STANDARD_KEY]],
+                headers=headers,
                 continue_after_error=continue_after_error,
                 allow_mult_guids_per_hash=allow_mult_guids_per_hash,
                 columns_with_arrays=columns_with_arrays,
@@ -150,6 +152,7 @@ def merge_bucket_manifests(
 def _get_updated_records(
     record,
     existing_records,
+    headers,
     continue_after_error,
     allow_mult_guids_per_hash,
     columns_with_arrays,
