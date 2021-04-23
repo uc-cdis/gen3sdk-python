@@ -108,8 +108,7 @@ def merge_bucket_manifests(
             # simple case where this is the first time we've seen this hash
             if record[MD5_STANDARD_KEY] not in all_rows:
                 record_to_write = copy.deepcopy(record)
-                for key in record_to_write.keys():
-                    headers.add(key)
+                headers.update(record_to_write.keys())
                 all_rows[record_to_write[MD5_STANDARD_KEY]] = [record_to_write]
             else:
                 # if the hash already exists, we need to try and update existing
@@ -125,7 +124,6 @@ def merge_bucket_manifests(
                 updated_records = _get_updated_records(
                     record=record,
                     existing_records=all_rows[record[MD5_STANDARD_KEY]],
-                    headers=headers,
                     continue_after_error=continue_after_error,
                     allow_mult_guids_per_hash=allow_mult_guids_per_hash,
                     columns_with_arrays=columns_with_arrays,
@@ -138,7 +136,6 @@ def merge_bucket_manifests(
             updated_records = _get_updated_records(
                 record=record,
                 existing_records=all_rows[record[MD5_STANDARD_KEY]],
-                headers=headers,
                 continue_after_error=continue_after_error,
                 allow_mult_guids_per_hash=allow_mult_guids_per_hash,
                 columns_with_arrays=columns_with_arrays,
@@ -153,7 +150,6 @@ def merge_bucket_manifests(
 def _get_updated_records(
     record,
     existing_records,
-    headers,
     continue_after_error,
     allow_mult_guids_per_hash,
     columns_with_arrays,
@@ -224,8 +220,7 @@ def _get_updated_records(
                 record_to_write.get(GUID_STANDARD_KEY), {}
             ).update(record_to_write)
 
-            for key in record_to_write.keys():
-                headers.add(key)
+            headers.update(record_to_write.keys())
     else:
         # merge normally, combining
         for existing_record in existing_records:
@@ -260,8 +255,7 @@ def _get_updated_records(
                     existing_record.get(GUID_STANDARD_KEY), {}
                 ).update(existing_record)
 
-            for key in record_to_write.keys():
-                headers.add(key)
+            headers.update(record_to_write.keys())
 
     return updated_records
 
