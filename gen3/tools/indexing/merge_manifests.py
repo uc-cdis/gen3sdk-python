@@ -106,9 +106,9 @@ def merge_bucket_manifests(
         records_with_no_guid = []
         for record in records_from_file:
             # simple case where this is the first time we've seen this hash
+            headers.update(record.keys())
             if record[MD5_STANDARD_KEY] not in all_rows:
                 record_to_write = copy.deepcopy(record)
-                headers.update(record_to_write.keys())
                 all_rows[record_to_write[MD5_STANDARD_KEY]] = [record_to_write]
             else:
                 # if the hash already exists, we need to try and update existing
@@ -124,7 +124,6 @@ def merge_bucket_manifests(
                 updated_records = _get_updated_records(
                     record=record,
                     existing_records=all_rows[record[MD5_STANDARD_KEY]],
-                    headers=headers,
                     continue_after_error=continue_after_error,
                     allow_mult_guids_per_hash=allow_mult_guids_per_hash,
                     columns_with_arrays=columns_with_arrays,
@@ -137,7 +136,6 @@ def merge_bucket_manifests(
             updated_records = _get_updated_records(
                 record=record,
                 existing_records=all_rows[record[MD5_STANDARD_KEY]],
-                headers=headers,
                 continue_after_error=continue_after_error,
                 allow_mult_guids_per_hash=allow_mult_guids_per_hash,
                 columns_with_arrays=columns_with_arrays,
@@ -152,7 +150,6 @@ def merge_bucket_manifests(
 def _get_updated_records(
     record,
     existing_records,
-    headers,
     continue_after_error,
     allow_mult_guids_per_hash,
     columns_with_arrays,
@@ -167,10 +164,6 @@ def _get_updated_records(
     Args:
         record (dict): dictionary of new record keys/values
         existing_records (list): existing records with this same hash
-        headers (list[str]): consolidation of all column names for final output
-            NOTE: this variable is owned outside of the scope of this call
-                  and we're updating the value within this function but not
-                  explicitly returning it
         continue_after_error (bool): See calling function
         allow_mult_guids_per_hash (bool): See calling function
         columns_with_arrays (list[str]): See calling function
@@ -201,7 +194,6 @@ def _get_updated_records(
     # existing records, so update *all* of them with this information
     if not new_guid:
         for existing_record in existing_records:
-            existing_urls = existing_record.get(URLS_STANDARD_KEY)
             guid = existing_record.get(GUID_STANDARD_KEY)
 
             _error_if_invalid_size_or_guid(
@@ -223,7 +215,6 @@ def _get_updated_records(
                 record_to_write.get(GUID_STANDARD_KEY), {}
             ).update(record_to_write)
 
-            headers.update(record_to_write.keys())
     else:
         # merge normally, combining
         for existing_record in existing_records:
@@ -257,8 +248,6 @@ def _get_updated_records(
                 updated_records.setdefault(
                     existing_record.get(GUID_STANDARD_KEY), {}
                 ).update(existing_record)
-
-            headers.update(record_to_write.keys())
 
     return updated_records
 
