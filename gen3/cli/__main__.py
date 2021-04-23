@@ -3,6 +3,7 @@ import os
 import gen3.cli.auth as auth
 import gen3.cli.pfb as pfb
 import gen3.cli.wss as wss
+import gen3.cli.index as index
 import gen3
 
 
@@ -44,10 +45,12 @@ def main(ctx=None, auth_config=None, endpoint=None):
     ctx.obj["auth_config"] = auth_config
     ctx.obj["endpoint"] = endpoint
     ctx.obj["auth_factory"] = AuthFactory(auth_config)
+    ctx.obj["index_factory"] = gen3.index.Gen3Index(AuthFactory(auth_config).get())
 
 
 main.add_command(auth.auth)
 main.add_command(pfb.pfb)
 main.add_command(wss.wss)
+main.add_command(index.index)
 
 main()
