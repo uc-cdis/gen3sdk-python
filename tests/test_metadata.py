@@ -419,7 +419,7 @@ def test_update(requests_mock):
     assert response == expected_response
 
 
-@patch("gen3.metadata.requests.delete")
+@patch("gen3.metadata.requests.Session.delete")
 def test_delete(requests_mock):
     """
     Test deleting guids

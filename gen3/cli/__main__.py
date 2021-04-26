@@ -5,6 +5,7 @@ import gen3.cli.pfb as pfb
 import gen3.cli.wss as wss
 import gen3.cli.discovery as discovery
 import gen3
+from gen3.http_client import http_client, set_ssl_verify, get_ssl_verify, __verify
 
 
 class AuthFactory:
@@ -25,7 +26,7 @@ class AuthFactory:
     "--auth",
     "auth_config",
     default=os.getenv("GEN3_API_KEY", None),
-    help="""authentication source: 
+    help="""authentication source:
     "idp://wts/<idp>" is an identity provider in a Gen3 workspace,
     "accesstoken:///<token>" is an access token,
     otherwise a path to an api key or basename of key under ~/.gen3/;
@@ -38,13 +39,23 @@ class AuthFactory:
     default=os.getenv("GEN3_ENDPOINT", "default"),
     help="commons hostname - optional if API Key given",
 )
+@click.option(
+    "--insecure",
+    "insecure",
+    is_flag=True,
+    default=False,
+    help="bypass TLS/SSL verification checks",
+)
 @click.pass_context
-def main(ctx=None, auth_config=None, endpoint=None):
+def main(ctx=None, auth_config=None, endpoint=None, insecure=False):
     """Gen3 sdk commands"""
     ctx.ensure_object(dict)
     ctx.obj["auth_config"] = auth_config
     ctx.obj["endpoint"] = endpoint
     ctx.obj["auth_factory"] = AuthFactory(auth_config)
+
+    if insecure:
+        set_ssl_verify(False)
 
 
 main.add_command(auth.auth)

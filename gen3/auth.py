@@ -10,6 +10,7 @@ import logging
 from urllib.parse import urlparse
 
 from gen3.utils import raise_for_status
+from gen3.http_client import http_client
 
 
 class Gen3AuthError(Exception):
@@ -64,7 +65,7 @@ def get_access_token_with_key(api_key):
     endpoint = endpoint_from_token(api_key["api_key"])
     # attempt to get a token from Fence
     auth_url = "{}/user/credentials/cdis/access_token".format(endpoint)
-    resp = requests.post(auth_url, json=api_key)
+    resp = http_client("requests").post(auth_url, json=api_key)
     token_key = "access_token"
     return _handle_access_token_response(resp, token_key)
 
@@ -256,7 +257,7 @@ class Gen3Auth(AuthBase):
         return _response
 
     def refresh_access_token(self):
-        """ Get a new access token """
+        """Get a new access token"""
         if self._use_wts:
             self._access_token = get_access_token_from_wts(
                 self._wts_namespace, self._wts_idp
@@ -281,7 +282,7 @@ class Gen3Auth(AuthBase):
         return self._access_token
 
     def get_access_token(self):
-        """ Get the access token - auto refresh if within 5 minutes of expiration """
+        """Get the access token - auto refresh if within 5 minutes of expiration"""
         if not self._access_token:
             cache_file = token_cache_file(
                 self._refresh_token and self._refresh_token["api_key"] or self._wts_idp

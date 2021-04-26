@@ -10,6 +10,7 @@ import sys
 
 from gen3.utils import append_query_params, DEFAULT_BACKOFF_SETTINGS, raise_for_status
 from gen3.auth import Gen3Auth
+from gen3.http_client import http_client
 
 
 class Gen3Metadata:
@@ -234,7 +235,9 @@ class Gen3Metadata:
 
         url_with_params = append_query_params(url, **kwargs)
         logging.debug(f"hitting: {url_with_params}")
-        response = requests.get(url_with_params, auth=self._auth_provider)
+        response = http_client("requests").get(
+            url_with_params, auth=self._auth_provider
+        )
         raise_for_status(response)
 
         return response.json()
@@ -307,7 +310,7 @@ class Gen3Metadata:
             overwrite (bool, optional): whether or not to overwrite existing data
             _ssl (None, optional): whether or not to use ssl
         """
-        async with aiohttp.ClientSession() as session:
+        async with http_client("aiohttp") as session:
             url = self.admin_endpoint + f"/metadata/{guid}"
             url_with_params = append_query_params(url, overwrite=overwrite, **kwargs)
 
@@ -384,7 +387,9 @@ class Gen3Metadata:
 
         url_with_params = append_query_params(url, **kwargs)
         logging.debug(f"hitting: {url_with_params}")
-        response = requests.delete(url_with_params, auth=self._auth_provider)
+        response = http_client("requests").delete(
+            url_with_params, auth=self._auth_provider
+        )
         raise_for_status(response)
 
         return response.json()
