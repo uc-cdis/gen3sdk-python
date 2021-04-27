@@ -2453,7 +2453,7 @@ class Gen3Expansion:
             page = 0
 
         Usage:
-            exp.get_index()
+            i = exp.get_indexd(outfile="TSV", uploader=orcid)
         """
         stats_url = "{}/index/_stats".format(self._endpoint)
         try:
@@ -2461,17 +2461,9 @@ class Gen3Expansion:
             stats = json.loads(response)
             print("Stats for '{}': {}".format(self._endpoint, stats))
         except Exception as e:
-            print(
-                "\tUnable to parse indexd response as JSON!\n\t\t{} {}".format(
-                    type(e), e
-                )
-            )
+            print("\tUnable to parse indexd response as JSON!\n\t\t{} {}".format(type(e), e))
 
-        print(
-            "Getting all records in indexd (limit: {}, starting at page: {})".format(
-                limit, page
-            )
-        )
+        print("Getting all records in indexd (limit: {}, starting at page: {})".format(limit, page))
 
         all_records = []
 
@@ -3519,6 +3511,31 @@ class Gen3Expansion:
         except:
             print("Error querying Guppy")
             return response.text
+
+    def guppy_aggregation(self, node, prop, format='JSON'):
+
+        guppy_url = "{}/guppy/graphql".format(self._endpoint)
+
+        query = "{{_aggregation {{{} {{{} {{histogram {{key count}} }}}}}}}}".format(node,prop)
+
+        query_json = {"query": query, "variables": None}
+
+        print("Requesting '{}': {}".format(guppy_url, query_json))
+
+        response = requests.post(guppy_url, json=query_json, auth=self._auth_provider)
+
+        try:
+            res = json.loads(response.text)
+        except:
+            print("Error querying Guppy")
+            return response.text
+        d = res['data']['_aggregation'][node][prop]['histogram']
+        if format == "JSON":
+            return d
+        elif format == "TSV":
+            df = pd.json_normalize(d)
+            return df
+
 
     # Guppy funcs
     def guppy_download(self, node, props):
