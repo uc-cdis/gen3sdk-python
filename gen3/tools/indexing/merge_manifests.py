@@ -142,11 +142,23 @@ def merge_bucket_manifests(
             )
             # it's possible a record without a GUID got added if it was the FIRST
             # instance of that md5, so we just need to make sure that it's removed
-            all_rows[record[MD5_STANDARD_KEY]] = [
-                record
+            # if there was another GUID provided later on
+            #
+            # this also handles the edge case where there were multiple rows for the md5
+            # and NO guid was provided (e.g. we want a single combined row of updated values)
+            any_guid_provided = [
+                record.get(GUID_STANDARD_KEY)
                 for record in updated_records.values()
                 if record.get(GUID_STANDARD_KEY)
             ]
+            if not any_guid_provided:
+                all_rows[record[MD5_STANDARD_KEY]] = updated_records.values()
+            else:
+                all_rows[record[MD5_STANDARD_KEY]] = [
+                    record
+                    for record in updated_records.values()
+                    if record.get(GUID_STANDARD_KEY)
+                ]
 
     _create_output_file(
         output_manifest, headers, all_rows, output_manifest_file_delimiter
