@@ -180,7 +180,7 @@ class Validator(ABC):
                 ['/a', '/b']
                 ['/a', '/b']
         """
-        values = values.translate(values.maketrans("[],\"'", "     "))
+        values = values.translate(values.maketrans("[]\"'", "    "))
         return values.split()
 
 

@@ -72,7 +72,13 @@ def test_verify_manifest(mock_index):
     assert "c1234567891234567890123456789012" in logs[
         "dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2"
     ].get("md5", {}).get("expected")
-    assert "gs://test/test3.txt" in logs[
+    assert "gs://test/test 3.txt" in logs[
+        "dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2"
+    ].get("urls", {}).get("expected")
+    assert "s3://testaws/file space.txt" in logs[
+        "dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2"
+    ].get("urls", {}).get("expected")
+    assert "s3://testaws/aws/file,with,comma.txt" in logs[
         "dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2"
     ].get("urls", {}).get("expected")
 

@@ -135,12 +135,18 @@ def merge_bucket_manifests(
         for record in records_with_no_guid:
             updated_records = _get_updated_records(
                 record=record,
-                existing_records=all_rows[record[MD5_STANDARD_KEY]],
+                existing_records=all_rows.get(record[MD5_STANDARD_KEY], []),
                 continue_after_error=continue_after_error,
                 allow_mult_guids_per_hash=allow_mult_guids_per_hash,
                 columns_with_arrays=columns_with_arrays,
             )
-            all_rows[record[MD5_STANDARD_KEY]] = updated_records.values()
+            # it's possible a record without a GUID got added if it was the FIRST
+            # instance of that md5, so we just need to make sure that it's removed
+            all_rows[record[MD5_STANDARD_KEY]] = [
+                record
+                for record in updated_records.values()
+                if record.get(GUID_STANDARD_KEY)
+            ]
 
     _create_output_file(
         output_manifest, headers, all_rows, output_manifest_file_delimiter

@@ -178,8 +178,8 @@ def test_is_valid_manifest_format_with_invalid_urls(caplog):
     assert '"[]"' in error_log
     assert "\"['']\"" in error_log
     assert '"[""]"' in error_log
-    assert '"["", ""]"' in error_log
-    assert '"["", \'\']"' in error_log
+    assert '"["" ""]"' in error_log
+    assert '"["" \'\']"' in error_log
     assert result == False
 
 
