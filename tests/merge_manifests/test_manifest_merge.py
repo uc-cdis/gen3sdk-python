@@ -12,6 +12,7 @@ def test_regular_merge_bucket_manifests():
     merge_bucket_manifests(
         directory="tests/merge_manifests/regular/input/",
         output_manifest="merged-output-test-manifest.tsv",
+        columns_with_arrays=["extra_data", "more_data", "some_additional_data"],
     )
     assert _get_tsv_data("merged-output-test-manifest.tsv") == _get_tsv_data(
         "tests/merge_manifests/regular/expected-merged-output-manifest.tsv"
@@ -25,6 +26,7 @@ def test_writing_to_csv():
     merge_bucket_manifests(
         directory="tests/merge_manifests/regular/input/",
         output_manifest="merged-output-test-manifest.csv",
+        columns_with_arrays=["extra_data", "more_data", "some_additional_data"],
     )
     assert _get_tsv_data("merged-output-test-manifest.csv", ",") == _get_tsv_data(
         "tests/merge_manifests/regular/expected-merged-output-manifest.tsv"
@@ -38,6 +40,7 @@ def test_multiple_guids_per_hash():
     merge_bucket_manifests(
         directory="tests/merge_manifests/multiple_guids_per_hash/input",
         output_manifest="merged-output-test-manifest.tsv",
+        columns_with_arrays=["extra_data", "more_data", "some_additional_data"],
         allow_mult_guids_per_hash=True,
     )
     assert _get_tsv_data("merged-output-test-manifest.tsv") == _get_tsv_data(
@@ -52,6 +55,7 @@ def test_same_guid_for_same_hash():
     merge_bucket_manifests(
         directory="tests/merge_manifests/same_guid_for_same_hash/input",
         output_manifest="merged-output-test-manifest.tsv",
+        columns_with_arrays=["extra_data", "more_data", "some_additional_data"],
         allow_mult_guids_per_hash=True,
     )
     assert _get_tsv_data("merged-output-test-manifest.tsv") == _get_tsv_data(
@@ -66,6 +70,7 @@ def test_multiple_urls():
     merge_bucket_manifests(
         directory="tests/merge_manifests/multiple_urls/input",
         output_manifest="merged-output-test-manifest.tsv",
+        columns_with_arrays=["extra_data", "more_data", "some_additional_data"],
     )
     assert _get_tsv_data("merged-output-test-manifest.tsv") == _get_tsv_data(
         "tests/merge_manifests/multiple_urls/expected-merged-output-manifest.tsv"
@@ -80,6 +85,7 @@ def test_duplicate_values():
     merge_bucket_manifests(
         directory="tests/merge_manifests/duplicate_values/input",
         output_manifest="merged-output-test-manifest.tsv",
+        columns_with_arrays=["extra_data", "more_data", "some_additional_data", "food"],
     )
     assert _get_tsv_data("merged-output-test-manifest.tsv") == _get_tsv_data(
         "tests/merge_manifests/duplicate_values/expected-merged-output-manifest.tsv"
@@ -95,6 +101,7 @@ def test_size_mismatch():
         merge_bucket_manifests(
             directory="tests/merge_manifests/size_mismatch/input",
             output_manifest="merged-output-test-manifest.tsv",
+            columns_with_arrays=["extra_data", "more_data", "some_additional_data"],
         )
 
 

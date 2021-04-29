@@ -1,3 +1,4 @@
-acl	authz	guid	md5	size	urls	extra_data
-		dg/123	f7cbeb4f7fcc139d95cb9cc1cf0696ec	42	http://cats.com s3://bucket/cats	baz foo
-		dg/124	f7cbeb4f7fcc139d95cb9cc1cf0696ec	42	http://cats.com	bar
+acl	authz	guid	md5	size	urls	more_data	extra_data
+	/baz /foo /foobar	dg/123	f7cbeb4f7fcc139d95cb9cc1cf0696ec	42	http://cats.com s3://bucket/cats		stuff stuff3
+	/bar /foobar	dg/124	f7cbeb4f7fcc139d95cb9cc1cf0696ec	42	http://cats.com		stuff3
+	/baz /foobar	dg/125	f7cbeb4f7fcc139d95cb9cc1cf0696ec	42	s3://bucket/duplicate	moredata	stuff2 stuff3
