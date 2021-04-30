@@ -2375,44 +2375,7 @@ class Gen3Expansion:
         return results
 
     # indexd functions:
-
-    def get_indexd_old(self, api, outfile=None):
-        """get all the records in indexd
-        Example:
-        exp.get_indexd(api='https://icgc.bionimbus.org/',outfile=True)
-        """
-        all_records = []
-        indexd_url = "{}/index/index".format(api)
-        response = requests.get(
-            indexd_url, auth=self._auth_provider
-        )  # response = requests.get(indexd_url, auth=auth)
-        records = response.json().get("records")
-        all_records.extend(records)
-        print("\tRetrieved {} records from indexd.".format(len(all_records)))
-
-        previous_did = None
-        start_did = records[-1].get("did")
-
-        while start_did != previous_did:
-            previous_did = start_did
-            next_url = "{}?start={}".format(indexd_url, start_did)
-            response = requests.get(
-                next_url, auth=self._auth_provider
-            )  # response = requests.get(next_url, auth=auth)
-            records = response.json().get("records")
-            all_records.extend(records)
-            print("\tRetrieved {} records from indexd.".format(len(all_records)))
-            if records:
-                start_did = response.json().get("records")[-1].get("did")
-        if outfile:
-            dc_regex = re.compile(r"https:\/\/(.+)\/")
-            dc = dc_regex.match(api).groups()[0]
-            outname = "{}_indexd_records.txt".format(dc)
-            with open(outname, "w") as outfile:
-                outfile.write(json.dumps(all_records))
-        return all_records
-
-    def query_indexd(self, limit=100, page=0, uploader=None):
+    def query_indexd(self, limit=100, page=0, uploader=None, args=None):
         """Queries indexd with given records limit and page number.
         For example:
             records = query_indexd(api='https://icgc.bionimbus.org/',limit=1000,page=0)
@@ -2424,6 +2387,9 @@ class Gen3Expansion:
             index_url = "{}/index/index/?limit={}&page={}".format(self._endpoint, limit, page)
         else:
             index_url = "{}/index/index/?limit={}&page={}&uploader={}".format(self._endpoint, limit, page, uploader)
+
+        if args != None:
+            index_url = "{}&{}".format(index_url,args)
 
         try:
             response = requests.get(index_url).text
@@ -2444,7 +2410,7 @@ class Gen3Expansion:
 
         return records
 
-    def get_indexd(self, limit=100, page=0, outfile="JSON", uploader=None):
+    def get_indexd(self, limit=100, page=0, format="JSON", uploader=None, args=None):
         """get all the records in indexd
             api = "https://icgc.bionimbus.org/"
             args = lambda: None
@@ -2453,8 +2419,14 @@ class Gen3Expansion:
             page = 0
 
         Usage:
-            i = exp.get_indexd(outfile="TSV", uploader=orcid)
+            i = exp.get_indexd(format="TSV", uploader=orcid)
         """
+        if format in ["JSON", "TSV"]:
+            dc_regex = re.compile(r"https:\/\/(.+)\/?$")
+            dc = dc_regex.match(self._endpoint).groups()[0]
+        else:
+            print("\n\n'{}' != a valid output format. Please provide a format of either 'JSON' or 'TSV'.\n\n".format(format))
+
         stats_url = "{}/index/_stats".format(self._endpoint)
         try:
             response = requests.get(stats_url).text
@@ -2470,7 +2442,7 @@ class Gen3Expansion:
         done = False
         while done == False:
 
-            records = self.query_indexd(limit=limit, page=page, uploader=uploader)
+            records = self.query_indexd(limit=limit, page=page, uploader=uploader, args=args)
             all_records.extend(records)
 
             if len(records) != limit:
@@ -2493,26 +2465,16 @@ class Gen3Expansion:
             "\t\tScript finished. Total records retrieved: {}".format(len(all_records))
         )
 
-        if outfile in ["JSON", "TSV"]:
-            dc_regex = re.compile(r"https:\/\/(.+)\/?$")
-            dc = dc_regex.match(self._endpoint).groups()[0]
+        if format == "JSON":
+            outname = "{}_indexd_records.json".format(dc)
+            with open(outname, "w") as output:
+                output.write(json.dumps(all_records))
 
-            if outfile == "JSON":
-                outname = "{}_indexd_records.json".format(dc)
-                with open(outname, "w") as output:
-                    output.write(json.dumps(all_records))
-
-            if outfile == "TSV":
-                outname = "{}_indexd_records.tsv".format(dc)
-                idf = pd.DataFrame(all_records)
-                idf.to_csv(outname,sep='\t',index=False)
-
-        else:
-            print(
-                "\n\n'{}' != a valid output format. Please provide a format of either 'JSON' or 'TSV'.\n\n".format(
-                    format
-                )
-            )
+        if format == "TSV":
+            outname = "{}_indexd_records.tsv".format(dc)
+            all_records = pd.DataFrame(all_records)
+            all_records['md5sum'] = [hashes.get('md5') for hashes in all_records.hashes]
+            all_records.to_csv(outname,sep='\t',index=False)
 
         return all_records
 
