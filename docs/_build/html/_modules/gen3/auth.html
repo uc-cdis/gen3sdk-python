@@ -41,8 +41,9 @@
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">urlparse</span>
+<span class="kn">import</span> <span class="nn">backoff</span>
 
-<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">raise_for_status</span>
+<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">,</span> <span class="n">raise_for_status</span>
 
 
 <span class="k">class</span> <span class="nc">Gen3AuthError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
@@ -289,7 +290,7 @@
         <span class="k">return</span> <span class="n">_response</span>
 
 <div class="viewcode-block" id="Gen3Auth.refresh_access_token"><a class="viewcode-back" href="../../auth.html#gen3.auth.Gen3Auth.refresh_access_token">[docs]</a>    <span class="k">def</span> <span class="nf">refresh_access_token</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Get a new access token &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Get a new access token&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_wts</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span> <span class="o">=</span> <span class="n">get_access_token_from_wts</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_wts_namespace</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span>
@@ -300,6 +301,20 @@
         <span class="n">cache_file</span> <span class="o">=</span> <span class="n">token_cache_file</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">]</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span>
         <span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write_to_file</span><span class="p">(</span><span class="n">cache_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Exceeded number of retries, unable to write to cache file.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span></div>
+
+    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span>
+        <span class="n">wait_gen</span><span class="o">=</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="n">exception</span><span class="o">=</span><span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span>
+    <span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_write_to_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cache_file</span><span class="p">,</span> <span class="n">content</span><span class="p">):</span>
         <span class="c1"># write a temp file, then rename - to avoid</span>
         <span class="c1"># simultaneous writes to same file race condition</span>
         <span class="n">temp</span> <span class="o">=</span> <span class="n">cache_file</span> <span class="o">+</span> <span class="p">(</span>
@@ -307,14 +322,16 @@
         <span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span><span class="p">)</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
             <span class="n">os</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="n">cache_file</span><span class="p">)</span>
-        <span class="k">except</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;failed to write token cache file: &quot;</span> <span class="o">+</span> <span class="n">cache_file</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span></div>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="n">e</span>
 
 <div class="viewcode-block" id="Gen3Auth.get_access_token"><a class="viewcode-back" href="../../auth.html#gen3.auth.Gen3Auth.get_access_token">[docs]</a>    <span class="k">def</span> <span class="nf">get_access_token</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Get the access token - auto refresh if within 5 minutes of expiration &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Get the access token - auto refresh if within 5 minutes of expiration&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span><span class="p">:</span>
             <span class="n">cache_file</span> <span class="o">=</span> <span class="n">token_cache_file</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">]</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span>
@@ -324,10 +341,12 @@
                     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">cache_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">_access_token_info</span> <span class="o">=</span> <span class="n">decode_token</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span><span class="p">)</span>
-                <span class="k">except</span><span class="p">:</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                     <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;ignoring invalid token cache: &quot;</span> <span class="o">+</span> <span class="n">cache_file</span><span class="p">)</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span> <span class="o">=</span> <span class="kc">None</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_access_token_info</span> <span class="o">=</span> <span class="kc">None</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+
         <span class="n">need_new_token</span> <span class="o">=</span> <span class="p">(</span>
             <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span>
             <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token_info</span>
