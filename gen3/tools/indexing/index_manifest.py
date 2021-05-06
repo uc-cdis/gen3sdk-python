@@ -494,6 +494,7 @@ def index_object_manifest(
         auth(Gen3Auth): Gen3 auth or tuple with basic auth name and password
         replace_urls(bool): flag to indicate if replace urls or not
         manifest_file_delimiter(str): manifest's delimiter
+        output_filename(str): output file name for manifest
 
     Returns:
         files(list(dict)): list of file info
@@ -519,6 +520,8 @@ def index_object_manifest(
 
     if not commons_url.endswith(service_location):
         commons_url += "/" + service_location
+
+    logging.info("\nUsing URL {}\n".format(commons_url))
 
     indexclient = client.IndexClient(commons_url, "v0", auth=auth)
 

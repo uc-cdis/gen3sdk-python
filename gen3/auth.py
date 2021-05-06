@@ -8,8 +8,9 @@ import requests
 import time
 import logging
 from urllib.parse import urlparse
+import backoff
 
-from gen3.utils import raise_for_status
+from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status
 
 
 class Gen3AuthError(Exception):
@@ -256,7 +257,7 @@ class Gen3Auth(AuthBase):
         return _response
 
     def refresh_access_token(self):
-        """ Get a new access token """
+        """Get a new access token"""
         if self._use_wts:
             self._access_token = get_access_token_from_wts(
                 self._wts_namespace, self._wts_idp
@@ -267,6 +268,20 @@ class Gen3Auth(AuthBase):
         cache_file = token_cache_file(
             self._refresh_token and self._refresh_token["api_key"] or self._wts_idp
         )
+
+        try:
+            self._write_to_file(cache_file, self._access_token)
+        except Exception as e:
+            logging.warning(
+                f"Exceeded number of retries, unable to write to cache file."
+            )
+
+        return self._access_token
+
+    @backoff.on_exception(
+        wait_gen=backoff.expo, exception=Exception, **DEFAULT_BACKOFF_SETTINGS
+    )
+    def _write_to_file(self, cache_file, content):
         # write a temp file, then rename - to avoid
         # simultaneous writes to same file race condition
         temp = cache_file + (
@@ -274,14 +289,16 @@ class Gen3Auth(AuthBase):
         )
         try:
             with open(temp, "w") as f:
-                f.write(self._access_token)
+                f.write(content)
             os.rename(temp, cache_file)
-        except:
+            return True
+        except Exception as e:
             logging.warning("failed to write token cache file: " + cache_file)
-        return self._access_token
+            logging.warning(str(e))
+            raise e
 
     def get_access_token(self):
-        """ Get the access token - auto refresh if within 5 minutes of expiration """
+        """Get the access token - auto refresh if within 5 minutes of expiration"""
         if not self._access_token:
             cache_file = token_cache_file(
                 self._refresh_token and self._refresh_token["api_key"] or self._wts_idp
@@ -291,10 +308,12 @@ class Gen3Auth(AuthBase):
                     with open(cache_file) as f:
                         self._access_token = f.read()
                         self._access_token_info = decode_token(self._access_token)
-                except:
+                except Exception as e:
                     logging.warning("ignoring invalid token cache: " + cache_file)
                     self._access_token = None
                     self._access_token_info = None
+                    logging.warning(str(e))
+
         need_new_token = (
             not self._access_token
             or not self._access_token_info

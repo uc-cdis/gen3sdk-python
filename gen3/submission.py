@@ -3,6 +3,7 @@ import json
 import requests
 import pandas as pd
 import os
+import logging
 
 from gen3.utils import raise_for_status
 
@@ -198,8 +199,10 @@ class Gen3Submission:
 
         """
         api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
+        logging.info("\nUsing the Sheepdog API URL {}\n".format(api_url))
+
         output = requests.put(api_url, auth=self._auth_provider, json=json)
-        raise_for_status(output)
+        output.raise_for_status()
         return output.json()
 
     def delete_record(self, program, project, uuid):

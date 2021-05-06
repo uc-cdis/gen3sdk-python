@@ -7,13 +7,16 @@ from cdisutilstest.code.indexd_fixture import (
 from gen3.index import Gen3Index
 from gen3.submission import Gen3Submission
 from gen3.query import Gen3Query
+from gen3.auth import Gen3Auth
 import pytest
 from drsclient.client import DrsClient
+from unittest.mock import call, MagicMock, patch
 
 
 class MockAuth:
     def __init__(self):
         self.endpoint = "https://example.commons.com"
+        self.refresh_token = {"api_key": "123"}
 
 
 @pytest.fixture
@@ -24,6 +27,17 @@ def sub():
 @pytest.fixture
 def gen3_auth():
     return MockAuth()
+
+
+@pytest.fixture
+def mock_gen3_auth():
+    mock_auth = MockAuth()
+    # patch as __init__ has method call
+    with patch("gen3.auth.endpoint_from_token") as mock_endpoint_from_token:
+        mock_endpoint_from_token().return_value = mock_auth.endpoint
+        return Gen3Auth(
+            endpoint=mock_auth.endpoint, refresh_token=mock_auth.refresh_token
+        )
 
 
 # for unittest with mock server
