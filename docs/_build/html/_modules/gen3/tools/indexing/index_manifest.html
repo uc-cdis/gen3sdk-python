@@ -527,6 +527,7 @@
 <span class="sd">        auth(Gen3Auth): Gen3 auth or tuple with basic auth name and password</span>
 <span class="sd">        replace_urls(bool): flag to indicate if replace urls or not</span>
 <span class="sd">        manifest_file_delimiter(str): manifest&#39;s delimiter</span>
+<span class="sd">        output_filename(str): output file name for manifest</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        files(list(dict)): list of file info</span>
@@ -552,6 +553,8 @@
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">commons_url</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">service_location</span><span class="p">):</span>
         <span class="n">commons_url</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">service_location</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Using URL </span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">commons_url</span><span class="p">))</span>
 
     <span class="n">indexclient</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">IndexClient</span><span class="p">(</span><span class="n">commons_url</span><span class="p">,</span> <span class="s2">&quot;v0&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="n">auth</span><span class="p">)</span>
 
