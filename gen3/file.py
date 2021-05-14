@@ -29,7 +29,7 @@ class Gen3File:
         self._auth_provider = auth_provider or endpoint
         self._endpoint = self._auth_provider.endpoint
 
-    def get_presigned_url(self, guid, protocol="http"):
+    def get_presigned_url(self, guid, protocol=None):
         """Generates a presigned URL for a file.
 
         Retrieves a presigned url for a file giving access to a file for a limited time.
@@ -43,9 +43,9 @@ class Gen3File:
             >>> Gen3File.get_presigned_url(query)
 
         """
-        api_url = "{}/user/data/download/{}?protocol={}".format(
-            self._endpoint, guid, protocol
-        )
+        api_url = "{}/user/data/download/{}".format(self._endpoint, guid)
+        if protocol:
+            api_url += "?protocol={}".format(protocol)
         output = requests.get(api_url, auth=self._auth_provider).text
         try:
             data = json.loads(output)
