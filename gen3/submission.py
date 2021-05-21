@@ -42,8 +42,7 @@ class Gen3Submission:
         self._endpoint = endpoint
 
     def __export_file(self, filename, output):
-        """Writes an API response to a file.
-        """
+        """Writes an API response to a file."""
         outfile = open(filename, "w")
         outfile.write(output)
         outfile.close
@@ -52,9 +51,7 @@ class Gen3Submission:
     ### Program functions
 
     def get_programs(self):
-        """List registered programs
-
-        """
+        """List registered programs"""
         api_url = f"{self._endpoint}/api/v0/submission/"
         output = requests.get(api_url, auth=self._auth_provider)
         output.raise_for_status()
@@ -396,6 +393,18 @@ class Gen3Submission:
         api_url = f"{self._endpoint}/api/v0/submission/{program}/{project}/manifest"
         output = requests.get(api_url, auth=self._auth_provider)
         return output
+
+    def submit_pfb(self, pfb_file_name, chunk_size=30):
+        """Submit to create new postgres database that encompases the entire commons of data
+
+        Args:
+            pfb_file_name (str): PFB file that contains the data and schema of the commons
+            chunk_size (integer): The number of rows of data to submit for each request to the API.
+
+        Examples:
+        This submits a PFB to the PFB import pelican job through the sower endpoint
+
+        """
 
     def submit_file(self, project_id, filename, chunk_size=30, row_offset=0):
         """Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.
