@@ -190,6 +190,7 @@ async def async_verify_object_manifest(
     manifest_row_parsers=manifest_row_parsers,
     manifest_file_delimiter=None,
     output_filename=f"verify-manifest-errors-{time.time()}.log",
+    start_guid=None,
 ):
     """
     Verify all file object records into a manifest csv
@@ -201,6 +202,9 @@ async def async_verify_object_manifest(
         manifest_row_parsers (Dict{indexd_field:func_to_parse_row}): Row parsers
         manifest_file_delimiter (str): delimeter in manifest_file
         output_filename (str): filename for output logs
+        start_guid (str): Will skip all guids that evaluate as LESS THAN < this GUID
+            WARNING: Using this effectively requires that your input already be sorted
+                     from LOW to HIGH for the GUID column.
     """
     start_time = time.perf_counter()
     logging.info(f"start time: {start_time}")
@@ -220,6 +224,7 @@ async def async_verify_object_manifest(
         manifest_file_delimiter,
         max_concurrent_requests,
         output_filename.split("/")[-1],
+        start_guid,
     )
 
     end_time = time.perf_counter()
@@ -233,6 +238,7 @@ async def _verify_all_index_records_in_file(
     manifest_file_delimiter,
     max_concurrent_requests,
     output_filename,
+    start_guid,
 ):
     """
     Getting indexd records and writing to a file. This function
@@ -250,6 +256,9 @@ async def _verify_all_index_records_in_file(
         manifest_file_delimiter (str): delimeter in manifest_file
         output_filename (str, optional): filename for output
         max_concurrent_requests (int): the maximum number of concurrent requests allowed
+        start_guid (str): Will skip all guids that evaluate as LESS THAN < this GUID
+            WARNING: Using this effectively requires that your input already be sorted
+                     from LOW to HIGH for the GUID column.
     """
     max_requests = int(max_concurrent_requests)
     logging.debug(f"max concurrent requests: {max_requests}")
@@ -263,7 +272,17 @@ async def _verify_all_index_records_in_file(
             new_row = {}
             for key, value in row.items():
                 new_row[key.strip()] = value.strip()
-            await queue.put(new_row)
+
+            if start_guid:
+                if new_row.get("guid", "") >= start_guid or not new_row.get("guid", ""):
+                    await queue.put(new_row)
+                else:
+                    print(
+                        f"skipping {new_row.get('guid')} b/c specified explicit "
+                        f"'start_guid={start_guid}'"
+                    )
+            else:
+                await queue.put(new_row)
 
     for _ in range(0, int(max_concurrent_requests + (max_concurrent_requests / 4))):
         await queue.put("DONE")

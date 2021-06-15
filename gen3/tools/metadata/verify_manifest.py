@@ -86,6 +86,7 @@ async def async_verify_metadata_manifest(
     manifest_row_parsers=manifest_row_parsers,
     manifest_file_delimiter=None,
     output_filename=f"verify-metadata-errors-{time.time()}.log",
+    start_guid=None,
 ):
     """
     Verify all file object records
@@ -99,6 +100,9 @@ async def async_verify_metadata_manifest(
         manifest_row_parsers (Dict{mds_field:func_to_parse_row}): Row parsers
         manifest_file_delimiter (str): delimeter in manifest_file
         output_filename (str): filename for output logs
+        start_guid (str): Will skip all guids that evaluate as LESS THAN < this GUID
+            WARNING: Using this effectively requires that your input already be sorted
+                     from LOW to HIGH for the GUID column.
     """
     start_time = time.perf_counter()
     logging.info(f"start time: {start_time}")
@@ -119,6 +123,7 @@ async def async_verify_metadata_manifest(
         max_concurrent_requests,
         output_filename,
         metadata_source,
+        start_guid,
     )
 
     end_time = time.perf_counter()
@@ -133,6 +138,7 @@ async def _verify_all_metadata_records_in_file(
     max_concurrent_requests,
     output_filename,
     metadata_source,
+    start_guid,
 ):
     """
     Getting mds records and write output to a file. This function
@@ -151,6 +157,9 @@ async def _verify_all_metadata_records_in_file(
         max_concurrent_requests (int): the maximum number of concurrent requests allowed
         metadata_source (str): the source of the metadata you are verifying, in practice
             this means the first nested section in the metadata service
+        start_guid (str): Will skip all guids that evaluate as LESS THAN < this GUID
+            WARNING: Using this effectively requires that your input already be sorted
+                     from LOW to HIGH for the GUID column.
     """
     max_requests = int(max_concurrent_requests)
     logging.debug(f"max concurrent requests: {max_requests}")
@@ -164,7 +173,16 @@ async def _verify_all_metadata_records_in_file(
             new_row = {}
             for key, value in row.items():
                 new_row[key.strip()] = value.strip()
-            await queue.put(new_row)
+
+            if start_guid:
+                if new_row.get("guid", "") >= start_guid or not new_row.get("guid", ""):
+                    await queue.put(new_row)
+                else:
+                    print(
+                        f"skipping {new_row.get('guid')} b/c 'start_guid={start_guid}'"
+                    )
+            else:
+                await queue.put(new_row)
 
     await asyncio.gather(
         *(

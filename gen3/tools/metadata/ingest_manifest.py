@@ -150,6 +150,7 @@ async def async_ingest_metadata_manifest(
     output_filename=f"ingest-metadata-manifest-errors-{time.time()}.log",
     get_guid_from_file=True,
     metadata_type=None,
+    start_guid=None,
 ):
     """
     Ingest all metadata records into a manifest csv
@@ -172,6 +173,9 @@ async def async_ingest_metadata_manifest(
             If provided, will override the default logic per GUID: (GUID_TYPE_FOR_INDEXED_FILE_OBJECT
                 if is_indexed_file_object
                 else GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT)
+        start_guid (str): Will skip all guids that evaluate as LESS THAN < this GUID
+            WARNING: Using this effectively requires that your input already be sorted
+                     from LOW to HIGH for the GUID column.
     """
     # if delimter not specified, try to get based on file ext
     if not manifest_file_delimiter:
@@ -192,6 +196,7 @@ async def async_ingest_metadata_manifest(
         output_filename.split("/")[-1],
         get_guid_from_file,
         metadata_type,
+        start_guid,
     )
 
 
@@ -205,6 +210,7 @@ async def _ingest_all_metadata_in_file(
     output_filename,
     get_guid_from_file,
     metadata_type,
+    start_guid,
 ):
     """
     Ingest metadata from file into metadata service. This function
@@ -232,6 +238,9 @@ async def _ingest_all_metadata_in_file(
             If provided, will override the default logic per GUID: (GUID_TYPE_FOR_INDEXED_FILE_OBJECT
                 if is_indexed_file_object
                 else GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT)
+        start_guid (str): Will skip all guids that evaluate as LESS THAN < this GUID
+            WARNING: Using this effectively requires that your input already be sorted
+                     from LOW to HIGH for the GUID column.
     """
     max_requests = int(max_concurrent_requests)
     logging.debug(f"max concurrent requests: {max_requests}")
@@ -257,7 +266,19 @@ async def _ingest_all_metadata_in_file(
                 if value:
                     value = value.strip().strip("'").strip('"').replace("''", "'")
                 new_row[key.strip()] = value
-            await queue.put(new_row)
+
+                if start_guid:
+                    if new_row.get("guid", "") >= start_guid or not new_row.get(
+                        "guid", ""
+                    ):
+                        await queue.put(new_row)
+                    else:
+                        print(
+                            f"skipping {new_row.get('guid')} b/c specified explicit "
+                            f"'start_guid={start_guid}'"
+                        )
+                else:
+                    await queue.put(new_row)
 
     await asyncio.gather(
         *(
