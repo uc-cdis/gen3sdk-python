@@ -2121,9 +2121,12 @@ class Gen3Expansion:
             elif (
                 len(valid_but_failed) > 0 and len(invalid) == 0
             ):  # if all entities are valid but submission still failed, probably due to duplicate submitter_ids. Can remove this section once the API response is fixed: https://ctds-planx.atlassian.net/browse/PXP-3065
-                raise Gen3Error(
-                    "Please check your data for correct file encoding, special characters, or duplicate submitter_ids or ids."
-                )
+                print("\tChunk with error:\n\n{}\n\n".format(chunk))
+                print("\tUnhandled API response. Adding chunk to 'other' in results. Check for special characters or malformed links or property values.")
+                results["other"].append(chunk)
+                start += chunk_size
+                end = start + chunk_size
+                chunk = df[start:end]
 
             elif timeout == False:  # get new chunk if didn't timeout
                 start += chunk_size
@@ -2152,7 +2155,7 @@ class Gen3Expansion:
 
         return results
 
-    def submit_file(self, project_id, filename, chunk_size=30, row_offset=0):
+    def submit_file(self, project_id, filename, chunk_size=30, row_offset=0, drop_props=['project_id']):
         """Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.
 
         Args:
@@ -2192,6 +2195,16 @@ class Gen3Expansion:
             raise Gen3Error(
                 "Warning: file contains duplicate submitter_ids. \nNote: submitter_ids must be unique within a node!"
             )
+
+        if drop_props is not None:
+            if isinstance(drop_props,str):
+                drop_props = [drop_props]
+            elif isinstance(drop_props,list):
+                for prop in drop_props:
+                    if prop in df:
+                        df.drop(columns=[prop],inplace=True)
+            else:
+                print("\n\n\tSubmit drop_props argument as a list of properties, e.g.,: drop_props=['id'].\n\n")
 
         # Chunk the file
         print("\nSubmitting {} with {} records.".format(filename, str(len(df))))
@@ -2343,9 +2356,14 @@ class Gen3Expansion:
             elif (
                 len(valid_but_failed) > 0 and len(invalid) == 0
             ):  # if all entities are valid but submission still failed, probably due to duplicate submitter_ids. Can remove this section once the API response is fixed: https://ctds-planx.atlassian.net/browse/PXP-3065
-                raise Gen3Error(
-                    "Please check your data for correct file encoding, special characters, or duplicate submitter_ids or ids."
-                )
+                # raise Gen3Error(
+                #     "Please check your data for correct file encoding, special characters, or duplicate submitter_ids or ids."
+                # )
+                print("\tUnhandled API response. Adding chunk to 'other' in results. Check for special characters or malformed links or property values.")
+                results["other"].append(chunk)
+                start += chunk_size
+                end = start + chunk_size
+                chunk = df[start:end]
 
             elif timeout == False:  # get new chunk if didn't timeout
                 start += chunk_size
@@ -2885,8 +2903,8 @@ class Gen3Expansion:
 
     def summarize_dd(
         self,
-        props_to_remove=["case_submitter_id"],
-        nodes_to_remove=["root", "metaschema"],
+        props_to_remove=["id", "submitter_id", "project_id", "created_datetime", "updated_datetime", "case_submitter_id", "state", "type", "md5sum", "object_id", "file_state", "file_size", "file_name", "projects"],
+        nodes_to_remove=["root", "metaschema", "program", "project", "core_metadata_collection"],
     ):
         """Return a dict with nodes and list of properties in each node."""
         dd = self.sub.get_dictionary_all()
@@ -2898,10 +2916,19 @@ class Gen3Expansion:
 
         dds = {}
         for node in nodes:
-            dds[node] = []
-            props = list(dd[node]["properties"])
-            for prop in props:
-                dds[node].append(prop)
+            if node not in nodes_to_remove:
+                print("\n\tnode: {}".format(node))
+                dds[node] = {}
+                dds[node]['title'] = dd[node]['title'].strip()
+                props = list(dd[node]["properties"])
+
+                for prop in props:
+                    if prop not in props_to_remove:
+                        print("\n\tprop: {}".format(prop))
+                        if 'description' in dd[node]['properties'][prop]:
+                            dds[node][prop] = dd[node]['properties'][prop]['description'].strip()
+                        else:
+                            dds[node][prop] = prop
 
         return dds
 
