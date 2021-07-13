@@ -26,7 +26,9 @@ aiohttp = "*"
 backoff = "*"
 click = "*"
 pandas = "*"
+dataclasses-json = "*"
 pypfb = "<1.0.0"
+tqdm = ">=4.61.2"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=3.2.3"

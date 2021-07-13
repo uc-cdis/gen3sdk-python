@@ -5,6 +5,7 @@ import gen3.cli.pfb as pfb
 import gen3.cli.wss as wss
 import gen3.cli.discovery as discovery
 import gen3.cli.configure as configure
+import gen3.cli.manifest as manifest
 import gen3
 
 
@@ -53,5 +54,5 @@ main.add_command(pfb.pfb)
 main.add_command(wss.wss)
 main.add_command(discovery.discovery)
 main.add_command(configure.configure)
-
+main.add_command(manifest.manifest)
 main()
