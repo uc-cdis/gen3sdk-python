@@ -1,16 +1,18 @@
+import datetime
 from dataclasses import dataclass
-from dataclasses_json import dataclass_json, LetterCase
-from typing import List, Optional
-from pathlib import Path
 from json import load as json_load, JSONDecodeError
+from pathlib import Path
+from typing import List, Optional
+
 import click
 import requests
-import datetime
+import humanfriendly
 from cdiserrors import get_logger
-from gen3.auth import _handle_access_token_response
+from dataclasses_json import dataclass_json, LetterCase
 from tqdm import tqdm
 
 from gen3.auth import Gen3Auth, Gen3AuthError
+from gen3.auth import _handle_access_token_response
 
 logger = get_logger("manifest", log_level="warning")
 
@@ -319,6 +321,19 @@ class ManifestDownloader:
 
 @click.command()
 @click.argument("infile")
+def listfiles(infile: str):
+    manifest_items = Manifest.load(Path(infile))
+    if manifest_items is None:
+        return
+
+    for item in manifest_items:
+        print(
+            f"{item.file_name : <45} {humanfriendly.format_size(item.file_size) :>12}"
+        )
+
+
+@click.command()
+@click.argument("infile")
 @click.pass_context
 def download(ctx, infile: str):
     manifest_items = Manifest.load(Path(infile))
@@ -339,4 +354,5 @@ def manifest():
     pass
 
 
+manifest.add_command(listfiles, name="list")
 manifest.add_command(download, name="download")
