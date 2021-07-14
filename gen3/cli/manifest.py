@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json, LetterCase
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 from pathlib import Path
 from json import load as json_load, JSONDecodeError
 import click
@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from gen3.auth import Gen3Auth, Gen3AuthError
 
-logger = get_logger("__name__", log_level="warning")
+logger = get_logger("manifest", log_level="warning")
 
 
 @dataclass_json(letter_case=LetterCase.SNAKE)
@@ -25,7 +25,7 @@ class Manifest:
     commons_url: Optional[str] = None
 
     @staticmethod
-    def load(path: Path) -> Optional[List[Dict[str, Any]]]:
+    def load(path: Path):
         try:
             with open(path, "rt") as fin:
                 data = json_load(fin)
@@ -82,12 +82,12 @@ def wts_get_token(hostname: str, idp: str, access_token: str):
 
         return _handle_access_token_response(response, "token")
 
-    except Gen3AuthError as ex:
+    except Gen3AuthError:
         logger.critical(f"Unable to authenticate your credentials with {hostname}")
         return None
 
 
-def download_file_from_url(url: str, filename: str, md5sum: str) -> bool:
+def download_file_from_url(url: str, filename: str) -> bool:
     response = requests.get(url, stream=True)
 
     if response.status_code != 200:
@@ -115,8 +115,8 @@ def download_file_from_url(url: str, filename: str, md5sum: str) -> bool:
 
 
 class ManifestDownloader:
-    def __init__(self, manifest: List[Dict[Any, Any]], hostname: str, auth: Gen3Auth):
-        self.manifest = manifest
+    def __init__(self, manifest_items: List[Manifest], hostname: str, auth: Gen3Auth):
+        self.manifest: List[Manifest] = manifest_items
         self.known_hosts = {}
         self.hostname = hostname
         self.auth = auth
@@ -126,7 +126,7 @@ class ManifestDownloader:
 
     def cache_hosts_wts_tokens(self):
         for entry in self.manifest:
-            if entry.commons_url == None:
+            if entry.commons_url is None:
                 continue
             commons_url = entry.commons_url
             if commons_url is not None:
@@ -145,7 +145,7 @@ class ManifestDownloader:
                             idp=self.wts_endpoints[commons_url]["idp"],
                             access_token=self.access_token,
                         )
-                        if token == None:
+                        if token is None:
                             self.known_hosts[commons_url] = KnownDRSEndpoint(
                                 hostname=commons_url, available=False
                             )
@@ -158,7 +158,7 @@ class ManifestDownloader:
                             )
 
     @staticmethod
-    def authenicate_user(hostname: str, access_token: str) -> bool:
+    def authenticate_user(hostname: str, access_token: str) -> bool:
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -213,11 +213,12 @@ class ManifestDownloader:
             data = response.json()
             return data["url"]
 
+        err_msg = response.json()
+        logger.critical(f"{err_msg['msg']}")
         return None
 
-    @staticmethod
     def get_download_url_using_fence(
-        object_id: str, access_method: str, access_token: str
+        self, object_id: str, access_method: str, access_token: str
     ) -> Optional[str]:
         headers = {
             "Content-Type": "application/json",
@@ -225,7 +226,7 @@ class ManifestDownloader:
             "Authorization": "bearer " + access_token,
         }
         response = requests.get(
-            url=f"https://{hostname}/data/download/{object_id}?protocol={access_method}",
+            url=f"https://{self.hostname}/data/download/{object_id}?protocol={access_method}",
             headers=headers,
         )
         if response.status_code == 200:
@@ -250,7 +251,7 @@ class ManifestDownloader:
         download_url = ManifestDownloader.get_download_url_using_drs(
             commons_url, object_id, access_methods[0], access_token
         )
-        if download_url == None:
+        if download_url is None:
             logger.critical(
                 f"Was unable to get the download url for {file_name}. Skipping "
             )
@@ -265,7 +266,7 @@ class ManifestDownloader:
         * get list of external oidc
         * loop:
             * process manifest entry getting and cache WTS token as needed
-            * use token and DRS enpoint to get presigned URL
+            * use token and DRS endpoint to get pre-signed URL
             * download file
         """
 
@@ -300,16 +301,14 @@ class ManifestDownloader:
                 download_url = ManifestDownloader.get_download_url(
                     self.hostname, entry.object_id, entry.file_name, self.access_token
                 )
-            if download_url == None:
+            if download_url is None:
                 completed[entry.file_name]["completed"] = "error"
                 continue
 
             completed[entry.file_name]["startTime"] = datetime.datetime.now(
                 datetime.timezone.utc
             )
-            res = download_file_from_url(
-                url=download_url, filename=entry.file_name, md5sum=entry.md5sum
-            )
+            res = download_file_from_url(url=download_url, filename=entry.file_name)
             completed[entry.file_name].update(
                 {
                     "completed": "downloaded" if res else "error",
@@ -319,14 +318,17 @@ class ManifestDownloader:
 
 
 @click.command()
-@click.argument("manifest")
+@click.argument("infile")
 @click.pass_context
-def download(ctx, manifest: str):
-    m = Manifest.load(manifest)
-    if m is None:
+def download(ctx, infile: str):
+    manifest_items = Manifest.load(Path(infile))
+    if manifest_items is None:
         return
+
     downloader = ManifestDownloader(
-        manifest=m, hostname=ctx.obj["endpoint"], auth=ctx.obj["auth_factory"].get()
+        manifest_items=manifest_items,
+        hostname=ctx.obj["endpoint"],
+        auth=ctx.obj["auth_factory"].get(),
     )
     downloader.download()
 
