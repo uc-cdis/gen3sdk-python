@@ -30,6 +30,7 @@ dataclasses-json = "*"
 pypfb = "<1.0.0"
 fastavro = "^1.4.7"
 tqdm = ">=4.61.2"
+humanfriendly ="*"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=3.2.3"
