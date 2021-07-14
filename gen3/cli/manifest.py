@@ -97,7 +97,7 @@ def download_file_from_url(url: str, filename: str) -> bool:
     total_size_in_bytes = int(response.headers.get("content-length", 0))
     block_size = 8092  # 8K
     progress_bar = tqdm(
-        desc=f"{filename : >45}",
+        desc=f"{filename : <45}",
         total=total_size_in_bytes,
         unit="iB",
         unit_scale=True,
