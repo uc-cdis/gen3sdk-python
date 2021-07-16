@@ -198,6 +198,24 @@ class ManifestDownloader:
             return []
         return [x["access_id"] for x in object_info["access_methods"]]
 
+    def get_user_auth(self, commons_url: str, access_token: str) -> Optional[List[str]]:
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": "bearer " + access_token,
+        }
+
+        response = requests.get(url=f"https://{commons_url}/user/user", headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            authz = data["authz"]
+            return authz
+        if response.status_code == 404:
+            logger.critical(f"user info not found")
+            return None
+
+        return None
+
     @staticmethod
     def get_download_url_using_drs(
         hostname: str, object_id: str, access_method: str, access_token: str
@@ -261,6 +279,30 @@ class ManifestDownloader:
 
         return download_url
 
+    @staticmethod
+    def list_auth(hostname: str, authz: dict):
+        print(f"Access for {hostname:}")
+        if authz is not None and len(authz) > 0:
+            for access, methods in authz.items():
+                print(f"      {access}: {' '.join([x['method'] for x in methods])}")
+        else:
+            print("      No access")
+
+    def user_access(self):
+        for hostname in self.known_hosts.keys():
+
+            if self.known_hosts[hostname].available is False:
+                logger.critical(
+                    f"Was unable to get user authorization from {hostname}."
+                )
+                continue
+            access_token = self.known_hosts[hostname].access_token
+            authz = self.get_user_auth(hostname, access_token)
+            ManifestDownloader.list_auth(hostname, authz)
+
+        authz = self.get_user_auth(self.hostname, self.access_token)
+        ManifestDownloader.list_auth(self.hostname, authz)
+
     def download(self):
         """
         * load the manifest
@@ -321,6 +363,22 @@ class ManifestDownloader:
 
 @click.command()
 @click.argument("infile")
+@click.pass_context
+def my_access(ctx, infile: str):
+    manifest_items = Manifest.load(Path(infile))
+    if manifest_items is None:
+        return
+
+    downloader = ManifestDownloader(
+        manifest_items=manifest_items,
+        hostname=ctx.obj["endpoint"],
+        auth=ctx.obj["auth_factory"].get(),
+    )
+    downloader.user_access()
+
+
+@click.command()
+@click.argument("infile")
 def listfiles(infile: str):
     manifest_items = Manifest.load(Path(infile))
     if manifest_items is None:
@@ -354,5 +412,6 @@ def manifest():
     pass
 
 
+manifest.add_command(my_access, name="access")
 manifest.add_command(listfiles, name="list")
 manifest.add_command(download, name="download")
