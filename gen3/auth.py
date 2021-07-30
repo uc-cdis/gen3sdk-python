@@ -75,7 +75,7 @@ def get_wts_endpoint(namespace=os.getenv("NAMESPACE", "default")):
     return f"https://{namespace}/wts"
 
 
-def external_oidc(namespace=os.getenv("NAMESPACE", "default")):
+def get_external_oidcs(namespace=os.getenv("NAMESPACE", "default")):
     resp = requests.get(get_wts_endpoint(namespace) + "/external_oidc/")
     raise_for_status(resp)
     return resp.json()
@@ -88,6 +88,7 @@ def get_access_token_from_wts(namespace=os.getenv("NAMESPACE", "default"), idp="
     """
     # attempt to get a token from the workspace-token-service
     auth_url = get_wts_endpoint(namespace) + "/token/"
+    print("\nauth_url: {}\n".format(auth_url))
     if idp and idp != "local":
         auth_url += "?idp={}".format(idp)
     resp = requests.get(auth_url)
