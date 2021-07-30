@@ -3679,6 +3679,98 @@ class Gen3Expansion:
         return df
 
 
+
+    def get_mds(self, data=True, limit=1000, args=None, guids=None):
+        """
+            Gets all the data in the metadata service for a data commons environment.
+            Set data=False to get only the "guids" of the metadata entries.
+        """
+
+        if guids is None:
+            if args is None:
+                murl = "{}/mds/metadata?limit={}".format(self._endpoint, limit)
+            else:
+                murl = "{}/mds/metadata?limit={}&{}".format(self._endpoint, limit, args)
+
+            if data is True:
+                murl += "&data=True"
+
+            try:
+                response = requests.get(murl)
+                md = json.loads(response.text)
+
+            except Exception as e:
+                print("\tUnable to parse MDS response as JSON!\n\t\t{} {}".format(type(e), e))
+                md = response.text
+
+        else:
+            if isinstance(guids,str):
+                murl = "{}/mds/metadata/{}".format(self._endpoint, guids)
+                response = requests.get(murl)
+                d = json.loads(response.text)
+                md = {guids: d}
+
+            elif isinstance(guids,list):
+                md = []
+                for guid in guids:
+                    murl = "{}/mds/metadata/{}".format(self._endpoint, guid)
+                    response = requests.get(murl)
+                    md.append(json.loads(response.text))
+
+        return md
+
+
+    def delete_mds(self,guids):
+        """
+        """
+        deleted,failed = [],[]
+        if isinstance(guids, str):
+            guids = [guids]
+        if not isinstance(guids,list):
+            print("\n\tPlease submit GUIDs as a list.")
+
+        count = 0
+        total = len(guids)
+        for guid in guids:
+            count += 1
+            mds_api = "{}/mds/metadata/{}".format(self._endpoint, guid)
+            res = requests.delete(mds_api,auth=self._auth_provider)
+            print(res.text)
+
+            if res.status_code == 200:
+                deleted.append(guid)
+                print("({}/{}) Deleteted '{}' from MDS.".format(count, total, guid))
+            else:
+                failed.append(guid)
+                print("({}/{}) FAILED to delete '{}' from MDS.".format(count, total, guid))
+
+        return {"deleted":deleted,"failed":failed}
+
+
+    def submit_mds(self, md):
+        """
+        Submit metadata to the metadata service (MDS) API.
+        """
+        submitted,failed = [],[]
+        guids = list(md)
+        total = len(guids)
+        count = 0
+        for guid in guids:
+            count+=1
+            print("\n\tPosting '{}' to metadata service".format(guid))
+            mds_api = "{}/mds/metadata/{}".format(self._endpoint, guid)
+            res = requests.post(mds_api, json=md[guid], auth=self._auth_provider)
+
+            if res.status_code > 199 and res.status_code < 300:
+                submitted.append(guid)
+                print("({}/{}) Submitted '{}' to MDS.".format(count, total, guid))
+            else:
+                failed.append(guid)
+                print("({}/{}) FAILED to submit '{}' to MDS.".format(count, total, guid))
+                print("\n\t\t{}".format(res.text))
+
+        return {"submitted":submitted, "failed":failed}
+
 ## To do
 #
 #
