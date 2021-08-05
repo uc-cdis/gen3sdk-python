@@ -382,7 +382,7 @@ def _my_access(hostname, auth, infile):
     )
     downloader.user_access()
 
-def _download(hostname, auth, infile, output_dir):
+def _download(hostname, auth, infile, output_dir=""):
     manifest_items = Manifest.load(Path(infile))
     if manifest_items is None:
         return
@@ -413,5 +413,5 @@ def describe_access_to_files_in_workspace_manifest(hostname, auth, infile):
 def list_files_in_workspace_manifest(infile):
     listfiles(infile)
 
-def download_files_in_workspace_manifest(hostname, auth, infile, output_dir):
+def download_files_in_workspace_manifest(hostname, auth, infile, output_dir=""):
     _download(hostname, auth, infile, output_dir)
