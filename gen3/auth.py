@@ -90,7 +90,6 @@ def get_access_token_from_wts(namespace=os.getenv("NAMESPACE", "default"), idp="
     auth_url = get_wts_endpoint(namespace) + "/token/"
     if idp and idp != "local":
         auth_url += "?idp={}".format(idp)
-    print("\nauth_url: {}\n".format(auth_url))
     resp = requests.get(auth_url)
     return _handle_access_token_response(resp, "token")
 
