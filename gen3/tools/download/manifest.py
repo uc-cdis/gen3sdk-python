@@ -11,6 +11,8 @@ from cdiserrors import get_logger
 from dataclasses_json import dataclass_json, LetterCase
 from tqdm import tqdm
 
+import os
+
 from gen3.auth import Gen3Auth, Gen3AuthError
 from gen3.auth import _handle_access_token_response
 
@@ -124,6 +126,8 @@ class ManifestDownloader:
         self.output_dir = output_dir
         if self.output_dir[-1] != "/":
                 self.output_dir += "/"
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
         self.auth = auth
         self.access_token = self.auth.get_access_token()
         self.wts_endpoints = wts_external_oidc(hostname)
@@ -414,7 +418,6 @@ def listfiles(infile: str):
 
 @click.command()
 @click.argument("infile")
-@click.argument("output_dir")
 @click.pass_context
 def download(ctx, infile: str, output_dir: str):
     _download(ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile, output_dir)
