@@ -440,5 +440,4 @@ def list_files_in_workspace_manifest(infile):
     listfiles(infile)
 
 def download_files_in_workspace_manifest(hostname, auth, infile, output_dir):
-    # TODO: make this async
     _download(hostname, auth, infile, output_dir)
