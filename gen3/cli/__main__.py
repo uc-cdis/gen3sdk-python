@@ -40,12 +40,6 @@ class AuthFactory:
     default=os.getenv("GEN3_ENDPOINT", "default"),
     help="commons hostname - optional if API Key given",
 )
-@click.option(
-    "--output_dir",
-    "output_dir",
-    default="",
-    help="output directory for downloaded files - optional",
-)
 @click.pass_context
 def main(ctx=None, auth_config=None, endpoint=None):
     """Gen3 sdk commands"""
