@@ -39,9 +39,9 @@ def listfiles(infile: str):
 
 @click.command()
 @click.argument("infile")
-@click.argument("output_dir")
+@click.argument("output_dir", default="")
 @click.pass_context
-def download(ctx, infile: str, output_dir: str):
+def download(ctx, infile: str, output_dir=""):
     download_files_in_workspace_manifest(ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile, output_dir)
 
 @click.group()
