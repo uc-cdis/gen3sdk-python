@@ -118,15 +118,16 @@ def download_file_from_url(url: str, filename: str) -> bool:
 
 
 class ManifestDownloader:
-    def __init__(self, manifest_items: List[Manifest], hostname: str, auth: Gen3Auth, output_dir: str):
+    def __init__(self, manifest_items: List[Manifest], hostname: str, auth: Gen3Auth, output_dir = ""):
         self.manifest: List[Manifest] = manifest_items
         self.known_hosts = {}
         self.hostname = hostname
         self.output_dir = output_dir
-        if self.output_dir[-1] != "/":
-                self.output_dir += "/"
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        if len(self.output_dir) > 0:
+            if self.output_dir[-1] != "/":
+                    self.output_dir += "/"
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
         self.auth = auth
         self.access_token = self.auth.get_access_token()
         self.wts_endpoints = wts_external_oidc(hostname)
