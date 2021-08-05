@@ -418,6 +418,7 @@ def listfiles(infile: str):
 
 @click.command()
 @click.argument("infile")
+@click.argument("output_dir")
 @click.pass_context
 def download(ctx, infile: str, output_dir: str):
     _download(ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile, output_dir)
