@@ -75,7 +75,7 @@ def get_wts_endpoint(namespace=os.getenv("NAMESPACE", "default")):
     return f"https://{namespace}/wts"
 
 
-def external_oidc(namespace=os.getenv("NAMESPACE", "default")):
+def get_external_oidcs(namespace=os.getenv("NAMESPACE", "default")):
     resp = requests.get(get_wts_endpoint(namespace) + "/external_oidc/")
     raise_for_status(resp)
     return resp.json()
