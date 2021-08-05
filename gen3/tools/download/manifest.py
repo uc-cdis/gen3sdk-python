@@ -4,7 +4,6 @@ from json import load as json_load, JSONDecodeError
 from pathlib import Path
 from typing import List, Optional
 
-import click
 import requests
 import humanfriendly
 from cdiserrors import get_logger
@@ -395,16 +394,6 @@ def _download(hostname, auth, infile, output_dir):
     )
     downloader.download()
 
-
-@click.command()
-@click.argument("infile")
-@click.pass_context
-def my_access(ctx, infile: str):
-    _my_access(ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile)
-
-
-@click.command()
-@click.argument("infile")
 def listfiles(infile: str):
     manifest_items = Manifest.load(Path(infile))
     if manifest_items is None:
@@ -415,22 +404,6 @@ def listfiles(infile: str):
             f"{item.file_name : <45} {humanfriendly.format_size(item.file_size) :>12}"
         )
 
-
-@click.command()
-@click.argument("infile")
-@click.argument("output_dir")
-@click.pass_context
-def download(ctx, infile: str, output_dir: str):
-    _download(ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile, output_dir)
-
-@click.group()
-def manifest():
-    """Commands for downloading Gen3 manifests"""
-    pass
-
-manifest.add_command(my_access, name="access")
-manifest.add_command(listfiles, name="list")
-manifest.add_command(download, name="download")
 
 # These functions are exposed to the SDK
 def describe_access_to_files_in_workspace_manifest(hostname, auth, infile):
