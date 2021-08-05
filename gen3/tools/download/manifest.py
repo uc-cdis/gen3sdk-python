@@ -435,6 +435,6 @@ def describe_access_to_files_in_workspace_manifest(hostname, auth, infile):
 def list_files_in_workspace_manifest(infile):
     listfiles(infile)
 
-async def async_download_workspace_manifest(hostname, auth, infile, output_dir):
+def download_workspace_manifest(hostname, auth, infile, output_dir):
     # TODO: make this async
     _download(hostname, auth, infile, output_dir)
