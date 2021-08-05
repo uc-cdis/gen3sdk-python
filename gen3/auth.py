@@ -88,9 +88,9 @@ def get_access_token_from_wts(namespace=os.getenv("NAMESPACE", "default"), idp="
     """
     # attempt to get a token from the workspace-token-service
     auth_url = get_wts_endpoint(namespace) + "/token/"
-    print("\nauth_url: {}\n".format(auth_url))
     if idp and idp != "local":
         auth_url += "?idp={}".format(idp)
+    print("\nauth_url: {}\n".format(auth_url))
     resp = requests.get(auth_url)
     return _handle_access_token_response(resp, "token")
 
