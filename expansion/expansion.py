@@ -3747,19 +3747,19 @@ class Gen3Expansion:
         return {"deleted":deleted,"failed":failed}
 
 
-    def submit_mds(self, md):
+    def submit_mds(self, mds):
         """
         Submit metadata to the metadata service (MDS) API.
         """
         submitted,failed = [],[]
-        guids = list(md)
+        guids = list(mds)
         total = len(guids)
         count = 0
         for guid in guids:
             count+=1
             print("\n\tPosting '{}' to metadata service".format(guid))
             mds_api = "{}/mds/metadata/{}".format(self._endpoint, guid)
-            res = requests.post(mds_api, json=md[guid], auth=self._auth_provider)
+            res = requests.post(mds_api, json=mds[guid], auth=self._auth_provider)
 
             if res.status_code > 199 and res.status_code < 300:
                 submitted.append(guid)
@@ -3770,6 +3770,34 @@ class Gen3Expansion:
                 print("\n\t\t{}".format(res.text))
 
         return {"submitted":submitted, "failed":failed}
+
+
+
+    def update_mds(self, mds):
+        """
+        Submit metadata to the metadata service (MDS) API.
+        https://petstore.swagger.io/?url=https://raw.githubusercontent.com/uc-cdis/metadata-service/master/docs/openapi.yaml#/Maintain/update_metadata_metadata__guid__put
+        """
+        submitted,failed = [],[]
+        guids = list(mds)
+        total = len(guids)
+        count = 0
+        for guid in guids:
+            count+=1
+            print("\n\tPosting '{}' to metadata service".format(guid))
+            mds_api = "{}/mds/metadata/{}".format(self._endpoint, guid)
+            res = requests.put(mds_api, json=mds[guid], auth=self._auth_provider)
+
+            if res.status_code > 199 and res.status_code < 300:
+                submitted.append(guid)
+                print("({}/{}) Submitted '{}' to MDS.".format(count, total, guid))
+            else:
+                failed.append(guid)
+                print("({}/{}) FAILED to submit '{}' to MDS.".format(count, total, guid))
+                print("\n\t\t{}".format(res.text))
+
+        return {"submitted":submitted, "failed":failed}
+
 
 ## To do
 #
