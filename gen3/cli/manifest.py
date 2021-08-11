@@ -11,7 +11,7 @@ logger = get_logger("manifest", log_level="warning")
 
 
 @click.command()
-@click.argument("infile", help="input manifest file")
+@click.argument("infile")
 @click.pass_context
 def my_access(ctx, infile: str):
     """List access right to commons listed in manifest"""
@@ -21,17 +21,15 @@ def my_access(ctx, infile: str):
 
 
 @click.command()
-@click.argument("infile", help="input manifest file")
+@click.argument("infile")
 def listfiles(infile: str):
     """List files and size in manifest"""
     list_files_in_workspace_manifest(infile)
 
 
 @click.command()
-@click.argument("infile", help="input manifest file")
-@click.argument(
-    "output_dir", default="", help="optional output directory, create if needed"
-)
+@click.argument("infile")
+@click.argument("output_dir", default="")
 @click.pass_context
 def download(ctx, infile: str, output_dir=""):
     """
