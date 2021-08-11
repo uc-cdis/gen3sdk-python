@@ -22,9 +22,9 @@ logger = get_logger("manifest", log_level="warning")
 @dataclass
 class Manifest:
     object_id: str
-    file_size: int
-    file_name: str
-    md5sum: str
+    file_size: Optional[int] = -1
+    file_name: Optional[str] = None
+    md5sum: Optional[str] = None
     commons_url: Optional[str] = None
 
     @staticmethod
@@ -118,14 +118,20 @@ def download_file_from_url(url: str, filename: str) -> bool:
 
 
 class ManifestDownloader:
-    def __init__(self, manifest_items: List[Manifest], hostname: str, auth: Gen3Auth, output_dir = ""):
+    def __init__(
+        self,
+        manifest_items: List[Manifest],
+        hostname: str,
+        auth: Gen3Auth,
+        output_dir="",
+    ):
         self.manifest: List[Manifest] = manifest_items
         self.known_hosts = {}
         self.hostname = hostname
         self.output_dir = output_dir
         if len(self.output_dir) > 0:
             if self.output_dir[-1] != "/":
-                    self.output_dir += "/"
+                self.output_dir += "/"
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
         self.auth = auth
@@ -148,7 +154,9 @@ class ManifestDownloader:
                         self.known_hosts[commons_url] = KnownDRSEndpoint(
                             hostname=commons_url, available=False
                         )
-                        logger.critical(f"Could not retrieve a token for {commons_url}; it is not available as a WTS endpoint.")
+                        logger.critical(
+                            f"Could not retrieve a token for {commons_url}; it is not available as a WTS endpoint."
+                        )
                     else:
                         token = wts_get_token(
                             hostname=self.hostname,
@@ -193,10 +201,10 @@ class ManifestDownloader:
             data = response.json()
             return data
         if response.status_code == 404:
-            logger.critical(f"{filename} not found")
+            logger.critical(f"{object_id} not found")
             return None
 
-        logger.critical(f"Error finding filename: {filename}")
+        logger.critical(f"Error finding filename: {object_id}")
         return None
 
     @staticmethod
@@ -260,7 +268,9 @@ class ManifestDownloader:
         if response.status_code == 200:
             data = response.json()
             return data["url"]
-        logger.critical(f"Unable to get a Fence presigned URL for {object_id} from {self.hostname}; the response was {response.status_code}. {response.text}")
+        logger.critical(
+            f"Unable to get a Fence presigned URL for {object_id} from {self.hostname}; the response was {response.status_code}. {response.text}"
+        )
         return None
 
     @staticmethod
@@ -382,6 +392,7 @@ def _my_access(hostname, auth, infile):
     )
     downloader.user_access()
 
+
 def _download(hostname, auth, infile, output_dir=""):
     manifest_items = Manifest.load(Path(infile))
     if manifest_items is None:
@@ -391,9 +402,10 @@ def _download(hostname, auth, infile, output_dir=""):
         manifest_items=manifest_items,
         hostname=hostname,
         auth=auth,
-        output_dir=output_dir
+        output_dir=output_dir,
     )
     downloader.download()
+
 
 def listfiles(infile: str):
     manifest_items = Manifest.load(Path(infile))
@@ -410,8 +422,10 @@ def listfiles(infile: str):
 def describe_access_to_files_in_workspace_manifest(hostname, auth, infile):
     _my_access(hostname, auth, infile)
 
+
 def list_files_in_workspace_manifest(infile):
     listfiles(infile)
+
 
 def download_files_in_workspace_manifest(hostname, auth, infile, output_dir=""):
     _download(hostname, auth, infile, output_dir)
