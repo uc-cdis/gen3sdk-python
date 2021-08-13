@@ -1,8 +1,8 @@
 import datetime
 from dataclasses import dataclass
-from json import load as json_load, JSONDecodeError
+from json import load as json_load, loads as json_loads, JSONDecodeError
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import requests
 import humanfriendly
@@ -81,7 +81,13 @@ def wts_get_token(hostname: str, idp: str, access_token: str):
     try:
         url = f"https://{hostname}/wts/token/?idp={idp}"
         response = requests.get(url=url, headers=headers)
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as ex:
+            logger.critical(
+                f'{ex.response.status_code}: {json_loads(ex.response.text).get("message", "")}'
+            )
+            raise ex
 
         return _handle_access_token_response(response, "token")
 
@@ -192,19 +198,37 @@ class ManifestDownloader:
         return False
 
     @staticmethod
-    def get_drs_object_info(
-        hostname: str, object_id: str, filename: str
-    ) -> Optional[dict]:
+    def extract_filename_from_object_info(object_info: dict) -> Optional[str]:
+        """
+        Get the filename from the object_info:
+        if name is object_info use that, otherwise try to extract it from the one of the access methods.
+        Returns filename if found, else return None
+        """
+        if "name" in object_info and object_info["name"]:
+            return object_info["name"]
+
+        for access_method in object_info["access_methods"]:
+            # TODO: add checks on dictionary path to 'url'
+            #  and if the last item is truly a filename
+            url = access_method["access_url"]["url"]
+            parts = url.split("/")
+            if parts:
+                return parts[-1]
+
+        return None
+
+    @staticmethod
+    def get_drs_object_info(hostname: str, object_id: str) -> Optional[dict]:
 
         response = requests.get(f"https://{hostname}/ga4gh/drs/v1/objects/{object_id}")
         if response.status_code == 200:
             data = response.json()
             return data
         if response.status_code == 404:
-            logger.critical(f"{object_id} not found")
+            logger.critical(f"{object_id} not found at {hostname}")
             return None
 
-        logger.critical(f"Error finding filename: {object_id}")
+        logger.critical(f"Error finding object: {object_id}")
         return None
 
     @staticmethod
@@ -275,15 +299,14 @@ class ManifestDownloader:
 
     @staticmethod
     def get_download_url(
-        commons_url: str, object_id: str, file_name: str, access_token: str
-    ) -> Optional[str]:
-        object_info = ManifestDownloader.get_drs_object_info(
-            commons_url, object_id, file_name
-        )
+        commons_url: str, object_id: str, access_token: str
+    ) -> Optional[Tuple[str, str]]:
+        object_info = ManifestDownloader.get_drs_object_info(commons_url, object_id)
         access_methods = ManifestDownloader.get_access_method(object_info)
 
         # use the first access method
         if len(access_methods) == 0:
+            logger.warning(f"no access methods found for {object_id}. Skipping.")
             return None
 
         download_url = ManifestDownloader.get_download_url_using_drs(
@@ -291,11 +314,12 @@ class ManifestDownloader:
         )
         if download_url is None:
             logger.critical(
-                f"Was unable to get the download url for {file_name}. Skipping "
+                f"Was unable to get the download url for {object_id}. Skipping."
             )
             return None
 
-        return download_url
+        filename = ManifestDownloader.extract_filename_from_object_info(object_info)
+        return download_url, filename
 
     @staticmethod
     def list_auth(hostname: str, authz: dict):
@@ -333,7 +357,7 @@ class ManifestDownloader:
         """
 
         completed = {
-            entry.file_name: {"status": "pending", "startTime": None, "endTime": None}
+            entry.object_id: {"status": "pending", "startTime": None, "endTime": None}
             for entry in self.manifest
         }
 
@@ -353,10 +377,9 @@ class ManifestDownloader:
                     )
                     continue
 
-                download_url = ManifestDownloader.get_download_url(
+                download_url, filename = ManifestDownloader.get_download_url(
                     commons_url,
                     entry.object_id,
-                    entry.file_name,
                     self.known_hosts[commons_url].access_token,
                 )
             else:
@@ -364,15 +387,15 @@ class ManifestDownloader:
                     self.hostname, entry.object_id, entry.file_name, self.access_token
                 )
             if download_url is None:
-                completed[entry.file_name]["completed"] = "error"
+                completed[entry.object_id]["completed"] = "error"
                 continue
 
-            completed[entry.file_name]["startTime"] = datetime.datetime.now(
+            completed[entry.object_id]["startTime"] = datetime.datetime.now(
                 datetime.timezone.utc
             )
             filepath = self.output_dir + entry.file_name
             res = download_file_from_url(url=download_url, filename=filepath)
-            completed[entry.file_name].update(
+            completed[entry.object_id].update(
                 {
                     "completed": "downloaded" if res else "error",
                     "endTime": datetime.datetime.now(datetime.timezone.utc),
