@@ -46,6 +46,6 @@ def update_config_lines(lines, profile_title, new_lines):
             configFile.writelines(lines)
     # If no profile exists then append new profile in the end
     except ValueError:
-        new_lines.insert(0, profile_title)
         with open(CONFIG_FILE_PATH, "a+") as configFile:
+            configFile.write(profile_title)
             configFile.writelines(new_lines)
