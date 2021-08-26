@@ -1,4 +1,4 @@
-import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy, re, operator, statistics
+import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy, re, operator, statistics, datetime
 import pandas as pd
 from os import path
 from pandas.io.json import json_normalize
@@ -348,9 +348,9 @@ class Gen3Expansion:
             projects = [projects]
 
         for project_id in projects:
-            mydir = "{}/{}_tsvs".format(
-                outdir, project_id
-            )  # create the directory to store TSVs
+            now = datetime.datetime.now()
+            date = "{}-{}-{}".format(now.year, now.month, now.day)
+            mydir = "{}_{}/{}_tsvs".format(outdir, date, project_id)  # create the directory to store TSVs
 
             if not os.path.exists(mydir):
                 os.makedirs(mydir)
@@ -2489,7 +2489,9 @@ class Gen3Expansion:
                 output.write(json.dumps(all_records))
 
         if format == "TSV":
-            outname = "{}_indexd_records.tsv".format(dc)
+            now = datetime.datetime.now()
+            date = "{}-{}-{}".format(now.year, now.month, now.day)
+            outname = "{}_indexd_records_{}.tsv".format(dc,date)
             all_records = pd.DataFrame(all_records)
             all_records['md5sum'] = [hashes.get('md5') for hashes in all_records.hashes]
             all_records.to_csv(outname,sep='\t',index=False)
