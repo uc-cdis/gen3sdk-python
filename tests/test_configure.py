@@ -20,7 +20,7 @@ creds = {"key_id": "1234", "api_key": "abc"}
 new_lines = [
     f"key_id={creds['key_id']}\n",
     f"api_key={creds['api_key']}\n",
-    f"end_point={mock_endpoint(None)}\n",
+    f"api_endpoint={mock_endpoint(None)}\n",
     f"access_key={mock_access_key(None)}\n",
     "use_shepherd=\n",
     "min_shepherd_version=\n",
@@ -30,7 +30,7 @@ lines_with_profile = [
     f"[{profile}]\n",
     f"key_id=random_key\n",
     f"api_key=random_api_key\n",
-    f"end_point=random_endpoint\n",
+    f"api_endpoint=random_endpoint\n",
     f"access_key=random_access_key\n",
     "use_shepherd=random_boolean\n",
     "min_shepherd_version=random_version\n",
@@ -55,12 +55,8 @@ def test_get_profile_from_creds(monkeypatch):
             os.remove(test_file_name)
 
     assert profile_line == expected_profile_line
-    assert lines[0] == new_lines[0]
-    assert lines[1] == new_lines[1]
-    assert lines[2] == new_lines[2]
-    assert lines[3] == new_lines[3]
-    assert lines[4] == new_lines[4]
-    assert lines[5] == new_lines[5]
+    for line, new_line in zip(lines, new_lines):
+        assert line == new_line
 
 
 @pytest.mark.parametrize("test_lines", [[], lines_with_profile])
@@ -74,4 +70,3 @@ def test_update_config_lines(test_lines, monkeypatch):
     finally:
         if os.path.exists(file_name):
             os.remove(file_name)
-    assert True
