@@ -4,7 +4,7 @@ from cdiserrors import get_logger
 from gen3.tools.download.drs_download import (
     list_files_in_workspace_manifest,
     download_files_in_workspace_manifest,
-    download_drs_object
+    download_drs_object,
 )
 
 logger = get_logger("manifest", log_level="warning")
@@ -13,22 +13,24 @@ logger = get_logger("manifest", log_level="warning")
 @click.command()
 @click.argument("infile")
 @click.option(
-    "-l","--long",
+    "-l",
+    "--long",
     is_flag=True,
-
     help="long listing of file",
 )
 @click.pass_context
-def listfiles(ctx, infile: str, long:bool):
+def listfiles(ctx, infile: str, long: bool):
     """List files and size in manifest"""
-    list_files_in_workspace_manifest(ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile, long)
+    list_files_in_workspace_manifest(
+        ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile, long
+    )
 
 
 @click.command()
 @click.argument("infile")
 @click.argument("output_dir", default=".")
 @click.pass_context
-def download_manifest(ctx, infile: str, output_dir:str):
+def download_manifest(ctx, infile: str, output_dir: str):
     """
     pulls all files in manifest where the manifest can contain DRS objects.
     The user credentials use the Gen3Auth class so the Gen3Auth options are applicable (--auth and --endpoint)
@@ -40,11 +42,12 @@ def download_manifest(ctx, infile: str, output_dir:str):
         ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile, output_dir
     )
 
+
 @click.command()
 @click.argument("object_id")
 @click.argument("output_dir", default=".")
 @click.pass_context
-def download_object(ctx, object_id: str, output_dir:str):
+def download_object(ctx, object_id: str, output_dir: str):
     """
     Download a DRS object by it's object id
     The user credentials use the Gen3Auth class so the Gen3Auth options are applicable (--auth and --endpoint)

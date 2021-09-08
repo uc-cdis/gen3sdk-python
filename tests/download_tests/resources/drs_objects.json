@@ -1,0 +1,185 @@
+{
+  "drs_objects": [
+    {
+      "access_methods": [
+        {
+          "access_id": "s3",
+          "access_url": {
+            "url": "s3://testprod-default-258867494168-upload/dg.XXTS/07246ed5-8c4a-4d53-a559-ce07c1dd7d11/Access05_Z.csv"
+          },
+          "region": "",
+          "type": "s3"
+        }
+      ],
+      "aliases": [],
+      "checksums": [
+        {
+          "checksum": "65196806d31002bd48abed020d861cf1",
+          "type": "md5"
+        }
+      ],
+      "contents": [],
+      "created_time": "2021-04-06T11:22:19.327370",
+      "description": null,
+      "form": null,
+      "id": "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e",
+      "mime_type": "application/json",
+      "name": "TestDataSet1.sav",
+      "self_uri": "drs://test.commons1.io/dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e",
+      "size": 1566369,
+      "updated_time": "2021-05-08T13:27:31.327280",
+      "version": "4e5a4c63"
+    },
+    {
+      "access_methods": [
+        {
+          "access_id": "s3",
+          "access_url": {
+            "url": "s3://testprod-default-258867494168-upload/dg.XXTS/6d3eb293-8388-4c5d-83ef-d0c2bd5ba604/TestDataSet_April2020.sav"
+          },
+          "region": "",
+          "type": "s3"
+        }
+      ],
+      "aliases": [],
+      "checksums": [
+        {
+          "checksum": "1f001d4ca7faa3a7cc6b9aa0466dbd8a",
+          "type": "md5"
+        }
+      ],
+      "contents": [],
+      "created_time": "2021-05-08T14:12:31.966948",
+      "description": null,
+      "form": "object",
+      "id": "dg.XXTS/6d3eb293-8388-4c5d-83ef-d0c2bd5ba604",
+      "mime_type": "application/json",
+      "name": "TestDataSet_April2020.sav",
+      "self_uri": "drs://test.commons1.io/dg.XXTS/6d3eb293-8388-4c5d-83ef-d0c2bd5ba604",
+      "size": 313525,
+      "updated_time": "2021-07-09T12:41:58.762035",
+      "version": "a287d433"
+    },
+    {
+      "access_methods": [
+        {
+          "access_id": "s3",
+          "access_url": {
+            "url": "s3://testprod-default-258867494168-upload/dg.XXTS/6f9a924f-9d83-4597-8f66-fe7d3021729f/TestDataSet_June2020.sav"
+          },
+          "region": ""
+        }
+      ],
+      "aliases": [],
+      "checksums": [
+        {
+          "checksum": "206e2d1e7688452e0527aa67a9e67ed0",
+          "type": "md5"
+        }
+      ],
+      "contents": [],
+      "created_time": "2020-01-17T19:05:09.158921",
+      "description": null,
+      "form": "object",
+      "id": "dg.XXTS/6f9a924f-9d83-4597-8f66-fe7d3021729f",
+      "mime_type": "application/json",
+      "name": "TestDataSet_June2020.sav",
+      "self_uri": "drs://test.commons1.io/dg.XXTS/6f9a924f-9d83-4597-8f66-fe7d3021729f",
+      "size": 370292,
+      "updated_time": "2020-01-17T19:05:09.158929",
+      "version": "b46be37b"
+    },
+    {
+      "access_methods": [
+        {
+          "access_id": "s3",
+          "access_url": {
+            "url": "s3://testprod-default-258867494168-upload/dg.XXTS/0b9ba42d-5d54-4308-bd49-47b4512d3ff6/TestDataSet_Oct2020.sav"
+          },
+          "region": "",
+          "type": "s3"
+        }
+      ],
+      "aliases": [],
+      "checksums": [
+        {
+          "checksum": "7f1378afee0cbd72e159036fa64c4aa4",
+          "type": "md5"
+        }
+      ],
+      "contents": [],
+      "created_time": "2021-05-08T14:11:26.077119",
+      "description": null,
+      "form": "object",
+      "id": "dg.XXTS/0e618fef-e359-424b-b844-0ca320105176",
+      "mime_type": "application/json",
+      "name": "TestDataSet_Oct2020.sav",
+      "self_uri": "drs://test.commons1.io/dg.XXTS/0e618fef-e359-424b-b844-0ca320105176",
+      "size": 367990,
+      "updated_time": "2021-07-09T12:46:22.568962",
+      "version": "833fd2bd"
+    },
+    {
+      "access_methods": [
+        {
+          "access_id": "s3",
+          "access_url": {
+            "url": "s3://testprod-default-258867494168-upload/dg.XXTS/0c5ddbb3-c801-4dc9-aae0-804c2c1591bf/EC03_2018_C.csv"
+          },
+          "region": "",
+          "type": "s3"
+        }
+      ],
+      "aliases": [],
+      "checksums": [
+        {
+          "checksum": "5d0b3d4c",
+          "type": "crc"
+        },
+        {
+          "checksum": "f16e2209abf34d3720ddceb517aef42c81e1e038becd48bf7c78b68db2c774e7f3c2beed3c08ec38c2528ed62332da04084678df2d4e9942b182778f4d6d8be4",
+          "type": "sha512"
+        },
+        {
+          "checksum": "23a2242d34e5b9f9eb93d9c7b24efb211cf327d70b10c6ae958ee7ba753a6202",
+          "type": "sha256"
+        },
+        {
+          "checksum": "cc83461f2f86724bbc2eb8f5dae8ee9971509109",
+          "type": "sha1"
+        },
+        {
+          "checksum": "074a93e1d9fbcacc47df3d46fb0dd178",
+          "type": "md5"
+        }
+      ],
+      "contents": [],
+      "created_time": "2021-05-08T14:12:02.567919",
+      "description": null,
+      "form": null,
+      "id": "dg.XXTS/0c5ddbb3-c801-4dc9-aae0-804c2c1591bf",
+      "mime_type": "application/json",
+      "name": "EC03_2018_C.csv",
+      "self_uri": "drs://test.datacommons.io/dg.XXTS/0c5ddbb3-c801-4dc9-aae0-804c2c1591bf",
+      "size": 84913,
+      "updated_time": "2021-07-09T12:46:22.707644",
+      "version": "d93b5f85"
+    },
+    {
+      "access_methods": [],
+      "aliases": [],
+      "checksums": [],
+      "contents": [],
+      "created_time": "2021-04-05T19:03:26.753183",
+      "description": null,
+      "form": null,
+      "id": "dg.XXTS/0d2f6629-0d53-4142-845e-c2eb1fb103cd",
+      "mime_type": "application/json",
+      "name": "dg.XXTS/cb89c44d-168b-4114-ae4f-44c47ea8bf54",
+      "self_uri": "drs://test.datacommons.io/dg.XXTS/0d2f6629-0d53-4142-845e-c2eb1fb103cd",
+      "size": null,
+      "updated_time": "2021-04-05T19:03:26.753191",
+      "version": "1b8c418e"
+    }
+  ]
+}
