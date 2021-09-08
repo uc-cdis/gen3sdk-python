@@ -1,0 +1,30 @@
+[
+  {
+    "md5sum": "65196806d31002bd48abed020d861cf1",
+    "file_name": "JCOIN_NORC_Omnibus_SURVEY1_Feb2020.sav",
+    "file_size": 1566369,
+    "object_id": "dg.6VTS/b96018c5-db06-4af8-a195-28e339ba815e",
+    "commons_url": "jcoin.datacommons.io"
+  },
+  {
+    "md5sum": "8371753a1324d421cc519cc03dcd477d",
+    "file_name": "JCOIN_NORC_Omnibus_SURVEY2_April2020.sav",
+    "file_size": 313525,
+    "object_id": "dg.6VTS/6d3eb293-8388-4c5d-83ef-d0c2bd5ba604",
+    "commons_url": "jcoin.datacommons.io"
+  },
+  {
+    "md5sum": "206e2d1e7688452e0527aa67a9e67ed0",
+    "file_name": "JCOIN_NORC_Omnibus_SURVEY3_June2020.sav",
+    "file_size": 370292,
+    "object_id": "dg.6VTS/6f9a924f-9d83-4597-8f66-fe7d3021729f",
+    "commons_url": "jcoin.datacommons.io"
+  },
+  {
+    "md5sum": "7f1378afee0cbd72e159036fa64c4aa4",
+    "file_name": "JCOIN_NORC_Omnibus_SURVEY4_Oct2020.sav",
+    "file_size": 367990,
+    "object_id": "dg.6VTS/0e618fef-e359-424b-b844-0ca320105176",
+    "commons_url": "jcoin.datacommons.io"
+  }
+]
