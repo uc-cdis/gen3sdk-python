@@ -1,0 +1,32 @@
+{
+  "acl": [
+    "admin"
+  ],
+  "authz": [],
+  "baseid": "1e6cf3f1-a5af-4543-a1ca-84b41b3221a9",
+  "created_date": "2018-06-13T17:16:29.981618",
+  "did": "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e",
+  "file_name": "TestDataSet1.sav",
+  "form": "object",
+  "from_index_service": {
+    "host": "https://test.commons1.io/index/",
+    "name": "TestCommons1"
+  },
+  "hashes": {
+    "md5": "65196806d31002bd48abed020d861cf1"
+  },
+  "metadata": {},
+  "rev": "6046fb9f",
+  "size": 1566369,
+  "updated_date": "2018-06-13T17:16:29.981629",
+  "uploader": null,
+  "urls": [
+    "gs://topmed_workflow_testing/topmed_aligner/input_files/TestDataSet1.sav",
+    "s3://topmed-workflow-testing/topmed-aligner/input-files/TestDataSet1.sav"
+  ],
+  "urls_metadata": {
+    "gs://topmed_workflow_testing/topmed_aligner/input_files/TestDataSet1.sav": {},
+    "s3://topmed-workflow-testing/topmed-aligner/input-files/TestDataSet1.sav": {}
+  },
+  "version": null
+}
