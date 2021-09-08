@@ -35,6 +35,7 @@ humanfriendly ="*"
 [tool.poetry.dev-dependencies]
 pytest = ">=3.2.3"
 pytest-cov = "^2.12.1"
+requests-mock = "*"
 cdisutilstest = { git = "https://github.com/uc-cdis/cdisutils-test.git", tag = "1.0.0" }
 doiclient = { git = "https://github.com/uc-cdis/doiclient.git", tag = "1.0.0" }
 dosclient = { git = "https://github.com/uc-cdis/dosclient.git", tag = "1.0.0" }
