@@ -6,7 +6,6 @@ from json import load as json_load, loads as json_loads, JSONDecodeError
 from logging import StreamHandler, Formatter, INFO
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-import backoff
 
 import humanfriendly
 import requests
@@ -167,23 +166,21 @@ class Downloadable:
             f'{self.file_name if self.file_name is not None else "not available" : >45} '
             f"{humanfriendly.format_size(self.file_size) :>12} "
             f'{self.hostname if self.hostname is not None else "not resolved"} '
-            f'{self.created_time.strftime("%m/%d/%Y, %H:%M:%S") if self.created_time is not None else "not available" }'
+            f'{self.created_time.strftime("%m/%d/%Y, %H:%M:%S") if self.created_time is not None else "not available"}'
         )
 
     def __repr__(self):
         return (
-            f'(Dowloadable: {self.file_name if self.file_name is not None else "not available" } '
-            f"{humanfriendly.format_size(self.file_size) } "
+            f'(Downloadable: {self.file_name if self.file_name is not None else "not available"} '
+            f"{humanfriendly.format_size(self.file_size)} "
             f'{self.hostname if self.hostname is not None else "not resolved"} '
-            f'{self.created_time.strftime("%m/%d/%Y, %H:%M:%S") if self.created_time is not None else "not available" }'
+            f'{self.created_time.strftime("%m/%d/%Y, %H:%M:%S") if self.created_time is not None else "not available"})'
         )
 
     def download(self):
         self._manager.download([self])
 
 
-# @backoff.on_exception(backoff.expo, (requests.exceptions.Timeout,
-#                                      requests.exceptions.ConnectionError), **DEFAULT_BACKOFF_SETTINGS)
 def wts_external_oidc(hostname: str) -> Dict[str, Any]:
     oidc = {}
     try:
@@ -217,7 +214,7 @@ def wts_get_token(hostname: str, idp: str, access_token: str):
             response.raise_for_status()
         except requests.exceptions.HTTPError as ex:
             logger.critical(
-                f'{ex.response.status_code}: {json_loads(ex.response.text).get("message", "")}'
+                f"HTTP Error getting WTS token: {ex.response.status_code}: {ex.response.text}"
             )
             return None
 
@@ -333,14 +330,22 @@ def add_drs_object_info(info: Downloadable) -> bool:
             child_id = item.get("id", None)
             if child_id is None:
                 continue
-            child_object = Downloadable(info.hostname, child_id)
+            child_object = Downloadable(hostname=info.hostname, object_id=child_id)
             add_drs_object_info(child_object)
             info.children.append(child_object)
 
     return True
 
 
-def download_file_from_url(url: str, filename: Path) -> bool:
+class DummyProgress:
+    def update(self, value):  # pragma: no cover
+        pass
+
+    def close(self):  # pragma: no cover
+        pass
+
+
+def download_file_from_url(url: str, filename: Path, showProgress: bool = True) -> bool:
     try:
         response = requests.get(url, stream=True)
         response.raise_for_status()
@@ -348,32 +353,44 @@ def download_file_from_url(url: str, filename: Path) -> bool:
     except requests.exceptions.Timeout:
         raise
     except requests.exceptions.HTTPError as exc:
-        logger.critical(
-            f"Error download file from presigned url: {exc.response.status_code} "
-        )
+        logger.critical(f"Error download file from url: {exc.response.status_code} ")
         return False
 
     total_size_in_bytes = int(response.headers.get("content-length", 0))
-    block_size = 8092  # 8K blocks might what to tune this.
-    progress_bar = tqdm(
-        desc=f"{str(filename) : <45}",
-        total=total_size_in_bytes,
-        unit="iB",
-        unit_scale=True,
-        bar_format="{l_bar:45}{bar:75}{r_bar}{bar:-10b}",
+
+    if total_size_in_bytes == 0:
+        logger.critical(f"content-length is 0 and it should not be")
+        return False
+
+    total_downloaded = 0
+    block_size = 8092  # 8K blocks might want to tune this.
+
+    progress_bar = (
+        tqdm(
+            desc=f"{str(filename) : <45}",
+            total=total_size_in_bytes,
+            unit="iB",
+            unit_scale=True,
+            bar_format="{l_bar:45}{bar:35}{r_bar}{bar:-10b}",
+        )
+        if showProgress
+        else DummyProgress()
     )
     try:
         with open(filename, "wb") as file:
             for data in response.iter_content(block_size):
                 progress_bar.update(len(data))
+                total_downloaded += len(data)
                 file.write(data)
     except IOError as ex:
         logger.critical(f"IOError {ex} opening {filename} for writing.")
         return False
 
     progress_bar.close()
-    if total_size_in_bytes != 0 and progress_bar.n != total_size_in_bytes:
-        logger.critical(f"Error in downloading {filename}")
+    if total_downloaded != total_size_in_bytes:
+        logger.critical(
+            f"Error in downloading {filename} expected {total_size_in_bytes} got {total_downloaded}"
+        )
         return False
     return True
 
@@ -453,14 +470,12 @@ def resolve_objects_drs_hostname_from_id(
             )
 
 
-def ensure_dirpath_exists(path: Path, *paths: Path) -> Path:
+def ensure_dirpath_exists(path: Path) -> Path:
     """
     Utility to create a directory if missing
     """
     assert path
     out_path: Path = path
-    if paths:
-        out_path = path.joinpath(*paths)
 
     if not out_path.exists():
         out_path.mkdir(parents=True, exist_ok=True)
@@ -488,7 +503,9 @@ def get_download_url_using_drs(
         raise
     except requests.exceptions.HTTPError as exc:
         err_msg = exc.response.json()
-        logger.critical(f"{err_msg['msg']}")
+        logger.critical(
+            f"HTTP Error getting download url {exc.response.status_code} {err_msg}"
+        )
     return None
 
 
@@ -504,7 +521,7 @@ def get_download_url(
                 f"Was unable to get the download url for {object_id} from {hostname}. Skipping."
             )
         return download_url
-    except TimeoutError:
+    except requests.exceptions.Timeout:
         logger.critical(f"Was unable to get the download url for {object_id}. Timeout.")
     return None
 
@@ -588,80 +605,9 @@ class DownloadManager:
 
         return None
 
-    @staticmethod
-    def is_user_authenticated(hostname: str, access_token: str) -> bool:
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Authorization": "bearer " + access_token,
-        }
-        try:
-            response = requests.get(
-                url=f"https://{hostname}/user/user", headers=headers
-            )
-            response.raise_for_status()
-            return True
-
-        except requests.exceptions.HTTPError as ex:
-            logger.critical(f"HTTP Error {ex.response.status_code} which means:")
-
-        logger.critical(f"Unable to authenticate your credentials with {hostname}")
-        return False
-
-    @staticmethod
-    def get_user_auth(drs_hostname: str, access_token: str) -> Optional[Dict[str, Any]]:
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Authorization": "bearer " + access_token,
-        }
-        try:
-
-            response = requests.get(
-                url=f"https://{drs_hostname}/user/user", headers=headers
-            )
-            response.raise_for_status()
-            data = response.json()
-            authz = data["authz"]
-            return authz
-        except requests.HTTPError as exc:
-            if exc.response.status_code == 404:
-                logger.critical(f"user authz not found")
-            else:
-                logger.critical(
-                    f"Error from {drs_hostname}: {exc.response.status_code}"
-                )
-            return None
-        except ValueError as exc:
-            logger.critical(f"get_user_auth: Value error {exc}. ")
-
-        return None
-
-    @staticmethod
-    def list_auth(hostname: str, authz: dict):
-        print(f"Access for {hostname:}")
-        if authz is not None and len(authz) > 0:
-            for access, methods in authz.items():
-                print(f"      {access}: {' '.join([x['method'] for x in methods])}")
-        else:
-            print("      No access")
-
-    def user_access(self):
-        for hostname in self.known_hosts.keys():
-
-            if self.known_hosts[hostname].available is False:
-                logger.critical(
-                    f"Was unable to get user authorization from {hostname}."
-                )
-                continue
-            access_token = self.known_hosts[hostname].access_token
-            authz = self.get_user_auth(hostname, access_token)
-            DownloadManager.list_auth(hostname, authz)
-
-        authz = self.get_user_auth(self.hostname, self.access_token)
-        DownloadManager.list_auth(self.hostname, authz)
-
-    def download(self, object_list: List[Downloadable], save_directory: str = "."):
+    def download(
+        self, object_list: List[Downloadable], save_directory: str = "."
+    ) -> Dict[str, Any]:
         """
         * load the object ids
         * use Gen3Auth to send request to host WTS
@@ -676,7 +622,12 @@ class DownloadManager:
         output_dir = Path(save_directory)
 
         completed = {
-            entry.object_id: {"status": "pending", "startTime": None, "endTime": None}
+            entry.object_id: {
+                "status": "pending",
+                "startTime": None,
+                "endTime": None,
+                "file_name": entry.file_name,
+            }
             for entry in object_list
         }
 
@@ -717,7 +668,7 @@ class DownloadManager:
             )
 
             if download_url is None:
-                completed[entry.object_id]["completed"] = "error"
+                completed[entry.object_id]["status"] = "error"
                 continue
 
             completed[entry.object_id]["startTime"] = datetime.now(timezone.utc)
@@ -725,17 +676,18 @@ class DownloadManager:
             res = download_file_from_url(url=download_url, filename=filepath)
             completed[entry.object_id].update(
                 {
-                    "completed": "downloaded" if res else "error",
+                    "status": "downloaded" if res else "error",
                     "endTime": datetime.now(timezone.utc),
                 }
             )
+        return completed
 
 
-def _download(hostname, auth, infile, output_dir="."):
+def _download(hostname, auth, infile, output_dir=".") -> Optional[Dict[str, Any]]:
     object_list = Manifest.load(Path(infile))
     if object_list is None:
         logger.critical(f"Error loading {infile}")
-
+        return None
     try:
         auth.get_access_token()
     except Gen3AuthError:
@@ -747,15 +699,17 @@ def _download(hostname, auth, infile, output_dir="."):
     )
 
     out_dir_path = ensure_dirpath_exists(Path(output_dir))
-    downloader.download(object_list, out_dir_path)
+    return downloader.download(object_list, out_dir_path)
 
 
-def _download_obj(hostname, auth, object_id, output_dir="."):
+def _download_obj(
+    hostname, auth, object_id, output_dir="."
+) -> Optional[Dict[str, Any]]:
     try:
         auth.get_access_token()
     except Gen3AuthError:
         logger.critical(f"Unable to authenticate your credentials with {hostname}")
-        return
+        return None
 
     object_list = [Downloadable(object_id=object_id)]
     downloader = DownloadManager(
@@ -763,10 +717,10 @@ def _download_obj(hostname, auth, object_id, output_dir="."):
     )
 
     out_dir_path = ensure_dirpath_exists(Path(output_dir))
-    downloader.download(object_list, out_dir_path)
+    return downloader.download(object_list, out_dir_path)
 
 
-def listfiles(hostname, auth, infile: str, long: bool):
+def _listfiles(hostname, auth, infile: str) -> None:
     object_list = Manifest.load(Path(infile))
     if object_list is None:
         return
@@ -784,8 +738,8 @@ def listfiles(hostname, auth, infile: str, long: bool):
 
 
 # These functions are exposed to the SDK
-def list_files_in_workspace_manifest(hostname, auth, infile: str, long: bool) -> None:
-    listfiles(hostname, auth, infile, long)
+def list_files_in_workspace_manifest(hostname, auth, infile: str) -> None:
+    _listfiles(hostname, auth, infile)
 
 
 def download_files_in_workspace_manifest(hostname, auth, infile, output_dir) -> None:
