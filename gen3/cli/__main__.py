@@ -5,7 +5,7 @@ import gen3.cli.pfb as pfb
 import gen3.cli.wss as wss
 import gen3.cli.discovery as discovery
 import gen3.cli.configure as configure
-import gen3.cli.manifest as manifest
+import gen3.cli.drs_pull as manifest
 import gen3
 
 
