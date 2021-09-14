@@ -153,7 +153,9 @@ def test_load_manifest():
     object_list = Manifest.load(Path(DIR, "resources/manifest_test_drs_compact.json"))
     object_list = [asdict(x) for x in object_list]
 
-    with open(Path(DIR, "expected/manifest_test_drs_compact_object_list.json"), "rt") as fin:
+    with open(
+        Path(DIR, "expected/manifest_test_drs_compact_object_list.json"), "rt"
+    ) as fin:
         expected = json.load(fin)
 
     assert expected == object_list
