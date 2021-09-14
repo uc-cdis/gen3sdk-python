@@ -30,7 +30,6 @@ dataclasses-json = "*"
 pypfb = "<1.0.0"
 tqdm = ">=4.61.2"
 humanfriendly ="*"
-tenacity = ">=6.3.0"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=3.2.3"
