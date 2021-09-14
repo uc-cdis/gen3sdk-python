@@ -6,7 +6,6 @@ import requests
 import time
 
 import gen3.auth
-from gen3.auth import Gen3Auth
 
 test_endpoint = "https://localhost"
 test_key = {
@@ -22,7 +21,7 @@ test_key = {
 
 def test_get_wts_endpoint():
     endpoint = gen3.auth.get_wts_endpoint(namespace="frickjack")
-    assert endpoint == "http://workspace-token-service.frickjack.svc.cluster.local"
+    assert endpoint == "https://frickjack/wts"
 
 
 def test_endpoint_from_token():
