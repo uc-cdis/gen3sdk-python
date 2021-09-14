@@ -49,8 +49,8 @@ Supports getting presigned urls right now.</p>
 <p class="rubric">Examples</p>
 <p>This generates the Gen3File class pointed at the sandbox commons while
 using the credentials.json downloaded from the commons profile page.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
-<span class="gp">... </span><span class="n">file</span> <span class="o">=</span> <span class="n">Gen3File</span><span class="p">(</span><span class="n">auth</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span>&gt;&gt;&gt; auth = Gen3Auth`(refresh_file=&quot;credentials.json&quot;)
+... file = Gen3File(auth)
 </pre></div>
 </div>
 <dl class="py method">
