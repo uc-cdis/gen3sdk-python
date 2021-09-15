@@ -62,7 +62,7 @@ def wts_endpoint():
 
 @click.command()
 def wts_list():
-    """list the idp's available from the wts in a Gen3 workspace environment """
+    """list the idp's available from the wts in a Gen3 workspace environment"""
     print(json.dumps(auth_tool.get_external_oidcs(), indent=2))
 
 
