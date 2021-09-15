@@ -21,7 +21,7 @@ test_key = {
 
 def test_get_wts_endpoint():
     endpoint = gen3.auth.get_wts_endpoint(namespace="frickjack")
-    assert endpoint == "https://frickjack/wts"
+    assert endpoint == "http://workspace-token-service.frickjack.svc.cluster.local"
 
 
 def test_endpoint_from_token():
