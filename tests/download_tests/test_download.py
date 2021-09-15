@@ -83,10 +83,17 @@ def drs_object_info():
     [
         (
             "drs://jcoin.datacommons.io/dg.XXTS/008e6b62-28c0-4659-afec-622340b0ef76",
-            ("jcoin.datacommons.io", "hostname"),
+            (
+                "jcoin.datacommons.io",
+                "dg.XXTS/008e6b62-28c0-4659-afec-622340b0ef76",
+                "hostname",
+            ),
         ),
-        ("dg.XXTS/008e6b62-28c0-4659-afec-622340b0ef76", ("dg.XXTS", "compact")),
-        ("008e6b62-28c0-4659-afec-622340b0ef76", ("", "unknown")),
+        (
+            "dg.XXTS/008e6b62-28c0-4659-afec-622340b0ef76",
+            ("dg.XXTS", "008e6b62-28c0-4659-afec-622340b0ef76", "compact"),
+        ),
+        ("008e6b62-28c0-4659-afec-622340b0ef76", ("", "", "unknown")),
     ],
 )
 def test_parse_drs_identifier(identifier, expected):

@@ -395,7 +395,7 @@ def download_file_from_url(url: str, filename: Path, showProgress: bool = True) 
     return True
 
 
-def parse_drs_identifier(drs_candidate: str) -> Tuple[str, str]:
+def parse_drs_identifier(drs_candidate: str) -> Tuple[str, str, str]:
     """
     Parses a DRS identifier to extract a hostname in the case of hostname based DRS
     a compact identifier.
@@ -409,7 +409,7 @@ def parse_drs_identifier(drs_candidate: str) -> Tuple[str, str]:
 
     matches = re.findall(drs_regex, drs_candidate, re.UNICODE)
 
-    if len(matches) == 1 and len(matches[0]) == 2:  # this could be a hostname DRS id
+    if len(matches) == 1:  # this could be a hostname DRS id
 
         hostname_regex = (
             r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*"
@@ -417,20 +417,20 @@ def parse_drs_identifier(drs_candidate: str) -> Tuple[str, str]:
         )
         hostname_matches = re.findall(hostname_regex, matches[0][0], re.UNICODE)
         if len(hostname_matches) == 1:
-            return matches[0][0], "hostname"
+            return matches[0][0], matches[0][1], "hostname"
     # possible compact rep
     compact_regex = r"([A-Za-z0-9\.\-\~]+)/([A-Za-z0-9\.\-\_\~\/]+)"
     matches = re.findall(compact_regex, drs_candidate, re.UNICODE)
     if len(matches) == 1 and len(matches[0]) == 2:
-        return matches[0][0], "compact"
+        return matches[0][0], matches[0][1], "compact"
 
     # can't figure it out
-    return "", "unknown"
+    return "", "", "unknown"
 
 
 def resolve_drs_hostname_from_id(
     object_id: str, resolved_drs_prefix_cache: dict
-) -> Optional[str]:
+) -> Optional[Tuple[str, str, str]]:
     """
     resolves and returns a DRS identifier, including calling a DRS server to
     resolve and compact id.
@@ -441,18 +441,18 @@ def resolve_drs_hostname_from_id(
     """
     hostname = None
 
-    identifier, identifier_type = parse_drs_identifier(object_id)
+    prefix, identifier, identifier_type = parse_drs_identifier(object_id)
     if identifier_type == "hostname":
-        return identifier
+        return prefix, identifier, identifier_type
     if identifier_type == "compact":
-        if identifier not in resolved_drs_prefix_cache:
-            hostname = DRS_RESOLVER(identifier, object_id)
+        if prefix not in resolved_drs_prefix_cache:
+            hostname = DRS_RESOLVER(prefix, object_id)
             if hostname is not None:
-                resolved_drs_prefix_cache[identifier] = hostname
+                resolved_drs_prefix_cache[prefix] = hostname
 
-        hostname = resolved_drs_prefix_cache[identifier]
+        hostname = resolved_drs_prefix_cache[prefix]
 
-    return hostname
+    return hostname, identifier, identifier_type
 
 
 def resolve_objects_drs_hostname_from_id(
@@ -465,9 +465,11 @@ def resolve_objects_drs_hostname_from_id(
     for entry in object_ids:
         if entry.hostname is None:
             # if resolution fails the entry hostname will still be None
-            entry.hostname = resolve_drs_hostname_from_id(
+            entry.hostname, nid, idtype = resolve_drs_hostname_from_id(
                 entry.object_id, resolved_drs_prefix_cache
             )
+            if idtype == "hostname":
+                entry.object_id = nid
 
 
 def ensure_dirpath_exists(path: Path) -> Path:
