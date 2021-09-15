@@ -660,6 +660,11 @@ class DownloadManager:
                 )
                 continue
             # TODO refine the selection of access_method
+            if len(entry.access_methods) == 0:
+                logger.critical(
+                    f"No access methods defined for {entry.object_id}. Skipping"
+                )
+                continue
             access_method = entry.access_methods[0]["access_id"]
 
             download_url = get_download_url(
