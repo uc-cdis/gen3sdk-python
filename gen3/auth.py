@@ -71,12 +71,11 @@ def get_access_token_with_key(api_key):
 
 
 def get_wts_endpoint(namespace=os.getenv("NAMESPACE", "default")):
-    # return "http://workspace-token-service.{}.svc.cluster.local".format(namespace)
-    return f"https://{namespace}/wts"
+    return "http://workspace-token-service.{}.svc.cluster.local".format(namespace)
 
 
-def get_external_oidcs(namespace=os.getenv("NAMESPACE", "default")):
-    resp = requests.get(get_wts_endpoint(namespace) + "/external_oidc/")
+def get_wts_idps(namespace=os.getenv("NAMESPACE", "default")):
+    resp = requests.get(get_wts_endpoint(namespace) + "/external_oidc")
     raise_for_status(resp)
     return resp.json()
 
