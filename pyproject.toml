@@ -18,7 +18,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">3.7,<=3.9"
+python = "^3.7"
 requests = "*"
 indexclient = ">=1.6.2"
 drsclient = "<1.0.0"
