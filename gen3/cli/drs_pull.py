@@ -57,7 +57,11 @@ def download_object(ctx, object_id: str, output_dir: str, object_hostname: str):
 
     """
     download_drs_object(
-        ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), object_id, output_dir, object_hostname
+        ctx.obj["endpoint"],
+        ctx.obj["auth_factory"].get(),
+        object_id,
+        output_dir,
+        object_hostname,
     )
 
 
