@@ -181,6 +181,30 @@ class Downloadable:
         self._manager.download([self])
 
 
+@dataclass
+class DownloadStatus:
+    filename: str
+    status: str = "pending"
+    startTime: Optional[datetime] = None
+    endTime: Optional[datetime] = None
+
+    def __str__(self):
+        return (
+            f'filename: {self.filename if self.filename is not None else "not available"} '
+            f"status: {self.status} "
+            f'startTime: {self.startTime.strftime("%m/%d/%Y, %H:%M:%S") if self.startTime is not None else "n/a"} '
+            f'endTime: {self.endTime.strftime("%m/%d/%Y, %H:%M:%S") if self.startTime is not None else "n/a"}'
+        )
+
+    def __repr__(self):
+        return (
+            f'filename: {self.filename if self.filename is not None else "not available"} '
+            f"status: {self.status} "
+            f'startTime: {self.startTime.strftime("%m/%d/%Y, %H:%M:%S") if self.startTime is not None else "n/a"} '
+            f'endTime: {self.endTime.strftime("%m/%d/%Y, %H:%M:%S") if self.startTime is not None else "n/a"}'
+        )
+
+
 def wts_external_oidc(hostname: str) -> Dict[str, Any]:
     oidc = {}
     try:
@@ -618,18 +642,15 @@ class DownloadManager:
             * process manifest entry getting and cache WTS token as needed
             * use token and DRS endpoint to get pre-signed URL
             * download file
+
+        returns: list of files requests and results.
         """
 
         self.cache_hosts_wts_tokens(object_list)
         output_dir = Path(save_directory)
 
         completed = {
-            entry.object_id: {
-                "status": "pending",
-                "startTime": None,
-                "endTime": None,
-                "file_name": entry.file_name,
-            }
+            entry.object_id: DownloadStatus(filename=entry.file_name)
             for entry in object_list
         }
 
@@ -675,18 +696,15 @@ class DownloadManager:
             )
 
             if download_url is None:
-                completed[entry.object_id]["status"] = "error"
+                completed[entry.object_id].status = "error"
                 continue
 
-            completed[entry.object_id]["startTime"] = datetime.now(timezone.utc)
+            completed[entry.object_id].startTime = datetime.now(timezone.utc)
             filepath = output_dir.joinpath(entry.file_name)
             res = download_file_from_url(url=download_url, filename=filepath)
-            completed[entry.object_id].update(
-                {
-                    "status": "downloaded" if res else "error",
-                    "endTime": datetime.now(timezone.utc),
-                }
-            )
+            completed[entry.object_id].status = "downloaded" if res else "error"
+            completed[entry.object_id].endTime = datetime.now(timezone.utc)
+
         return completed
 
 
