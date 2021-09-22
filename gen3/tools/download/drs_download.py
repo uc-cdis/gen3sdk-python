@@ -710,7 +710,7 @@ def _download(hostname, auth, infile, output_dir=".") -> Optional[Dict[str, Any]
 
 
 def _download_obj(
-    hostname, auth, object_id, output_dir="."
+    hostname, auth, object_id, output_dir="." , object_hostname=None
 ) -> Optional[Dict[str, Any]]:
     try:
         auth.get_access_token()
@@ -718,7 +718,7 @@ def _download_obj(
         logger.critical(f"Unable to authenticate your credentials with {hostname}")
         return None
 
-    object_list = [Downloadable(object_id=object_id)]
+    object_list = [Downloadable(object_id=object_id, hostname=object_hostname)]
     downloader = DownloadManager(
         hostname=hostname, auth=auth, download_list=object_list
     )
@@ -753,5 +753,5 @@ def download_files_in_workspace_manifest(hostname, auth, infile, output_dir) -> 
     _download(hostname, auth, infile, output_dir)
 
 
-def download_drs_object(hostname, auth, object_id, output_dir) -> None:
-    _download_obj(hostname, auth, object_id, output_dir)
+def download_drs_object(hostname, auth, object_id, output_dir, object_hostname) -> None:
+    _download_obj(hostname, auth, object_id, output_dir, object_hostname)

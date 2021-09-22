@@ -46,8 +46,9 @@ def download_manifest(ctx, infile: str, output_dir: str):
 @click.command()
 @click.argument("object_id")
 @click.argument("output_dir", default=".")
+@click.option("--object_hostname", "object_hostname", default=None, required=False)
 @click.pass_context
-def download_object(ctx, object_id: str, output_dir: str):
+def download_object(ctx, object_id: str, output_dir: str, object_hostname: str):
     """
     Download a DRS object by it's object id
     The user credentials use the Gen3Auth class so the Gen3Auth options are applicable (--auth and --endpoint)
@@ -56,7 +57,7 @@ def download_object(ctx, object_id: str, output_dir: str):
 
     """
     download_drs_object(
-        ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), object_id, output_dir
+        ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), object_id, output_dir, object_hostname
     )
 
 
