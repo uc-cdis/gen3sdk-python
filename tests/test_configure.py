@@ -42,8 +42,6 @@ lines_with_profile = [
 def test_get_profile_from_creds(monkeypatch):
     test_file_name = str(uuid.uuid4()) + ".json"
     try:
-        profile = "DummyProfile"
-        creds = {"key_id": "1234", "api_key": "abc"}
         with open(test_file_name, "w+") as cred_file:
             json.dump(creds, cred_file)
 
