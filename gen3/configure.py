@@ -29,18 +29,22 @@ import gen3.auth as auth_tool
 CONFIG_FILE_PATH = expanduser("~/.gen3/config")
 
 
-def get_profile_from_creds(profile, cred):
+def get_profile_from_creds(
+    profile, cred, api_endpoint="", use_sheperd="", min_sheperd_version=""
+):
     with open(expanduser(cred)) as f:
         creds_from_json = json.load(f)
         credentials = OrderedDict()
         credentials["key_id"] = creds_from_json["key_id"]
         credentials["api_key"] = creds_from_json["api_key"]
-        credentials["api_endpoint"] = auth_tool.endpoint_from_token(
-            credentials["api_key"]
+        credentials["api_endpoint"] = (
+            api_endpoint
+            if api_endpoint != ""
+            else auth_tool.endpoint_from_token(credentials["api_key"])
         )
         credentials["access_key"] = auth_tool.get_access_token_with_key(credentials)
-        credentials["use_shepherd"] = ""
-        credentials["min_shepherd_version"] = ""
+        credentials["use_shepherd"] = use_sheperd
+        credentials["min_shepherd_version"] = min_sheperd_version
     profile_line = "[" + profile + "]\n"
     new_lines = [key + "=" + value + "\n" for key, value in credentials.items()]
     new_lines.append("\n")  # Adds an empty line between two profiles.
@@ -48,7 +52,7 @@ def get_profile_from_creds(profile, cred):
 
 
 def get_current_config_lines():
-    """ Read lines from the config file if exists in ~/.gen3 folder, else create new config file """
+    """Read lines from the config file if exists in ~/.gen3 folder, else create new config file"""
     try:
         with open(CONFIG_FILE_PATH) as configFile:
             logging.info(f"Reading existing config file at {CONFIG_FILE_PATH}")
@@ -60,17 +64,18 @@ def get_current_config_lines():
 
 
 def update_config_lines(lines, profile_title, new_lines):
-    """ Update config file contents with the new profile values """
+    """Update config file contents with the new profile values"""
 
     if profile_title in lines:
         profile_line_index = lines.index(profile_title)
         next_profile_index = len(lines)
-        for i in range(profile_line_index, len(lines)):
+        for i in range(profile_line_index + 1, len(lines)):
             if lines[i][0] == "[":
                 next_profile_index = i
                 break
         del lines[profile_line_index:next_profile_index]
+    lines.append(profile_title)
+    lines += new_lines
 
-    with open(CONFIG_FILE_PATH, "a+") as configFile:
-        configFile.write(profile_title)
-        configFile.writelines(new_lines)
+    with open(CONFIG_FILE_PATH, "w+") as configFile:
+        configFile.writelines(lines)

@@ -42,8 +42,6 @@ lines_with_profile = [
 def test_get_profile_from_creds(monkeypatch):
     test_file_name = str(uuid.uuid4()) + ".json"
     try:
-        profile = "DummyProfile"
-        creds = {"key_id": "1234", "api_key": "abc"}
         with open(test_file_name, "w+") as cred_file:
             json.dump(creds, cred_file)
 
@@ -63,8 +61,12 @@ def test_get_profile_from_creds(monkeypatch):
 def test_update_config_lines(test_lines, monkeypatch):
     file_name = str(uuid.uuid4())
     monkeypatch.setattr(config_tool, "CONFIG_FILE_PATH", file_name)
+    with open(file_name, "w") as f:
+        f.writelines(test_lines)
     try:
-        config_tool.update_config_lines(test_lines, expected_profile_line, new_lines)
+        config_tool.update_config_lines(
+            config_tool.get_current_config_lines(), expected_profile_line, new_lines
+        )
         with (open(file_name, "r")) as f:
             assert f.readlines() == [expected_profile_line] + new_lines
     finally:
