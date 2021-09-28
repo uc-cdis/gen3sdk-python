@@ -14,16 +14,6 @@ logger = get_logger("manifest", log_level="warning")
 @click.command()
 @click.argument("infile")
 @click.pass_context
-def listfiles(ctx, infile: str):
-    """List files and size in manifest"""
-    list_files_in_workspace_manifest(
-        ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
-    )
-
-
-@click.command()
-@click.argument("infile")
-@click.pass_context
 def user_access(ctx, infile: str):
     """List files and size in manifest"""
     list_access_in_manifest(ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile)
@@ -68,8 +58,6 @@ def manifest():
     """Commands for downloading Gen3 manifests"""
     pass
 
-
-manifest.add_command(listfiles, name="list")
 manifest.add_command(download_manifest, name="pull_manifest")
 manifest.add_command(download_object, name="pull_object")
 manifest.add_command(user_access, name="list_access")
