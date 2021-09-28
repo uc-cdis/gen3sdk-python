@@ -505,8 +505,8 @@ def test_download_objects(
 
         # test to see if file is downloaded
         for id, item in results.items():
-            assert item["status"] == "downloaded"
-            with open(download_dir.join(item["file_name"]), "rt") as fin:
+            assert item.status == "downloaded"
+            with open(download_dir.join(item.filename), "rt") as fin:
                 assert fin.read() == download_test_files[id]["content"]
 
         # test _download manifest
@@ -518,8 +518,8 @@ def test_download_objects(
             download_dir.join("_download"),
         )
         for id, item in results.items():
-            assert item["status"] == "downloaded"
-            with open(download_dir.join("_download", item["file_name"]), "rt") as fin:
+            assert item.status == "downloaded"
+            with open(download_dir.join("_download", item.filename), "rt") as fin:
                 assert fin.read() == download_test_files[id]["content"]
         # test various other failures
 
@@ -542,10 +542,8 @@ def test_download_objects(
             download_dir.join("_download_obj"),
         )
         for id, item in results.items():
-            assert item["status"] == "downloaded"
-            with open(
-                download_dir.join("_download_obj", item["file_name"]), "rt"
-            ) as fin:
+            assert item.status == "downloaded"
+            with open(download_dir.join("_download_obj", item.filename), "rt") as fin:
                 assert fin.read() == download_test_files[id]["content"]
 
         # test listfiles

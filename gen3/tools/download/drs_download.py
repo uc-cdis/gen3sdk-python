@@ -552,6 +552,42 @@ def get_download_url(
     return None
 
 
+def get_user_auth(commons_url: str, access_token: str) -> Optional[List[str]]:
+    """
+    Get a user authz for the commons based on the access token.
+    return the authz object from the user endpoint
+    Any error will be logged and None is returned
+    """
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": "bearer " + access_token,
+    }
+
+    try:
+        response = requests.get(url=f"https://{commons_url}/user/user", headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        authz = data["authz"]
+        return authz
+    except requests.exceptions.HTTPError as exc:
+        err_msg = exc.response.json()
+        logger.critical(
+            f"HTTP Error getting user access {exc.response.status_code} {err_msg}"
+        )
+
+    return None
+
+
+def list_auth(hostname: str, authz: dict):
+    print(f"Access for {hostname:}")
+    if authz is not None and len(authz) > 0:
+        for access, methods in authz.items():
+            print(f"      {access}: {' '.join([x['method'] for x in methods])}")
+    else:
+        print("      No access")
+
+
 class DownloadManager:
     """
     Class to assist in downloading a list of Downloadables which at a minmum are
@@ -707,6 +743,21 @@ class DownloadManager:
 
         return completed
 
+    def user_access(self):
+        results = {}
+        self.cache_hosts_wts_tokens(self.download_list)
+        for hostname in self.known_hosts.keys():
+            if self.known_hosts[hostname].available is False:
+                logger.critical(
+                    f"Was unable to get user authorization from {hostname}."
+                )
+                continue
+            access_token = self.known_hosts[hostname].access_token
+            authz = get_user_auth(hostname, access_token)
+            results[hostname] = authz
+
+        return results
+
 
 def _download(hostname, auth, infile, output_dir=".") -> Optional[Dict[str, Any]]:
     object_list = Manifest.load(Path(infile))
@@ -762,6 +813,23 @@ def _listfiles(hostname, auth, infile: str) -> None:
         print(x)
 
 
+def _list_access(hostname, auth, infile: str) -> None:
+    object_list = Manifest.load(Path(infile))
+    if object_list is None:
+        return
+
+    try:
+        auth.get_access_token()
+    except Gen3AuthError:
+        logger.critical(f"Unable to authenticate your credentials with {hostname}")
+        return
+
+    download = DownloadManager(hostname=hostname, auth=auth, download_list=object_list)
+    access = download.user_access()
+    for h, authz in access.items():
+        list_auth(h, authz)
+
+
 # These functions are exposed to the SDK
 def list_files_in_workspace_manifest(hostname, auth, infile: str) -> None:
     _listfiles(hostname, auth, infile)
@@ -773,3 +841,7 @@ def download_files_in_workspace_manifest(hostname, auth, infile, output_dir) -> 
 
 def download_drs_object(hostname, auth, object_id, output_dir) -> None:
     _download_obj(hostname, auth, object_id, output_dir)
+
+
+def list_access_in_manifest(hostname, auth, infile) -> None:
+    _list_access(hostname, auth, infile)

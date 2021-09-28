@@ -5,6 +5,7 @@ from gen3.tools.download.drs_download import (
     list_files_in_workspace_manifest,
     download_files_in_workspace_manifest,
     download_drs_object,
+    list_access_in_manifest,
 )
 
 logger = get_logger("manifest", log_level="warning")
@@ -12,18 +13,20 @@ logger = get_logger("manifest", log_level="warning")
 
 @click.command()
 @click.argument("infile")
-@click.option(
-    "-l",
-    "--long",
-    is_flag=True,
-    help="long listing of file",
-)
 @click.pass_context
-def listfiles(ctx, infile: str, long: bool):
+def listfiles(ctx, infile: str):
     """List files and size in manifest"""
     list_files_in_workspace_manifest(
-        ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile, long
+        ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
     )
+
+
+@click.command()
+@click.argument("infile")
+@click.pass_context
+def user_access(ctx, infile: str):
+    """List files and size in manifest"""
+    list_access_in_manifest(ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile)
 
 
 @click.command()
@@ -69,3 +72,4 @@ def manifest():
 manifest.add_command(listfiles, name="list")
 manifest.add_command(download_manifest, name="pull_manifest")
 manifest.add_command(download_object, name="pull_object")
+manifest.add_command(user_access, name="list_access")
