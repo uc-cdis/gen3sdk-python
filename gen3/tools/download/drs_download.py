@@ -45,7 +45,7 @@ def resolve_compact_drs_using_dataguids(
             return strip_http_url(hn)
 
     except requests.exceptions.HTTPError as exc:
-        logger.Warning(f"Unable to get resolve identifier from dataguids.org/index")
+        logger.warning(f"Unable to get resolve identifier from dataguids.org/index")
         if exc.response.status_code == 404:
             # not found try using the MDS
             pass
@@ -59,7 +59,7 @@ def resolve_compact_drs_using_dataguids(
         if "host" in results:
             return strip_http_url(results["host"])
     except requests.exceptions.HTTPError as exc:
-        logger.Warning(
+        logger.warning(
             f"Unable to get resolve identifier from dataguids.org/mds/metadata"
         )
         logger.critical(
