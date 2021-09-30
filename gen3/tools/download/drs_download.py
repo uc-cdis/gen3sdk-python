@@ -38,13 +38,14 @@ def resolve_compact_drs_using_dataguids(
     # look for the hostname in the field "from_index_service"
     # or and very hacky query the MDS
     try:
-        response = requests.get(f"https://dataguids.org/{object_id}")
+        response = requests.get(f"https://dataguids.org/index/{object_id}")
         response.raise_for_status()
         results = response.json()
         if (hn := results.get("from_index_service", {}).get("host", None)) is not None:
             return strip_http_url(hn)
 
     except requests.exceptions.HTTPError as exc:
+        logger.Warning(f"Unable to get resolve identifier from dataguids.org/index")
         if exc.response.status_code == 404:
             # not found try using the MDS
             pass
@@ -58,6 +59,9 @@ def resolve_compact_drs_using_dataguids(
         if "host" in results:
             return strip_http_url(results["host"])
     except requests.exceptions.HTTPError as exc:
+        logger.Warning(
+            f"Unable to get resolve identifier from dataguids.org/mds/metadata"
+        )
         logger.critical(
             f"HTTP Error accessing dataguids.org: {exc.response.status_code}"
         )
@@ -710,7 +714,7 @@ def _download(hostname, auth, infile, output_dir=".") -> Optional[Dict[str, Any]
 
 
 def _download_obj(
-    hostname, auth, object_id, output_dir="." , object_hostname=None
+    hostname, auth, object_id, output_dir=".", object_hostname=None
 ) -> Optional[Dict[str, Any]]:
     try:
         auth.get_access_token()

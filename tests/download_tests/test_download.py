@@ -389,20 +389,20 @@ def test_resolve_compact_drs_using_dataguids(drs_objects):
     }
 
     with requests_mock.Mocker() as m:
-        m.get(f"https://dataguids.org/{object_id}", json=DRS_RESOLVER_RESULTS)
+        m.get(f"https://dataguids.org/index/{object_id}", json=DRS_RESOLVER_RESULTS)
         results = resolve_compact_drs_using_dataguids(identifier, object_id)
         expected = "test.commons1.io"
         assert results == expected
 
         object_id = "dg.TEST/00e6cfa9-a183-42f6-bb44-b70347106bbe"
         identifier = "dg.TEST"
-        m.get(f"https://dataguids.org/{object_id}", json={}, status_code=404)
+        m.get(f"https://dataguids.org/index/{object_id}", json={}, status_code=404)
         m.get(f"https://dataguids.org/mds/metadata/{identifier}", json=DRS_MDS_RESULTS)
         results = resolve_compact_drs_using_dataguids(identifier, object_id)
         expected = "test.commons1.io"
         assert results == expected
 
-        m.get(f"https://dataguids.org/{object_id}", json={}, status_code=500)
+        m.get(f"https://dataguids.org/index/{object_id}", json={}, status_code=500)
         m.get(f"https://dataguids.org/mds/metadata/{identifier}", json=DRS_MDS_RESULTS)
         assert resolve_compact_drs_using_dataguids(identifier, object_id) == None
 
@@ -415,7 +415,7 @@ def test_resolve_compact_drs_using_dataguids(drs_objects):
 
         object_id = "dg.TEST/00e6cfa9-a183-42f6-bb44-b70347106bbe"
         identifier = "dg.TEST"
-        m.get(f"https://dataguids.org/{object_id}", json={}, status_code=404)
+        m.get(f"https://dataguids.org/index/{object_id}", json={}, status_code=404)
         m.get(
             f"https://dataguids.org/mds/metadata/{identifier}",
             json=DRS_MDS_RESULTS,
@@ -473,7 +473,7 @@ def test_download_objects(
             Path(DIR, "resources/manifest_test_drs_compact.json")
         )
         m.get(
-            f"https://dataguids.org/{drs_resolver_dataguids['did']}",
+            f"https://dataguids.org/index/{drs_resolver_dataguids['did']}",
             json=drs_resolver_dataguids,
         )
         m.get(
