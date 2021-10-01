@@ -13,19 +13,27 @@ from gen3.metadata import Gen3Metadata
 from gen3.tools import metadata
 from gen3.utils import raise_for_status
 
-
 MAX_GUIDS_PER_REQUEST = 2000
 MAX_CONCURRENT_REQUESTS = 5
 
 
-async def output_expanded_discovery_metadata(auth, endpoint=None, limit=500):
+async def output_expanded_discovery_metadata(
+    auth, endpoint=None, limit=500, use_agg_mds=False
+):
     """
     fetch discovery metadata from a commons and output to {commons}-discovery-metadata.tsv
     """
     if endpoint:
-        mds = Gen3Metadata(auth_provider=auth, endpoint=endpoint)
+        mds = Gen3Metadata(
+            auth_provider=auth,
+            endpoint=endpoint,
+            service_location="mds/aggregate" if use_agg_mds else "mds",
+        )
     else:
-        mds = Gen3Metadata(auth_provider=auth)
+        mds = Gen3Metadata(
+            auth_provider=auth,
+            service_location="mds/aggregate" if use_agg_mds else "mds",
+        )
 
     with tempfile.TemporaryDirectory() as metadata_cache_dir:
         all_fields = set()
@@ -39,9 +47,20 @@ async def output_expanded_discovery_metadata(auth, endpoint=None, limit=500):
                 offset=offset,
             )
 
+            # if agg MDS we will flatten the results as they are in "common" : dict format
+            if use_agg_mds:
+                partial_metadata = {
+                    i: d
+                    for y in partial_metadata.values()
+                    for x in y
+                    for i, d in x.items()
+                }
+
             if len(partial_metadata):
                 for guid, guid_metadata in partial_metadata.items():
-                    with open(f"{metadata_cache_dir}/{guid}", "w+") as cached_guid_file:
+                    with open(
+                        f"{metadata_cache_dir}/{guid.replace('/','_')}", "w+"
+                    ) as cached_guid_file:
                         guid_discovery_metadata = guid_metadata["gen3_discovery"]
                         json.dump(guid_discovery_metadata, cached_guid_file)
                         all_fields |= set(guid_discovery_metadata.keys())

@@ -3,9 +3,6 @@ import csv
 import json
 import tempfile
 from unittest.mock import patch
-from csv import DictReader
-
-import pandas as pd
 import pytest
 
 from gen3.tools.metadata.discovery import (
@@ -29,6 +26,7 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
         "dictval": {"k1": "v1", "k2": "v2"},
     }
     guid2_discovery_metadata = {"other_key": "other_val", "tags": []}
+
     metadata_query_patch.side_effect = lambda *_, **__: {
         "guid1": {
             "_guid_type": "discovery_metadata",
@@ -82,6 +80,36 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
         )
         outfile.seek(0)
         assert outfile.read() == "guid\nguid1\n"
+
+        # test discovering data from aggregate MDS
+        metadata_query_patch.side_effect = lambda *_, **__: {
+            "commons1": [
+                {
+                    "guid1": {
+                        "_guid_type": "discovery_metadata",
+                        "gen3_discovery": guid1_discovery_metadata,
+                    }
+                }
+            ],
+            "commons2": [
+                {
+                    "guid2": {
+                        "_guid_type": "discovery_metadata",
+                        "gen3_discovery": guid2_discovery_metadata,
+                    }
+                }
+            ],
+        }
+
+        outfile.truncate(0)
+        loop.run_until_complete(
+            output_expanded_discovery_metadata(
+                gen3_auth, endpoint="excommons.org", use_agg_mds=True
+            )
+        )
+        outfile.seek(0)
+        csv_rows = list(csv.DictReader(outfile, delimiter="\t"))
+        assert len(csv_rows) == 2
 
 
 @patch("gen3.metadata.Gen3Metadata.async_create")
