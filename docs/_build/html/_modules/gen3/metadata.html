@@ -171,7 +171,15 @@
         <span class="k">return</span> <span class="n">response</span></div>
 
 <div class="viewcode-block" id="Gen3Metadata.query"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.query">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
-    <span class="k">def</span> <span class="nf">query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">return_full_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">query</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">query</span><span class="p">,</span>
+        <span class="n">return_full_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">limit</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">offset</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">use_agg_mds</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Query the metadata given a query.</span>
 
@@ -217,6 +225,7 @@
 <span class="sd">            Dict{guid: {metadata}}: Dictionary with GUIDs as keys and associated</span>
 <span class="sd">                metadata JSON blobs as values</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/metadata?</span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s2">&quot;</span>
 
         <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span>
