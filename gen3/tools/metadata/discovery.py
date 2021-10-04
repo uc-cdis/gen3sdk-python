@@ -35,6 +35,7 @@ async def output_expanded_discovery_metadata(
             service_location="mds/aggregate" if use_agg_mds else "mds",
         )
 
+    count = 0
     with tempfile.TemporaryDirectory() as metadata_cache_dir:
         all_fields = set()
         num_tags = 0
@@ -45,13 +46,16 @@ async def output_expanded_discovery_metadata(
                 return_full_metadata=True,
                 limit=min(limit, MAX_GUIDS_PER_REQUEST),
                 offset=offset,
+                use_agg_mds=use_agg_mds,
             )
 
             # if agg MDS we will flatten the results as they are in "common" : dict format
+            # However this can result in duplicates as the aggregate mds is namespaced to
+            # handle this, therefore prefix the commons in front of the guid
             if use_agg_mds:
                 partial_metadata = {
-                    i: d
-                    for y in partial_metadata.values()
+                    f"{c}__{i}": d
+                    for c, y in partial_metadata.items()
                     for x in y
                     for i, d in x.items()
                 }
@@ -59,7 +63,7 @@ async def output_expanded_discovery_metadata(
             if len(partial_metadata):
                 for guid, guid_metadata in partial_metadata.items():
                     with open(
-                        f"{metadata_cache_dir}/{guid.replace('/','_')}", "w+"
+                        f"{metadata_cache_dir}/{guid.replace('/', '_')}", "w+"
                     ) as cached_guid_file:
                         guid_discovery_metadata = guid_metadata["gen3_discovery"]
                         json.dump(guid_discovery_metadata, cached_guid_file)
@@ -79,7 +83,10 @@ async def output_expanded_discovery_metadata(
         base_schema = {column: "" for column in output_columns}
 
         output_filename = _metadata_file_from_auth(auth)
-        with open(output_filename, "w+") as output_file:
+        with open(
+            output_filename,
+            "w+",
+        ) as output_file:
             writer = csv.DictWriter(
                 output_file,
                 fieldnames=output_columns,
@@ -90,6 +97,8 @@ async def output_expanded_discovery_metadata(
             )
             writer.writeheader()
 
+            a = sorted(os.listdir(metadata_cache_dir))
+            count = 0
             for guid in sorted(os.listdir(metadata_cache_dir)):
                 with open(f"{metadata_cache_dir}/{guid}") as f:
                     fetched_metadata = json.load(f)
@@ -98,16 +107,20 @@ async def output_expanded_discovery_metadata(
                         for tag_num, tag in enumerate(fetched_metadata.pop("tags", []))
                     }
 
+                    true_guid = guid
+                    if use_agg_mds:
+                        true_guid = guid.split("__")[1]
                     output_metadata = {
                         k: json.dumps(v) if type(v) in [list, dict] else v
                         for k, v in {
                             **base_schema,
                             **fetched_metadata,
                             **flattened_tags,
-                            "guid": guid,
+                            "guid": true_guid,
                         }.items()
                     }
                     writer.writerow(output_metadata)
+                    count += 1
 
         return output_filename
 

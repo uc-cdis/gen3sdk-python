@@ -138,7 +138,15 @@ class Gen3Metadata:
         return response
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    def query(self, query, return_full_metadata=False, limit=10, offset=0, **kwargs):
+    def query(
+        self,
+        query,
+        return_full_metadata=False,
+        limit=10,
+        offset=0,
+        use_agg_mds=False,
+        **kwargs,
+    ):
         """
         Query the metadata given a query.
 
@@ -184,6 +192,7 @@ class Gen3Metadata:
             Dict{guid: {metadata}}: Dictionary with GUIDs as keys and associated
                 metadata JSON blobs as values
         """
+
         url = self.endpoint + f"/metadata?{query}"
 
         url_with_params = append_query_params(
