@@ -99,8 +99,6 @@ async def output_expanded_discovery_metadata(
             )
             writer.writeheader()
 
-            a = sorted(os.listdir(metadata_cache_dir))
-            count = 0
             for guid in sorted(os.listdir(metadata_cache_dir)):
                 with open(f"{metadata_cache_dir}/{guid}") as f:
                     fetched_metadata = json.load(f)
