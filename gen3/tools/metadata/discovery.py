@@ -15,6 +15,12 @@ from gen3.utils import raise_for_status
 
 MAX_GUIDS_PER_REQUEST = 2000
 MAX_CONCURRENT_REQUESTS = 5
+BASE_CSV_PARSER_SETTINGS = {
+    "delimiter": "\t",
+    "quotechar": "",
+    "quoting": csv.QUOTE_NONE,
+    "escapechar": "\\",
+}
 
 
 async def output_expanded_discovery_metadata(
@@ -89,11 +95,7 @@ async def output_expanded_discovery_metadata(
         ) as output_file:
             writer = csv.DictWriter(
                 output_file,
-                fieldnames=output_columns,
-                delimiter="\t",
-                quotechar="",
-                quoting=csv.QUOTE_NONE,
-                escapechar="\\",
+                **{**BASE_CSV_PARSER_SETTINGS, "fieldnames": output_columns},
             )
             writer.writeheader()
 
@@ -110,15 +112,14 @@ async def output_expanded_discovery_metadata(
                     true_guid = guid
                     if use_agg_mds:
                         true_guid = guid.split("__")[1]
-                    output_metadata = {
-                        k: json.dumps(v) if type(v) in [list, dict] else v
-                        for k, v in {
+                    output_metadata = _sanitize_tsv_row(
+                        {
                             **base_schema,
                             **fetched_metadata,
                             **flattened_tags,
                             "guid": true_guid,
-                        }.items()
-                    }
+                        }
+                    )
                     writer.writerow(output_metadata)
                     count += 1
 
@@ -143,11 +144,7 @@ async def publish_discovery_metadata(
 
     with open(metadata_filename) as metadata_file:
         metadata_reader = csv.DictReader(
-            metadata_file,
-            delimiter=delimiter,
-            quotechar="",
-            quoting=csv.QUOTE_NONE,
-            escapechar="\\",
+            metadata_file, **{**BASE_CSV_PARSER_SETTINGS, "delimiter": delimiter}
         )
         tag_columns = [
             column for column in metadata_reader.fieldnames if "_tag_" in column
@@ -208,8 +205,19 @@ def try_delete_discovery_guid(auth, guid):
         logging.warning(e)
 
 
+def _sanitize_tsv_row(tsv_row):
+    sanitized = {}
+    for k, v in tsv_row.items():
+        if type(v) in [list, dict]:
+            sanitized[k] = json.dumps(v)
+        elif type(v) == str:
+            sanitized[k] = v.replace("\n", "\\n")
+    return sanitized
+
+
 def _try_parse(data):
     if data:
+        data = data.replace("\\n", "\n")
         try:
             return json.loads(data)
         except json.JSONDecodeError:
