@@ -67,7 +67,7 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
         assert guid1_row["dictval"] == json.dumps(guid1_discovery_metadata["dictval"])
         assert guid2_row["other_key"] == guid2_discovery_metadata["other_key"]
 
-        # output will double-encode newlines, but this should return to original data after parsing
+        # output will double-encode newlines, but this should return to original data after
         assert _try_parse(guid1_row["str_key"]) == guid1_discovery_metadata["str_key"]
 
         # all keys not present in a metadata object should get null values
@@ -113,8 +113,10 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
             )
         )
         outfile.seek(0)
-        csv_rows = list(csv.DictReader(outfile, **BASE_CSV_PARSER_SETTINGS))
-        assert len(csv_rows) == 2
+        agg_csv_rows = list(csv.DictReader(outfile, **BASE_CSV_PARSER_SETTINGS))
+
+        # agg mds should parse identical to single-commons mds
+        assert agg_csv_rows == csv_rows
 
 
 @patch("gen3.metadata.Gen3Metadata.async_create")
