@@ -119,7 +119,6 @@ async def output_expanded_discovery_metadata(
                         }
                     )
                     writer.writerow(output_metadata)
-                    count += 1
 
         return output_filename
 
