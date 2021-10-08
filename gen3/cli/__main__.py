@@ -31,7 +31,7 @@ class AuthFactory:
     "--auth",
     "auth_config",
     default=os.getenv("GEN3_API_KEY", None),
-    help="""authentication source: 
+    help="""authentication source:
     "idp://wts/<idp>" is an identity provider in a Gen3 workspace,
     "accesstoken:///<token>" is an access token,
     otherwise a path to an api key or basename of key under ~/.gen3/;
@@ -74,16 +74,24 @@ def main(ctx, auth_config, endpoint, verbose_logs, very_verbose_logs, only_error
     ctx.obj["auth_factory"] = AuthFactory(auth_config)
 
     if very_verbose_logs:
-        cdislogging.get_logger(__name__, log_level="debug")
+        logger = cdislogging.get_logger(
+            __name__, format=gen3.LOG_FORMAT, log_level="debug"
+        )
         sdklogging.setLevel("DEBUG")
     elif verbose_logs:
-        cdislogging.get_logger(__name__, log_level="info")
+        logger = cdislogging.get_logger(
+            __name__, format=gen3.LOG_FORMAT, log_level="info"
+        )
         sdklogging.setLevel("INFO")
     elif only_error_logs:
-        cdislogging.get_logger(__name__, log_level="error")
+        logger = cdislogging.get_logger(
+            __name__, format=gen3.LOG_FORMAT, log_level="error"
+        )
         sdklogging.setLevel("ERROR")
     else:
-        cdislogging.get_logger(__name__, log_level="warning")
+        logger = cdislogging.get_logger(
+            __name__, format=gen3.LOG_FORMAT, log_level="warning"
+        )
         sdklogging.setLevel("WARNING")
 
 

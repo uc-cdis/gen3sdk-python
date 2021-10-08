@@ -1,3 +1,4 @@
 from cdislogging import get_logger
 
-logging = get_logger("__name__", log_level="info")
+LOG_FORMAT = "[%(asctime)s][%(levelname)7s] %(message)s"
+logging = get_logger("__name__", format=LOG_FORMAT, log_level="info")
