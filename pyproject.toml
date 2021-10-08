@@ -27,6 +27,7 @@ backoff = "*"
 click = "*"
 pandas = "*"
 pypfb = "<1.0.0"
+cdislogging = ">=1.1.1"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=3.2.3"
