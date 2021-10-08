@@ -41,7 +41,8 @@ Attributes:
 """
 import asyncio
 import csv
-import logging
+from cdislogging import get_logger
+
 import os
 import time
 
@@ -49,6 +50,8 @@ from gen3.index import Gen3Index
 
 MAX_CONCURRENT_REQUESTS = 24
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+
+logging = get_logger("__name__")
 
 
 def _get_guid_from_row(row):
@@ -259,10 +262,14 @@ async def _verify_all_index_records_in_file(
 
     with open(manifest_file, encoding="utf-8-sig") as manifest:
         reader = csv.DictReader(manifest, delimiter=manifest_file_delimiter)
+
         for row in reader:
             new_row = {}
             for key, value in row.items():
-                new_row[key.strip()] = value.strip()
+                if value:
+                    value = value.strip()
+
+                new_row[key.strip()] = value
             await queue.put(new_row)
 
     for _ in range(0, int(max_concurrent_requests + (max_concurrent_requests / 4))):

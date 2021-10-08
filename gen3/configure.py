@@ -19,7 +19,8 @@ min_shepherd_version=
 
 """
 import json
-import logging
+from cdislogging import get_logger
+
 from os.path import expanduser
 from pathlib import Path
 from collections import OrderedDict
@@ -27,6 +28,8 @@ import gen3.auth as auth_tool
 
 
 CONFIG_FILE_PATH = expanduser("~/.gen3/config")
+
+logging = get_logger("__name__")
 
 
 def get_profile_from_creds(profile, cred):

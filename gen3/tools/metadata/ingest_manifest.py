@@ -23,7 +23,8 @@ import aiohttp
 import asyncio
 import csv
 import json
-import logging
+from cdislogging import get_logger
+
 import os
 import time
 import urllib.parse
@@ -38,6 +39,8 @@ MAX_CONCURRENT_REQUESTS = 24
 COLUMN_TO_USE_AS_GUID = "guid"
 GUID_TYPE_FOR_INDEXED_FILE_OBJECT = "indexed_file_object"
 GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT = "metadata_object"
+
+logging = get_logger("__name__")
 
 
 def _get_guid_for_row(commons_url, row, lock):
@@ -257,7 +260,31 @@ async def _ingest_all_metadata_in_file(
                 if value:
                     value = value.strip().strip("'").strip('"').replace("''", "'")
                 new_row[key.strip()] = value
-            await queue.put(new_row)
+
+                if start_guid:
+                    if (
+                        new_row.get("guid", "") >= start_guid
+                        and new_row.get("dbgap_status", "")
+                    ) or not new_row.get("guid", ""):
+                        await queue.put(new_row)
+                    else:
+                        print(
+                            f"skipping {new_row.get('guid')} b/c specified explicit "
+                            f"'start_guid={start_guid}' and dbgap_status is {new_row.get('dbgap_status', '')}"
+                        )
+
+                # if start_guid:
+                #     if new_row.get("guid", "") >= start_guid or not new_row.get(
+                #         "guid", ""
+                #     ):
+                #         await queue.put(new_row)
+                #     else:
+                #         print(
+                #             f"skipping {new_row.get('guid')} b/c specified explicit "
+                #             f"'start_guid={start_guid}'"
+                #         )
+                else:
+                    await queue.put(new_row)
 
     await asyncio.gather(
         *(

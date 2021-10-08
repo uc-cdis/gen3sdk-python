@@ -6,11 +6,14 @@ import os
 import random
 import requests
 import time
-import logging
+from cdislogging import get_logger
+
 from urllib.parse import urlparse
 import backoff
 
 from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status
+
+logging = get_logger("__name__")
 
 
 class Gen3AuthError(Exception):

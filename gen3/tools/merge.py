@@ -7,7 +7,9 @@ import copy
 import time
 import base64
 from datetime import datetime
-import logging
+from cdislogging import get_logger
+
+logging = get_logger("__name__")
 
 
 def _get_guids_for_manifest_row(row, data_from_indexing_manifest, config, **kwargs):

@@ -1,4 +1,5 @@
-import logging
+from cdislogging import get_logger
+
 import sys
 import re
 import requests
@@ -17,6 +18,8 @@ SIZE_FORMAT = r"^[0-9]*$"
 ACL_FORMAT = r"^.*$"
 URL_FORMAT = r"^.*$"
 AUTHZ_FORMAT = r"^.*$"
+
+logging = get_logger("__name__")
 
 
 def raise_for_status(response):
