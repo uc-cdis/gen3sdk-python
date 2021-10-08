@@ -57,8 +57,13 @@ def discovery_publish(ctx, file, use_default_file, omit_empty):
     help="max number of metadata records to fetch (default 500)",
     default=500,
 )
+@click.option(
+    "--agg",
+    is_flag=True,
+    help="use aggregate metadata service instead of the metadata service",
+)
 @click.pass_context
-def discovery_read(ctx, limit):
+def discovery_read(ctx, limit, agg):
     """
     Download the metadata used to populate a commons' discovery page into a TSV.
     Outputs the TSV filename with format {commons-url}-discovery_metadata.tsv
@@ -67,7 +72,9 @@ def discovery_read(ctx, limit):
     loop = asyncio.get_event_loop()
     endpoint = ctx.obj.get("endpoint")
     output_file = loop.run_until_complete(
-        output_expanded_discovery_metadata(auth, endpoint=endpoint, limit=limit)
+        output_expanded_discovery_metadata(
+            auth, endpoint=endpoint, limit=limit, use_agg_mds=agg
+        )
     )
 
     click.echo(output_file)

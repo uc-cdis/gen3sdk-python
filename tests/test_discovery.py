@@ -3,14 +3,13 @@ import csv
 import json
 import tempfile
 from unittest.mock import patch
-from csv import DictReader
-
-import pandas as pd
 import pytest
 
 from gen3.tools.metadata.discovery import (
     output_expanded_discovery_metadata,
     publish_discovery_metadata,
+    BASE_CSV_PARSER_SETTINGS,
+    _try_parse,
 )
 
 
@@ -18,7 +17,8 @@ from gen3.tools.metadata.discovery import (
 @patch("gen3.metadata.Gen3Metadata.query")
 def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
     guid1_discovery_metadata = {
-        "str_key": "str_val",
+        # this value should be written to the file exactly as shown
+        "str_key": "str_val \n \t \\",
         # tags should flatten
         "tags": [
             {"name": "first tag", "category": "category 1"},
@@ -29,6 +29,7 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
         "dictval": {"k1": "v1", "k2": "v2"},
     }
     guid2_discovery_metadata = {"other_key": "other_val", "tags": []}
+
     metadata_query_patch.side_effect = lambda *_, **__: {
         "guid1": {
             "_guid_type": "discovery_metadata",
@@ -47,7 +48,7 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
             output_expanded_discovery_metadata(gen3_auth, endpoint="excommons.org")
         )
         outfile.seek(0)
-        csv_rows = list(csv.DictReader(outfile, delimiter="\t"))
+        csv_rows = list(csv.DictReader(outfile, **BASE_CSV_PARSER_SETTINGS))
         assert len(csv_rows) == 2
 
         guid1_row, guid2_row = csv_rows
@@ -62,10 +63,12 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
         assert metadata_columns - metadata_keys == set(["_tag_0", "_tag_1", "guid"])
 
         # output should jsonify all dicts/lists, leave everthing else the same
-        assert guid1_row["str_key"] == guid1_discovery_metadata["str_key"]
         assert guid1_row["listval"] == json.dumps(guid1_discovery_metadata["listval"])
         assert guid1_row["dictval"] == json.dumps(guid1_discovery_metadata["dictval"])
         assert guid2_row["other_key"] == guid2_discovery_metadata["other_key"]
+
+        # output will double-encode newlines, but this should return to original data after
+        assert _try_parse(guid1_row["str_key"]) == guid1_discovery_metadata["str_key"]
 
         # all keys not present in a metadata object should get null values
         assert all(guid1_row[key] == "" for key in list(guid2_keys - guid1_keys))
@@ -82,6 +85,38 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
         )
         outfile.seek(0)
         assert outfile.read() == "guid\nguid1\n"
+
+        # test discovering data from aggregate MDS
+        metadata_query_patch.side_effect = lambda *_, **__: {
+            "commons1": [
+                {
+                    "guid1": {
+                        "_guid_type": "discovery_metadata",
+                        "gen3_discovery": guid1_discovery_metadata,
+                    }
+                }
+            ],
+            "commons2": [
+                {
+                    "guid2": {
+                        "_guid_type": "discovery_metadata",
+                        "gen3_discovery": guid2_discovery_metadata,
+                    }
+                }
+            ],
+        }
+
+        outfile.truncate(0)
+        loop.run_until_complete(
+            output_expanded_discovery_metadata(
+                gen3_auth, endpoint="excommons.org", use_agg_mds=True
+            )
+        )
+        outfile.seek(0)
+        agg_csv_rows = list(csv.DictReader(outfile, **BASE_CSV_PARSER_SETTINGS))
+
+        # agg mds should parse identical to single-commons mds
+        assert agg_csv_rows == csv_rows
 
 
 @patch("gen3.metadata.Gen3Metadata.async_create")
