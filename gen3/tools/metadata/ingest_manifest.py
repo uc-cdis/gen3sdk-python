@@ -260,31 +260,7 @@ async def _ingest_all_metadata_in_file(
                 if value:
                     value = value.strip().strip("'").strip('"').replace("''", "'")
                 new_row[key.strip()] = value
-
-                if start_guid:
-                    if (
-                        new_row.get("guid", "") >= start_guid
-                        and new_row.get("dbgap_status", "")
-                    ) or not new_row.get("guid", ""):
-                        await queue.put(new_row)
-                    else:
-                        print(
-                            f"skipping {new_row.get('guid')} b/c specified explicit "
-                            f"'start_guid={start_guid}' and dbgap_status is {new_row.get('dbgap_status', '')}"
-                        )
-
-                # if start_guid:
-                #     if new_row.get("guid", "") >= start_guid or not new_row.get(
-                #         "guid", ""
-                #     ):
-                #         await queue.put(new_row)
-                #     else:
-                #         print(
-                #             f"skipping {new_row.get('guid')} b/c specified explicit "
-                #             f"'start_guid={start_guid}'"
-                #         )
-                else:
-                    await queue.put(new_row)
+            await queue.put(new_row)
 
     await asyncio.gather(
         *(
