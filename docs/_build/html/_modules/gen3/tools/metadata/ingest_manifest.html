@@ -293,31 +293,7 @@
                 <span class="k">if</span> <span class="n">value</span><span class="p">:</span>
                     <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&#39;&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;&#39;&quot;</span><span class="p">)</span>
                 <span class="n">new_row</span><span class="p">[</span><span class="n">key</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span> <span class="o">=</span> <span class="n">value</span>
-
-                <span class="k">if</span> <span class="n">start_guid</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="p">(</span>
-                        <span class="n">new_row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;guid&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">start_guid</span>
-                        <span class="ow">and</span> <span class="n">new_row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dbgap_status&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-                    <span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">new_row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;guid&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">):</span>
-                        <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">new_row</span><span class="p">)</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="nb">print</span><span class="p">(</span>
-                            <span class="sa">f</span><span class="s2">&quot;skipping </span><span class="si">{</span><span class="n">new_row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;guid&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"> b/c specified explicit &quot;</span>
-                            <span class="sa">f</span><span class="s2">&quot;&#39;start_guid=</span><span class="si">{</span><span class="n">start_guid</span><span class="si">}</span><span class="s2">&#39; and dbgap_status is </span><span class="si">{</span><span class="n">new_row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dbgap_status&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
-                        <span class="p">)</span>
-
-                <span class="c1"># if start_guid:</span>
-                <span class="c1">#     if new_row.get(&quot;guid&quot;, &quot;&quot;) &gt;= start_guid or not new_row.get(</span>
-                <span class="c1">#         &quot;guid&quot;, &quot;&quot;</span>
-                <span class="c1">#     ):</span>
-                <span class="c1">#         await queue.put(new_row)</span>
-                <span class="c1">#     else:</span>
-                <span class="c1">#         print(</span>
-                <span class="c1">#             f&quot;skipping {new_row.get(&#39;guid&#39;)} b/c specified explicit &quot;</span>
-                <span class="c1">#             f&quot;&#39;start_guid={start_guid}&#39;&quot;</span>
-                <span class="c1">#         )</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">new_row</span><span class="p">)</span>
+            <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">new_row</span><span class="p">)</span>
 
     <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span>
         <span class="o">*</span><span class="p">(</span>
