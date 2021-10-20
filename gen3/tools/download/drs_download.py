@@ -16,10 +16,10 @@ from tqdm import tqdm
 
 from gen3.auth import Gen3Auth, Gen3AuthError
 from gen3.auth import _handle_access_token_response
-from gen3.utils import DEFAULT_BACKOFF_SETTINGS
+from gen3.tools.download.drs_resolvers import resolve_drs
 
 # Setup custom logger to create a console/friendly message
-logger = get_logger("manifest", log_level="warning")
+logger = get_logger("download", log_level="warning")
 console = StreamHandler()
 console.setLevel(INFO)
 formatter = Formatter("%(message)s")
@@ -27,49 +27,6 @@ console.setFormatter(formatter)
 logger.addHandler(console)
 
 DEFAULT_EXPIRE: timedelta = timedelta(hours=1)
-
-
-def resolve_compact_drs_using_dataguids(
-    identifier: str, object_id: str
-) -> Optional[str]:
-    # use dataguids.org to resolve identifier
-    # At this time there are two possible ways to resolve a compact ID
-    # query https://dataguids.org/index/ with the object id and
-    # look for the hostname in the field "from_index_service"
-    # or and very hacky query the MDS
-    try:
-        response = requests.get(f"https://dataguids.org/{object_id}")
-        response.raise_for_status()
-        results = response.json()
-        if (hn := results.get("from_index_service", {}).get("host", None)) is not None:
-            return strip_http_url(hn)
-
-    except requests.exceptions.HTTPError as exc:
-        if exc.response.status_code == 404:
-            # not found try using the MDS
-            pass
-        else:
-            return None
-
-    try:
-        response = requests.get(f"https://dataguids.org/mds/metadata/{identifier}")
-        response.raise_for_status()
-        results = response.json()
-        if "host" in results:
-            return strip_http_url(results["host"])
-    except requests.exceptions.HTTPError as exc:
-        logger.critical(
-            f"HTTP Error accessing dataguids.org: {exc.response.status_code}"
-        )
-        return None
-
-    return None
-
-
-REGISTERED_DRS_RESOLVERS = {"dataguids": resolve_compact_drs_using_dataguids}
-
-DRS_RESOLVER = REGISTERED_DRS_RESOLVERS["dataguids"]
-
 
 class Downloadable:
     pass
@@ -247,16 +204,6 @@ def wts_get_token(hostname: str, idp: str, access_token: str):
     except Gen3AuthError:
         logger.critical(f"Unable to authenticate your credentials with {hostname}")
         return None
-
-
-def strip_http_url(s: str) -> str:
-    return (
-        s.replace("/index", "")[::-1]
-        .replace("/", "", 1)[::-1]
-        .replace("http://", "")
-        .replace("https://", "")
-        .replace("/ga4gh/drs/v1/objects", "")
-    )
 
 
 def get_drs_object_info(hostname: str, object_id: str) -> Optional[dict]:
@@ -453,7 +400,7 @@ def parse_drs_identifier(drs_candidate: str) -> Tuple[str, str, str]:
 
 
 def resolve_drs_hostname_from_id(
-    object_id: str, resolved_drs_prefix_cache: dict
+    object_id: str, resolved_drs_prefix_cache: dict, mds_url: str
 ) -> Optional[Tuple[str, str, str]]:
     """
     resolves and returns a DRS identifier, including calling a DRS server to
@@ -470,7 +417,7 @@ def resolve_drs_hostname_from_id(
         return prefix, identifier, identifier_type
     if identifier_type == "compact":
         if prefix not in resolved_drs_prefix_cache:
-            hostname = DRS_RESOLVER(prefix, object_id)
+            hostname = resolve_drs(prefix, object_id, metadata_service_url=mds_url)
             if hostname is not None:
                 resolved_drs_prefix_cache[prefix] = hostname
 
@@ -480,7 +427,8 @@ def resolve_drs_hostname_from_id(
 
 
 def resolve_objects_drs_hostname_from_id(
-    object_ids: List[Downloadable], resolved_drs_prefix_cache: dict
+    object_ids: List[Downloadable], resolved_drs_prefix_cache: dict,
+    mds_url: str
 ) -> None:
     """
     Given a list of object_ids go through list and resolve + cache any unknown
@@ -490,7 +438,7 @@ def resolve_objects_drs_hostname_from_id(
         if entry.hostname is None:
             # if resolution fails the entry hostname will still be None
             entry.hostname, nid, idtype = resolve_drs_hostname_from_id(
-                entry.object_id, resolved_drs_prefix_cache
+                entry.object_id, resolved_drs_prefix_cache, mds_url
             )
             if idtype == "hostname":
                 entry.object_id = nid
@@ -590,11 +538,19 @@ def list_auth(hostname: str, authz: dict):
 
 class DownloadManager:
     """
-    Class to assist in downloading a list of Downloadables which at a minmum are
+    Class to assist in downloading a list of Downloadables which at a minimum is a json manifest
+    of DRS object ids
+    The parameters are:
+        * hostname: commons to start from
+        * auth: Gen3 authentication
+        * list of objects to download
+        * DRS resolution strategy
     """
 
     def __init__(
-        self, hostname: str, auth: Gen3Auth, download_list: List[Downloadable]
+        self, hostname: str,
+            auth: Gen3Auth,
+            download_list: List[Downloadable],
     ):
 
         self.hostname = hostname
@@ -614,7 +570,7 @@ class DownloadManager:
         self.resolve_objects(self.download_list)
 
     def resolve_objects(self, object_list: List[Downloadable]):
-        resolve_objects_drs_hostname_from_id(object_list, self.resolved_compact_drs)
+        resolve_objects_drs_hostname_from_id(object_list, self.resolved_compact_drs, f"http://{self.hostname}/mds/metadata")
         for entry in object_list:
             add_drs_object_info(entry)
             # sugar to allow download objects to self download

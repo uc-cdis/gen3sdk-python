@@ -1,0 +1,72 @@
+[
+  {
+    "hints": [
+      ".*dg\\.4503.*"
+    ],
+    "host": "https://gen3.biodatacatalyst.nhlbi.nih.gov/index/",
+    "name": "DataSTAGE",
+    "type": "indexd"
+  },
+  {
+    "hints": [
+      ".*dg\\.7C5B.*"
+    ],
+    "host": "https://portal.occ-data.org/index/",
+    "name": "OCC Environmental DC",
+    "type": "indexd"
+  },
+  {
+    "hints": [
+      ".*dg\\.F82A1A.*"
+    ],
+    "host": "https://data.kidsfirstdrc.org/index/",
+    "name": "Kids First",
+    "type": "indexd"
+  },
+  {
+    "hints": [
+      "10\\..*"
+    ],
+    "host": "https://dx.doi.org/",
+    "name": "DX DOI",
+    "type": "doi"
+  },
+  {
+    "hints": [],
+    "host": "https://nci-crdc.datacommons.io/index/",
+    "name": "NCI CRDC",
+    "type": "indexd"
+  },
+  {
+    "hints": [
+      ".*dg\\.ANV0.*"
+    ],
+    "host": "https://gen3.theanvil.io/index/",
+    "name": "AnVIL",
+    "type": "indexd"
+  },
+  {
+    "hints": [
+      ".*dg\\.6VTS.*"
+    ],
+    "host": "https://jcoin.datacommons.io/index/",
+    "name": "JCOIN",
+    "type": "indexd"
+  },
+  {
+    "hints": [
+      ".*dg\\.H34L.*"
+    ],
+    "host": "https://healdata.org/index/",
+    "name": "HEAL",
+    "type": "indexd"
+  },
+  {
+    "hints": [
+      ".*dg\\.H35L.*"
+    ],
+    "host": "https://externaldata.healdata.org/index/",
+    "name": "External Data HEAL",
+    "type": "indexd"
+  }
+]

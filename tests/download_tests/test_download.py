@@ -13,7 +13,6 @@ DIR = Path(__file__).resolve().parent
 
 from gen3.tools.download.drs_download import (
     parse_drs_identifier,
-    strip_http_url,
     get_drs_object_type,
     get_drs_object_info,
     get_access_methods,
@@ -23,7 +22,6 @@ from gen3.tools.download.drs_download import (
     Downloadable,
     DownloadManager,
     wts_external_oidc,
-    resolve_compact_drs_using_dataguids,
     add_drs_object_info,
     _download,
     _download_obj,
@@ -33,6 +31,11 @@ from gen3.tools.download.drs_download import (
     get_download_url_using_drs,
     get_download_url,
     download_file_from_url,
+)
+
+from gen3.tools.download.drs_resolvers import (
+    clean_http_url,
+    resolve_compact_drs_using_dataguids,
 )
 
 
@@ -110,7 +113,7 @@ def test_parse_drs_identifier(identifier, expected):
     ],
 )
 def test_strip_http_url(s: str, expected):
-    assert strip_http_url(s) == expected
+    assert clean_http_url(s) == expected
 
 
 def test_add_object_info(drs_object_info):
@@ -349,81 +352,6 @@ def test_download_file_from_url_failures(download_dir):
             assert isinstance(exc, requests.exceptions.Timeout) is True
 
 
-def test_resolve_compact_drs_using_dataguids(drs_objects):
-    DRS_RESOLVER_RESULTS = {
-        "acl": ["admin"],
-        "authz": [],
-        "baseid": "1e6cf3f1-a5af-4543-a1ca-84b41b3221a9",
-        "created_date": "2018-06-13T17:16:29.981618",
-        "did": "dg.XXTS/00e6cfa9-a183-42f6-bb44-b70347106bbe",
-        "file_name": None,
-        "form": "object",
-        "from_index_service": {
-            "host": "https://test.commons1.io/index/",
-            "name": "TESTCommons",
-        },
-        "hashes": {"md5": "4fe23cf4c6bdcf930df5765b48d81216"},
-        "metadata": {},
-        "rev": "6046fb9f",
-        "size": 9567026,
-        "updated_date": "2018-06-13T17:16:29.981629",
-        "uploader": None,
-        "urls": [
-            "gs://test_workflow_testing/topmed_aligner/input_files/176325.0005.recab.cram",
-            "s3://test-workflow-testing/topmed-aligner/input-files/176325.0005.recab.cram",
-        ],
-        "urls_metadata": {
-            "gs://test_workflow_testing/topmed_aligner/input_files/176325.0005.recab.cram": {},
-            "s3://test-workflow-testing/topmed-aligner/input-files/176325.0005.recab.cram": {},
-        },
-        "version": None,
-    }
-
-    object_id = "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e"
-    identifier = "dg.XXTS"
-
-    DRS_MDS_RESULTS = {
-        "host": "https://test.commons1.io/index/",
-        "name": "TestCommons",
-        "type": "indexd",
-    }
-
-    with requests_mock.Mocker() as m:
-        m.get(f"https://dataguids.org/{object_id}", json=DRS_RESOLVER_RESULTS)
-        results = resolve_compact_drs_using_dataguids(identifier, object_id)
-        expected = "test.commons1.io"
-        assert results == expected
-
-        object_id = "dg.TEST/00e6cfa9-a183-42f6-bb44-b70347106bbe"
-        identifier = "dg.TEST"
-        m.get(f"https://dataguids.org/{object_id}", json={}, status_code=404)
-        m.get(f"https://dataguids.org/mds/metadata/{identifier}", json=DRS_MDS_RESULTS)
-        results = resolve_compact_drs_using_dataguids(identifier, object_id)
-        expected = "test.commons1.io"
-        assert results == expected
-
-        m.get(f"https://dataguids.org/{object_id}", json={}, status_code=500)
-        m.get(f"https://dataguids.org/mds/metadata/{identifier}", json=DRS_MDS_RESULTS)
-        assert resolve_compact_drs_using_dataguids(identifier, object_id) == None
-
-        m.get(
-            f"https://dataguids.org/mds/metadata/{identifier}",
-            json=DRS_MDS_RESULTS,
-            status_code=404,
-        )
-        assert resolve_compact_drs_using_dataguids(identifier, object_id) is None
-
-        object_id = "dg.TEST/00e6cfa9-a183-42f6-bb44-b70347106bbe"
-        identifier = "dg.TEST"
-        m.get(f"https://dataguids.org/{object_id}", json={}, status_code=404)
-        m.get(
-            f"https://dataguids.org/mds/metadata/{identifier}",
-            json=DRS_MDS_RESULTS,
-            status_code=500,
-        )
-        assert resolve_compact_drs_using_dataguids(identifier, object_id) is None
-
-
 @pytest.mark.parametrize(
     "hostname",
     [
@@ -473,7 +401,7 @@ def test_download_objects(
             Path(DIR, "resources/manifest_test_drs_compact.json")
         )
         m.get(
-            f"https://dataguids.org/{drs_resolver_dataguids['did']}",
+            f"https://dataguids.org/index/{drs_resolver_dataguids['did']}",
             json=drs_resolver_dataguids,
         )
         m.get(
