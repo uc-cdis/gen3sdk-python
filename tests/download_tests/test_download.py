@@ -409,6 +409,17 @@ def test_download_objects(
             json={"token": "whatever1"},
         )
 
+        m.get(
+            "http://test.datacommons.io/mds/metadata/dg.XXTS",
+            json={},
+            status_code=404,
+        )
+
+        m.get(
+            "https://dataguids.org/index/_dist",
+            json={},
+            status_code=404,
+        )
         for object_id, info in drs_object_info.items():
             m.get(f"https://{commons_url}/ga4gh/drs/v1/objects/{object_id}", json=info)
             m.get(
