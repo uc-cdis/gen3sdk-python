@@ -5,6 +5,7 @@ from gen3.tools.download.drs_download import download_files_in_workspace_manifes
 from logging import StreamHandler, Formatter, INFO
 
 from cdiserrors import get_logger
+
 # Setup custom logger to create a console/friendly message
 logger = get_logger("download", log_level="warning")
 console = StreamHandler()

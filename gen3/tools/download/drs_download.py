@@ -28,6 +28,7 @@ logger.addHandler(console)
 
 DEFAULT_EXPIRE: timedelta = timedelta(hours=1)
 
+
 class Downloadable:
     pass
 
@@ -427,8 +428,7 @@ def resolve_drs_hostname_from_id(
 
 
 def resolve_objects_drs_hostname_from_id(
-    object_ids: List[Downloadable], resolved_drs_prefix_cache: dict,
-    mds_url: str
+    object_ids: List[Downloadable], resolved_drs_prefix_cache: dict, mds_url: str
 ) -> None:
     """
     Given a list of object_ids go through list and resolve + cache any unknown
@@ -548,9 +548,10 @@ class DownloadManager:
     """
 
     def __init__(
-        self, hostname: str,
-            auth: Gen3Auth,
-            download_list: List[Downloadable],
+        self,
+        hostname: str,
+        auth: Gen3Auth,
+        download_list: List[Downloadable],
     ):
 
         self.hostname = hostname
@@ -570,7 +571,11 @@ class DownloadManager:
         self.resolve_objects(self.download_list)
 
     def resolve_objects(self, object_list: List[Downloadable]):
-        resolve_objects_drs_hostname_from_id(object_list, self.resolved_compact_drs, f"http://{self.hostname}/mds/metadata")
+        resolve_objects_drs_hostname_from_id(
+            object_list,
+            self.resolved_compact_drs,
+            f"http://{self.hostname}/mds/metadata",
+        )
         for entry in object_list:
             add_drs_object_info(entry)
             # sugar to allow download objects to self download
