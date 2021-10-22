@@ -574,7 +574,7 @@ class DownloadManager:
         resolve_objects_drs_hostname_from_id(
             object_list,
             self.resolved_compact_drs,
-            f"http://{self.hostname}/mds/metadata",
+            f"http://{self.hostname}/mds/aggregate/info",
         )
         for entry in object_list:
             add_drs_object_info(entry)

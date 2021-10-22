@@ -3,11 +3,11 @@ import json
 import requests_mock
 from unittest import mock
 from pathlib import Path
+import shutil
 
 DIR = Path(__file__).resolve().parent
 
 from gen3.tools.download.drs_resolvers import (
-    REGISTERED_DRS_RESOLVERS,
     resolve_drs,
     create_local_drs_cache,
     append_to_local_drs_cache,
@@ -15,6 +15,7 @@ from gen3.tools.download.drs_resolvers import (
     resolve_compact_drs_using_indexd_dist,
     resolve_compact_drs_using_dataguids,
     resolve_drs_using_commons_mds,
+    resolve_drs_via_list,
 )
 
 
@@ -101,6 +102,13 @@ def test_resolve_drs_from_local_cache_exceptions(download_dir):
     results = resolve_drs_from_local_cache("dg.XXTS", None, cache_dir=None)
     assert results is None
 
+    with mock.patch(
+        "gen3.tools.download.drs_resolvers.DRS_CACHE",
+        str(Path(download_dir, ".drs_cache", "resolved_drs_hosts.json")),
+    ):
+        results = resolve_drs_from_local_cache("dg.NOOP", None)
+        assert results is None
+
     # test with a cache file that does not exists
     with mock.patch(
         "gen3.tools.download.drs_resolvers.DRS_CACHE",
@@ -120,6 +128,18 @@ def test_resolve_drs_from_local_cache_exceptions(download_dir):
 
 def test_write_cache_to_unwritable_dir():
     assert create_local_drs_cache({}, Path("/.drs_cache")) is False
+
+
+def test_cache_expired(download_dir):
+
+    src = Path(DIR, "resources", "expired_drs_host_cache.json")
+    dst = Path(download_dir, ".drs_cache", "expired_drs_host_cache.json")
+    shutil.copy(src, dst)
+    with mock.patch(
+        "gen3.tools.download.drs_resolvers.DRS_CACHE",
+        str(dst),
+    ):
+        assert resolve_drs_from_local_cache("dg.XXTS") is None
 
 
 def test_append_cache(download_dir):
@@ -142,11 +162,11 @@ def test_append_cache(download_dir):
         assert append_to_local_drs_cache(data_first)
         with open(cache_file, "rt") as fin:
             results = json.load(fin)
-            assert results == data_first
+            assert results["cache"] == data_first
         assert append_to_local_drs_cache(data_second)
         with open(cache_file, "rt") as fin:
             results = json.load(fin)
-            assert results == {**data_first, **data_second}
+            assert results["cache"] == {**data_first, **data_second}
 
     with mock.patch(
         "gen3.tools.download.drs_resolvers.DRS_CACHE",
@@ -156,8 +176,12 @@ def test_append_cache(download_dir):
 
     assert append_to_local_drs_cache(data_second, Path("/.drs_cache")) is False
 
+    cache_file.chmod(0o000)
+    assert append_to_local_drs_cache(data_second, cache_file) is False
+    cache_file.chmod(0o666)
 
-def test_resolve_compact_drs_using_dataguids():
+
+def test_resolve_compact_drs_using_dataguids(download_dir):
     DRS_RESOLVER_RESULTS = {
         "acl": ["admin"],
         "authz": [],
@@ -195,68 +219,90 @@ def test_resolve_compact_drs_using_dataguids():
         "name": "TestCommons",
         "type": "indexd",
     }
-
-    with requests_mock.Mocker() as m:
-        m.get(
-            f"https://dataguids_mock.org/index/{object_id}", json=DRS_RESOLVER_RESULTS
-        )
-        results = resolve_compact_drs_using_dataguids(
-            identifier, object_id, resolver_hostname="https://dataguids_mock.org"
-        )
-        expected = "test.commons1.io"
-        assert results == expected
-
-        object_id = "dg.TEST/00e6cfa9-a183-42f6-bb44-b70347106bbe"
-        identifier = "dg.TEST"
-        m.get(f"https://dataguids_mock.org/index/{object_id}", json={}, status_code=404)
-        m.get(
-            f"https://dataguids_mock.org/mds/metadata/{identifier}",
-            json=DRS_MDS_RESULTS,
-        )
-        results = resolve_compact_drs_using_dataguids(
-            identifier, object_id, resolver_hostname="https://dataguids_mock.org"
-        )
-        expected = "test.commons1.io"
-        assert results == expected
-        m.get(f"https://dataguids_mock.org/index/{object_id}", json={}, status_code=500)
-
-        m.get(
-            f"https://dataguids_mock.org/mds/metadata/{identifier}",
-            json=DRS_MDS_RESULTS,
-        )
-        assert (
-            resolve_compact_drs_using_dataguids(
+    with mock.patch(
+        "gen3.tools.download.drs_resolvers.DRS_CACHE",
+        str(Path(download_dir, ".drs_cache", "resolved_drs_hosts.json")),
+    ):
+        with requests_mock.Mocker() as m:
+            m.get(
+                f"https://dataguids_mock.org/index/{object_id}",
+                json=DRS_RESOLVER_RESULTS,
+            )
+            results = resolve_compact_drs_using_dataguids(
                 identifier, object_id, resolver_hostname="https://dataguids_mock.org"
             )
-            == None
-        )
+            expected = "test.commons1.io"
+            assert results == expected
 
-        m.get(
-            f"https://dataguids_mock.org/mds/metadata/{identifier}",
-            json=DRS_MDS_RESULTS,
-            status_code=404,
-        )
-        assert (
-            resolve_compact_drs_using_dataguids(
+            object_id = "dg.TEST/00e6cfa9-a183-42f6-bb44-b70347106bbe"
+            identifier = "dg.TEST"
+            m.get(
+                f"https://dataguids_mock.org/index/{object_id}",
+                json={},
+                status_code=404,
+            )
+            m.get(
+                f"https://dataguids_mock.org/mds/metadata/{identifier}",
+                json=DRS_MDS_RESULTS,
+            )
+            results = resolve_compact_drs_using_dataguids(
                 identifier, object_id, resolver_hostname="https://dataguids_mock.org"
             )
-            is None
-        )
-
-        object_id = "dg.TEST/00e6cfa9-a183-42f6-bb44-b70347106bbe"
-        identifier = "dg.TEST"
-        m.get(f"https://dataguids_mock.org/index/{object_id}", json={}, status_code=404)
-        m.get(
-            f"https://dataguids_mock.org/mds/metadata/{identifier}",
-            json=DRS_MDS_RESULTS,
-            status_code=500,
-        )
-        assert (
-            resolve_compact_drs_using_dataguids(
-                identifier, object_id, resolver_hostname="https://dataguids_mock.org"
+            expected = "test.commons1.io"
+            assert results == expected
+            m.get(
+                f"https://dataguids_mock.org/index/{object_id}",
+                json={},
+                status_code=500,
             )
-            is None
-        )
+
+            m.get(
+                f"https://dataguids_mock.org/mds/metadata/{identifier}",
+                json=DRS_MDS_RESULTS,
+            )
+            assert (
+                resolve_compact_drs_using_dataguids(
+                    identifier,
+                    object_id,
+                    resolver_hostname="https://dataguids_mock.org",
+                )
+                == None
+            )
+
+            m.get(
+                f"https://dataguids_mock.org/mds/metadata/{identifier}",
+                json=DRS_MDS_RESULTS,
+                status_code=404,
+            )
+            assert (
+                resolve_compact_drs_using_dataguids(
+                    identifier,
+                    object_id,
+                    resolver_hostname="https://dataguids_mock.org",
+                )
+                is None
+            )
+
+            object_id = "dg.TEST/00e6cfa9-a183-42f6-bb44-b70347106bbe"
+            identifier = "dg.TEST"
+            m.get(
+                f"https://dataguids_mock.org/index/{object_id}",
+                json={},
+                status_code=404,
+            )
+            m.get(
+                f"https://dataguids_mock.org/mds/metadata/{identifier}",
+                json=DRS_MDS_RESULTS,
+                status_code=500,
+            )
+            assert (
+                resolve_compact_drs_using_dataguids(
+                    identifier,
+                    object_id,
+                    resolver_hostname="https://dataguids_mock.org",
+                )
+                is None
+            )
 
 
 @pytest.mark.parametrize(
@@ -267,7 +313,7 @@ def test_resolve_compact_drs_using_dataguids():
         ("dg.5656", None),
     ],
 )
-def test_resolve_using_mds(identifier, expected):
+def test_resolve_using_mds(download_dir, identifier, expected):
     MDS_RESPONSE = {
         "dg.4503": {
             "host": "https://gen3.biodatacatalyst.nhlbi.nih.gov/index/",
@@ -281,19 +327,23 @@ def test_resolve_using_mds(identifier, expected):
         },
     }
 
-    with requests_mock.Mocker() as m:
-        m.get(
-            f"https://dataguids_mock.org/mds/metadata/{identifier}",
-            json=MDS_RESPONSE.get(identifier, {"detail": "Not found: dg.4503444"}),
-            status_code=200 if identifier in MDS_RESPONSE else 404,
-        )
+    with mock.patch(
+        "gen3.tools.download.drs_resolvers.DRS_CACHE",
+        str(Path(download_dir, ".drs_cache", "resolved_drs_hosts.json")),
+    ):
+        with requests_mock.Mocker() as m:
+            m.get(
+                f"https://dataguids_mock.org/mds/metadata/{identifier}",
+                json=MDS_RESPONSE.get(identifier, {"detail": "Not found: dg.4503444"}),
+                status_code=200 if identifier in MDS_RESPONSE else 404,
+            )
 
-        results = resolve_drs_using_commons_mds(
-            identifier,
-            None,
-            metadata_service_url="https://dataguids_mock.org/mds/metadata",
-        )
-        assert expected == results
+            results = resolve_drs_using_commons_mds(
+                identifier,
+                None,
+                metadata_service_url="https://dataguids_mock.org/mds/metadata",
+            )
+            assert expected == results
 
 
 @pytest.mark.parametrize(
@@ -357,3 +407,7 @@ def test_resolve_drs_strategy(download_dir, identifier, object_id, expected):
                 cache_results=True,
             )
             assert results == expected
+
+
+def test_missing_resolvers():
+    assert resolve_drs_via_list([], "dg.XXTS", None) is None

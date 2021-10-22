@@ -7,6 +7,7 @@ import requests_mock
 from unittest.mock import patch
 from dataclasses import asdict
 from pathlib import Path
+from unittest import mock
 import gen3
 
 DIR = Path(__file__).resolve().parent
@@ -379,116 +380,123 @@ def test_download_objects(
 
     commons_url = "test.commons1.io"
     remote_host = ""
-
-    with requests_mock.Mocker() as m:
-        # mock the initial credentials request
-        m.post(
-            f"http://{hostname}/user/credentials/cdis/access_token",
-            json={
-                "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTYzMTI5MTI0NywiaWF0IjoxNjMxMjkxMjQ3fQ.DRcKE6Zr5aDzrh2Hz-0Zo8N0kGNQfgWIwmt6W_MTkls"
-            },
-        )
-        with patch(
-            "gen3.auth.Gen3Auth._write_to_file"
-        ) as mock_write_to_file:  # do not cache fake token
-            mock_write_to_file().return_value = True
-            auth = gen3.auth.Gen3Auth(refresh_token=test_key)
-            token = auth.get_access_token()
-
-        # mock the WTS and other responses
-        m.get(f"https://{hostname}/wts/external_oidc/", json=wts_oidc[hostname])
-        object_list = Manifest.load(
-            Path(DIR, "resources/manifest_test_drs_compact.json")
-        )
-        m.get(
-            f"https://dataguids.org/index/{drs_resolver_dataguids['did']}",
-            json=drs_resolver_dataguids,
-        )
-        m.get(
-            f"https://{hostname}/wts/token/?idp=test-google",
-            json={"token": "whatever1"},
-        )
-
-        m.get(
-            "http://test.datacommons.io/mds/metadata/dg.XXTS",
-            json={},
-            status_code=404,
-        )
-
-        m.get(
-            "https://dataguids.org/index/_dist",
-            json={},
-            status_code=404,
-        )
-        for object_id, info in drs_object_info.items():
-            m.get(f"https://{commons_url}/ga4gh/drs/v1/objects/{object_id}", json=info)
-            m.get(
-                f"https://{commons_url}/ga4gh/drs/v1/objects/{object_id}/access/s3",
-                json={"url": f"https://default-download.s3.amazon.com/{object_id}"},
-            )
-        for object in object_list:
-            m.get(
-                f"https://default-download.s3.amazon.com/{object.object_id}",
-                headers={
-                    "content-length": download_test_files[object.object_id][
-                        "content_length"
-                    ]
+    with mock.patch(
+        "gen3.tools.download.drs_resolvers.DRS_CACHE",
+        str(Path(download_dir, ".drs_cache", "resolved_drs_hosts.json")),
+    ):
+        with requests_mock.Mocker() as m:
+            # mock the initial credentials request
+            m.post(
+                f"http://{hostname}/user/credentials/cdis/access_token",
+                json={
+                    "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTYzMTI5MTI0NywiaWF0IjoxNjMxMjkxMjQ3fQ.DRcKE6Zr5aDzrh2Hz-0Zo8N0kGNQfgWIwmt6W_MTkls"
                 },
-                text=download_test_files[object.object_id]["content"],
+            )
+            with patch(
+                "gen3.auth.Gen3Auth._write_to_file"
+            ) as mock_write_to_file:  # do not cache fake token
+                mock_write_to_file().return_value = True
+                auth = gen3.auth.Gen3Auth(refresh_token=test_key)
+                token = auth.get_access_token()
+
+            # mock the WTS and other responses
+            m.get(f"https://{hostname}/wts/external_oidc/", json=wts_oidc[hostname])
+            object_list = Manifest.load(
+                Path(DIR, "resources/manifest_test_drs_compact.json")
+            )
+            m.get(
+                f"https://dataguids.org/index/{drs_resolver_dataguids['did']}",
+                json=drs_resolver_dataguids,
+            )
+            m.get(
+                f"https://{hostname}/wts/token/?idp=test-google",
+                json={"token": "whatever1"},
             )
 
-        downloader = DownloadManager(hostname, auth, object_list)
-        results = downloader.download(
-            object_list=[object_list[0]], save_directory=download_dir
-        )
+            m.get(
+                "http://test.datacommons.io/mds/aggregate/info/dg.XXTS",
+                json={},
+                status_code=404,
+            )
 
-        # test to see if file is downloaded
-        for id, item in results.items():
-            assert item.status == "downloaded"
-            with open(download_dir.join(item.filename), "rt") as fin:
-                assert fin.read() == download_test_files[id]["content"]
+            m.get(
+                "https://dataguids.org/index/_dist",
+                json={},
+                status_code=404,
+            )
+            for object_id, info in drs_object_info.items():
+                m.get(
+                    f"https://{commons_url}/ga4gh/drs/v1/objects/{object_id}", json=info
+                )
+                m.get(
+                    f"https://{commons_url}/ga4gh/drs/v1/objects/{object_id}/access/s3",
+                    json={"url": f"https://default-download.s3.amazon.com/{object_id}"},
+                )
+            for object in object_list:
+                m.get(
+                    f"https://default-download.s3.amazon.com/{object.object_id}",
+                    headers={
+                        "content-length": download_test_files[object.object_id][
+                            "content_length"
+                        ]
+                    },
+                    text=download_test_files[object.object_id]["content"],
+                )
 
-        # test _download manifest
+            downloader = DownloadManager(hostname, auth, object_list)
+            results = downloader.download(
+                object_list=[object_list[0]], save_directory=download_dir
+            )
 
-        results = _download(
-            hostname,
-            auth,
-            Path(DIR, "resources/manifest_test_2.json"),
-            download_dir.join("_download"),
-        )
-        for id, item in results.items():
-            assert item.status == "downloaded"
-            with open(download_dir.join("_download", item.filename), "rt") as fin:
-                assert fin.read() == download_test_files[id]["content"]
-        # test various other failures
+            # test to see if file is downloaded
+            for id, item in results.items():
+                assert item.status == "downloaded"
+                with open(download_dir.join(item.filename), "rt") as fin:
+                    assert fin.read() == download_test_files[id]["content"]
 
-        assert (
-            _download(
+            # test _download manifest
+
+            results = _download(
                 hostname,
                 auth,
-                Path(DIR, "resources/manifest_does_not_exists.json"),
+                Path(DIR, "resources/manifest_test_2.json"),
                 download_dir.join("_download"),
             )
-            is None
-        )
+            for id, item in results.items():
+                assert item.status == "downloaded"
+                with open(download_dir.join("_download", item.filename), "rt") as fin:
+                    assert fin.read() == download_test_files[id]["content"]
+            # test various other failures
 
-        # test download object
+            assert (
+                _download(
+                    hostname,
+                    auth,
+                    Path(DIR, "resources/manifest_does_not_exists.json"),
+                    download_dir.join("_download"),
+                )
+                is None
+            )
 
-        results = _download_obj(
-            hostname,
-            auth,
-            "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e",
-            download_dir.join("_download_obj"),
-        )
-        for id, item in results.items():
-            assert item.status == "downloaded"
-            with open(download_dir.join("_download_obj", item.filename), "rt") as fin:
-                assert fin.read() == download_test_files[id]["content"]
+            # test download object
 
-        # test listfiles
+            results = _download_obj(
+                hostname,
+                auth,
+                "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e",
+                download_dir.join("_download_obj"),
+            )
+            for id, item in results.items():
+                assert item.status == "downloaded"
+                with open(
+                    download_dir.join("_download_obj", item.filename), "rt"
+                ) as fin:
+                    assert fin.read() == download_test_files[id]["content"]
 
-        _listfiles(hostname, auth, "resources/manifest_test_2.json")
+            # test listfiles
 
-        list_files_in_workspace_manifest(
-            hostname, auth, "resources/manifest_test_2.json"
-        )
+            _listfiles(hostname, auth, "resources/manifest_test_2.json")
+
+            list_files_in_workspace_manifest(
+                hostname, auth, "resources/manifest_test_2.json"
+            )

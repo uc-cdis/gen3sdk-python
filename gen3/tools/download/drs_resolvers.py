@@ -4,7 +4,11 @@ import json
 from cdiserrors import get_logger
 import os
 import inspect
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
+
+DRS_CACHE_EXPIRE_DURATION = os.getenv("DRS_CACHE_EXPIRE_DURATION", 365)
+DRS_CACHE_EXPIRE = timedelta(days=DRS_CACHE_EXPIRE_DURATION)
 
 DRS_CACHE = os.getenv(
     "DRS_CACHE", str(Path(Path.home(), ".drs_cache", "resolved_drs_hosts.json"))
@@ -44,7 +48,17 @@ def create_local_drs_cache(data: dict, cache_path: str = None) -> bool:
         cache_path = Path(cache_path)
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         with open(cache_path, "wt") as fout:
-            json.dump(data, fout)
+            json.dump(
+                {
+                    "info": {
+                        "created": datetime.now(timezone.utc).strftime(
+                            "%m/%d/%Y %H:%M:%S:%z"
+                        )
+                    },
+                    "cache": data,
+                },
+                fout,
+            )
         return True
 
     except IOError as ex:
@@ -57,12 +71,12 @@ def append_to_local_drs_cache(data: dict, cache_path: str = None) -> bool:
         cache_path = DRS_CACHE
     try:
         cache_path = Path(cache_path)
-        if cache_path.exists() is False:  # no cache exists so create it
+        if cache_path.exists() is False:  # no cache exists so create a cache
             return create_local_drs_cache(data, cache_path)
 
         with open(cache_path, "rt") as fin:
             cache_data = json.load(fin)
-            cache_data = {**cache_data, **data}
+            cache_data["cache"] = {**cache_data["cache"], **data}
             with open(cache_path, "wt") as fout:
                 json.dump(cache_data, fout)
 
@@ -87,10 +101,16 @@ def resolve_drs_from_local_cache(
     try:
         with open(filename, "rt") as fin:
             data = json.load(fin)
-            if identifier in data:
-                return data[identifier].get("host", None)
-    except IOError as ex:
-        logger.error(f"{filename} not found {ex}")
+            timestamp = datetime.strptime(
+                data["info"]["created"], "%m/%d/%Y %H:%M:%S:%z"
+            )
+            if (datetime.now(timezone.utc) - timestamp) > DRS_CACHE_EXPIRE:
+                fin.close()  # cache is expired return and one of the other resolvers will recreate it
+                return None
+
+            if identifier in data["cache"]:
+                return data["cache"][identifier].get("host", None)
+
     except json.JSONDecodeError as ex:
         logger.error(f"json cache file cannot be parsed: {ex}")
 
