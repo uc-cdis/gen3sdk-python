@@ -1,3 +1,8 @@
+# new way:
+import gen3
+from gen3.auth import Gen3Auth
+from gen3.submission import Gen3Submission
+
 ####################################################################################
 ####################################################################################
 ####################################################################################
@@ -86,6 +91,7 @@ curl https://api.github.com/repos/uc-cdis/cdis-data-client/releases/latest | gre
 unzip dataclient_osx.zip
 mv gen3-client ~/.gen3
 rm dataclient_osx.zip
+
 
 
 # Now configure my gen3-client profile:

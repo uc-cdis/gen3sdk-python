@@ -737,6 +737,59 @@ class Gen3Expansion:
         )
         return uuids
 
+    def get_records_for_submitter_ids(self, sids, node):
+        """
+        Get a list of UUIDs for a provided list of submitter_ids.
+        # could also use:{node(submitter_id: "xyz") {id project_id}} #
+        """
+        uuids = []
+        pids = []
+        count = 0
+        for sid in sids:
+            count += 1
+            args = 'submitter_id:"{}"'.format(sid)
+            res = self.paginate_query(node=node, args=args, props=["id", "submitter_id","project_id"])
+            recs = res["data"][node]
+            if len(recs) == 1:
+                uuids.append(recs[0]["id"])
+                pids.append(recs[0]["project_id"])
+            elif len(recs) == 0:
+                print("No data returned for {}:\n\t{}".format(sid, res))
+            print("\t{}/{}".format(count, len(sids)))
+        print(
+            "Finished retrieving {} uuids for {} submitter_ids".format(
+                len(uuids), len(sids)
+            )
+        )
+        df = pd.DataFrame({'project_id':pids,'uuid':uuids,'submitter_id':sids})
+
+        dfs = []
+        for i in range(len(df)):
+            sid = df.iloc[i]['submitter_id']
+            pid = df.iloc[i]['project_id']
+            uuid = df.iloc[i]['uuid']
+            prog,proj = pid.split("-",1)
+            print("({}/{}): {}".format(i+1,len(df),uuid))
+            mydir = "project_uuids/{}_tsvs".format(pid)  # create the directory to store TSVs
+            if not os.path.exists(mydir):
+                os.makedirs(mydir)
+            filename = "{}/{}_{}.tsv".format(mydir,pid,uuid)
+            if os.path.isfile(filename):
+                print("File previously downloaded.")
+            else:
+                self.sub.export_record(prog, proj, uuid, "tsv", filename)
+            df1 = pd.read_csv(filename, sep="\t", header=0)
+            dfs.append(df1)
+        all_data = pd.concat(dfs, ignore_index=True)
+        master = "master_uuids_{}.tsv".format(node)
+        all_data.to_csv("{}".format(master), sep='\t',index=False)
+        print("Master node TSV with {} total recs written to {}.".format(len(all_data),master))
+        return all_data
+
+
+
+
+
     def delete_records(self, uuids, project_id, chunk_size=200, backup=False):
         """
         This function attempts to delete a list of UUIDs from a project.
@@ -2490,7 +2543,7 @@ class Gen3Expansion:
 
         if format == "TSV":
             now = datetime.datetime.now()
-            date = "{}-{}-{}".format(now.year, now.month, now.day)
+            date = "{}-{}-{}_{}.{}".format(now.year, now.month, now.day, now.minute, now.second)
             outname = "{}_indexd_records_{}.tsv".format(dc,date)
             all_records = pd.DataFrame(all_records)
             all_records['md5sum'] = [hashes.get('md5') for hashes in all_records.hashes]
