@@ -313,6 +313,4 @@ async def _parse_from_queue(queue):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(filename="output.log", level=logging.DEBUG)
-    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
     write_page_records_to_files()
