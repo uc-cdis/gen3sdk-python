@@ -346,7 +346,11 @@ class Gen3Submission:
         output = requests.get(api_url, auth=self._auth_provider).text
         if filename is None:
             if fileformat == "json":
-                output = json.loads(output)
+                try:
+                    output = json.loads(output)
+                except ValueError as e:
+                    print(f"Output: {output}\nUnable to parse JSON: {e}")
+                    raise
             return output
         else:
             self.__export_file(filename, output)
@@ -378,7 +382,11 @@ class Gen3Submission:
         output = requests.get(api_url, auth=self._auth_provider).text
         if filename is None:
             if fileformat == "json":
-                output = json.loads(output)
+                try:
+                    output = json.loads(output)
+                except ValueError as e:
+                    print(f"Output: {output}\nUnable to parse JSON: {e}")
+                    raise
             return output
         else:
             self.__export_file(filename, output)
