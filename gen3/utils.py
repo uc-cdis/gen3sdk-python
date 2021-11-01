@@ -2,12 +2,15 @@ import logging
 import sys
 import re
 import requests
+import configparser
+from os.path import expanduser
 
 from urllib.parse import urlunsplit
 from urllib.parse import urlencode
 from urllib.parse import urlsplit
 from urllib.parse import parse_qs
 
+CONFIG_FILE_PATH = expanduser("~/.gen3/config")
 
 UUID_FORMAT = (
     r"^.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
@@ -164,6 +167,25 @@ def get_urls(raw_urls_string):
         .rstrip("]")
         .split(" ")
     ]
+
+
+def get_cfg_from_profile(profile, cfg):
+    """
+    Return value of `cfg` in configure profile `profile` or None if either don't exist
+    Args:
+        profile (str): name of profile previously setup using `gen3 configure`
+        cfg (str): name of configuration variable within the profile
+
+    Returns:
+        str: Value of `cfg` in provided configure profil
+    """
+    config = configparser.ConfigParser()
+    config.read(CONFIG_FILE_PATH)
+
+    try:
+        return config[profile][cfg]
+    except Exception as exc:
+        return None
 
 
 # Default settings to control usage of backoff library.

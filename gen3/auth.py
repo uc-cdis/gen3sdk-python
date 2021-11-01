@@ -10,7 +10,7 @@ import logging
 from urllib.parse import urlparse
 import backoff
 
-from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status
+from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status, get_cfg_from_profile
 
 
 class Gen3AuthError(Exception):
@@ -164,7 +164,12 @@ class Gen3Auth(AuthBase):
         if not refresh_file and not refresh_token and not idp:
             refresh_file = os.getenv("GEN3_API_KEY", "credentials")
 
-        if refresh_file and not idp:
+        # prefer to check for a configure profile with the provided name first
+        if get_cfg_from_profile(profile=refresh_file, cfg="api_key_filepath"):
+            refresh_file = get_cfg_from_profile(
+                profile=refresh_file, cfg="api_key_filepath"
+            )
+        elif refresh_file and not idp:
             idp_prefix = "idp://wts/"
             access_token_prefix = "accesstoken:///"
             if refresh_file[0 : len(idp_prefix)] == idp_prefix:
