@@ -7,8 +7,11 @@ import inspect
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-DRS_CACHE_EXPIRE_DURATION = os.getenv("DRS_CACHE_EXPIRE_DURATION", 365)
+DRS_CACHE_EXPIRE_DURATION = os.getenv("DRS_CACHE_EXPIRE_DURATION", 2)  # In Days
 DRS_CACHE_EXPIRE = timedelta(days=DRS_CACHE_EXPIRE_DURATION)
+DRS_RESOLUTION_ORDER = os.getenv(
+    "DRS_RESOLUTION_ORDER", "cache_file:commons_mds:dataguids_dist:dataguids"
+)
 
 DRS_CACHE = os.getenv(
     "DRS_CACHE", str(Path(Path.home(), ".drs_cache", "resolved_drs_hosts.json"))
@@ -231,6 +234,7 @@ def resolve_drs_using_commons_mds(
     )
 
 
+## TODO: provide methods to turn this into a plugin archicture
 REGISTERED_DRS_RESOLVERS = {
     "cache_file": resolve_drs_from_local_cache,
     "commons_mds": resolve_drs_using_commons_mds,
@@ -272,5 +276,5 @@ def resolve_drs_via_list(
 
 def resolve_drs(identifier, object_id, **kwargs):
     return resolve_drs_via_list(
-        REGISTERED_DRS_RESOLVERS, identifier, object_id, **kwargs
+        DRS_RESOLUTION_ORDER.split(":"), identifier, object_id, **kwargs
     )

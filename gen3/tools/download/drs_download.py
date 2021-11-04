@@ -3,7 +3,6 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
 from enum import Enum
 from json import load as json_load, loads as json_loads, JSONDecodeError
-from logging import StreamHandler, Formatter, INFO
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -18,15 +17,9 @@ from gen3.auth import Gen3Auth, Gen3AuthError
 from gen3.auth import _handle_access_token_response
 from gen3.tools.download.drs_resolvers import resolve_drs
 
-# Setup custom logger to create a console/friendly message
-logger = get_logger("download", log_level="warning")
-console = StreamHandler()
-console.setLevel(INFO)
-formatter = Formatter("%(message)s")
-console.setFormatter(formatter)
-logger.addHandler(console)
-
 DEFAULT_EXPIRE: timedelta = timedelta(hours=1)
+
+logger = get_logger("download", log_level="warning")
 
 
 class Downloadable:
@@ -176,7 +169,7 @@ def wts_external_oidc(hostname: str) -> Dict[str, Any]:
         logger.critical(
             f'{ex.response.status_code}: {json_loads(ex.response.text).get("message", "")}'
         )
-        raise
+        # raise
 
     return oidc
 
@@ -396,7 +389,7 @@ def parse_drs_identifier(drs_candidate: str) -> Tuple[str, str, str]:
     if len(matches) == 1 and len(matches[0]) == 2:
         return matches[0][0], matches[0][1], "compact"
 
-    # can't figure it out
+    # can't figure out a this identifier
     return "", "", "unknown"
 
 
@@ -421,8 +414,8 @@ def resolve_drs_hostname_from_id(
             hostname = resolve_drs(prefix, object_id, metadata_service_url=mds_url)
             if hostname is not None:
                 resolved_drs_prefix_cache[prefix] = hostname
-
-        hostname = resolved_drs_prefix_cache[prefix]
+        else:
+            hostname = resolved_drs_prefix_cache[prefix]
 
     return hostname, identifier, identifier_type
 
@@ -652,36 +645,44 @@ class DownloadManager:
         }
 
         for entry in object_list:
-            drs_hostname = None
-            access_token = None
-            if entry.hostname is not None:
-                # handle hostname DRS
-                # check to see if we have tokens
-                if entry.hostname not in self.known_hosts:
-                    logger.critical(
-                        f"{entry.hostname} is not present in this commons remote user access. "
-                        f"Skipping {entry.file_name}"
-                    )
-                    continue
-                if self.known_hosts[entry.hostname].available is False:
-                    logger.critical(
-                        f"Was unable to get user authorization from {entry.hostname}. Skipping {entry.file_name}"
-                    )
-                    continue
+            if entry.hostname is None:
+                logger.critical(
+                    f"{entry.hostname} was not resolved, skipping {entry.object_id}."
+                    f"Skipping {entry.file_name}"
+                )
+                completed[entry.object_id].status = "error (resolving DRS host)"
+                continue
 
-                drs_hostname = entry.hostname
-                access_token = self.get_fresh_token(drs_hostname)
+            # check to see if we have tokens
+            if entry.hostname not in self.known_hosts:
+                logger.critical(
+                    f"{entry.hostname} is not present in this commons remote user access."
+                    f"Skipping {entry.file_name}"
+                )
+                completed[entry.object_id].status = "error (resolving DRS host)"
+                continue
+            if self.known_hosts[entry.hostname].available is False:
+                logger.critical(
+                    f"Was unable to get user authorization from {entry.hostname}. Skipping {entry.file_name}"
+                )
+                completed[entry.object_id].status = "error (no auth)"
+                continue
+
+            drs_hostname = entry.hostname
+            access_token = self.get_fresh_token(drs_hostname)
 
             if access_token is None:
                 logger.critical(
                     f"No access token defined for {entry.object_id}. Skipping"
                 )
+                completed[entry.object_id].status = "error (no access token)"
                 continue
             # TODO refine the selection of access_method
             if len(entry.access_methods) == 0:
                 logger.critical(
                     f"No access methods defined for {entry.object_id}. Skipping"
                 )
+                completed[entry.object_id].status = "error (no access methods)"
                 continue
             access_method = entry.access_methods[0]["access_id"]
 
@@ -757,52 +758,56 @@ def _download_obj(
     return downloader.download(object_list, out_dir_path)
 
 
-def _listfiles(hostname, auth, infile: str) -> None:
+def _listfiles(hostname, auth, infile: str) -> bool:
     object_list = Manifest.load(Path(infile))
     if object_list is None:
-        return
+        return False
 
     try:
         auth.get_access_token()
     except Gen3AuthError:
         logger.critical(f"Unable to authenticate your credentials with {hostname}")
-        return
+        return False
 
     DownloadManager(hostname=hostname, auth=auth, download_list=object_list)
 
     for x in object_list:
         print(x)
 
+    return True
 
-def _list_access(hostname, auth, infile: str) -> None:
+
+def _list_access(hostname, auth, infile: str) -> bool:
     object_list = Manifest.load(Path(infile))
     if object_list is None:
-        return
+        return False
 
     try:
         auth.get_access_token()
     except Gen3AuthError:
         logger.critical(f"Unable to authenticate your credentials with {hostname}")
-        return
+        return False
 
     download = DownloadManager(hostname=hostname, auth=auth, download_list=object_list)
     access = download.user_access()
     for h, authz in access.items():
         list_auth(h, authz)
 
+    return True
+
 
 # These functions are exposed to the SDK
-def list_files_in_workspace_manifest(hostname, auth, infile: str) -> None:
-    _listfiles(hostname, auth, infile)
+def list_files_in_workspace_manifest(hostname, auth, infile: str) -> bool:
+    return _listfiles(hostname, auth, infile)
 
 
 def download_files_in_workspace_manifest(hostname, auth, infile, output_dir) -> None:
-    _download(hostname, auth, infile, output_dir)
+    _download(hostname, auth, infile, output_dir)  # pragma: no cover
 
 
 def download_drs_object(hostname, auth, object_id, output_dir) -> None:
-    _download_obj(hostname, auth, object_id, output_dir)
+    _download_obj(hostname, auth, object_id, output_dir)  # pragma: no cover
 
 
-def list_access_in_manifest(hostname, auth, infile) -> None:
-    _list_access(hostname, auth, infile)
+def list_access_in_manifest(hostname, auth, infile) -> bool:
+    return _list_access(hostname, auth, infile)  # pragma: no cover

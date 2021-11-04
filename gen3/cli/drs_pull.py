@@ -8,7 +8,23 @@ from gen3.tools.download.drs_download import (
     list_access_in_manifest,
 )
 
-logger = get_logger("manifest", log_level="warning")
+logger = get_logger("download", log_level="warning")
+
+
+@click.command()
+@click.argument("infile")
+@click.option("--access", is_flag=True)
+@click.pass_context
+def list_files(ctx, infile: str, access: bool):
+    """List files and size in manifest"""
+    if access:
+        list_access_in_manifest(
+            ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
+        )
+    else:
+        list_files_in_workspace_manifest(
+            ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
+        )
 
 
 @click.command()
@@ -58,6 +74,7 @@ def manifest():
     """Commands for downloading Gen3 manifests"""
     pass
 
+
 manifest.add_command(download_manifest, name="pull_manifest")
 manifest.add_command(download_object, name="pull_object")
-manifest.add_command(user_access, name="list_access")
+manifest.add_command(list_files, name="ls")
