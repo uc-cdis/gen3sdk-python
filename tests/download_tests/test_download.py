@@ -4,7 +4,7 @@ import base64
 import time
 import requests
 import requests_mock
-
+from datetime import datetime, timezone, timedelta
 from dataclasses import asdict
 from pathlib import Path
 from unittest import mock
@@ -51,6 +51,13 @@ def drs_objects():
     with open(Path(DIR, "resources/drs_objects.json")) as fin:
         test_data = json.load(fin)
         return test_data["drs_objects"]
+
+
+@pytest.fixture
+def drs_object_commons3():
+    with open(Path(DIR, "resources/drs_object_commons3.json")) as fin:
+        test_data = json.load(fin)
+        return test_data
 
 
 @pytest.fixture
@@ -364,6 +371,7 @@ def test_download_objects(
     gen3_auth,
     wts_oidc,
     drs_object_info,
+    drs_object_commons3,
     drs_resolver_dataguids,
     download_dir,
     download_test_files,
@@ -474,6 +482,27 @@ def test_download_objects(
                         assert fin.read() == download_test_files[id]["content"]
                 # test various other failures
 
+                # Test if manifest has commons not in WTS
+                m.get(
+                    f"https://test.commons3.io/ga4gh/drs/v1/objects/dg.XX23/b96018c5-db06-4af8-a195-28e339ba815e",
+                    json=drs_object_commons3,
+                )
+
+                expected = {
+                    "dg.XX23/b96018c5-db06-4af8-a195-28e339ba815e": DownloadStatus(
+                        filename="TestDataSet1.sav", status="error (no auth)"
+                    )
+                }
+
+                results = _download(
+                    hostname,
+                    auth,
+                    Path(DIR, "resources/manifest_test_hostname_not_in_wts.json"),
+                    download_dir.join("_download"),
+                )
+                assert expected == results
+
+                # Test if manifest does not exists
                 assert (
                     _download(
                         hostname,
@@ -577,7 +606,9 @@ def test_download_objects(
     "hostname,commons_url,manifest_file",
     [("test.datacommons.io", "test.commons1.io", "manifest_test_1.json")],
 )
-def test_list_auth(wts_oidc, drs_object_info, hostname, commons_url, manifest_file):
+def test_list_auth(
+    capsys, wts_oidc, drs_object_info, hostname, commons_url, manifest_file
+):
     test_key = {
         "api_key": "whatever."
         + base64.urlsafe_b64encode(
@@ -636,6 +667,77 @@ def test_list_auth(wts_oidc, drs_object_info, hostname, commons_url, manifest_fi
         ) as mock_write_to_file:  # do not cache fake token
             mock_write_to_file().return_value = True
             auth = gen3.auth.Gen3Auth(refresh_token=test_key)
-            auth.get_access_token()
 
-            _list_access(hostname, auth, Path(DIR, f"resources/{manifest_file}"))
+            result = _list_access(
+                hostname, auth, Path(DIR, f"resources/{manifest_file}")
+            )
+            captured = capsys.readouterr()
+            expected = """Access for test.datacommons.io
+      /dictionary_page: access
+      /programs/open: read read-storage
+      /programs/open/projects: read read-storage
+      /programs/open/projects/BACPAC: read read-storage
+      /programs/open/projects/HOPE: read read-storage
+      /programs/open/projects/Preventing_Opioid_Use_Disorder: read read-storage
+      /sower: access
+      /workspace: access
+"""
+            assert result is True
+            assert captured.out == expected
+
+            # Test missing manifest file
+            result = _list_access(
+                hostname, auth, Path(DIR, f"resources/non_existent_file.json")
+            )
+            assert result is False
+
+
+def test_download_status_repr_and_str():
+    download1 = DownloadStatus(
+        filename="test.csv",
+        status="downloaded",
+        startTime=datetime.fromisoformat("2011-11-04T00:05:23"),
+        endTime=datetime.fromisoformat("2011-11-04T00:07:12"),
+    )
+
+    results = download1.__repr__()
+    expected = "filename: test.csv status: downloaded startTime: 11/04/2011, 00:05:23 endTime: 11/04/2011, 00:07:12"
+    assert results == expected
+
+    results = download1.__str__()
+    expected = "filename: test.csv status: downloaded startTime: 11/04/2011, 00:05:23 endTime: 11/04/2011, 00:07:12"
+    assert results == expected
+
+
+def test_no_gen3_auth():
+    hostname = "test.datacommons.io"
+    test_key = {
+        "api_key": "whatever."
+        + base64.urlsafe_b64encode(
+            ('{"iss": "http://%s", "exp": %d }' % (hostname, time.time() + 300)).encode(
+                "utf-8"
+            )
+        ).decode("utf-8")
+        + ".whatever"
+    }
+
+    with requests_mock.Mocker() as m:
+        m.post(
+            f"http://{hostname}/user/credentials/cdis/access_token",
+            json={},
+            status_code=501,
+        )
+        with mock.patch(
+            "gen3.auth.Gen3Auth._write_to_file"
+        ) as mock_write_to_file:  # do not cache fake token
+            mock_write_to_file().return_value = False
+            auth = gen3.auth.Gen3Auth(refresh_token=test_key)
+            print("done")
+            result = _list_access(
+                hostname, auth, Path(DIR, f"resources/manifest_test_1.json")
+            )
+            assert result is False
+            result = list_files_in_workspace_manifest(
+                hostname, auth, Path(DIR, f"resources/manifest_test_1.json")
+            )
+            assert result is False
