@@ -3,6 +3,7 @@ from cdiserrors import get_logger
 
 from gen3.tools.download.drs_download import (
     list_files_in_workspace_manifest,
+    list_object_in_workspace_manifest,
     download_files_in_workspace_manifest,
     download_drs_object,
     list_access_in_manifest,
@@ -14,17 +15,23 @@ logger = get_logger("download", log_level="warning")
 @click.command()
 @click.argument("infile")
 @click.option("--access", is_flag=True)
+@click.option("--object", is_flag=True)
 @click.pass_context
-def list_files(ctx, infile: str, access: bool):
+def list_files(ctx, infile: str, access: bool, object: bool):
     """List files and size in manifest"""
     if access:
         list_access_in_manifest(
             ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
         )
     else:
-        list_files_in_workspace_manifest(
-            ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
-        )
+        if object:
+            list_object_in_workspace_manifest(
+                ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
+            )
+        else:
+            list_files_in_workspace_manifest(
+                ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
+            )
 
 
 @click.command()

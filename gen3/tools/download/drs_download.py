@@ -6,6 +6,7 @@ from json import load as json_load, loads as json_loads, JSONDecodeError
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+
 import humanfriendly
 import requests
 from cdiserrors import get_logger
@@ -131,6 +132,21 @@ class Downloadable:
     def download(self):
         self._manager.download([self])
 
+    def printprint(self, indent: str = ""):
+        from os import linesep
+
+        res = self.__str__() + linesep
+        child_indent = f"{indent}    "
+
+        pos = -1
+        for x in self.children:
+            pos += 1
+            if pos == len(self.children) - 1:
+                res += f"{child_indent}└── {x.printprint(child_indent)}"
+            else:
+                res += f"{child_indent}├── {x.printprint(child_indent)}"
+        return res
+
 
 @dataclass
 class DownloadStatus:
@@ -162,6 +178,11 @@ def wts_external_oidc(hostname: str) -> Dict[str, Any]:
         response = requests.get(f"https://{hostname}/wts/external_oidc/")
         response.raise_for_status()
         data = response.json()
+        if "providers" not in data:
+            logger.warning(
+                'cannot find "providers". Likely no WTS service for this commons'
+            )
+            return oidc
         for item in data["providers"]:
             oidc[item["base_url"].replace("https://", "")] = item
 
@@ -169,7 +190,8 @@ def wts_external_oidc(hostname: str) -> Dict[str, Any]:
         logger.critical(
             f'{ex.response.status_code}: {json_loads(ex.response.text).get("message", "")}'
         )
-        # raise
+    except JSONDecodeError as ex:
+        logger.warning(f"Unable to decode response. Likely no WTS service")
 
     return oidc
 
@@ -214,6 +236,9 @@ def get_drs_object_info(hostname: str, object_id: str) -> Optional[dict]:
             logger.critical(
                 f"HTTPError {exc.response.status_code} when accessing object: {object_id}"
             )
+        return None
+    except ConnectionError as exc:
+        logger.critical(f"Connection Error {exc} when accessing object: {object_id}")
         return None
 
 
@@ -645,6 +670,16 @@ class DownloadManager:
         }
 
         for entry in object_list:
+            # handle bundles first
+            if entry.object_type is DRSObjectType.bundle:
+                # append the filename to the directory path and
+                child_dir = Path(save_directory, entry.file_name)
+                # call download with the children object list
+                child_status = self.download(entry.children, child_dir)
+                # when complete, append the return status
+                completed[entry.object_id] = child_status
+                continue
+
             if entry.hostname is None:
                 logger.critical(
                     f"{entry.hostname} was not resolved, skipping {entry.object_id}."
@@ -772,7 +807,24 @@ def _listfiles(hostname, auth, infile: str) -> bool:
     DownloadManager(hostname=hostname, auth=auth, download_list=object_list)
 
     for x in object_list:
-        print(x)
+        print(x.printprint())
+
+    return True
+
+
+def _list_object(hostname, auth, object_id: str) -> bool:
+
+    try:
+        auth.get_access_token()
+    except Gen3AuthError:
+        logger.critical(f"Unable to authenticate your credentials with {hostname}")
+        return False
+
+    object_list = [Downloadable(object_id=object_id)]
+    DownloadManager(hostname=hostname, auth=auth, download_list=object_list)
+
+    for x in object_list:
+        print(x.printprint())
 
     return True
 
@@ -799,6 +851,11 @@ def _list_access(hostname, auth, infile: str) -> bool:
 # These functions are exposed to the SDK
 def list_files_in_workspace_manifest(hostname, auth, infile: str) -> bool:
     return _listfiles(hostname, auth, infile)
+
+
+# These functions are exposed to the SDK
+def list_object_in_workspace_manifest(hostname, auth, object_id: str) -> bool:
+    return _list_object(hostname, auth, object_id)
 
 
 def download_files_in_workspace_manifest(hostname, auth, infile, output_dir) -> None:

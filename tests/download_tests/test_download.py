@@ -691,6 +691,13 @@ def test_list_auth(
             )
             assert result is False
 
+            # Test HTTP failure of
+            m.get(f"https://{hostname}/user/user", json={}, status_code=404)
+            result = _list_access(
+                hostname, auth, Path(DIR, f"resources/non_existent_file.json")
+            )
+            captured = capsys.readouterr()
+            assert result is False
 
 def test_download_status_repr_and_str():
     download1 = DownloadStatus(

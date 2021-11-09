@@ -50,6 +50,7 @@ def create_local_drs_cache(data: dict, cache_path: str = None) -> bool:
     try:
         cache_path = Path(cache_path)
         cache_path.parent.mkdir(parents=True, exist_ok=True)
+        # create timestam
         with open(cache_path, "wt") as fout:
             json.dump(
                 {
@@ -104,14 +105,14 @@ def resolve_drs_from_local_cache(
     try:
         with open(filename, "rt") as fin:
             data = json.load(fin)
-            timestamp = datetime.strptime(
-                data["info"]["created"], "%m/%d/%Y %H:%M:%S:%z"
-            )
-            if (datetime.now(timezone.utc) - timestamp) > DRS_CACHE_EXPIRE:
-                fin.close()  # cache is expired return and one of the other resolvers will recreate it
-                return None
-
             if identifier in data["cache"]:
+                timestamp = datetime.strptime(
+                    data["cache"][identifier].get("created", "1/1/1900 00:00:01:+0000"),
+                    "%m/%d/%Y %H:%M:%S:%z",
+                )
+                if (datetime.now(timezone.utc) - timestamp) > DRS_CACHE_EXPIRE:
+                    fin.close()  # cache is expired return and one of the other resolvers will recreate it
+                    return None
                 return data["cache"][identifier].get("host", None)
 
     except json.JSONDecodeError as ex:
@@ -139,7 +140,14 @@ def resolve_compact_drs_using_indexd_dist(
             name = entry.get("name", "")
             for x in entry["hints"]:
                 id = clean_dist_entry(x)
-                data[id] = {"host": host, "name": name, "type": entry["type"]}
+                data[id] = {
+                    "host": host,
+                    "name": name,
+                    "type": entry["type"],
+                    "created": datetime.now(timezone.utc).strftime(
+                        "%m/%d/%Y %H:%M:%S:%z"
+                    ),
+                }
 
         if identifier in data:
             if cache_results:  # write the results to cache since we have a
@@ -171,6 +179,9 @@ def resolve_drs_using_metadata_service(
                         "host": hn,
                         "name": results.get("name", ""),
                         "type": "indexd",
+                        "created": datetime.now(timezone.utc).strftime(
+                            "%m/%d/%Y %H:%M:%S:%z"
+                        ),
                     }
                 }
                 append_to_local_drs_cache(data)
@@ -208,6 +219,9 @@ def resolve_compact_drs_using_dataguids(
                         "host": hn,
                         "name": results.get("from_index_service", {}).get("name", None),
                         "type": "indexd",
+                        "created": datetime.now(timezone.utc).strftime(
+                            "%m/%d/%Y %H:%M:%S:%z"
+                        ),
                     }
                 }
                 append_to_local_drs_cache(data)
@@ -234,7 +248,7 @@ def resolve_drs_using_commons_mds(
     )
 
 
-## TODO: provide methods to turn this into a plugin archicture
+## TODO: provide methods to turn this into a plugin architecture
 REGISTERED_DRS_RESOLVERS = {
     "cache_file": resolve_drs_from_local_cache,
     "commons_mds": resolve_drs_using_commons_mds,
