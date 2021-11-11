@@ -15,9 +15,8 @@ def configure(profile, cred):
     logging.info(f"Configuring profile [ {profile} ] with credentials at {cred}")
 
     try:
-        profile_title, new_lines = config_tool.get_profile_from_creds(profile, cred)
-        lines = config_tool.get_current_config_lines()
-        config_tool.update_config_lines(lines, profile_title, new_lines)
+        cfg = config_tool.get_profile_from_creds(cred)
+        config_tool.update_config_lines(profile, cfg)
     except Exception as e:
         logging.warning(str(e))
         raise e

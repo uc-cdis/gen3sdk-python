@@ -43,7 +43,7 @@
 <span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">urlparse</span>
 <span class="kn">import</span> <span class="nn">backoff</span>
 
-<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">,</span> <span class="n">raise_for_status</span>
+<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">,</span> <span class="n">raise_for_status</span><span class="p">,</span> <span class="n">get_cfg_from_profile</span>
 
 
 <span class="k">class</span> <span class="nc">Gen3AuthError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
@@ -197,7 +197,12 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">refresh_file</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">refresh_token</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">idp</span><span class="p">:</span>
             <span class="n">refresh_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;GEN3_API_KEY&quot;</span><span class="p">,</span> <span class="s2">&quot;credentials&quot;</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">refresh_file</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">idp</span><span class="p">:</span>
+        <span class="c1"># prefer to check for a configure profile with the provided name first</span>
+        <span class="k">if</span> <span class="n">get_cfg_from_profile</span><span class="p">(</span><span class="n">profile</span><span class="o">=</span><span class="n">refresh_file</span><span class="p">,</span> <span class="n">cfg</span><span class="o">=</span><span class="s2">&quot;api_key_filepath&quot;</span><span class="p">):</span>
+            <span class="n">refresh_file</span> <span class="o">=</span> <span class="n">get_cfg_from_profile</span><span class="p">(</span>
+                <span class="n">profile</span><span class="o">=</span><span class="n">refresh_file</span><span class="p">,</span> <span class="n">cfg</span><span class="o">=</span><span class="s2">&quot;api_key_filepath&quot;</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">refresh_file</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">idp</span><span class="p">:</span>
             <span class="n">idp_prefix</span> <span class="o">=</span> <span class="s2">&quot;idp://wts/&quot;</span>
             <span class="n">access_token_prefix</span> <span class="o">=</span> <span class="s2">&quot;accesstoken:///&quot;</span>
             <span class="k">if</span> <span class="n">refresh_file</span><span class="p">[</span><span class="mi">0</span> <span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">idp_prefix</span><span class="p">)]</span> <span class="o">==</span> <span class="n">idp_prefix</span><span class="p">:</span>
