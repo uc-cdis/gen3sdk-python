@@ -7,8 +7,16 @@ import inspect
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
+# DRS Compact identifiers are resolved to hostnames using a set of resolvers
+# NOTE: that the policy is to minimize the requests to dataguids.org or other DRS
+# resolvers, which is why the resolution order start local and expands outward.
+
+# Environment Variables for controlling how DRS hostname are resolved and
+# cached, if DRS should be cached, and the order to execute the resolvers
 DRS_CACHE_EXPIRE_DURATION = os.getenv("DRS_CACHE_EXPIRE_DURATION", 2)  # In Days
+DRS_RESOLVER_HOSTNAME = os.getenv("DRS_RESOLVER_HOSTNAME", "https://dataguids.org")
 DRS_CACHE_EXPIRE = timedelta(days=DRS_CACHE_EXPIRE_DURATION)
+LOCALLY_CACHE_RESOLVED_HOSTS = os.getenv("LOCALLY_CACHE_RESOLVED_HOSTS", True)
 DRS_RESOLUTION_ORDER = os.getenv(
     "DRS_RESOLUTION_ORDER", "cache_file:commons_mds:dataguids_dist:dataguids"
 )
@@ -50,7 +58,7 @@ def create_local_drs_cache(data: dict, cache_path: str = None) -> bool:
     try:
         cache_path = Path(cache_path)
         cache_path.parent.mkdir(parents=True, exist_ok=True)
-        # create timestam
+        # create timestamp for the cache file
         with open(cache_path, "wt") as fout:
             json.dump(
                 {
@@ -71,6 +79,13 @@ def create_local_drs_cache(data: dict, cache_path: str = None) -> bool:
 
 
 def append_to_local_drs_cache(data: dict, cache_path: str = None) -> bool:
+    """
+    Appends/replaces a resolved DRS hostname in the local cache. If no cache file
+    exists, it will create one.
+    @param data: DRS resolution object to add
+    @param cache_path: path to local cache
+    @return: true if success
+    """
     if cache_path is None:
         cache_path = DRS_CACHE
     try:
@@ -96,6 +111,18 @@ def append_to_local_drs_cache(data: dict, cache_path: str = None) -> bool:
 def resolve_drs_from_local_cache(
     identifier: str, _: str = None, **kwargs
 ) -> Optional[str]:
+    """
+    Resolves a compact DRS prefix by reading a local cache file. The format of the cache
+    file is JSON.
+    If the id is found and considered "fresh" return the identifier, otherwise
+    return None indicating that the id is not resolved. Resolved hostnames are considered
+    fresh if the entry's timestamp is less than the expire value, which is in days.
+    @param identifier: DRS prefix to resolve
+    @param _: unused
+    @param kwargs: optional parameters:
+        * "cache_dir": directory to store the cache in
+    @return: hostname if resolved, otherwise None
+    """
     filename = kwargs.get("cache_dir", DRS_CACHE)
     if filename is None:
         return None
@@ -123,8 +150,8 @@ def resolve_drs_from_local_cache(
 
 def resolve_compact_drs_using_indexd_dist(
     identifier: str,
-    cache_results: bool = True,
-    resolver_hostname: str = "https://dataguids.org",
+    cache_results: bool = LOCALLY_CACHE_RESOLVED_HOSTS,
+    resolver_hostname: str = DRS_RESOLVER_HOSTNAME,
 ):
     try:
         response = requests.get(f"{resolver_hostname}/index/_dist")
@@ -139,8 +166,8 @@ def resolve_compact_drs_using_indexd_dist(
             host = clean_http_url(entry["host"])
             name = entry.get("name", "")
             for x in entry["hints"]:
-                id = clean_dist_entry(x)
-                data[id] = {
+                entry_id = clean_dist_entry(x)
+                data[entry_id] = {
                     "host": host,
                     "name": name,
                     "type": entry["type"],
@@ -159,13 +186,13 @@ def resolve_compact_drs_using_indexd_dist(
 
     except requests.exceptions.HTTPError as exc:
         logger.critical(
-            f"HTTP Error accessing dataguids.org: {exc.response.status_code}"
+            f"HTTP Error accessing {DRS_RESOLVER_HOSTNAME}: {exc.response.status_code}"
         )
     return None
 
 
 def resolve_drs_using_metadata_service(
-    identifier: str, metadata_service_url: str, cache_results: bool = True
+    identifier: str, metadata_service_url: str, cache_results: bool = LOCALLY_CACHE_RESOLVED_HOSTS
 ) -> Optional[str]:
     try:
         response = requests.get(f"{metadata_service_url}/{identifier}")
@@ -190,7 +217,7 @@ def resolve_drs_using_metadata_service(
     except requests.exceptions.HTTPError as exc:
         if exc.response.status_code != 404:
             logger.info(
-                f"HTTP Error accessing dataguids.org: {exc.response.status_code}"
+                f"HTTP Error accessing {DRS_RESOLVER_HOSTNAME}: {exc.response.status_code}"
             )
         return None
 
@@ -198,8 +225,8 @@ def resolve_drs_using_metadata_service(
 def resolve_compact_drs_using_dataguids(
     identifier: str,
     object_id: str,
-    cache_results: bool = True,
-    resolver_hostname: str = "https://dataguids.org",
+    cache_results: bool = LOCALLY_CACHE_RESOLVED_HOSTS,
+    resolver_hostname: str = DRS_RESOLVER_HOSTNAME,
 ) -> Optional[str]:
     # use dataguids.org to resolve identifier
     # At this time there are two possible ways to resolve a compact ID
@@ -241,14 +268,14 @@ def resolve_compact_drs_using_dataguids(
 
 
 def resolve_drs_using_commons_mds(
-    identifier: str, _: str, metadata_service_url: str, cache_results: bool = True
+    identifier: str, _: str, metadata_service_url: str, cache_results: bool = LOCALLY_CACHE_RESOLVED_HOSTS
 ) -> Optional[str]:
     return resolve_drs_using_metadata_service(
         identifier, metadata_service_url, cache_results
     )
 
 
-## TODO: provide methods to turn this into a plugin architecture
+# TODO: provide methods to turn this into a plugin architecture
 REGISTERED_DRS_RESOLVERS = {
     "cache_file": resolve_drs_from_local_cache,
     "commons_mds": resolve_drs_using_commons_mds,
