@@ -180,7 +180,7 @@ def wts_external_oidc(hostname: str) -> Dict[str, Any]:
         data = response.json()
         if "providers" not in data:
             logger.warning(
-                'cannot find "providers". Likely no WTS service for this commons'
+                'cannot find "providers". Likely no WTS service running for this commons'
             )
             return oidc
         for item in data["providers"]:
@@ -191,7 +191,9 @@ def wts_external_oidc(hostname: str) -> Dict[str, Any]:
             f'{ex.response.status_code}: {json_loads(ex.response.text).get("message", "")}'
         )
     except JSONDecodeError as ex:
-        logger.warning(f"Unable to decode response. Likely no WTS service")
+        logger.warning(
+            f"Unable to process response. Likely no WTS service running for this commons"
+        )
 
     return oidc
 
@@ -854,8 +856,8 @@ def list_files_in_workspace_manifest(hostname, auth, infile: str) -> bool:
 
 
 # These functions are exposed to the SDK
-def list_object_in_workspace_manifest(hostname, auth, object_id: str) -> bool:
-    return _list_object(hostname, auth, object_id)
+def list_drs_object(hostname, auth, object_id: str) -> bool:
+    return _list_object(hostname, auth, object_id)  #
 
 
 def download_files_in_workspace_manifest(hostname, auth, infile, output_dir) -> None:

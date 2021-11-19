@@ -68,5 +68,13 @@
     "host": "https://externaldata.healdata.org/index/",
     "name": "External Data HEAL",
     "type": "indexd"
-  }
+  },
+   {
+    "hints": [
+      ".*dg\\.XXTS.*"
+    ],
+     "host": "https://test1.testcommons1.org/index/",
+     "name": "DataSTAGE",
+     "type": "indexd"
+   }
 ]

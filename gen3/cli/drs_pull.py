@@ -3,7 +3,7 @@ from cdiserrors import get_logger
 
 from gen3.tools.download.drs_download import (
     list_files_in_workspace_manifest,
-    list_object_in_workspace_manifest,
+    list_drs_object,
     download_files_in_workspace_manifest,
     download_drs_object,
     list_access_in_manifest,
@@ -25,9 +25,7 @@ def list_files(ctx, infile: str, access: bool, object: bool):
         )
     else:
         if object:
-            list_object_in_workspace_manifest(
-                ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
-            )
+            list_drs_object(ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile)
         else:
             list_files_in_workspace_manifest(
                 ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile

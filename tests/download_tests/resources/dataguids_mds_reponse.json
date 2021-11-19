@@ -8,5 +8,10 @@
     "host": "https://jcoin.datacommons.io/ga4gh/drs/v1/objects/",
     "name": "JCOIN",
     "type": "DRS"
+  },
+  "dg.XXTS": {
+    "host": "https://test1.testcommons1.org/ga4gh/drs/v1/objects/",
+    "name": "DataSTAGE",
+    "type": "indexd"
   }
 }

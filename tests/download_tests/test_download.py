@@ -28,6 +28,7 @@ from gen3.tools.download.drs_download import (
     _download,
     _download_obj,
     _list_access,
+    list_drs_object,
     list_files_in_workspace_manifest,
     wts_get_token,
     get_download_url_using_drs,
@@ -528,8 +529,36 @@ def test_download_objects(
                     ) as fin:
                         assert fin.read() == download_test_files[id]["content"]
 
-                # test listfiles
+                # test download object with no auth
 
+                m.post(
+                    f"http://{hostname}/user/credentials/cdis/access_token",
+                    json={},
+                    status_code=404,
+                )
+                results = _download_obj(
+                    hostname,
+                    auth,
+                    "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e",
+                    download_dir.join("_download_obj"),
+                )
+                assert results is None
+
+                results = _download(
+                    hostname,
+                    auth,
+                    Path(DIR, "resources/manifest_test_2.json"),
+                    download_dir.join("_download"),
+                )
+                assert results is None
+
+                # test listfiles
+            m.post(
+                f"http://{hostname}/user/credentials/cdis/access_token",
+                json={
+                    "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTYzMTI5MTI0NywiaWF0IjoxNjMxMjkxMjQ3fQ.DRcKE6Zr5aDzrh2Hz-0Zo8N0kGNQfgWIwmt6W_MTkls"
+                },
+            )
             # test the Object string representations
             results = object_list[0].__repr__()
             expected = "(Downloadable: TestDataSet1.sav 1.57 MB test.commons1.io 04/06/2021, 11:22:19)"
@@ -691,13 +720,16 @@ def test_list_auth(
             )
             assert result is False
 
-            # Test HTTP failure of
+            # Test HTTP failure of user auth
             m.get(f"https://{hostname}/user/user", json={}, status_code=404)
             result = _list_access(
-                hostname, auth, Path(DIR, f"resources/non_existent_file.json")
+                hostname, auth, Path(DIR, f"resources/{manifest_file}")
             )
             captured = capsys.readouterr()
-            assert result is False
+            results = captured.out.split()
+            expected = ["Access", "for", "test.datacommons.io", "No", "access"]
+            assert results == expected
+
 
 def test_download_status_repr_and_str():
     download1 = DownloadStatus(
@@ -739,12 +771,101 @@ def test_no_gen3_auth():
         ) as mock_write_to_file:  # do not cache fake token
             mock_write_to_file().return_value = False
             auth = gen3.auth.Gen3Auth(refresh_token=test_key)
-            print("done")
             result = _list_access(
                 hostname, auth, Path(DIR, f"resources/manifest_test_1.json")
             )
             assert result is False
             result = list_files_in_workspace_manifest(
                 hostname, auth, Path(DIR, f"resources/manifest_test_1.json")
+            )
+            assert result is False
+
+
+@pytest.mark.parametrize(
+    "hostname,commons_url,manifest_file,expected",
+    [
+        (
+            "test.datacommons.io",
+            "test.testcommons1.org",
+            "manifest_test_1.json",
+            [
+                "TestDataSet1.sav",
+                "1.57",
+                "MB",
+                "test.testcommons1.org",
+                "04/06/2021,",
+                "11:22:19",
+            ],
+        )
+    ],
+)
+def test_list(
+    capsys,
+    wts_oidc,
+    drs_object_info,
+    drs_resolver_dataguids,
+    hostname,
+    commons_url,
+    manifest_file,
+    expected,
+):
+
+    test_key = {
+        "api_key": "whatever."
+        + base64.urlsafe_b64encode(
+            ('{"iss": "http://%s", "exp": %d }' % (hostname, time.time() + 300)).encode(
+                "utf-8"
+            )
+        ).decode("utf-8")
+        + ".whatever"
+    }
+
+    with requests_mock.Mocker() as m:
+        m.get(f"https://{hostname}/wts/external_oidc/", json=wts_oidc[hostname])
+        m.post(
+            f"http://{hostname}/user/credentials/cdis/access_token",
+            json={
+                "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTYzMTI5MTI0NywiaWF0IjoxNjMxMjkxMjQ3fQ.DRcKE6Zr5aDzrh2Hz-0Zo8N0kGNQfgWIwmt6W_MTkls"
+            },
+        )
+        for object_id, info in drs_object_info.items():
+            m.get(f"https://{commons_url}/ga4gh/drs/v1/objects/{object_id}", json=info)
+
+        with mock.patch(
+            "gen3.auth.Gen3Auth._write_to_file"
+        ) as mock_write_to_file:  # do not cache fake token
+            mock_write_to_file().return_value = False
+            auth = gen3.auth.Gen3Auth(refresh_token=test_key)
+
+            m.get(
+                f"http://{hostname}/mds/aggregate/info/dg.XXTS",
+                json={
+                    "host": f"https://{commons_url}/ga4gh/drs/v1/objects/",
+                    "name": "DataSTAGE",
+                    "type": "indexd",
+                },
+            )
+
+            # test list object
+            result = list_drs_object(
+                hostname, auth, "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e"
+            )
+            captured = capsys.readouterr()
+            list_results = captured.out.split()
+            assert expected == list_results
+
+            # test getting auth error
+
+            # test no auth
+            m.post(
+                f"http://{hostname}/user/credentials/cdis/access_token",
+                json={
+                    "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTYzMTI5MTI0NywiaWF0IjoxNjMxMjkxMjQ3fQ.DRcKE6Zr5aDzrh2Hz-0Zo8N0kGNQfgWIwmt6W_MTkls"
+                },
+                status_code=404,
+            )
+
+            result = list_drs_object(
+                hostname, auth, "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e"
             )
             assert result is False
