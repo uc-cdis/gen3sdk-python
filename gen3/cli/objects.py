@@ -1,10 +1,12 @@
 import asyncio
 import click
+import csv
 import logging
+import os
 import sys
 from urllib.parse import urlparse
 
-
+from gen3.index import Gen3Index
 from gen3.tools import indexing
 from gen3.tools.indexing import is_valid_manifest_format, index_object_manifest
 from gen3.tools.indexing.verify_manifest import manifest_row_parsers
@@ -239,7 +241,59 @@ def objects_manifest_publish(ctx, file, thread_num, append_urls):
     )
 
 
+@click.command(help="Publishes specified object manifest to Gen3 instance.")
+@click.argument("file", required=True)
+@click.pass_context
+def objects_manifest_delete_all_guids(ctx, file):
+    auth = ctx.obj["auth_factory"].get()
+    loop = asyncio.get_event_loop()
+
+    if not file:
+        file = click.prompt("Enter Discovery metadata file path to publish")
+
+    click.echo(f"        DELETING ALL GUIDS\n  from: {file}\n    in: {auth.endpoint}")
+    click.confirm(
+        f"Are you sure you want to DELETE ALL GUIDS in {auth.endpoint} as specified by this file: {file}?",
+        abort=True,
+    )
+    click.confirm(
+        f"Please confirm again, this is irreversible. All GUIDs specified specified in {file} will be deleted from {auth.endpoint}. You are sure?",
+        abort=True,
+    )
+
+    index = Gen3Index(auth.endpoint, auth_provider=auth)
+    if not index.is_healthy():
+        print(
+            f"uh oh! The indexing service is not healthy in the commons {auth.endpoint}"
+        )
+        exit()
+
+    # if delimter not specified, try to get based on file ext
+    file_ext = os.path.splitext(file)
+    if file_ext[-1].lower() == ".tsv":
+        manifest_file_delimiter = "\t"
+    else:
+        # default, assume CSV
+        manifest_file_delimiter = ","
+
+    with open(file, "r", encoding="utf-8-sig") as input_file:
+        csvReader = csv.DictReader(input_file, delimiter=manifest_file_delimiter)
+        fieldnames = csvReader.fieldnames
+
+        logging.debug(f"got fieldnames from {file}: {fieldnames}")
+        logging.debug(f"using guid/GUID/did/DID to retrieve GUID to delete...")
+
+        for row in csvReader:
+            guid = (
+                row.get("guid") or row.get("GUID") or row.get("did") or row.get("DID")
+            )
+            if guid:
+                print(f"deleting GUID record:{guid}")
+                print(index.delete_record(guid=guid))
+
+
 manifest.add_command(objects_manifest_read, name="read")
 manifest.add_command(objects_manifest_verify, name="verify")
 manifest.add_command(objects_manifest_validate_format, name="validate-manifest-format")
 manifest.add_command(objects_manifest_publish, name="publish")
+manifest.add_command(objects_manifest_delete_all_guids, name="delete-all-guids")
