@@ -288,8 +288,8 @@ def objects_manifest_delete_all_guids(ctx, file):
                 row.get("guid") or row.get("GUID") or row.get("did") or row.get("DID")
             )
             if guid:
-                print(f"deleting GUID record:{guid}")
-                print(index.delete_record(guid=guid))
+                logging.debug(f"deleting GUID record:{guid}")
+                logging.debug(index.delete_record(guid=guid))
 
 
 manifest.add_command(objects_manifest_read, name="read")
