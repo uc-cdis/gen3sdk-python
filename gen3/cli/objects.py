@@ -263,7 +263,7 @@ def objects_manifest_delete_all_guids(ctx, file):
 
     index = Gen3Index(auth.endpoint, auth_provider=auth)
     if not index.is_healthy():
-        print(
+        logging.error(
             f"uh oh! The indexing service is not healthy in the commons {auth.endpoint}"
         )
         exit()
