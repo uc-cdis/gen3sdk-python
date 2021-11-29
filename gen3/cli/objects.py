@@ -53,7 +53,7 @@ def objects_manifest_read(ctx, output_file, num_processes, max_concurrent_reques
     auth = ctx.obj["auth_factory"].get()
     loop = asyncio.get_event_loop()
     click.echo(f"Getting minimal object metadata from {auth.endpoint}")
-    output_filename = loop.run_until_complete(
+    loop.run_until_complete(
         indexing.async_download_object_manifest(
             auth.endpoint,
             output_filename=output_file,
@@ -61,7 +61,7 @@ def objects_manifest_read(ctx, output_file, num_processes, max_concurrent_reques
             max_concurrent_requests=max_concurrent_requests,
         )
     )
-    click.echo(output_filename)
+    click.echo(output_file)
 
 
 @click.command(
@@ -241,7 +241,7 @@ def objects_manifest_publish(ctx, file, thread_num, append_urls):
     )
 
 
-@click.command(help="Publishes specified object manifest to Gen3 instance.")
+@click.command(help="Deletes specified object manifest to Gen3 instance.")
 @click.argument("file", required=True)
 @click.pass_context
 def objects_manifest_delete_all_guids(ctx, file):
@@ -249,7 +249,7 @@ def objects_manifest_delete_all_guids(ctx, file):
     loop = asyncio.get_event_loop()
 
     if not file:
-        file = click.prompt("Enter Discovery metadata file path to publish")
+        file = click.prompt("Enter Discovery metadata file path to delete")
 
     click.echo(f"        DELETING ALL GUIDS\n  from: {file}\n    in: {auth.endpoint}")
     click.confirm(
@@ -263,12 +263,12 @@ def objects_manifest_delete_all_guids(ctx, file):
 
     index = Gen3Index(auth.endpoint, auth_provider=auth)
     if not index.is_healthy():
-        print(
+        logging.debug(
             f"uh oh! The indexing service is not healthy in the commons {auth.endpoint}"
         )
         exit()
 
-    # if delimter not specified, try to get based on file ext
+    # try to get delimeter based on file ext
     file_ext = os.path.splitext(file)
     if file_ext[-1].lower() == ".tsv":
         manifest_file_delimiter = "\t"
@@ -281,15 +281,22 @@ def objects_manifest_delete_all_guids(ctx, file):
         fieldnames = csvReader.fieldnames
 
         logging.debug(f"got fieldnames from {file}: {fieldnames}")
-        logging.debug(f"using guid/GUID/did/DID to retrieve GUID to delete...")
+
+        # figure out which permutation of the name GUID is being used 1 time
+        # then use it for all future rows
+        guid_name = "guid"
+        for name in ["guid", "GUID", "did", "DID"]:
+            if name in fieldnames:
+                guid_name = name
+
+        logging.debug(f"using {guid_name} to retrieve GUID to delete...")
 
         for row in csvReader:
-            guid = (
-                row.get("guid") or row.get("GUID") or row.get("did") or row.get("DID")
-            )
+            guid = row.get(guid_name)
+
             if guid:
-                print(f"deleting GUID record:{guid}")
-                print(index.delete_record(guid=guid))
+                logging.debug(f"deleting GUID record:{guid}")
+                logging.debug(index.delete_record(guid=guid))
 
 
 manifest.add_command(objects_manifest_read, name="read")
