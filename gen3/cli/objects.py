@@ -268,7 +268,7 @@ def objects_manifest_delete_all_guids(ctx, file):
         )
         exit()
 
-    # if delimter not specified, try to get based on file ext
+    # if delimiter not specified, try to get based on file ext
     file_ext = os.path.splitext(file)
     if file_ext[-1].lower() == ".tsv":
         manifest_file_delimiter = "\t"
