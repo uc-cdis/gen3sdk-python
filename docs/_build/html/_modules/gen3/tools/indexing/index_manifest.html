@@ -74,6 +74,7 @@
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">traceback</span>
 
+<span class="kn">from</span> <span class="nn">gen3.index</span> <span class="kn">import</span> <span class="n">Gen3Index</span>
 <span class="kn">from</span> <span class="nn">gen3.auth</span> <span class="kn">import</span> <span class="n">Gen3Auth</span>
 <span class="kn">from</span> <span class="nn">gen3.tools.indexing.manifest_columns</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">GUID_COLUMN_NAMES</span><span class="p">,</span>
@@ -680,6 +681,51 @@
     <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="s2">&quot;index_object_manifest.log&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
     <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">))</span>
     <span class="n">index_object_manifest_cli</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="delete_all_guids"><a class="viewcode-back" href="../../../../tools/indexing.html#gen3.tools.indexing.index_manifest.delete_all_guids">[docs]</a><span class="k">def</span> <span class="nf">delete_all_guids</span><span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="n">file</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Delete all GUIDs specified in the object manifest.</span>
+
+<span class="sd">    WARNING: THIS COMPLETELY REMOVES INDEX RECORDS. USE THIS ONLY IF YOU KNOW</span>
+<span class="sd">             THE IMPLICATIONS.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">Gen3Index</span><span class="p">(</span><span class="n">auth</span><span class="o">.</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">auth_provider</span><span class="o">=</span><span class="n">auth</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">index</span><span class="o">.</span><span class="n">is_healthy</span><span class="p">():</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;uh oh! The indexing service is not healthy in the commons </span><span class="si">{</span><span class="n">auth</span><span class="o">.</span><span class="n">endpoint</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="n">exit</span><span class="p">()</span>
+
+    <span class="c1"># try to get delimeter based on file ext</span>
+    <span class="n">file_ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">file_ext</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.tsv&quot;</span><span class="p">:</span>
+        <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># default, assume CSV</span>
+        <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8-sig&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">input_file</span><span class="p">:</span>
+        <span class="n">csvReader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">manifest_file_delimiter</span><span class="p">)</span>
+        <span class="n">fieldnames</span> <span class="o">=</span> <span class="n">csvReader</span><span class="o">.</span><span class="n">fieldnames</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;got fieldnames from </span><span class="si">{</span><span class="n">file</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">fieldnames</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># figure out which permutation of the name GUID is being used 1 time</span>
+        <span class="c1"># then use it for all future rows</span>
+        <span class="n">guid_name</span> <span class="o">=</span> <span class="s2">&quot;guid&quot;</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;guid&quot;</span><span class="p">,</span> <span class="s2">&quot;GUID&quot;</span><span class="p">,</span> <span class="s2">&quot;did&quot;</span><span class="p">,</span> <span class="s2">&quot;DID&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">fieldnames</span><span class="p">:</span>
+                <span class="n">guid_name</span> <span class="o">=</span> <span class="n">name</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;using </span><span class="si">{</span><span class="n">guid_name</span><span class="si">}</span><span class="s2"> to retrieve GUID to delete...&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">csvReader</span><span class="p">:</span>
+            <span class="n">guid</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">guid_name</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">guid</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;deleting GUID record:</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">index</span><span class="o">.</span><span class="n">delete_record</span><span class="p">(</span><span class="n">guid</span><span class="o">=</span><span class="n">guid</span><span class="p">))</span></div>
 </pre></div>
 
           </div>
