@@ -6,9 +6,12 @@ import os
 import sys
 from urllib.parse import urlparse
 
-from gen3.index import Gen3Index
 from gen3.tools import indexing
-from gen3.tools.indexing import is_valid_manifest_format, index_object_manifest
+from gen3.tools.indexing import (
+    is_valid_manifest_format,
+    index_object_manifest,
+    delete_all_guids,
+)
 from gen3.tools.indexing.verify_manifest import manifest_row_parsers
 
 
@@ -261,42 +264,7 @@ def objects_manifest_delete_all_guids(ctx, file):
         abort=True,
     )
 
-    index = Gen3Index(auth.endpoint, auth_provider=auth)
-    if not index.is_healthy():
-        logging.debug(
-            f"uh oh! The indexing service is not healthy in the commons {auth.endpoint}"
-        )
-        exit()
-
-    # try to get delimeter based on file ext
-    file_ext = os.path.splitext(file)
-    if file_ext[-1].lower() == ".tsv":
-        manifest_file_delimiter = "\t"
-    else:
-        # default, assume CSV
-        manifest_file_delimiter = ","
-
-    with open(file, "r", encoding="utf-8-sig") as input_file:
-        csvReader = csv.DictReader(input_file, delimiter=manifest_file_delimiter)
-        fieldnames = csvReader.fieldnames
-
-        logging.debug(f"got fieldnames from {file}: {fieldnames}")
-
-        # figure out which permutation of the name GUID is being used 1 time
-        # then use it for all future rows
-        guid_name = "guid"
-        for name in ["guid", "GUID", "did", "DID"]:
-            if name in fieldnames:
-                guid_name = name
-
-        logging.debug(f"using {guid_name} to retrieve GUID to delete...")
-
-        for row in csvReader:
-            guid = row.get(guid_name)
-
-            if guid:
-                logging.debug(f"deleting GUID record:{guid}")
-                logging.debug(index.delete_record(guid=guid))
+    delete_all_guids(auth, file)
 
 
 manifest.add_command(objects_manifest_read, name="read")

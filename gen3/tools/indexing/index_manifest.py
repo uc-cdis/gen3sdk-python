@@ -41,6 +41,7 @@ import copy
 import sys
 import traceback
 
+from gen3.index import Gen3Index
 from gen3.auth import Gen3Auth
 from gen3.tools.indexing.manifest_columns import (
     GUID_COLUMN_NAMES,
@@ -647,3 +648,48 @@ if __name__ == "__main__":
     logging.basicConfig(filename="index_object_manifest.log", level=logging.DEBUG)
     logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
     index_object_manifest_cli()
+
+
+def delete_all_guids(auth, file):
+    """
+    Delete all GUIDs specified in the object manifest.
+
+    WARNING: THIS COMPLETELY REMOVES INDEX RECORDS. USE THIS ONLY IF YOU KNOW
+             THE IMPLICATIONS.
+    """
+    index = Gen3Index(auth.endpoint, auth_provider=auth)
+    if not index.is_healthy():
+        logging.debug(
+            f"uh oh! The indexing service is not healthy in the commons {auth.endpoint}"
+        )
+        exit()
+
+    # try to get delimeter based on file ext
+    file_ext = os.path.splitext(file)
+    if file_ext[-1].lower() == ".tsv":
+        manifest_file_delimiter = "\t"
+    else:
+        # default, assume CSV
+        manifest_file_delimiter = ","
+
+    with open(file, "r", encoding="utf-8-sig") as input_file:
+        csvReader = csv.DictReader(input_file, delimiter=manifest_file_delimiter)
+        fieldnames = csvReader.fieldnames
+
+        logging.debug(f"got fieldnames from {file}: {fieldnames}")
+
+        # figure out which permutation of the name GUID is being used 1 time
+        # then use it for all future rows
+        guid_name = "guid"
+        for name in ["guid", "GUID", "did", "DID"]:
+            if name in fieldnames:
+                guid_name = name
+
+        logging.debug(f"using {guid_name} to retrieve GUID to delete...")
+
+        for row in csvReader:
+            guid = row.get(guid_name)
+
+            if guid:
+                logging.debug(f"deleting GUID record:{guid}")
+                logging.debug(index.delete_record(guid=guid))
