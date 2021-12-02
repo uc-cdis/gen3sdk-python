@@ -17,17 +17,19 @@ logger = get_logger("download", log_level="warning")
 @click.option("--access", is_flag=True)
 @click.option("--object", is_flag=True)
 @click.pass_context
-def list_files(ctx, infile: str, access: bool, object: bool):
+def list_files(ctx, infile: str, access: bool, object: bool) -> bool:
     """List files and size in manifest"""
     if access:
-        list_access_in_manifest(
+        return list_access_in_manifest(
             ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
         )
     else:
         if object:
-            list_drs_object(ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile)
+            return list_drs_object(
+                ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
+            )
         else:
-            list_files_in_workspace_manifest(
+            return list_files_in_workspace_manifest(
                 ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
             )
 
@@ -37,7 +39,9 @@ def list_files(ctx, infile: str, access: bool, object: bool):
 @click.pass_context
 def user_access(ctx, infile: str):
     """List files and size in manifest"""
-    list_access_in_manifest(ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile)
+    return list_access_in_manifest(
+        ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
+    )
 
 
 @click.command()

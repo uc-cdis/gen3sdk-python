@@ -351,7 +351,11 @@ def test_resolve_using_mds(download_dir, identifier, expected):
     [
         ("dg.F82A1A", None, "data.kidsfirstdrc.org"),
         ("dg.ANV0", None, "gen3.theanvil.io"),
-        ("dg.XXTS", "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e", "test.commons1.io"),
+        (
+            "dg.XXTS",
+            "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e",
+            "test1.testcommons1.org",
+        ),
     ],
 )
 def test_resolve_drs_strategy(download_dir, identifier, object_id, expected):

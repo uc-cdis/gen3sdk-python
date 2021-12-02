@@ -53,12 +53,19 @@ def clean_http_url(s: str) -> str:
 
 
 def create_local_drs_cache(data: dict, cache_path: str = None) -> bool:
+    """
+    Creates a file caching resolved DRS hosts passed in the data paramter. Will logged error if unable
+    to create (typically a bad path or invalid permissions)
+    @param data: dictionary of resolved DRS hosts
+    @param cache_path: path to store the cache file. If not set will use the environment variable DRS_CACHE
+    @return: True if successfully written
+    """
     if cache_path is None:
         cache_path = DRS_CACHE
     try:
         cache_path = Path(cache_path)
         cache_path.parent.mkdir(parents=True, exist_ok=True)
-        # create timestamp for the cache file
+        # create timestamp for when the cache file was created
         with open(cache_path, "wt") as fout:
             json.dump(
                 {
@@ -84,7 +91,7 @@ def append_to_local_drs_cache(data: dict, cache_path: str = None) -> bool:
     exists, it will create one.
     @param data: DRS resolution object to add
     @param cache_path: path to local cache
-    @return: true if success
+    @return: true if successful
     """
     if cache_path is None:
         cache_path = DRS_CACHE
@@ -192,7 +199,9 @@ def resolve_compact_drs_using_indexd_dist(
 
 
 def resolve_drs_using_metadata_service(
-    identifier: str, metadata_service_url: str, cache_results: bool = LOCALLY_CACHE_RESOLVED_HOSTS
+    identifier: str,
+    metadata_service_url: str,
+    cache_results: bool = LOCALLY_CACHE_RESOLVED_HOSTS,
 ) -> Optional[str]:
     try:
         response = requests.get(f"{metadata_service_url}/{identifier}")
@@ -268,7 +277,10 @@ def resolve_compact_drs_using_dataguids(
 
 
 def resolve_drs_using_commons_mds(
-    identifier: str, _: str, metadata_service_url: str, cache_results: bool = LOCALLY_CACHE_RESOLVED_HOSTS
+    identifier: str,
+    _: str,
+    metadata_service_url: str,
+    cache_results: bool = LOCALLY_CACHE_RESOLVED_HOSTS,
 ) -> Optional[str]:
     return resolve_drs_using_metadata_service(
         identifier, metadata_service_url, cache_results

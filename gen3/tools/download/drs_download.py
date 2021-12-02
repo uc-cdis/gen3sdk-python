@@ -548,10 +548,16 @@ def get_user_auth(commons_url: str, access_token: str) -> Optional[List[str]]:
 
 
 def list_auth(hostname: str, authz: dict):
-    print(f"Access for {hostname:}")
+
+    print(
+        f"───────────────────────────────────────────────────────────────────────────────────────────────────────"
+    )
+    print(f"Access for {hostname}:")
     if authz is not None and len(authz) > 0:
         for access, methods in authz.items():
-            print(f"      {access}: {' '.join([x['method'] for x in methods])}")
+            print(
+                f"      {access : <55}: {' '.join([x['method'] for x in methods]):>40}"
+            )
     else:
         print("      No access")
 
@@ -805,6 +811,11 @@ def _listfiles(hostname, auth, infile: str) -> bool:
     except Gen3AuthError:
         logger.critical(f"Unable to authenticate your credentials with {hostname}")
         return False
+    except requests.exceptions.RequestException as ex:
+        logger.critical(
+            f"Unable to authenticate your credentials with {hostname}: {str(ex)}"
+        )
+        return False
 
     DownloadManager(hostname=hostname, auth=auth, download_list=object_list)
 
@@ -820,6 +831,11 @@ def _list_object(hostname, auth, object_id: str) -> bool:
         auth.get_access_token()
     except Gen3AuthError:
         logger.critical(f"Unable to authenticate your credentials with {hostname}")
+        return False
+    except requests.exceptions.RequestException as ex:
+        logger.critical(
+            f"Unable to authenticate your credentials with {hostname}: {ex}"
+        )
         return False
 
     object_list = [Downloadable(object_id=object_id)]
@@ -841,11 +857,16 @@ def _list_access(hostname, auth, infile: str) -> bool:
     except Gen3AuthError:
         logger.critical(f"Unable to authenticate your credentials with {hostname}")
         return False
+    except requests.exceptions.RequestException as ex:
+        logger.critical(
+            f"Unable to authenticate your credentials with {hostname}: {ex}"
+        )
+        return False
 
     download = DownloadManager(hostname=hostname, auth=auth, download_list=object_list)
     access = download.user_access()
-    for h, authz in access.items():
-        list_auth(h, authz)
+    for h, access in access.items():
+        list_auth(h, access)
 
     return True
 
@@ -855,9 +876,9 @@ def list_files_in_workspace_manifest(hostname, auth, infile: str) -> bool:
     return _listfiles(hostname, auth, infile)
 
 
-# These functions are exposed to the SDK
+# These functions are exposed to the SDK's cli
 def list_drs_object(hostname, auth, object_id: str) -> bool:
-    return _list_object(hostname, auth, object_id)  #
+    return _list_object(hostname, auth, object_id)  # pragma: no cover
 
 
 def download_files_in_workspace_manifest(hostname, auth, infile, output_dir) -> None:
