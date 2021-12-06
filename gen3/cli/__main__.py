@@ -6,7 +6,7 @@ import gen3.cli.wss as wss
 import gen3.cli.discovery as discovery
 import gen3.cli.configure as configure
 import gen3.cli.objects as objects
-import gen3.cli.manifest as manifest
+import gen3.cli.drs_pull as drs_pull
 import gen3
 
 
@@ -56,7 +56,7 @@ main.add_command(wss.wss)
 main.add_command(discovery.discovery)
 main.add_command(configure.configure)
 main.add_command(objects.objects)
-main.add_command(manifest.download_manifest, name="pull_manifest")
-main.add_command(manifest.download_object, name="pull_object")
-main.add_command(manifest.list_files, name="ls")
+main.add_command(drs_pull.download_manifest, name="pull_manifest")
+main.add_command(drs_pull.download_object, name="pull_object")
+main.add_command(drs_pull.list_files, name="ls")
 main()
