@@ -701,15 +701,16 @@ def test_list_auth(
                 hostname, auth, Path(DIR, f"resources/{manifest_file}")
             )
             captured = capsys.readouterr()
-            expected = """Access for test.datacommons.io
-      /dictionary_page: access
-      /programs/open: read read-storage
-      /programs/open/projects: read read-storage
-      /programs/open/projects/BACPAC: read read-storage
-      /programs/open/projects/HOPE: read read-storage
-      /programs/open/projects/Preventing_Opioid_Use_Disorder: read read-storage
-      /sower: access
-      /workspace: access
+            expected = """───────────────────────────────────────────────────────────────────────────────────────────────────────
+Access for test.datacommons.io:
+      /dictionary_page                                       :                                   access
+      /programs/open                                         :                        read read-storage
+      /programs/open/projects                                :                        read read-storage
+      /programs/open/projects/BACPAC                         :                        read read-storage
+      /programs/open/projects/HOPE                           :                        read read-storage
+      /programs/open/projects/Preventing_Opioid_Use_Disorder :                        read read-storage
+      /sower                                                 :                                   access
+      /workspace                                             :                                   access
 """
             assert result is True
             assert captured.out == expected
@@ -727,7 +728,14 @@ def test_list_auth(
             )
             captured = capsys.readouterr()
             results = captured.out.split()
-            expected = ["Access", "for", "test.datacommons.io", "No", "access"]
+            expected = [
+                "───────────────────────────────────────────────────────────────────────────────────────────────────────",
+                "Access",
+                "for",
+                "test.datacommons.io:",
+                "No",
+                "access",
+            ]
             assert results == expected
 
 

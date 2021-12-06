@@ -1,7 +1,51 @@
-## Pulling Object manifests 
+## Downloading DRS objects and manifest
+TOC
+- [Resolving DRS Identifiers](#resolving-drs-identifiers)
+- [Pulling Object Manifests](#pulling-object-manifests)
+- [Listing Files and Access](#listing-files-and-access)
+    
 
-To download using the CLI. Given a manifest JSON file. The cli can download all
-of the files in the manifest using:
+## Resolving DRS Identifiers
+
+Downloading a DRS objectID or manifest containing DRS bundles requires resolving the DRS prefix 
+to an actual hostname. Most DRS resolver request that the resolved prefixes are cached to prevent 
+overloading these resolver services. Gen2 uses dataguid.org to resolve its prefixes but others
+can be selected as well. 
+
+To configure the DRS resolvers there are number of environment variables that can be set to control
+the DRS resolution process.
+
+* DRS_CACHE_EXPIRE_DURATION=2
+* DRS_RESOLVER_HOSTNAME="http://dataguids.org"
+* LOCALLY_CACHE_RESOLVED_HOSTS=True
+* DRS_RESOLUTION_ORDER="cache_file:commons_mds:dataguids_dist:dataguids"
+
+*DRS_CACHE_EXPIRE_DURATION* controls the number of days to keeps a resolved DRS hostname, the default
+value is 2 day but typically DRS hostnames do not change that often, so the value can be higher. 
+
+*DRS_RESOLVER_HOSTNAME* set the hostname of the resolver service to use. Currently, the default 
+value of "http://dataguids.org" is the only supported resolver, but others will be added in 
+the future.
+
+*LOCALLY_CACHE_RESOLVED_HOSTS* Set to True (the default) to create a local cache file to store the
+resolved hostnames. Use of this is highly recommended as it will reduce the resolution time 
+significantly. 
+
+*DRS_RESOLUTION_ORDER* The order to apply the resolvers. The default value is the suggested one, and 
+there should be no need to change this order, not that the last one dataguids is needed as it is 
+the final resolver when all others fail to resolve a DRS prefix. Depending on the configuration 
+of the Gen3 commons the metadata service can also cache DRS prefixes but only when using the Aggregate
+Metadata service.
+
+Note that these environment variables allows for a Gen3 commons workspace to have a prepopulated 
+cache file provided, which when combined with a large *DRS_CACHE_EXPIRE_DURATION* and a 
+*DRS_RESOLUTION_ORDER* of "cache_file" only will prevent the DRS resolver from accessing any other 
+resolver. This is recommended as one way to increase download performance. 
+
+## Pulling Object Manifests 
+
+To download using the CLI. Given a manifest JSON file. The cli can download the files in the 
+manifest using:
 ```
 gen3 cli pull_manifest <manifest.json> 
 ```
@@ -24,6 +68,8 @@ Access05_T.csv    : 100%|██████████████████�
 ```
 
 ### Listing Files and Access
+
+#### List Contents
 
 To list the contents of a manifest file (or DRS object id):
 ```
@@ -84,4 +130,56 @@ ISPY1_series_1.3.6.1.4.1.14519.5.2.1.7695.1700.100392922143281268049004312967/1.
     ├── 1.3.6.1.4.1.14519.5.2.1.7695.1700.307923524868494279703016890148.dcm#1592595549547255    527.66 KB nci-crdc.datacommons.io 09/19/2020, 00:11:53
     ├── 1.3.6.1.4.1.14519.5.2.1.7695.1700.177741488444741406265552879434.dcm#1592595549340161    527.66 KB nci-crdc.datacommons.io 09/19/2020, 09:12:09
     └── 1.3.6.1.4.1.14519.5.2.1.7695.1700.193538014659307853778370216921.dcm#1592595549438034    527.66 KB nci-crdc.datacommons.io 09/18/2020, 14:48:53
+```
+#### List Access
+Given a manifest or DRS object id, you can query the access rights for that object's host commons, or in the case of a manifest all of the host commons
+
+```
+gen3 cli ls --access test1_manifest.json
+```
+
+```
+───────────────────────────────────────────────────────────────────────────────────────────────────────
+Access for healdata.org:
+      /dictionary_page                                       :                                   access
+      /programs/open                                         :                        read read-storage
+      /programs/open/projects                                :                        read read-storage
+      /programs/open/projects/BACPAC                         :                        read read-storage
+      /programs/open/projects/HOPE                           :                        read read-storage
+      /programs/open/projects/Preventing_Opioid_Use_Disorder :                        read read-storage
+      /sower                                                 :                                   access
+      /workspace                                             :                                   access
+───────────────────────────────────────────────────────────────────────────────────────────────────────
+Access for jcoin.datacommons.io:
+      /data_file                                             :                              file_upload
+      /mds_gateway                                           :                                   access
+      /open                                                  :                        read read-storage
+      /programs                                              :                                      * *
+      /programs/JCOIN                                        :                                      * *
+      /programs/JCOIN/projects                               :                                      * *
+      /programs/JCOIN/projects/BMC                           :                                      * *
+      /programs/JCOIN/projects/Brown                         :                                      * *
+      /programs/JCOIN/projects/Chestnut                      :                                      * *
+      /programs/JCOIN/projects/FRI                           :                                      * *
+      /programs/JCOIN/projects/IU                            :                                      * *
+      /programs/JCOIN/projects/MAARC                         :                                      * *
+      /programs/JCOIN/projects/NYSPI                         :                                      * *
+      /programs/JCOIN/projects/NYU                           :                                      * *
+      /programs/JCOIN/projects/OEPS                          :                    * read read-storage *
+      /programs/JCOIN/projects/ROMI                          :                                      * *
+      /programs/JCOIN/projects/SURVEYS                       :                                      * *
+      /programs/JCOIN/projects/TCU                           :                                      * *
+      /programs/JCOIN/projects/TEST                          :                                      * *
+      /programs/JCOIN/projects/UKY                           :                    * read read-storage *
+      /programs/JCOIN/projects/Yale                          :                                      * *
+      /programs/test                                         :                                      * *
+      /programs/test/projects                                :                                      * *
+      /programs/test/projects/jcoin                          : * create delete read read-storage update write-storage *
+      /prometheus                                            :                                   access
+      /services/indexd/admin                                 :                                        *
+      /services/sheepdog/submission/program                  :                                        *
+      /services/sheepdog/submission/project                  :                                        *
+      /sower                                                 :                                   access
+      /workspace                                             :                                   access
+
 ```

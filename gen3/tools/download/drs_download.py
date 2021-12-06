@@ -6,7 +6,6 @@ from json import load as json_load, loads as json_loads, JSONDecodeError
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-
 import humanfriendly
 import requests
 from cdiserrors import get_logger
@@ -24,14 +23,20 @@ logger = get_logger("download", log_level="warning")
 
 
 class Downloadable:
+    """
+    Forward reference to Dowloadable class for use in data classed below
+    """
+
     pass
 
 
 @dataclass_json(letter_case=LetterCase.SNAKE)
 @dataclass
 class Manifest:
+    """Data class representing a Gen3 JSON manifest."""
+
     object_id: str  # only required member
-    file_size: Optional[int] = -1
+    file_size: Optional[int] = -1  # -1 indicated not set
     file_name: Optional[str] = None
     md5sum: Optional[str] = None
     commons_url: Optional[str] = None
@@ -150,6 +155,11 @@ class Downloadable:
 
 @dataclass
 class DownloadStatus:
+    """Stores the download status of objectIDs.
+
+    Status is pending until it is downloaded or an error occurs.
+    """
+
     filename: str
     status: str = "pending"
     startTime: Optional[datetime] = None
@@ -315,9 +325,6 @@ def add_drs_object_info(info: Downloadable) -> bool:
         info.access_methods = get_access_methods(object_info)
         return True
     else:  # a bundle,get everything else
-        # one assumption is that bundles are not federated, i.e. a DRS object cannot
-        # refer to an DRS object on another ga4gh server
-        # TODO confirm with spec.
         for item in object_info["contents"]:
             child_id = item.get("id", None)
             if child_id is None:
@@ -345,7 +352,7 @@ def download_file_from_url(url: str, filename: Path, showProgress: bool = True) 
     except requests.exceptions.Timeout:
         raise
     except requests.exceptions.HTTPError as exc:
-        logger.critical(f"Error download file from url: {exc.response.status_code} ")
+        logger.critical(f"Error downloading file from url: {exc.response.status_code} ")
         return False
 
     total_size_in_bytes = int(response.headers.get("content-length", 0))
@@ -423,9 +430,8 @@ def parse_drs_identifier(drs_candidate: str) -> Tuple[str, str, str]:
 def resolve_drs_hostname_from_id(
     object_id: str, resolved_drs_prefix_cache: dict, mds_url: str
 ) -> Optional[Tuple[str, str, str]]:
-    """
-    resolves and returns a DRS identifier, including calling a DRS server to
-    resolve and compact id.
+    """Resolves and returns a DRS identifier
+
     Returns the hostname of the DRS server if resolved, otherwise it returns None
 
     The resolved_drs_prefix_cache is updated if needed and is a potential side effect of this
@@ -450,9 +456,7 @@ def resolve_drs_hostname_from_id(
 def resolve_objects_drs_hostname_from_id(
     object_ids: List[Downloadable], resolved_drs_prefix_cache: dict, mds_url: str
 ) -> None:
-    """
-    Given a list of object_ids go through list and resolve + cache any unknown
-    """
+    """Given a list of object_ids go through list and resolve + cache any unknown"""
 
     for entry in object_ids:
         if entry.hostname is None:
@@ -465,9 +469,7 @@ def resolve_objects_drs_hostname_from_id(
 
 
 def ensure_dirpath_exists(path: Path) -> Path:
-    """
-    Utility to create a directory if missing
-    """
+    """Utility to create a directory if missing"""
     assert path
     out_path: Path = path
 
@@ -523,7 +525,7 @@ def get_download_url(
 def get_user_auth(commons_url: str, access_token: str) -> Optional[List[str]]:
     """
     Get a user authz for the commons based on the access token.
-    return the authz object from the user endpoint
+    Returns the authz object from the user endpoint
     Any error will be logged and None is returned
     """
     headers = {
@@ -548,7 +550,6 @@ def get_user_auth(commons_url: str, access_token: str) -> Optional[List[str]]:
 
 
 def list_auth(hostname: str, authz: dict):
-
     print(
         f"───────────────────────────────────────────────────────────────────────────────────────────────────────"
     )
@@ -826,7 +827,6 @@ def _listfiles(hostname, auth, infile: str) -> bool:
 
 
 def _list_object(hostname, auth, object_id: str) -> bool:
-
     try:
         auth.get_access_token()
     except Gen3AuthError:

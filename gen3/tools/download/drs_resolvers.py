@@ -31,7 +31,7 @@ logger = get_logger("download", log_level="warning")
 def clean_dist_entry(s: str) -> str:
     """
     Cleans the string returning a proper DRS prefix
-    @param s: string to clean
+           s: string to clean
     @return: cleaned string
     """
     return s.replace("\\.", ".").replace(".*", "")
@@ -40,7 +40,7 @@ def clean_dist_entry(s: str) -> str:
 def clean_http_url(s: str) -> str:
     """
     Cleans input string removing http(s) prefix and all trailing paths
-    @param s: string to clean
+           s: string to clean
     @return: cleaned string
     """
     return (
@@ -56,8 +56,8 @@ def create_local_drs_cache(data: dict, cache_path: str = None) -> bool:
     """
     Creates a file caching resolved DRS hosts passed in the data paramter. Will logged error if unable
     to create (typically a bad path or invalid permissions)
-    @param data: dictionary of resolved DRS hosts
-    @param cache_path: path to store the cache file. If not set will use the environment variable DRS_CACHE
+           data: dictionary of resolved DRS hosts
+           cache_path: path to store the cache file. If not set will use the environment variable DRS_CACHE
     @return: True if successfully written
     """
     if cache_path is None:
@@ -89,8 +89,8 @@ def append_to_local_drs_cache(data: dict, cache_path: str = None) -> bool:
     """
     Appends/replaces a resolved DRS hostname in the local cache. If no cache file
     exists, it will create one.
-    @param data: DRS resolution object to add
-    @param cache_path: path to local cache
+           data: DRS resolution object to add
+           cache_path: path to local cache
     @return: true if successful
     """
     if cache_path is None:
@@ -118,17 +118,19 @@ def append_to_local_drs_cache(data: dict, cache_path: str = None) -> bool:
 def resolve_drs_from_local_cache(
     identifier: str, _: str = None, **kwargs
 ) -> Optional[str]:
-    """
-    Resolves a compact DRS prefix by reading a local cache file. The format of the cache
-    file is JSON.
+    """Resolves a compact DRS prefix by reading a local cache file
+
+    The format of the cache file is JSON.
     If the id is found and considered "fresh" return the identifier, otherwise
     return None indicating that the id is not resolved. Resolved hostnames are considered
     fresh if the entry's timestamp is less than the expire value, which is in days.
-    @param identifier: DRS prefix to resolve
-    @param _: unused
-    @param kwargs: optional parameters:
-        * "cache_dir": directory to store the cache in
-    @return: hostname if resolved, otherwise None
+
+    Args
+           identifier: DRS prefix to resolve
+           _: unused
+           kwargs: optional parameters:
+                "cache_dir": directory to store the cache in
+           Returns a hostname if resolved, otherwise None
     """
     filename = kwargs.get("cache_dir", DRS_CACHE)
     if filename is None:
@@ -160,6 +162,17 @@ def resolve_compact_drs_using_indexd_dist(
     cache_results: bool = LOCALLY_CACHE_RESOLVED_HOSTS,
     resolver_hostname: str = DRS_RESOLVER_HOSTNAME,
 ):
+    """Resolves a compact DRS prefix by by performing a lookup via a commons indexd/_dist endpoint.
+
+    If the id is found it, optionally caches the results, and returns the identifier, otherwise
+    return None indicating that the id is not resolved.
+
+    Args
+           identifier: DRS prefix to resolve
+           cache_results: set to true to write local cache file
+           resolver_hostname: url of indexd server to query. This is typically dataguids.org
+           Returns a hostname if resolved, otherwise None
+    """
     try:
         response = requests.get(f"{resolver_hostname}/index/_dist")
         response.raise_for_status()
@@ -203,6 +216,17 @@ def resolve_drs_using_metadata_service(
     metadata_service_url: str,
     cache_results: bool = LOCALLY_CACHE_RESOLVED_HOSTS,
 ) -> Optional[str]:
+    """Resolves a compact DRS prefix by by performing a lookup into a Gen3 AggregateMDS.
+
+    If the id is found it, optionally caches the results, and returns the identifier, otherwise
+    return None indicating that the id is not resolved.
+
+    Args
+           identifier: DRS prefix to resolve
+           metadata_service_url: url of MDS server to query.
+           cache_results: set to true to write local cache file
+           Returns a hostname if resolved, otherwise None
+    """
     try:
         response = requests.get(f"{metadata_service_url}/{identifier}")
         response.raise_for_status()
@@ -231,17 +255,29 @@ def resolve_drs_using_metadata_service(
         return None
 
 
-def resolve_compact_drs_using_dataguids(
+def resolve_compact_drs_using_official_resolver(
     identifier: str,
     object_id: str,
     cache_results: bool = LOCALLY_CACHE_RESOLVED_HOSTS,
     resolver_hostname: str = DRS_RESOLVER_HOSTNAME,
 ) -> Optional[str]:
-    # use dataguids.org to resolve identifier
-    # At this time there are two possible ways to resolve a compact ID
-    # query https://dataguids.org/index/ with the object id and
-    # look for the hostname in the field "from_index_service"
-    # failing that try to access dataguids metadata service
+    """Resolves a DRS prefix or objectId using a DRS resolver
+
+    Use DRS_RESOLVER_HOSTNAME (default: dataguids.org) to resolve identifier
+    At this time there are two possible ways to resolve a compact ID
+    query https://dataguids.org/index/ with the object id and
+    look for the hostname in the field "from_index_service"
+    failing that try to access dataguids metadata service
+
+    Args
+           identifier: DRS prefix to resolve
+           object_id: objectid with DRS prefix to resolve
+           cache_results: set to true to write local cache file
+           resolver_hostname: url of indexd server to query. This is typically dataguids.org
+
+           Returns hostname if resolved, otherwise None
+    """
+
     try:
         response = requests.get(f"{resolver_hostname}/index/{object_id}")
         response.raise_for_status()
@@ -282,6 +318,15 @@ def resolve_drs_using_commons_mds(
     metadata_service_url: str,
     cache_results: bool = LOCALLY_CACHE_RESOLVED_HOSTS,
 ) -> Optional[str]:
+    """Wrapper to use the resolve_drs_using_metadata_service as a DRS resolver functions
+
+    Args:
+           identifier: DRS prefix to resolve
+           _: unused
+           metadata_service_url: url of MDS server to query.
+           cache_results: set to true to write local cache file
+           Returns a hostname if resolved, otherwise None
+    """
     return resolve_drs_using_metadata_service(
         identifier, metadata_service_url, cache_results
     )
@@ -292,13 +337,22 @@ REGISTERED_DRS_RESOLVERS = {
     "cache_file": resolve_drs_from_local_cache,
     "commons_mds": resolve_drs_using_commons_mds,
     "dataguids_dist": resolve_compact_drs_using_indexd_dist,
-    "dataguids": resolve_compact_drs_using_dataguids,
+    "dataguids": resolve_compact_drs_using_official_resolver,
 }
 
 
 def resolve_drs_via_list(
     resolvers_to_try: List[str], identifier, object_id, **kwargs
 ) -> Optional[str]:
+    """Attempts to resolve DRS host by iterating through a list of methods
+    Args
+       resolvers_to_try: List of  DRS resolvers to execute.
+       identifier: DRS prefix to resolve
+       object_id: or objectid with DRS prefix to resolve
+       kwargs: per resolver options
+    Returns hostname if resolved, None otherwise. This would indicate that
+    the DRS identifier cannot be resolved.
+    """
     tried = []
     for how in resolvers_to_try:
         tried.append(how)
@@ -328,6 +382,19 @@ def resolve_drs_via_list(
 
 
 def resolve_drs(identifier, object_id, **kwargs):
+    """Resolve DRS identifier or object id using the various registered DRS resolvers
+
+    This is top level call used by the DRS downloader
+
+    Args
+       identifier: DRS prefix to resolve
+       object_id: or objectid with DRS prefix to resolve
+       kwargs: per resolver options
+
+    Examples:
+
+        >>> resolve_drs("dg.4DFC", None)
+    """
     return resolve_drs_via_list(
         DRS_RESOLUTION_ORDER.split(":"), identifier, object_id, **kwargs
     )

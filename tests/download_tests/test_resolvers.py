@@ -13,7 +13,7 @@ from gen3.tools.download.drs_resolvers import (
     append_to_local_drs_cache,
     resolve_drs_from_local_cache,
     resolve_compact_drs_using_indexd_dist,
-    resolve_compact_drs_using_dataguids,
+    resolve_compact_drs_using_official_resolver,
     resolve_drs_using_commons_mds,
     resolve_drs_via_list,
 )
@@ -228,7 +228,7 @@ def test_resolve_compact_drs_using_dataguids(download_dir):
                 f"https://dataguids_mock.org/index/{object_id}",
                 json=DRS_RESOLVER_RESULTS,
             )
-            results = resolve_compact_drs_using_dataguids(
+            results = resolve_compact_drs_using_official_resolver(
                 identifier, object_id, resolver_hostname="https://dataguids_mock.org"
             )
             expected = "test.commons1.io"
@@ -245,7 +245,7 @@ def test_resolve_compact_drs_using_dataguids(download_dir):
                 f"https://dataguids_mock.org/mds/metadata/{identifier}",
                 json=DRS_MDS_RESULTS,
             )
-            results = resolve_compact_drs_using_dataguids(
+            results = resolve_compact_drs_using_official_resolver(
                 identifier, object_id, resolver_hostname="https://dataguids_mock.org"
             )
             expected = "test.commons1.io"
@@ -261,7 +261,7 @@ def test_resolve_compact_drs_using_dataguids(download_dir):
                 json=DRS_MDS_RESULTS,
             )
             assert (
-                resolve_compact_drs_using_dataguids(
+                resolve_compact_drs_using_official_resolver(
                     identifier,
                     object_id,
                     resolver_hostname="https://dataguids_mock.org",
@@ -275,7 +275,7 @@ def test_resolve_compact_drs_using_dataguids(download_dir):
                 status_code=404,
             )
             assert (
-                resolve_compact_drs_using_dataguids(
+                resolve_compact_drs_using_official_resolver(
                     identifier,
                     object_id,
                     resolver_hostname="https://dataguids_mock.org",
@@ -296,7 +296,7 @@ def test_resolve_compact_drs_using_dataguids(download_dir):
                 status_code=500,
             )
             assert (
-                resolve_compact_drs_using_dataguids(
+                resolve_compact_drs_using_official_resolver(
                     identifier,
                     object_id,
                     resolver_hostname="https://dataguids_mock.org",
