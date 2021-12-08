@@ -24,7 +24,7 @@ logger = get_logger("drs-pull", log_level="warning")
 
 class Downloadable:
     """
-    Forward reference to Dowloadable class for use in data classed below
+    Forward reference to Dowloadable class for use in data classes below
     """
 
     pass
@@ -157,7 +157,7 @@ class Downloadable:
 class DownloadStatus:
     """Stores the download status of objectIDs.
 
-    Status is pending until it is downloaded or an error occurs.
+    Status is "pending" until it is downloaded or an error occurs.
     """
 
     filename: str
@@ -256,17 +256,18 @@ def get_drs_object_info(hostname: str, object_id: str) -> Optional[dict]:
 
 
 def extract_filename_from_object_info(object_info: dict) -> Optional[str]:
-    """
-    Get the filename from the object_info:
-    if name is object_info use that, otherwise try to extract it from the one of the access methods.
+    """Extracts the filename from the object_info.
+
+    if filename is in object_info use that, otherwise try to extract it from the one of the access methods.
     Returns filename if found, else return None
+
+    Args
+        object_info: DRS object dictionary
     """
     if "name" in object_info and object_info["name"]:
         return object_info["name"]
 
     for access_method in object_info["access_methods"]:
-        # TODO: add checks on dictionary path to 'url'
-        #  and if the last item is truly a filename
         url = access_method["access_url"]["url"]
         parts = url.split("/")
         if parts:
@@ -282,9 +283,11 @@ def get_access_methods(object_info: dict) -> List[str]:
     return object_info["access_methods"]
 
 
-def get_drs_object_type(object_info) -> DRSObjectType:
-    """
-    From the object info determine the type of object.
+def get_drs_object_type(object_info: dict) -> DRSObjectType:
+    """From the object info determine the type of object.
+
+    Args:
+        object_info: DRS object dictionary
     """
     if "form" in object_info:
         if object_info["form"] is None:
@@ -304,10 +307,12 @@ def get_drs_object_timestamp(s: Optional[str]) -> Optional[datetime]:
 def add_drs_object_info(info: Downloadable) -> bool:
     """
     Given a downloader object fill in the required fields
-    from the resolved hostname. Returns True if object is valid
-    and resolvable.
+    from the resolved hostname.
+
+    Returns True if object is valid and resolvable.
     In the case of a bundle, try to resolve all object_ids contained
-    in the bundle including other object and bundles
+    in the bundle including other objects and bundles.
+
     """
     if info.hostname is None:
         return False
@@ -568,8 +573,8 @@ class DownloadManager:
     """
     Class to assist in downloading a list of Downloadables which at a minimum is a json manifest
     of DRS object ids
-    The parameters are:
-        * hostname: commons to start from
+    Args
+        * hostname: Gen3 commons home commons
         * auth: Gen3 authentication
         * list of objects to download
         * DRS resolution strategy
@@ -599,6 +604,11 @@ class DownloadManager:
         self.resolve_objects(self.download_list)
 
     def resolve_objects(self, object_list: List[Downloadable]):
+        """
+        Given an object list, resolve the DRS hostnames and
+        @param object_list:
+        @return:
+        """
         resolve_objects_drs_hostname_from_id(
             object_list,
             self.resolved_compact_drs,

@@ -41,12 +41,8 @@ def list_files_or_access(ctx, infile: str, access: bool, object: bool) -> bool:
 
 
 @click.command()
-@click.argument("infile", help="input manifest file")
-@click.argument(
-    "output_dir",
-    default=".",
-    help="directory to write downloads to. Directory will be created if it does not exists.",
-)
+@click.argument("infile")
+@click.argument("output_dir", default=".")
 @click.pass_context
 def download_manifest(ctx, infile: str, output_dir: str):
     """
@@ -62,12 +58,8 @@ def download_manifest(ctx, infile: str, output_dir: str):
 
 
 @click.command()
-@click.argument("object_id", help="DRS object to download")
-@click.argument(
-    "output_dir",
-    default=".",
-    help="directory to write downloads to. Directory will be created if it does not exists.",
-)
+@click.argument("object_id")
+@click.argument("output_dir", default=".")
 @click.pass_context
 def download_object(ctx, object_id: str, output_dir: str):
     """
