@@ -1,0 +1,293 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DRS Download Tools &#8212; Gen3 SDK  documentation</title>
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Indexing Tools" href="indexing.html" />
+    <link rel="prev" title="Gen3 Tools" href="../tools.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="drs-download-tools">
+<h1>DRS Download Tools<a class="headerlink" href="#drs-download-tools" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-gen3.tools.download.drs_download">
+<span id="drs-pull"></span><h2>DRS Pull<a class="headerlink" href="#module-gen3.tools.download.drs_download" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="gen3.tools.download.drs_download.DRSObjectType">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">DRSObjectType</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DRSObjectType"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DRSObjectType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
+<p>An enumeration.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="gen3.tools.download.drs_download.DownloadManager">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">DownloadManager</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hostname</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="../auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><span class="pre">gen3.auth.Gen3Auth</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">download_list</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><span class="pre">gen3.tools.download.drs_download.Downloadable</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DownloadManager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadManager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class to assist in downloading a list of Downloadables which at a minimum is a json manifest
+of DRS object ids
+Args</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>hostname: Gen3 commons home commons</p></li>
+<li><p>auth: Gen3 authentication</p></li>
+<li><p>list of objects to download</p></li>
+<li><p>DRS resolution strategy</p></li>
+</ul>
+</div></blockquote>
+<dl class="py method">
+<dt id="gen3.tools.download.drs_download.DownloadManager.download">
+<code class="sig-name descname"><span class="pre">download</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_list</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><span class="pre">gen3.tools.download.drs_download.Downloadable</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_directory</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'.'</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DownloadManager.download"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadManager.download" title="Permalink to this definition">¶</a></dt>
+<dd><ul class="simple">
+<li><p>load the object ids</p></li>
+<li><p>use Gen3Auth to send request to host WTS</p></li>
+<li><p>get list of external oidc</p></li>
+<li><dl class="simple">
+<dt>loop:</dt><dd><ul>
+<li><p>process manifest entry getting and cache WTS token as needed</p></li>
+<li><p>use token and DRS endpoint to get pre-signed URL</p></li>
+<li><p>download file</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<p>returns: list of files requests and results.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.tools.download.drs_download.DownloadManager.get_fresh_token">
+<code class="sig-name descname"><span class="pre">get_fresh_token</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">drs_hostname</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DownloadManager.get_fresh_token"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadManager.get_fresh_token" title="Permalink to this definition">¶</a></dt>
+<dd><p>Will return and or refresh and return a WTS token if hostname is known
+otherwise returns None.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.tools.download.drs_download.DownloadManager.resolve_objects">
+<code class="sig-name descname"><span class="pre">resolve_objects</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_list</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><span class="pre">gen3.tools.download.drs_download.Downloadable</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DownloadManager.resolve_objects"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadManager.resolve_objects" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given an object list, resolve the DRS hostnames and
+&#64;param object_list:
+&#64;return:</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="gen3.tools.download.drs_download.DownloadStatus">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">DownloadStatus</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">status</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'pending'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_time</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_time</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DownloadStatus"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadStatus" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Stores the download status of objectIDs.</p>
+<p>Status is “pending” until it is downloaded or an error occurs.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="gen3.tools.download.drs_download.Downloadable">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">Downloadable</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="pre">object_id:</span> <span class="pre">str</span></em>, <em class="sig-param"><span class="pre">object_type:</span> <span class="pre">Union[gen3.tools.download.drs_download.DRSObjectType</span></em>, <em class="sig-param"><span class="pre">NoneType]</span> <span class="pre">=</span> <span class="pre">&lt;DRSObjectType.unknown:</span> <span class="pre">'unknown'&gt;</span></em>, <em class="sig-param"><span class="pre">hostname:</span> <span class="pre">Union[str</span></em>, <em class="sig-param"><span class="pre">NoneType]</span> <span class="pre">=</span> <span class="pre">None</span></em>, <em class="sig-param"><span class="pre">file_size:</span> <span class="pre">Union[int</span></em>, <em class="sig-param"><span class="pre">NoneType]</span> <span class="pre">=</span> <span class="pre">-1</span></em>, <em class="sig-param"><span class="pre">file_name:</span> <span class="pre">Union[str</span></em>, <em class="sig-param"><span class="pre">NoneType]</span> <span class="pre">=</span> <span class="pre">None</span></em>, <em class="sig-param"><span class="pre">updated_time:</span> <span class="pre">Union[datetime.datetime</span></em>, <em class="sig-param"><span class="pre">NoneType]</span> <span class="pre">=</span> <span class="pre">None</span></em>, <em class="sig-param"><span class="pre">created_time:</span> <span class="pre">Union[datetime.datetime</span></em>, <em class="sig-param"><span class="pre">NoneType]</span> <span class="pre">=</span> <span class="pre">None</span></em>, <em class="sig-param"><span class="pre">access_methods:</span> <span class="pre">List[Dict[str</span></em>, <em class="sig-param"><span class="pre">Any]]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">children:</span> <span class="pre">List[gen3.tools.download.drs_download.Downloadable]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#Downloadable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.Downloadable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="gen3.tools.download.drs_download.KnownDRSEndpoint">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">KnownDRSEndpoint</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hostname</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_refresh_time</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">datetime.datetime</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idp</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">NoneType</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">access_token</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">NoneType</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">identifier</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">NoneType</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_wts</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#KnownDRSEndpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.KnownDRSEndpoint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="gen3.tools.download.drs_download.Manifest">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">Manifest</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_size</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">md5sum</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">commons_url</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#Manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.Manifest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Data class representing a Gen3 JSON manifest.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="gen3.tools.download.drs_download.add_drs_object_info">
+<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">add_drs_object_info</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">info</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><span class="pre">gen3.tools.download.drs_download.Downloadable</span></a></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">bool</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#add_drs_object_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.add_drs_object_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a downloader object fill in the required fields
+from the resolved hostname.</p>
+<p>Returns True if object is valid and resolvable.
+In the case of a bundle, try to resolve all object_ids contained
+in the bundle including other objects and bundles.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="gen3.tools.download.drs_download.ensure_dirpath_exists">
+<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">ensure_dirpath_exists</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pathlib.Path</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">pathlib.Path</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#ensure_dirpath_exists"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.ensure_dirpath_exists" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility to create a directory if missing</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="gen3.tools.download.drs_download.extract_filename_from_object_info">
+<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">extract_filename_from_object_info</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_info</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#extract_filename_from_object_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.extract_filename_from_object_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extracts the filename from the object_info.</p>
+<p>if filename is in object_info use that, otherwise try to extract it from the one of the access methods.
+Returns filename if found, else return None</p>
+<dl class="simple">
+<dt>Args</dt><dd><p>object_info: DRS object dictionary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="gen3.tools.download.drs_download.get_drs_object_type">
+<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">get_drs_object_type</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_info</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#gen3.tools.download.drs_download.DRSObjectType" title="gen3.tools.download.drs_download.DRSObjectType"><span class="pre">gen3.tools.download.drs_download.DRSObjectType</span></a><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#get_drs_object_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.get_drs_object_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>From the object info determine the type of object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>object_info</strong> – DRS object dictionary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="gen3.tools.download.drs_download.get_user_auth">
+<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">get_user_auth</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">commons_url</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">access_token</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#get_user_auth"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.get_user_auth" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a user authz for the commons based on the access token.
+Returns the authz object from the user endpoint
+Any error will be logged and None is returned</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="gen3.tools.download.drs_download.parse_drs_identifier">
+<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">parse_drs_identifier</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">drs_candidate</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#parse_drs_identifier"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.parse_drs_identifier" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parses a DRS identifier to extract a hostname in the case of hostname based DRS
+a compact identifier.
+If neither one is recognized return an empty string and a type of ‘unknown’
+Note: The regex expressions used to extract hostname or identifier has a potential for
+a false positive.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="gen3.tools.download.drs_download.resolve_drs_hostname_from_id">
+<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">resolve_drs_hostname_from_id</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolved_drs_prefix_cache</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mds_url</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#resolve_drs_hostname_from_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.resolve_drs_hostname_from_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resolves and returns a DRS identifier</p>
+<p>Returns the hostname of the DRS server if resolved, otherwise it returns None</p>
+<p>The resolved_drs_prefix_cache is updated if needed and is a potential side effect of this
+call</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="gen3.tools.download.drs_download.resolve_objects_drs_hostname_from_id">
+<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">resolve_objects_drs_hostname_from_id</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_ids</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><span class="pre">gen3.tools.download.drs_download.Downloadable</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolved_drs_prefix_cache</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mds_url</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#resolve_objects_drs_hostname_from_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.resolve_objects_drs_hostname_from_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a list of object_ids go through list and resolve + cache any unknown</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Gen3 SDK</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=uc-cdis&repo=gen3sdk-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../auth.html">Gen3 Auth Helper</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../file.html">Gen3 File Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../indexing.html">Gen3 Index Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../jobs.html">Gen3 Jobs Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Gen3 Metadata Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../query.html">Gen3 Query Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../submission.html">Gen3 Submission Class</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../tools.html">Gen3 Tools</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">DRS Download Tools</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#module-gen3.tools.download.drs_download">DRS Pull</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="indexing.html">Indexing Tools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metadata.html">Metadata Tools</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../wss.html">Gen3 Workspace Storage</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="../tools.html">Gen3 Tools</a><ul>
+      <li>Previous: <a href="../tools.html" title="previous chapter">Gen3 Tools</a></li>
+      <li>Next: <a href="indexing.html" title="next chapter">Indexing Tools</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Center for Translational Data Science.
+      
+      |
+      <a href="../_sources/tools/drs_pull.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/uc-cdis/gen3sdk-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
