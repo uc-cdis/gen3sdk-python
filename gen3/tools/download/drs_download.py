@@ -162,23 +162,23 @@ class DownloadStatus:
 
     filename: str
     status: str = "pending"
-    startTime: Optional[datetime] = None
-    endTime: Optional[datetime] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
 
     def __str__(self):
         return (
             f'filename: {self.filename if self.filename is not None else "not available"} '
             f"status: {self.status} "
-            f'startTime: {self.startTime.strftime("%m/%d/%Y, %H:%M:%S") if self.startTime is not None else "n/a"} '
-            f'endTime: {self.endTime.strftime("%m/%d/%Y, %H:%M:%S") if self.startTime is not None else "n/a"}'
+            f'start_time: {self.start_time.strftime("%m/%d/%Y, %H:%M:%S") if self.start_time is not None else "n/a"} '
+            f'end_time: {self.end_time.strftime("%m/%d/%Y, %H:%M:%S") if self.start_time is not None else "n/a"}'
         )
 
     def __repr__(self):
         return (
             f'filename: {self.filename if self.filename is not None else "not available"} '
             f"status: {self.status} "
-            f'startTime: {self.startTime.strftime("%m/%d/%Y, %H:%M:%S") if self.startTime is not None else "n/a"} '
-            f'endTime: {self.endTime.strftime("%m/%d/%Y, %H:%M:%S") if self.startTime is not None else "n/a"}'
+            f'start_time: {self.start_time.strftime("%m/%d/%Y, %H:%M:%S") if self.start_time is not None else "n/a"} '
+            f'end_time: {self.end_time.strftime("%m/%d/%Y, %H:%M:%S") if self.start_time is not None else "n/a"}'
         )
 
 
@@ -742,11 +742,11 @@ class DownloadManager:
                 completed[entry.object_id].status = "error"
                 continue
 
-            completed[entry.object_id].startTime = datetime.now(timezone.utc)
+            completed[entry.object_id].start_time = datetime.now(timezone.utc)
             filepath = output_dir.joinpath(entry.file_name)
             res = download_file_from_url(url=download_url, filename=filepath)
             completed[entry.object_id].status = "downloaded" if res else "error"
-            completed[entry.object_id].endTime = datetime.now(timezone.utc)
+            completed[entry.object_id].end_time = datetime.now(timezone.utc)
 
         return completed
 

@@ -200,7 +200,7 @@ def resolve_compact_drs_using_indexd_dist(
             if cache_results:  # write the results to cache since we have a
                 # number of results, caching them will potentially
                 # save lookup time in the future
-                create_local_drs_cache(data)
+                append_to_local_drs_cache(data)
 
             return data[identifier]["host"]
 

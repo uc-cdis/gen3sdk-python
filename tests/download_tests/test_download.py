@@ -94,9 +94,9 @@ def drs_object_info():
     "identifier,expected",
     [
         (
-            "drs://jcoin.datacommons.io/dg.XXTS/008e6b62-28c0-4659-afec-622340b0ef76",
+            "drs://drs.testcommons.me/dg.XXTS/008e6b62-28c0-4659-afec-622340b0ef76",
             (
-                "jcoin.datacommons.io",
+                "drs.testcommons.me",
                 "dg.XXTS/008e6b62-28c0-4659-afec-622340b0ef76",
                 "hostname",
             ),
@@ -115,10 +115,10 @@ def test_parse_drs_identifier(identifier, expected):
 @pytest.mark.parametrize(
     "s,expected",
     [
-        ("https://jcoin.datacommons.io/index/", "jcoin.datacommons.io"),
+        ("https://drs.testcommons.me/index/", "drs.testcommons.me"),
         ("http://foo.testgen3.io/index/", "foo.testgen3.io"),
-        ("jcoin.datacommons.io/index/", "jcoin.datacommons.io"),
-        ("jcoin.datacommons.io/index", "jcoin.datacommons.io"),
+        ("drs.testcommons.me/index/", "drs.testcommons.me"),
+        ("drs.testcommons.me/index", "drs.testcommons.me"),
     ],
 )
 def test_strip_http_url(s: str, expected):
@@ -743,16 +743,16 @@ def test_download_status_repr_and_str():
     download1 = DownloadStatus(
         filename="test.csv",
         status="downloaded",
-        startTime=datetime.fromisoformat("2011-11-04T00:05:23"),
-        endTime=datetime.fromisoformat("2011-11-04T00:07:12"),
+        start_time=datetime.fromisoformat("2011-11-04T00:05:23"),
+        end_time=datetime.fromisoformat("2011-11-04T00:07:12"),
     )
 
     results = download1.__repr__()
-    expected = "filename: test.csv status: downloaded startTime: 11/04/2011, 00:05:23 endTime: 11/04/2011, 00:07:12"
+    expected = "filename: test.csv status: downloaded start_time: 11/04/2011, 00:05:23 end_time: 11/04/2011, 00:07:12"
     assert results == expected
 
     results = download1.__str__()
-    expected = "filename: test.csv status: downloaded startTime: 11/04/2011, 00:05:23 endTime: 11/04/2011, 00:07:12"
+    expected = "filename: test.csv status: downloaded start_time: 11/04/2011, 00:05:23 end_time: 11/04/2011, 00:07:12"
     assert results == expected
 
 
