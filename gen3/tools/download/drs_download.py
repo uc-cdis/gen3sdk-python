@@ -19,7 +19,7 @@ from gen3.tools.download.drs_resolvers import resolve_drs
 
 DEFAULT_EXPIRE: timedelta = timedelta(hours=1)
 
-logger = get_logger("download", log_level="warning")
+logger = get_logger("drs-pull", log_level="warning")
 
 
 class Downloadable:
@@ -202,7 +202,8 @@ def wts_external_oidc(hostname: str) -> Dict[str, Any]:
         )
     except JSONDecodeError as ex:
         logger.warning(
-            f"Unable to process response. Likely no WTS service running for this commons"
+            f"Unable to process WTS response. Likely no WTS service running on this commons. "
+            f"Certain commands might fail."
         )
 
     return oidc

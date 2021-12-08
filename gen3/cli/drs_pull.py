@@ -14,11 +14,17 @@ logger = get_logger("download", log_level="warning")
 
 @click.command()
 @click.argument("infile")
-@click.option("--access", is_flag=True)
-@click.option("--object", is_flag=True)
+@click.option(
+    "--access",
+    is_flag=True,
+    help="list access rights to Gen3 commons hosting DRS objects, instead of files",
+)
+@click.option(
+    "--object", is_flag=True, help="list file or access for object instead of manifest"
+)
 @click.pass_context
-def list_files(ctx, infile: str, access: bool, object: bool) -> bool:
-    """List files and size in manifest"""
+def list_files_or_access(ctx, infile: str, access: bool, object: bool) -> bool:
+    """List files and size in manifest or if access is True list instead list user access"""
     if access:
         return list_access_in_manifest(
             ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
@@ -35,22 +41,16 @@ def list_files(ctx, infile: str, access: bool, object: bool) -> bool:
 
 
 @click.command()
-@click.argument("infile")
-@click.pass_context
-def user_access(ctx, infile: str):
-    """List files and size in manifest"""
-    return list_access_in_manifest(
-        ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
-    )
-
-
-@click.command()
-@click.argument("infile")
-@click.argument("output_dir", default=".")
+@click.argument("infile", help="input manifest file")
+@click.argument(
+    "output_dir",
+    default=".",
+    help="directory to write downloads to. Directory will be created if it does not exists.",
+)
 @click.pass_context
 def download_manifest(ctx, infile: str, output_dir: str):
     """
-    pulls all files in manifest where the manifest can contain DRS objects.
+    Pulls all DIR objects in manifest where the manifest can contain DRS objects.
     The user credentials use the Gen3Auth class so the Gen3Auth options are applicable (--auth and --endpoint)
     An example:
         gen3 --endpoint healdata.org pull_manifest manifest1.json
@@ -62,8 +62,12 @@ def download_manifest(ctx, infile: str, output_dir: str):
 
 
 @click.command()
-@click.argument("object_id")
-@click.argument("output_dir", default=".")
+@click.argument("object_id", help="DRS object to download")
+@click.argument(
+    "output_dir",
+    default=".",
+    help="directory to write downloads to. Directory will be created if it does not exists.",
+)
 @click.pass_context
 def download_object(ctx, object_id: str, output_dir: str):
     """
@@ -79,11 +83,11 @@ def download_object(ctx, object_id: str, output_dir: str):
 
 
 @click.group()
-def manifest():
-    """Commands for downloading Gen3 manifests"""
+def drs_pull():
+    """Commands for downloading and listing DRS objects and manifests"""
     pass
 
 
-manifest.add_command(download_manifest, name="pull_manifest")
-manifest.add_command(download_object, name="pull_object")
-manifest.add_command(list_files, name="ls")
+drs_pull.add_command(download_manifest, name="pull_manifest")
+drs_pull.add_command(download_object, name="pull_object")
+drs_pull.add_command(list_files_or_access, name="ls")
