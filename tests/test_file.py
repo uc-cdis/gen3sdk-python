@@ -97,7 +97,7 @@ def test_get_presigned_url_wrong_api_key(gen3_file, supported_protocol):
         (None, 500, "Failed to delete data file.", "Failed to delete data file."),
     ],
 )
-def test_delete_files(gen3_file, guid, status_code, response_text, expected_response):
+def test_delete_file(gen3_file, guid, status_code, response_text, expected_response):
     """
     Delete files for a Gen3File using a guid
 
@@ -115,11 +115,11 @@ def test_delete_files(gen3_file, guid, status_code, response_text, expected_resp
     with patch("gen3.file.requests") as mock_request:
         mock_request.status_code = status_code
         mock_request.delete().text = response_text
-        res = gen3_file.delete_files(guid=guid)
+        res = gen3_file.delete_file(guid=guid)
         assert res == expected_response
 
 
-def test_delete_files_no_refresh_token(gen3_file):
+def test_delete_file_no_refresh_token(gen3_file):
     """
     Delete files for a Gen3File without a refresh token, which should raise an HTTPError
 
@@ -130,11 +130,11 @@ def test_delete_files_no_refresh_token(gen3_file):
 
     with patch("gen3.file.requests.delete", side_effect=HTTPError):
         with pytest.raises(HTTPError):
-            res = gen3_file.delete_files(guid="123")
+            res = gen3_file.delete_file(guid="123")
             assert res == "Failed to delete data file."
 
 
-def test_delete_files_no_api_key(gen3_file):
+def test_delete_file_no_api_key(gen3_file):
     """
     Delete files for a Gen3File without an api_key in the refresh token, which should return a 401
 
@@ -146,11 +146,11 @@ def test_delete_files_no_api_key(gen3_file):
     with patch("gen3.file.requests") as mock_request:
         mock_request.status_code = 401
         mock_request.delete().text = "Failed to delete data file."
-        res = gen3_file.delete_files(guid="123")
+        res = gen3_file.delete_file(guid="123")
         assert res == "Failed to delete data file."
 
 
-def test_delete_files_wrong_api_key(gen3_file):
+def test_delete_file_wrong_api_key(gen3_file):
     """
     Delete files for a Gen3File with the wrong value for the api_key
     in the refresh token, which should return a 401
@@ -163,7 +163,7 @@ def test_delete_files_wrong_api_key(gen3_file):
     with patch("gen3.file.requests") as mock_request:
         mock_request.status_code = 401
         mock_request.delete().text = "Failed to delete data file."
-        res = gen3_file.delete_files(guid="123")
+        res = gen3_file.delete_file(guid="123")
         assert res == "Failed to delete data file."
 
 
@@ -180,21 +180,21 @@ def test_delete_files_wrong_api_key(gen3_file):
             200,
             201,
             '{ "url": "https://fakecontainer/some/path/file.txt" }',
-            {"guid": "guid", "url": "https://fakecontainer/some/path/guid/file.txt"},
+            {"url": "https://fakecontainer/some/path/file.txt"},
         ),
         (
             ["/programs"],
             200,
             201,
             '{ "url": "https://fakecontainer/some/path/file.txt" }',
-            {"guid": "guid", "url": "https://fakecontainer/some/path/guid/file.txt"},
+            {"url": "https://fakecontainer/some/path/file.txt"},
         ),
         (
             ["/programs"],
             0,
             201,
             '{ "url": "https://fakecontainer/some/path/file.txt" }',
-            {"guid": "guid", "url": "https://fakecontainer/some/path/guid/file.txt"},
+            {"url": "https://fakecontainer/some/path/file.txt"},
         ),
         (
             "[/programs]",
@@ -257,10 +257,8 @@ def test_upload_file(
             expires_in=expires_in,
         )
         if status_code == 201:
-            # check that the response URL includes the extra guid for the uploaded file
-            assert res.get("url") == expected_response["url"].replace(
-                f"{expected_response['guid']}/", ""
-            )
+            # check that the SDK is getting fence
+            assert res.get("url") == expected_response["url"]
         else:
             # check the error message
             assert expected_response in res
