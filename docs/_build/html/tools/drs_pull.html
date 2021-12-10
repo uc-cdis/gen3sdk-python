@@ -32,65 +32,139 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="drs-download-tools">
-<h1>DRS Download Tools<a class="headerlink" href="#drs-download-tools" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="module-gen3.tools.download.drs_download">
-<span id="drs-pull"></span><h2>DRS Pull<a class="headerlink" href="#module-gen3.tools.download.drs_download" title="Permalink to this headline">¶</a></h2>
-<dl class="py class">
-<dt id="gen3.tools.download.drs_download.DRSObjectType">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">DRSObjectType</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DRSObjectType"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DRSObjectType" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
-<p>An enumeration.</p>
-</dd></dl>
-
+  <div class="section" id="module-gen3.tools.download.drs_download">
+<span id="drs-download-tools"></span><h1>DRS Download Tools<a class="headerlink" href="#module-gen3.tools.download.drs_download" title="Permalink to this headline">¶</a></h1>
+<p>Module for downloading and listing JSON DRS manifest and DRS objects. The main classes in
+this module for downloading DRS objects are DownloadManager and Manifest.</p>
+<blockquote>
+<div><dl>
+<dt>Examples:</dt><dd><p>This generates the Gen3Jobs class pointed at the sandbox commons while
+using the credentials.json downloaded from the commons profile page.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">datafiles</span> <span class="o">=</span> <span class="n">Manifest</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;sample/manifest_1.json&#39;</span><span class="p">)</span>
+<span class="go">    downloadManager = DownloadManager(&quot;source.my_commons.org&quot;,</span>
+<span class="go">                      Gen3Auth(refresh_file=&quot;~.gen3/my_credentials.json&quot;), datafiles)</span>
+<span class="go">    for i in datafiles:</span>
+<span class="go">        print(i)</span>
+<span class="go">    downloadManager.download(datafiles, &quot;.&quot;)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</div></blockquote>
+<p>In addition there are a few convenience functions  which wrap the download and list classes
+into a single function call.</p>
+<blockquote>
+<div><dl>
+<dt>Examples:</dt><dd><p>This generates the Gen3Jobs class pointed at the sandbox commons while
+using the credentials.json downloaded from the commons profile page.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">download_files_in_drs_manifest</span><span class="p">(</span><span class="s2">&quot;source.my_commons.org&quot;</span><span class="p">,</span>
+<span class="go">                              Gen3Auth(refresh_file=&quot;~.gen3/my_credentials.json&quot;),</span>
+<span class="go">                              &#39;sample/manifest_1.json&#39;)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</div></blockquote>
+<p>Downloading a DRS objectID or manifest containing DRS bundles requires resolving the DRS prefix
+to an actual hostname. Most DRS resolver request that the resolved prefixes are cached to prevent
+overloading these resolver services. Gen3 uses dataguid.org to resolve its prefixes but others
+can be selected as well.</p>
+<p>To configure the DRS resolvers there are number of environment variables that can be set to control
+the DRS resolution process.</p>
+<ul class="simple">
+<li><p>DRS_CACHE_EXPIRE_DURATION=2</p></li>
+<li><p>DRS_RESOLVER_HOSTNAME=”<a class="reference external" href="http://dataguids.org">http://dataguids.org</a>”</p></li>
+<li><p>LOCALLY_CACHE_RESOLVED_HOSTS=True</p></li>
+<li><p>DRS_RESOLUTION_ORDER=”cache_file:commons_mds:dataguids_dist:dataguids”</p></li>
+</ul>
+<p><em>DRS_CACHE_EXPIRE_DURATION</em> controls the number of days to keeps a resolved DRS hostname, the default
+value is 2 day but typically DRS hostnames do not change that often, so the value can be higher.</p>
+<p><em>DRS_RESOLVER_HOSTNAME</em> set the hostname of the resolver service to use. Currently, the default
+value of “<a class="reference external" href="http://dataguids.org">http://dataguids.org</a>” is the only supported resolver, but others will be added in
+the future.</p>
+<p><em>LOCALLY_CACHE_RESOLVED_HOSTS</em> Set to True (the default) to create a local cache file to store the
+resolved hostnames. Use of this is highly recommended as it will reduce the resolution time
+significantly.</p>
+<p><em>DRS_RESOLUTION_ORDER</em> The order to apply the resolvers. The default value is the suggested one, and
+there should be no need to change this order, not that the last one dataguids is needed as it is
+the final resolver when all others fail to resolve a DRS prefix. Depending on the configuration
+of the Gen3 commons the metadata service can also cache DRS prefixes but only when using the Aggregate
+Metadata service.</p>
+<p>Note that these environment variables allows for a Gen3 commons workspace to have a prepopulated
+cache file provided, which when combined with a large <em>DRS_CACHE_EXPIRE_DURATION</em> and a
+<em>DRS_RESOLUTION_ORDER</em> of “cache_file” only will prevent the DRS resolver from accessing any other
+resolver. This is recommended as one way to increase download performance.</p>
 <dl class="py class">
 <dt id="gen3.tools.download.drs_download.DownloadManager">
 <em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">DownloadManager</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hostname</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="../auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><span class="pre">gen3.auth.Gen3Auth</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">download_list</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><span class="pre">gen3.tools.download.drs_download.Downloadable</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DownloadManager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadManager" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Class to assist in downloading a list of Downloadables which at a minimum is a json manifest
-of DRS object ids
-Args</p>
-<blockquote>
-<div><ul class="simple">
-<li><p>hostname: Gen3 commons home commons</p></li>
-<li><p>auth: Gen3 authentication</p></li>
-<li><p>list of objects to download</p></li>
-<li><p>DRS resolution strategy</p></li>
-</ul>
-</div></blockquote>
+<dd><p>Class to assist in downloading a list of Downloadable object  which at a minimum is a json manifest
+of DRS object ids. The methods of interest are download and user_access.</p>
+<dl class="py method">
+<dt id="gen3.tools.download.drs_download.DownloadManager.cache_hosts_wts_tokens">
+<code class="sig-name descname"><span class="pre">cache_hosts_wts_tokens</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_list</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><span class="pre">gen3.tools.download.drs_download.Downloadable</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DownloadManager.cache_hosts_wts_tokens"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadManager.cache_hosts_wts_tokens" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a object list, get WTS token for all DRS hosts in the list
+:param object_list: list of object to cache
+:type object_list: List[Downloadable]</p>
+</dd></dl>
+
 <dl class="py method">
 <dt id="gen3.tools.download.drs_download.DownloadManager.download">
 <code class="sig-name descname"><span class="pre">download</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_list</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><span class="pre">gen3.tools.download.drs_download.Downloadable</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_directory</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'.'</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DownloadManager.download"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadManager.download" title="Permalink to this definition">¶</a></dt>
-<dd><ul class="simple">
-<li><p>load the object ids</p></li>
-<li><p>use Gen3Auth to send request to host WTS</p></li>
-<li><p>get list of external oidc</p></li>
-<li><dl class="simple">
-<dt>loop:</dt><dd><ul>
-<li><p>process manifest entry getting and cache WTS token as needed</p></li>
-<li><p>use token and DRS endpoint to get pre-signed URL</p></li>
-<li><p>download file</p></li>
+<dd><p>Downloads objects to the directory or current working directory.
+The input is an list of Downloadable object created by loading a manifest
+using the Manifest class or a call to Manifest.load(…</p>
+<p>The download manager will download each file in the manifest, in the
+case of errors they are logged and it continues.</p>
+<p>The return value is a list of DownloadStatus object, detailing the results
+of the download.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>object_list</strong> (<em>List</em><em>[</em><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><em>Downloadable</em></a><em>]</em>) – </p></li>
+<li><p><strong>save_directory</strong> (<em>str</em>) – directory to save to (will be created)</p></li>
 </ul>
 </dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>List of DownloadStatus objects for each object id in object_list</p>
+</dd>
 </dl>
-</li>
-</ul>
-<p>returns: list of files requests and results.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt id="gen3.tools.download.drs_download.DownloadManager.get_fresh_token">
 <code class="sig-name descname"><span class="pre">get_fresh_token</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">drs_hostname</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DownloadManager.get_fresh_token"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadManager.get_fresh_token" title="Permalink to this definition">¶</a></dt>
-<dd><p>Will return and or refresh and return a WTS token if hostname is known
-otherwise returns None.</p>
+<dd><p>Will return and/or refresh and return a WTS token if hostname is known otherwise returns None.
+:param drs_hostname: hostname to get token for
+:type drs_hostname: str</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>access token if successful otherwise None</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt id="gen3.tools.download.drs_download.DownloadManager.resolve_objects">
 <code class="sig-name descname"><span class="pre">resolve_objects</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_list</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><span class="pre">gen3.tools.download.drs_download.Downloadable</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DownloadManager.resolve_objects"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadManager.resolve_objects" title="Permalink to this definition">¶</a></dt>
-<dd><p>Given an object list, resolve the DRS hostnames and
-&#64;param object_list:
-&#64;return:</p>
+<dd><p>Given an Downloadable object list, resolve the DRS hostnames and update each Downloadable</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>object_list</strong> (<em>List</em><em>[</em><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><em>Downloadable</em></a><em>]</em>) – list of Downloadable objects to resolve</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.tools.download.drs_download.DownloadManager.user_access">
+<code class="sig-name descname"><span class="pre">user_access</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DownloadManager.user_access"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadManager.user_access" title="Permalink to this definition">¶</a></dt>
+<dd><p>List the user’s access permissions on each host needed to download
+DRS objects in the manifest. A useful way to determine if access permissions
+are one reason a download failed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>list of authz for each DRS host</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -98,103 +172,360 @@ otherwise returns None.</p>
 <dl class="py class">
 <dt id="gen3.tools.download.drs_download.DownloadStatus">
 <em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">DownloadStatus</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">status</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'pending'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_time</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_time</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DownloadStatus"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadStatus" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Stores the download status of objectIDs.</p>
-<p>Status is “pending” until it is downloaded or an error occurs.</p>
+<dd><p>Stores the download status of objectIDs.</p>
+<p>The DataManager will return a list of DownloadStatus as a result of calling the download method</p>
+<p>Status is “pending” until it is downloaded or an error occurs.
+.. attribute:: filename</p>
+<blockquote>
+<div><p>the name of the file to download</p>
+<dl class="field-list simple">
+<dt class="field-odd">type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="py attribute">
+<dt id="gen3.tools.download.drs_download.DownloadStatus.status">
+<code class="sig-name descname"><span class="pre">status</span></code><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadStatus.status" title="Permalink to this definition">¶</a></dt>
+<dd><p>status of file download initially “pending”</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="gen3.tools.download.drs_download.DownloadStatus.start_time">
+<code class="sig-name descname"><span class="pre">start_time</span></code><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadStatus.start_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>start time of download as datetime initially None</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[datetime]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="gen3.tools.download.drs_download.DownloadStatus.end_time">
+<code class="sig-name descname"><span class="pre">end_time</span></code><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadStatus.end_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>end time of download as datetime initially None</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[datetime]</p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
 <dt id="gen3.tools.download.drs_download.Downloadable">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">Downloadable</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="pre">object_id:</span> <span class="pre">str</span></em>, <em class="sig-param"><span class="pre">object_type:</span> <span class="pre">Union[gen3.tools.download.drs_download.DRSObjectType</span></em>, <em class="sig-param"><span class="pre">NoneType]</span> <span class="pre">=</span> <span class="pre">&lt;DRSObjectType.unknown:</span> <span class="pre">'unknown'&gt;</span></em>, <em class="sig-param"><span class="pre">hostname:</span> <span class="pre">Union[str</span></em>, <em class="sig-param"><span class="pre">NoneType]</span> <span class="pre">=</span> <span class="pre">None</span></em>, <em class="sig-param"><span class="pre">file_size:</span> <span class="pre">Union[int</span></em>, <em class="sig-param"><span class="pre">NoneType]</span> <span class="pre">=</span> <span class="pre">-1</span></em>, <em class="sig-param"><span class="pre">file_name:</span> <span class="pre">Union[str</span></em>, <em class="sig-param"><span class="pre">NoneType]</span> <span class="pre">=</span> <span class="pre">None</span></em>, <em class="sig-param"><span class="pre">updated_time:</span> <span class="pre">Union[datetime.datetime</span></em>, <em class="sig-param"><span class="pre">NoneType]</span> <span class="pre">=</span> <span class="pre">None</span></em>, <em class="sig-param"><span class="pre">created_time:</span> <span class="pre">Union[datetime.datetime</span></em>, <em class="sig-param"><span class="pre">NoneType]</span> <span class="pre">=</span> <span class="pre">None</span></em>, <em class="sig-param"><span class="pre">access_methods:</span> <span class="pre">List[Dict[str</span></em>, <em class="sig-param"><span class="pre">Any]]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">children:</span> <span class="pre">List[gen3.tools.download.drs_download.Downloadable]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#Downloadable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.Downloadable" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">Downloadable</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="pre">object_id:</span> <span class="pre">str</span></em>, <em class="sig-param"><span class="pre">object_type:</span> <span class="pre">Optional[gen3.tools.download.drs_download.DRSObjectType]</span> <span class="pre">=</span> <span class="pre">&lt;DRSObjectType.unknown:</span> <span class="pre">'unknown'&gt;</span></em>, <em class="sig-param"><span class="pre">hostname:</span> <span class="pre">Optional[str]</span> <span class="pre">=</span> <span class="pre">None</span></em>, <em class="sig-param"><span class="pre">file_size:</span> <span class="pre">Optional[int]</span> <span class="pre">=</span> <span class="pre">-1</span></em>, <em class="sig-param"><span class="pre">file_name:</span> <span class="pre">Optional[str]</span> <span class="pre">=</span> <span class="pre">None</span></em>, <em class="sig-param"><span class="pre">updated_time:</span> <span class="pre">Optional[datetime.datetime]</span> <span class="pre">=</span> <span class="pre">None</span></em>, <em class="sig-param"><span class="pre">created_time:</span> <span class="pre">Optional[datetime.datetime]</span> <span class="pre">=</span> <span class="pre">None</span></em>, <em class="sig-param"><span class="pre">access_methods:</span> <span class="pre">List[Dict[str</span></em>, <em class="sig-param"><span class="pre">Any]]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">children:</span> <span class="pre">List[gen3.tools.download.drs_download.Downloadable]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#Downloadable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.Downloadable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class handling the information for a DRS object. The information is populated from the manifest or
+by retrieving the information from a DRS server.</p>
+<dl class="py attribute">
+<dt id="gen3.tools.download.drs_download.Downloadable.object_id">
+<code class="sig-name descname"><span class="pre">object_id</span></code><a class="headerlink" href="#gen3.tools.download.drs_download.Downloadable.object_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>DRS object id (REQUIRED)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="py class">
-<dt id="gen3.tools.download.drs_download.KnownDRSEndpoint">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">KnownDRSEndpoint</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hostname</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_refresh_time</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">datetime.datetime</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idp</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">NoneType</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">access_token</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">NoneType</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">identifier</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">NoneType</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_wts</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#KnownDRSEndpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.KnownDRSEndpoint" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt id="gen3.tools.download.drs_download.Downloadable.object_type">
+<code class="sig-name descname"><span class="pre">object_type</span></code><a class="headerlink" href="#gen3.tools.download.drs_download.Downloadable.object_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>type of DRS object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>DRSObjectType</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="gen3.tools.download.drs_download.Downloadable.hostname">
+<code class="sig-name descname"><span class="pre">hostname</span></code><a class="headerlink" href="#gen3.tools.download.drs_download.Downloadable.hostname" title="Permalink to this definition">¶</a></dt>
+<dd><p>hostname of DRS object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="gen3.tools.download.drs_download.Downloadable.file_size">
+<code class="sig-name descname"><span class="pre">file_size</span></code><a class="headerlink" href="#gen3.tools.download.drs_download.Downloadable.file_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>size in bytes</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="gen3.tools.download.drs_download.Downloadable.file_name">
+<code class="sig-name descname"><span class="pre">file_name</span></code><a class="headerlink" href="#gen3.tools.download.drs_download.Downloadable.file_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>name of file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="gen3.tools.download.drs_download.Downloadable.updated_time">
+<code class="sig-name descname"><span class="pre">updated_time</span></code><a class="headerlink" href="#gen3.tools.download.drs_download.Downloadable.updated_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>timestamp of last update to file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>datetime</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="gen3.tools.download.drs_download.Downloadable.created_time">
+<code class="sig-name descname"><span class="pre">created_time</span></code><a class="headerlink" href="#gen3.tools.download.drs_download.Downloadable.created_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>timestamp when file is created</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>datetime</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="gen3.tools.download.drs_download.Downloadable.access_methods">
+<code class="sig-name descname"><span class="pre">access_methods</span></code><a class="headerlink" href="#gen3.tools.download.drs_download.Downloadable.access_methods" title="Permalink to this definition">¶</a></dt>
+<dd><p>list of access methods (e.g. s3) for DRS object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>List[Dict[str, Any]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="gen3.tools.download.drs_download.Downloadable.children">
+<code class="sig-name descname"><span class="pre">children</span></code><a class="headerlink" href="#gen3.tools.download.drs_download.Downloadable.children" title="Permalink to this definition">¶</a></dt>
+<dd><p>list of child objects (in the case of DRS bundles)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>List[<a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable">Downloadable</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="gen3.tools.download.drs_download.Downloadable._manager">
+<code class="sig-name descname"><span class="pre">_manager</span></code><a class="headerlink" href="#gen3.tools.download.drs_download.Downloadable._manager" title="Permalink to this definition">¶</a></dt>
+<dd><p>manager for this Downloadable</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#gen3.tools.download.drs_download.DownloadManager" title="gen3.tools.download.drs_download.DownloadManager">DownloadManager</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.tools.download.drs_download.Downloadable.download">
+<code class="sig-name descname"><span class="pre">download</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#Downloadable.download"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.Downloadable.download" title="Permalink to this definition">¶</a></dt>
+<dd><p>calls the manager to download this object. Allows Downloadables to be self downloading</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.tools.download.drs_download.Downloadable.printprint">
+<code class="sig-name descname"><span class="pre">printprint</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indent</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#Downloadable.printprint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.Downloadable.printprint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pretty prints the object information. This is used for listing an object.
+In the case of a DRS bundle the child objects are listed similar to the linux tree command</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
 <dt id="gen3.tools.download.drs_download.Manifest">
 <em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">Manifest</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_size</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">md5sum</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">commons_url</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#Manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.Manifest" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Data class representing a Gen3 JSON manifest.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt id="gen3.tools.download.drs_download.add_drs_object_info">
-<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">add_drs_object_info</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">info</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><span class="pre">gen3.tools.download.drs_download.Downloadable</span></a></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">bool</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#add_drs_object_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.add_drs_object_info" title="Permalink to this definition">¶</a></dt>
-<dd><p>Given a downloader object fill in the required fields
-from the resolved hostname.</p>
-<p>Returns True if object is valid and resolvable.
-In the case of a bundle, try to resolve all object_ids contained
-in the bundle including other objects and bundles.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt id="gen3.tools.download.drs_download.ensure_dirpath_exists">
-<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">ensure_dirpath_exists</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pathlib.Path</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">pathlib.Path</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#ensure_dirpath_exists"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.ensure_dirpath_exists" title="Permalink to this definition">¶</a></dt>
-<dd><p>Utility to create a directory if missing</p>
-</dd></dl>
-
-<dl class="py function">
-<dt id="gen3.tools.download.drs_download.extract_filename_from_object_info">
-<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">extract_filename_from_object_info</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_info</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#extract_filename_from_object_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.extract_filename_from_object_info" title="Permalink to this definition">¶</a></dt>
-<dd><p>Extracts the filename from the object_info.</p>
-<p>if filename is in object_info use that, otherwise try to extract it from the one of the access methods.
-Returns filename if found, else return None</p>
-<dl class="simple">
-<dt>Args</dt><dd><p>object_info: DRS object dictionary</p>
+<dd><p>Data class representing a Gen3 JSON manifest typically exported from a Gen3 discovery page.</p>
+<p>The class is passed to the DownloadManager to download or list all of the files in the manifest.
+The Download manager will cache additional information (if available)</p>
+<dl class="py attribute">
+<dt id="gen3.tools.download.drs_download.Manifest.object_id">
+<code class="sig-name descname"><span class="pre">object_id</span></code><a class="headerlink" href="#gen3.tools.download.drs_download.Manifest.object_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>the DRS object id. This is the only attribute that needs to be defined</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
 </dd>
 </dl>
 </dd></dl>
 
-<dl class="py function">
-<dt id="gen3.tools.download.drs_download.get_drs_object_type">
-<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">get_drs_object_type</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_info</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#gen3.tools.download.drs_download.DRSObjectType" title="gen3.tools.download.drs_download.DRSObjectType"><span class="pre">gen3.tools.download.drs_download.DRSObjectType</span></a><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#get_drs_object_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.get_drs_object_type" title="Permalink to this definition">¶</a></dt>
-<dd><p>From the object info determine the type of object.</p>
+<dl class="py attribute">
+<dt id="gen3.tools.download.drs_download.Manifest.file_size">
+<code class="sig-name descname"><span class="pre">file_size</span></code><a class="headerlink" href="#gen3.tools.download.drs_download.Manifest.file_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>the filesize of the object, if contained in the manifest</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="gen3.tools.download.drs_download.Manifest.file_name">
+<code class="sig-name descname"><span class="pre">file_name</span></code><a class="headerlink" href="#gen3.tools.download.drs_download.Manifest.file_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>the name of the file pointed to by the DRS object id</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="gen3.tools.download.drs_download.Manifest.md5sum">
+<code class="sig-name descname"><span class="pre">md5sum</span></code><a class="headerlink" href="#gen3.tools.download.drs_download.Manifest.md5sum" title="Permalink to this definition">¶</a></dt>
+<dd><p>the checksum of the object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="gen3.tools.download.drs_download.Manifest.commons_url">
+<code class="sig-name descname"><span class="pre">commons_url</span></code><a class="headerlink" href="#gen3.tools.download.drs_download.Manifest.commons_url" title="Permalink to this definition">¶</a></dt>
+<dd><p>url of the indexd server to retrieve file/bundle from</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.tools.download.drs_download.Manifest.create_object_list">
+<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">create_object_list</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><span class="pre">gen3.tools.download.drs_download.Downloadable</span></a><span class="p"><span class="pre">]</span></span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#Manifest.create_object_list"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.Manifest.create_object_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a list of Downloadable instances from the manifest</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>object_info</strong> – DRS object dictionary</p>
+<dd class="field-odd"><p><strong>manifest</strong> (<em>list</em>) – list of manifest objects</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>List of Downloadable instances</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.tools.download.drs_download.Manifest.load">
+<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">load</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pathlib.Path</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><span class="pre">gen3.tools.download.drs_download.Downloadable</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#Manifest.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.Manifest.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to load a json manifest and return a list of Bownloadable object.
+This list is passed to the DownloadManager methods of download, and list</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>filename</strong> (<em>Path</em>) – path to manifest file</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>list of Downloadable objects if successfully opened/parsed None otherwise</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.tools.download.drs_download.Manifest.load_manifest">
+<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">load_manifest</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pathlib.Path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#Manifest.load_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.Manifest.load_manifest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads a json manifest</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="gen3.tools.download.drs_download.download_drs_object">
+<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">download_drs_object</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hostname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#download_drs_object"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.download_drs_object" title="Permalink to this definition">¶</a></dt>
+<dd><p>A convenience function used to download a single DRS object.
+:param hostname: hostname of Gen3 commons to use for access and WTS
+:type hostname: str
+:param auth: Gen3 Auth instance
+:param object_id: DRS object id
+:type object_id: str
+:param output_dir: directory to save downloaded files to</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>List of DownloadStatus objects for the DRS object</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
-<dt id="gen3.tools.download.drs_download.get_user_auth">
-<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">get_user_auth</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">commons_url</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">access_token</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#get_user_auth"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.get_user_auth" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get a user authz for the commons based on the access token.
-Returns the authz object from the user endpoint
-Any error will be logged and None is returned</p>
+<dt id="gen3.tools.download.drs_download.download_files_in_drs_manifest">
+<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">download_files_in_drs_manifest</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hostname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">infile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#download_files_in_drs_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.download_files_in_drs_manifest" title="Permalink to this definition">¶</a></dt>
+<dd><p>A convenience function used to download a json manifest.
+:param hostname: hostname of Gen3 commons to use for access and WTS
+:type hostname: str
+:param auth: Gen3 Auth instance
+:type auth: str
+:param infile: manifest file
+:type infile: str
+:param output_dir: directory to save downloaded files to</p>
+<p>Returns:</p>
 </dd></dl>
 
 <dl class="py function">
-<dt id="gen3.tools.download.drs_download.parse_drs_identifier">
-<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">parse_drs_identifier</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">drs_candidate</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#parse_drs_identifier"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.parse_drs_identifier" title="Permalink to this definition">¶</a></dt>
-<dd><p>Parses a DRS identifier to extract a hostname in the case of hostname based DRS
-a compact identifier.
-If neither one is recognized return an empty string and a type of ‘unknown’
-Note: The regex expressions used to extract hostname or identifier has a potential for
-a false positive.</p>
+<dt id="gen3.tools.download.drs_download.list_access_in_drs_manifest">
+<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">list_access_in_drs_manifest</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hostname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">infile</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">bool</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#list_access_in_drs_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.list_access_in_drs_manifest" title="Permalink to this definition">¶</a></dt>
+<dd><p>A convenience function to list a users access for all DRS hostname in a manifest.
+:param hostname: hostname of Gen3 commons to use for access and WTS
+:type hostname: str
+:param auth: Gen3 Auth instance
+:param infile: manifest file
+:type infile: str</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>True if successfully listed</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
-<dt id="gen3.tools.download.drs_download.resolve_drs_hostname_from_id">
-<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">resolve_drs_hostname_from_id</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolved_drs_prefix_cache</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mds_url</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#resolve_drs_hostname_from_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.resolve_drs_hostname_from_id" title="Permalink to this definition">¶</a></dt>
-<dd><p>Resolves and returns a DRS identifier</p>
-<p>Returns the hostname of the DRS server if resolved, otherwise it returns None</p>
-<p>The resolved_drs_prefix_cache is updated if needed and is a potential side effect of this
-call</p>
+<dt id="gen3.tools.download.drs_download.list_drs_object">
+<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">list_drs_object</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hostname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">bool</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#list_drs_object"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.list_drs_object" title="Permalink to this definition">¶</a></dt>
+<dd><p>A convenience function used to list a DRS object.
+:param hostname: hostname of Gen3 commons to use for access and WTS
+:type hostname: str
+:param auth: Gen3 Auth instance
+:param object_id: DRS object
+:type object_id: str</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>True if successfully listed</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
-<dt id="gen3.tools.download.drs_download.resolve_objects_drs_hostname_from_id">
-<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">resolve_objects_drs_hostname_from_id</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_ids</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><span class="pre">gen3.tools.download.drs_download.Downloadable</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolved_drs_prefix_cache</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mds_url</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#resolve_objects_drs_hostname_from_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.resolve_objects_drs_hostname_from_id" title="Permalink to this definition">¶</a></dt>
-<dd><p>Given a list of object_ids go through list and resolve + cache any unknown</p>
+<dt id="gen3.tools.download.drs_download.list_files_in_drs_manifest">
+<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">list_files_in_drs_manifest</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hostname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">infile</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">bool</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#list_files_in_drs_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.list_files_in_drs_manifest" title="Permalink to this definition">¶</a></dt>
+<dd><p>A wrapper function used by the cli to list files in a manifest.
+:param hostname: hostname of Gen3 commons to use for access and WTS
+:type hostname: str
+:param auth: Gen3 Auth instance
+:param infile: manifest file
+:type infile: str</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>True if successfully listed</p>
+</dd>
+</dl>
 </dd></dl>
 
-</div>
 </div>
 
 
@@ -230,10 +561,7 @@ call</p>
 <li class="toctree-l1"><a class="reference internal" href="../query.html">Gen3 Query Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../submission.html">Gen3 Submission Class</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../tools.html">Gen3 Tools</a><ul class="current">
-<li class="toctree-l2 current"><a class="current reference internal" href="#">DRS Download Tools</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#module-gen3.tools.download.drs_download">DRS Pull</a></li>
-</ul>
-</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">DRS Download Tools</a></li>
 <li class="toctree-l2"><a class="reference internal" href="indexing.html">Indexing Tools</a></li>
 <li class="toctree-l2"><a class="reference internal" href="metadata.html">Metadata Tools</a></li>
 </ul>
@@ -275,7 +603,7 @@ call</p>
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2020, Center for Translational Data Science.
+      &copy;2021, Center for Translational Data Science.
       
       |
       <a href="../_sources/tools/drs_pull.rst.txt"
