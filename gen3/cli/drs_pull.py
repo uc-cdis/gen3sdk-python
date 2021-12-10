@@ -2,11 +2,11 @@ import click
 from cdiserrors import get_logger
 
 from gen3.tools.download.drs_download import (
-    list_files_in_workspace_manifest,
+    list_files_in_drs_manifest,
     list_drs_object,
-    download_files_in_workspace_manifest,
+    download_files_in_drs_manifest,
     download_drs_object,
-    list_access_in_manifest,
+    list_access_in_drs_manifest,
 )
 
 logger = get_logger("download", log_level="warning")
@@ -26,7 +26,7 @@ logger = get_logger("download", log_level="warning")
 def list_files_or_access(ctx, infile: str, access: bool, object: bool) -> bool:
     """List files and size in manifest or if access is True list instead list user access"""
     if access:
-        return list_access_in_manifest(
+        return list_access_in_drs_manifest(
             ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
         )
     else:
@@ -35,7 +35,7 @@ def list_files_or_access(ctx, infile: str, access: bool, object: bool) -> bool:
                 ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
             )
         else:
-            return list_files_in_workspace_manifest(
+            return list_files_in_drs_manifest(
                 ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
             )
 
@@ -49,10 +49,10 @@ def download_manifest(ctx, infile: str, output_dir: str):
     Pulls all DIR objects in manifest where the manifest can contain DRS objects.
     The user credentials use the Gen3Auth class so the Gen3Auth options are applicable (--auth and --endpoint)
     An example:
-        gen3 --endpoint healdata.org pull_manifest manifest1.json
+        gen3 --endpoint mydata.org pull_manifest manifest1.json
 
     """
-    download_files_in_workspace_manifest(
+    download_files_in_drs_manifest(
         ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile, output_dir
     )
 
@@ -66,7 +66,7 @@ def download_object(ctx, object_id: str, output_dir: str):
     Download a DRS object by it's object id
     The user credentials use the Gen3Auth class so the Gen3Auth options are applicable (--auth and --endpoint)
     An example:
-        gen3 --endpoint healdata.org pull_object dg.6VTS/181af989-5d66-4139-91e7-69f4570ccd41
+        gen3 --endpoint mydata.org pull_object dg.XXXT/181af989-5d66-4139-91e7-69f4570ccd41
 
     """
     download_drs_object(

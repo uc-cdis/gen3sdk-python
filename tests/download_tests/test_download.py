@@ -29,7 +29,7 @@ from gen3.tools.download.drs_download import (
     _download_obj,
     _list_access,
     list_drs_object,
-    list_files_in_workspace_manifest,
+    list_files_in_drs_manifest,
     wts_get_token,
     get_download_url_using_drs,
     get_download_url,
@@ -565,7 +565,7 @@ def test_download_objects(
             assert results == expected
 
             # test list files
-            result = list_files_in_workspace_manifest(
+            result = list_files_in_drs_manifest(
                 hostname,
                 auth,
                 Path(DIR, "resources/manifest_test_2.json"),
@@ -583,9 +583,7 @@ def test_download_objects(
             assert result is True
 
             # test non-existent manifest
-            res = list_files_in_workspace_manifest(
-                hostname, auth, "missing/missing.json"
-            )
+            res = list_files_in_drs_manifest(hostname, auth, "missing/missing.json")
             assert res is False
 
             # test non-existent host
@@ -600,7 +598,7 @@ def test_download_objects(
                 json={},
                 status_code=500,
             )
-            result = list_files_in_workspace_manifest(
+            result = list_files_in_drs_manifest(
                 "nullhost", auth, Path(DIR, "resources/manifest_test_bad_id.json")
             )
             expected = [
@@ -783,7 +781,7 @@ def test_no_gen3_auth():
                 hostname, auth, Path(DIR, f"resources/manifest_test_1.json")
             )
             assert result is False
-            result = list_files_in_workspace_manifest(
+            result = list_files_in_drs_manifest(
                 hostname, auth, Path(DIR, f"resources/manifest_test_1.json")
             )
             assert result is False

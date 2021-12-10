@@ -31,7 +31,7 @@ jobs:
         # install sphinx from PyPI (as of 03/16/21 python3-sphinx is broken)
         # sudo apt-get install python3-sphinx
         pip install 'sphinx<4.0.0'
-        pip uninstall -y asyncio
+        cd
     - name: Build docs
       run: |
         sphinx-build --version

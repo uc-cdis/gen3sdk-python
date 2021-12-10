@@ -1,3 +1,68 @@
+"""
+Module for downloading and listing JSON DRS manifest and DRS objects. The main classes in
+this module for downloading DRS objects are DownloadManager and Manifest.
+
+    Examples:
+        This generates the Gen3Jobs class pointed at the sandbox commons while
+        using the credentials.json downloaded from the commons profile page.
+
+        >>> datafiles = Manifest.load('sample/manifest_1.json')
+            downloadManager = DownloadManager("source.my_commons.org",
+                              Gen3Auth(refresh_file="~.gen3/my_credentials.json"), datafiles)
+            for i in datafiles:
+                print(i)
+            downloadManager.download(datafiles, ".")
+
+In addition there are a few convenience functions  which wrap the download and list classes
+into a single function call.
+
+    Examples:
+        This generates the Gen3Jobs class pointed at the sandbox commons while
+        using the credentials.json downloaded from the commons profile page.
+
+        >>> download_files_in_drs_manifest("source.my_commons.org",
+                                      Gen3Auth(refresh_file="~.gen3/my_credentials.json"),
+                                      'sample/manifest_1.json')
+
+Downloading a DRS objectID or manifest containing DRS bundles requires resolving the DRS prefix
+to an actual hostname. Most DRS resolver request that the resolved prefixes are cached to prevent
+overloading these resolver services. Gen3 uses dataguid.org to resolve its prefixes but others
+can be selected as well.
+
+To configure the DRS resolvers there are number of environment variables that can be set to control
+the DRS resolution process.
+
+* DRS_CACHE_EXPIRE_DURATION=2
+* DRS_RESOLVER_HOSTNAME="http://dataguids.org"
+* LOCALLY_CACHE_RESOLVED_HOSTS=True
+* DRS_RESOLUTION_ORDER="cache_file:commons_mds:dataguids_dist:dataguids"
+
+*DRS_CACHE_EXPIRE_DURATION* controls the number of days to keeps a resolved DRS hostname, the default
+value is 2 day but typically DRS hostnames do not change that often, so the value can be higher.
+
+*DRS_RESOLVER_HOSTNAME* set the hostname of the resolver service to use. Currently, the default
+value of "http://dataguids.org" is the only supported resolver, but others will be added in
+the future.
+
+*LOCALLY_CACHE_RESOLVED_HOSTS* Set to True (the default) to create a local cache file to store the
+resolved hostnames. Use of this is highly recommended as it will reduce the resolution time
+significantly.
+
+*DRS_RESOLUTION_ORDER* The order to apply the resolvers. The default value is the suggested one, and
+there should be no need to change this order, not that the last one dataguids is needed as it is
+the final resolver when all others fail to resolve a DRS prefix. Depending on the configuration
+of the Gen3 commons the metadata service can also cache DRS prefixes but only when using the Aggregate
+Metadata service.
+
+Note that these environment variables allows for a Gen3 commons workspace to have a prepopulated
+cache file provided, which when combined with a large *DRS_CACHE_EXPIRE_DURATION* and a
+*DRS_RESOLUTION_ORDER* of "cache_file" only will prevent the DRS resolver from accessing any other
+resolver. This is recommended as one way to increase download performance.
+
+
+"""
+
+
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
@@ -24,7 +89,7 @@ logger = get_logger("drs-pull", log_level="warning")
 
 class Downloadable:
     """
-    Forward reference to Dowloadable class for use in data classes below
+    Forward reference to Downloadable class for use in data classes below
     """
 
     pass
@@ -33,7 +98,18 @@ class Downloadable:
 @dataclass_json(letter_case=LetterCase.SNAKE)
 @dataclass
 class Manifest:
-    """Data class representing a Gen3 JSON manifest."""
+    """Data class representing a Gen3 JSON manifest typically exported from a Gen3 discovery page.
+
+    The class is passed to the DownloadManager to download or list all of the files in the manifest.
+    The Download manager will cache additional information (if available)
+
+    Attributes:
+        object_id(str): the DRS object id. This is the only attribute that needs to be defined
+        file_size(Optional[int]): the filesize of the object, if contained in the manifest
+        file_name(Optional[str]): the name of the file pointed to by the DRS object id
+        md5sum(Optional[str]): the checksum of the object
+        commons_url(Optional[str]): url of the indexd server to retrieve file/bundle from
+    """
 
     object_id: str  # only required member
     file_size: Optional[int] = -1  # -1 indicated not set
@@ -43,12 +119,20 @@ class Manifest:
 
     @staticmethod
     def load_manifest(path: Path):
+        """Loads a json manifest"""
         with open(path, "rt") as fin:
             data = json_load(fin)
             return Manifest.schema().load(data, many=True)
 
     @staticmethod
     def create_object_list(manifest) -> List[Downloadable]:
+        """Create a list of Downloadable instances from the manifest
+
+        Args:
+            manifest(list): list of manifest objects
+        Returns:
+            List of Downloadable instances
+        """
         results = []
         for entry in manifest:
             results.append(
@@ -58,6 +142,15 @@ class Manifest:
 
     @staticmethod
     def load(filename: Path) -> Optional[List[Downloadable]]:
+        """
+        Method to load a json manifest and return a list of Bownloadable object.
+        This list is passed to the DownloadManager methods of download, and list
+
+        Args:
+            filename(Path): path to manifest file
+        Returns:
+            list of Downloadable objects if successfully opened/parsed None otherwise
+        """
         try:
             manifest = Manifest.load_manifest(filename)
             return Manifest.create_object_list(manifest)
@@ -71,6 +164,21 @@ class Manifest:
 
 @dataclass
 class KnownDRSEndpoint:
+    """
+    Dataclass used internally by the DownloadManager class to cache hostnames and tokens
+    for Gen3 commons possibly accessed using the Workspace Token Service (WTS). The endpoint is
+    assumed to support DRS and therefore caches additional DRS information.
+
+    Attributes:
+        hostname (str): hostname of DRS server
+        last_refresh_time (datetime): last time the token has been refreshed
+        idp (Optional[str]): cached idp information
+        access_token (Optional[str]): current bearer token initially None
+        identifier (Optional[str]): DRS prefix (if used)
+        use_wts (bool): if True use WTS to create tokens
+
+    """
+
     hostname: str
     last_refresh_time: datetime = None
     idp: Optional[str] = None
@@ -80,9 +188,14 @@ class KnownDRSEndpoint:
 
     @property
     def available(self):
+        """If endpoint has access token it is available"""
         return self.access_token is not None
 
-    def expired(self):
+    def expired(self) -> bool:
+        """check if WTS token is older than the default expiration date
+
+        If not using the WTS return false and use standard Gen3 Auth
+        """
         if not self.use_wts:
             return False
 
@@ -90,6 +203,13 @@ class KnownDRSEndpoint:
         return res
 
     def renew_token(self, wts_server_name: str, server_access_token):
+        """Gets a new token from the WTS and updates the token and refresh time
+
+        Args:
+            wts_server_name (str): hostname of WTS server
+            server_access_token (str): token used to authenticate use of WTS
+
+        """
         token = wts_get_token(
             hostname=wts_server_name,
             idp=self.idp,
@@ -100,6 +220,8 @@ class KnownDRSEndpoint:
 
 
 class DRSObjectType(str, Enum):
+    """Enum defining the 3 possible DRS object types."""
+
     unknown = "unknown"
     object = "object"
     bundle = "bundle"
@@ -107,6 +229,23 @@ class DRSObjectType(str, Enum):
 
 @dataclass
 class Downloadable:
+    """
+    Class handling the information for a DRS object. The information is populated from the manifest or
+    by retrieving the information from a DRS server.
+
+    Attributes:
+        object_id (str): DRS object id (REQUIRED)
+        object_type (DRSObjectType): type of DRS object
+        hostname (str): hostname of DRS object
+        file_size (int): size in bytes
+        file_name (str): name of file
+        updated_time (datetime): timestamp of last update to file
+        created_time (datetime): timestamp when file is created
+        access_methods (List[Dict[str, Any]]): list of access methods (e.g. s3) for DRS object
+        children (List[Downloadable]): list of child objects (in the case of DRS bundles)
+        _manager (DownloadManager): manager for this Downloadable
+    """
+
     object_id: str
     object_type: Optional[DRSObjectType] = DRSObjectType.unknown
     hostname: Optional[str] = None
@@ -135,9 +274,15 @@ class Downloadable:
         )
 
     def download(self):
+        """calls the manager to download this object. Allows Downloadables to be self downloading"""
         self._manager.download([self])
 
     def printprint(self, indent: str = ""):
+        """
+        Pretty prints the object information. This is used for listing an object.
+        In the case of a DRS bundle the child objects are listed similar to the linux tree command
+        """
+
         from os import linesep
 
         res = self.__str__() + linesep
@@ -157,7 +302,14 @@ class Downloadable:
 class DownloadStatus:
     """Stores the download status of objectIDs.
 
+    The DataManager will return a list of DownloadStatus as a result of calling the download method
+
     Status is "pending" until it is downloaded or an error occurs.
+    Attributes:
+        filename (str): the name of the file to download
+        status (str): status of file download initially "pending"
+        start_time (Optional[datetime]): start time of download as datetime initially None
+        end_time (Optional[datetime]): end time of download as datetime initially None
     """
 
     filename: str
@@ -183,6 +335,16 @@ class DownloadStatus:
 
 
 def wts_external_oidc(hostname: str) -> Dict[str, Any]:
+    """
+    Get the external_oidc from a connected WTS. Will report if WTS service
+    is missing. Note that in some cases this can be considered a warning not a error.
+
+    Args:
+        hostname (str): hostname to access the WTS endpoint
+
+    Returns:
+        dict containing the oidc information
+    """
     oidc = {}
     try:
         response = requests.get(f"https://{hostname}/wts/external_oidc/")
@@ -210,6 +372,16 @@ def wts_external_oidc(hostname: str) -> Dict[str, Any]:
 
 
 def wts_get_token(hostname: str, idp: str, access_token: str):
+    """
+    Gets a auth token from a Gen3 WTS server for the supplied idp
+    Args:
+        hostname (str): Gen3 common's WTS service
+        idp: identity provider to use
+        access_token: Gen3 Auth to use to with WTS
+
+    Returns:
+        Token for idp if successful, None if failure
+    """
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -236,6 +408,15 @@ def wts_get_token(hostname: str, idp: str, access_token: str):
 
 
 def get_drs_object_info(hostname: str, object_id: str) -> Optional[dict]:
+    """
+    Retrieves information for a DRS object residing on the hostname
+    Args:
+        hostname (str): hostname of DRS object
+        object_id (str): DRS object id
+
+    Returns:
+        GAG4H DRS object information if sucessful otherwise None
+    """
     try:
         response = requests.get(f"https://{hostname}/ga4gh/drs/v1/objects/{object_id}")
         response.raise_for_status()
@@ -262,7 +443,7 @@ def extract_filename_from_object_info(object_info: dict) -> Optional[str]:
     Returns filename if found, else return None
 
     Args
-        object_info: DRS object dictionary
+        object_info (dict): DRS object dictionary
     """
     if "name" in object_info and object_info["name"]:
         return object_info["name"]
@@ -277,6 +458,15 @@ def extract_filename_from_object_info(object_info: dict) -> Optional[str]:
 
 
 def get_access_methods(object_info: dict) -> List[str]:
+    """
+    Returns the DRS GA4GH access methods from the object_info.
+
+    Args:
+        object_info (dict): dict of GA4GH DRS Object information
+
+    Returns:
+        List of access methods
+    """
     if object_info is None:
         logger.critical("no access methods defined for this file")
         return []
@@ -287,7 +477,10 @@ def get_drs_object_type(object_info: dict) -> DRSObjectType:
     """From the object info determine the type of object.
 
     Args:
-        object_info: DRS object dictionary
+        object_info (dict): DRS object dictionary
+
+    Returns:
+        type of object: either bundle or object
     """
     if "form" in object_info:
         if object_info["form"] is None:
@@ -301,6 +494,13 @@ def get_drs_object_type(object_info: dict) -> DRSObjectType:
 
 
 def get_drs_object_timestamp(s: Optional[str]) -> Optional[datetime]:
+    """returns the timestamp in datetime if not none otherwise returns None
+
+    Args:
+        s (Optional[str]): string to parse
+    Returns:
+        datetime if not None
+    """
     return date_parser.parse(s) if s is not None else None
 
 
@@ -308,11 +508,12 @@ def add_drs_object_info(info: Downloadable) -> bool:
     """
     Given a downloader object fill in the required fields
     from the resolved hostname.
+    In the case of a bundle, try to resolve all object_ids contained in the bundle including other objects and bundles.
 
-    Returns True if object is valid and resolvable.
-    In the case of a bundle, try to resolve all object_ids contained
-    in the bundle including other objects and bundles.
-
+    Args:
+        info (Downloadable): Downloadable to add information to
+    Returns:
+         True if object is valid and resolvable.
     """
     if info.hostname is None:
         return False
@@ -343,6 +544,10 @@ def add_drs_object_info(info: Downloadable) -> bool:
 
 
 class DummyProgress:
+    """
+    Dummy progress bar which stubs a tqdm progress bar
+    """
+
     def update(self, value):  # pragma: no cover
         pass
 
@@ -351,6 +556,18 @@ class DummyProgress:
 
 
 def download_file_from_url(url: str, filename: Path, showProgress: bool = True) -> bool:
+    """
+    Downloads a file using the URL. The URL is a pre-signed url created by the download manager
+    from the access method of the DRS object.
+
+    Args:
+        url (str): URL to download from
+        filename (str): name of the file to write data to
+        showProgress (bool): show a progress bar (default)
+
+    Returns:
+        True if object has been downloaded
+    """
     try:
         response = requests.get(url, stream=True)
         response.raise_for_status()
@@ -403,10 +620,17 @@ def download_file_from_url(url: str, filename: Path, showProgress: bool = True) 
 def parse_drs_identifier(drs_candidate: str) -> Tuple[str, str, str]:
     """
     Parses a DRS identifier to extract a hostname in the case of hostname based DRS
-    a compact identifier.
+    otherwise it look for a DRS compact identifier.
+
     If neither one is recognized return an empty string and a type of 'unknown'
     Note: The regex expressions used to extract hostname or identifier has a potential for
     a false positive.
+
+    Args:
+        drs_candidate (str): a drs object identifier
+
+    Returns:
+        Tuple (str): tuple of hostname/drs prefix, guid, string: one of "hostname", "compact", "unknown"
     """
     # determine if hostname or compact identifier or unknown
     drs_regex = r"drs://([A-Za-z0-9\.\-\~]+)/([A-Za-z0-9\.\-\_\~\/]+)"
@@ -437,11 +661,15 @@ def resolve_drs_hostname_from_id(
     object_id: str, resolved_drs_prefix_cache: dict, mds_url: str
 ) -> Optional[Tuple[str, str, str]]:
     """Resolves and returns a DRS identifier
-
-    Returns the hostname of the DRS server if resolved, otherwise it returns None
-
     The resolved_drs_prefix_cache is updated if needed and is a potential side effect of this
     call
+    Args:
+        object_id (str): DRS object id to resolve
+        resolved_drs_prefix_cache (dict) : cache of resolved DRS prefixes
+        mds_url (str): the URL for the Gen3 Aggregate MDS to use to help resolved DRS hostname
+
+    Returns:
+         the hostname of the DRS server if resolved, otherwise it returns None
     """
     hostname = None
 
@@ -462,8 +690,14 @@ def resolve_drs_hostname_from_id(
 def resolve_objects_drs_hostname_from_id(
     object_ids: List[Downloadable], resolved_drs_prefix_cache: dict, mds_url: str
 ) -> None:
-    """Given a list of object_ids go through list and resolve + cache any unknown"""
+    """Given a list of object_ids go through list and resolve + cache any unknown
 
+    Args:
+        object_ids (List[Downloadable]): list of object to resolve
+        resolved_drs_prefix_cache (dict): cache of resolved DRS prefixes
+        mds_url (str): Gen3 metadata service to used to help resolve DRS prefix
+
+    """
     for entry in object_ids:
         if entry.hostname is None:
             # if resolution fails the entry hostname will still be None
@@ -475,7 +709,14 @@ def resolve_objects_drs_hostname_from_id(
 
 
 def ensure_dirpath_exists(path: Path) -> Path:
-    """Utility to create a directory if missing"""
+    """Utility to create a directory if missing.
+    Returns the path so that the call can be inlined in a another call
+
+    Args:
+        path (Path): path to create
+    Returns
+        path of created directory
+    """
     assert path
     out_path: Path = path
 
@@ -488,6 +729,17 @@ def ensure_dirpath_exists(path: Path) -> Path:
 def get_download_url_using_drs(
     drs_hostname: str, object_id: str, access_method: str, access_token: str
 ) -> Optional[str]:
+    """
+    Returns the presigned URL for a DRS object, from a DRS hostname, via the access method
+    Args:
+        drs_hostname (str): hostname of DRS server
+        object_id (str): DRS object id
+        access_method (str): access method to use
+        access_token (str): access token to DRS server
+
+    Returns:
+        presigned url to object
+    """
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -514,6 +766,18 @@ def get_download_url_using_drs(
 def get_download_url(
     hostname: str, object_id: str, access_method: str, access_token: str
 ) -> Optional[str]:
+    """
+    Wrapper for get_download_url_using_drs.
+    Args:
+        drs_hostname (str): hostname of DRS server
+        object_id (str): DRS object id
+        access_method (str): access method to use
+        access_token (str): access token to DRS server
+
+    Returns:
+        presigned url to object
+
+    """
     try:
         download_url = get_download_url_using_drs(
             hostname, object_id, access_method, access_token
@@ -530,9 +794,18 @@ def get_download_url(
 
 def get_user_auth(commons_url: str, access_token: str) -> Optional[List[str]]:
     """
-    Get a user authz for the commons based on the access token.
-    Returns the authz object from the user endpoint
+    Retrieves a user's authz for the commons based on the access token.
     Any error will be logged and None is returned
+
+    Args:
+        commons_url (str): hostname of Gen3 indexd
+        access_token (str): user's auth token
+
+    Returns:
+        The authz object from the user endpoint
+    """
+    """
+
     """
     headers = {
         "Content-Type": "application/json",
@@ -556,6 +829,12 @@ def get_user_auth(commons_url: str, access_token: str) -> Optional[List[str]]:
 
 
 def list_auth(hostname: str, authz: dict):
+    """
+    Prints the authz for a DRS hostname
+    Args:
+        hostname (str): hostname to list access
+        authz (str): dictionary of authz stringts
+    """
     print(
         f"───────────────────────────────────────────────────────────────────────────────────────────────────────"
     )
@@ -571,13 +850,8 @@ def list_auth(hostname: str, authz: dict):
 
 class DownloadManager:
     """
-    Class to assist in downloading a list of Downloadables which at a minimum is a json manifest
-    of DRS object ids
-    Args
-        * hostname: Gen3 commons home commons
-        * auth: Gen3 authentication
-        * list of objects to download
-        * DRS resolution strategy
+    Class to assist in downloading a list of Downloadable object  which at a minimum is a json manifest
+    of DRS object ids. The methods of interest are download and user_access.
     """
 
     def __init__(
@@ -586,6 +860,16 @@ class DownloadManager:
         auth: Gen3Auth,
         download_list: List[Downloadable],
     ):
+        """
+        Initialize the DownloadManager so that is ready to start downloading.
+        Note the downloadable objects are required so that all tokens are available
+        to support the download.
+
+        Args:
+            hostname (str): Gen3 commons home commons
+            auth (Gen3Auth) : Gen3 authentication
+            download_list (List[Downloadable]): list of objects to download
+        """
 
         self.hostname = hostname
         self.access_token = auth.get_access_token()
@@ -605,9 +889,10 @@ class DownloadManager:
 
     def resolve_objects(self, object_list: List[Downloadable]):
         """
-        Given an object list, resolve the DRS hostnames and
-        @param object_list:
-        @return:
+        Given an Downloadable object list, resolve the DRS hostnames and update each Downloadable
+
+        Args:
+            object_list (List[Downloadable]): list of Downloadable objects to resolve
         """
         resolve_objects_drs_hostname_from_id(
             object_list,
@@ -620,6 +905,11 @@ class DownloadManager:
             entry._manager = self
 
     def cache_hosts_wts_tokens(self, object_list: List[Downloadable]):
+        """
+        Given a object list, get WTS token for all DRS hosts in the list
+        Args:
+            object_list (List[Downloadable]): list of object to cache
+        """
         for entry in object_list:
             if entry.hostname is None:  # handle workspace manifest with common_url
                 logger.warning(f"Hostname not defined for {entry.object_id}")
@@ -646,11 +936,13 @@ class DownloadManager:
                         self.known_hosts[drs_hostname] = endpoint
 
     def get_fresh_token(self, drs_hostname: str) -> Optional[str]:
-        """
-        Will return and or refresh and return a WTS token if hostname is known
-        otherwise returns None.
-        """
+        """Will return and/or refresh and return a WTS token if hostname is known otherwise returns None.
+        Args:
+            drs_hostname (str): hostname to get token for
 
+        Returns:
+            access token if successful otherwise None
+        """
         if drs_hostname not in self.known_hosts:
             logger.critical(f"Could not find {drs_hostname} in cache.")
             return None
@@ -670,15 +962,22 @@ class DownloadManager:
         self, object_list: List[Downloadable], save_directory: str = "."
     ) -> Dict[str, Any]:
         """
-        * load the object ids
-        * use Gen3Auth to send request to host WTS
-        * get list of external oidc
-        * loop:
-            * process manifest entry getting and cache WTS token as needed
-            * use token and DRS endpoint to get pre-signed URL
-            * download file
+        Downloads objects to the directory or current working directory.
+        The input is an list of Downloadable object created by loading a manifest
+        using the Manifest class or a call to Manifest.load(...
 
-        returns: list of files requests and results.
+        The download manager will download each file in the manifest, in the
+        case of errors they are logged and it continues.
+
+        The return value is a list of DownloadStatus object, detailing the results
+        of the download.
+
+        Args:
+            object_list (List[Downloadable]):
+            save_directory (str): directory to save to (will be created)
+
+        Returns:
+            List of DownloadStatus objects for each object id in object_list
         """
 
         self.cache_hosts_wts_tokens(object_list)
@@ -761,6 +1060,14 @@ class DownloadManager:
         return completed
 
     def user_access(self):
+        """
+        List the user's access permissions on each host needed to download
+        DRS objects in the manifest. A useful way to determine if access permissions
+        are one reason a download failed.
+
+        Returns:
+            list of authz for each DRS host
+        """
         results = {}
         self.cache_hosts_wts_tokens(self.download_list)
         for hostname in self.known_hosts.keys():
@@ -777,6 +1084,17 @@ class DownloadManager:
 
 
 def _download(hostname, auth, infile, output_dir=".") -> Optional[Dict[str, Any]]:
+    """
+    A convenience function used to download a json manifest.
+    Args:
+        hostname (str): hostname of Gen3 commons to use for access and WTS
+        auth (str): Gen3 Auth instance
+        infile (str): manifest file
+        output_dir: directory to save downloaded files to
+
+    Returns:
+        List of DownloadStatus objects for each object id in object_list
+    """
     object_list = Manifest.load(Path(infile))
     if object_list is None:
         logger.critical(f"Error loading {infile}")
@@ -798,6 +1116,17 @@ def _download(hostname, auth, infile, output_dir=".") -> Optional[Dict[str, Any]
 def _download_obj(
     hostname, auth, object_id, output_dir="."
 ) -> Optional[Dict[str, Any]]:
+    """
+    A convenience function used to download a single DRS object.
+    Args:
+        hostname (str): hostname of Gen3 commons to use for access and WTS
+        auth: Gen3 Auth instance
+        object_id (str): DRS object id
+        output_dir: directory to save downloaded files to
+
+    Returns:
+        List of DownloadStatus objects for the DRS object
+    """
     try:
         auth.get_access_token()
     except Gen3AuthError:
@@ -814,6 +1143,16 @@ def _download_obj(
 
 
 def _listfiles(hostname, auth, infile: str) -> bool:
+    """
+    A wrapper function used by the cli to list files in a manifest.
+    Args:
+        hostname (str): hostname of Gen3 commons to use for access and WTS
+        auth: Gen3 Auth instance
+        infile (str): manifest file
+
+    Returns:
+        True if successfully listed
+    """
     object_list = Manifest.load(Path(infile))
     if object_list is None:
         return False
@@ -838,6 +1177,16 @@ def _listfiles(hostname, auth, infile: str) -> bool:
 
 
 def _list_object(hostname, auth, object_id: str) -> bool:
+    """
+    A convenience function used to list a DRS object.
+    Args:
+        hostname (str): hostname of Gen3 commons to use for access and WTS
+        auth: Gen3 Auth instance
+        object_id (str): DRS object
+
+    Returns:
+        True if successfully listed
+    """
     try:
         auth.get_access_token()
     except Gen3AuthError:
@@ -859,6 +1208,16 @@ def _list_object(hostname, auth, object_id: str) -> bool:
 
 
 def _list_access(hostname, auth, infile: str) -> bool:
+    """
+    A convenience function to list a users access for all DRS hostname in a manifest.
+    Args:
+        hostname (str): hostname of Gen3 commons to use for access and WTS
+        auth: Gen3 Auth instance
+        infile (str): manifest file
+
+    Returns:
+        True if successfully listed
+    """
     object_list = Manifest.load(Path(infile))
     if object_list is None:
         return False
@@ -882,23 +1241,73 @@ def _list_access(hostname, auth, infile: str) -> bool:
     return True
 
 
-# These functions are exposed to the SDK
-def list_files_in_workspace_manifest(hostname, auth, infile: str) -> bool:
+# These functions are exposed to the SDK's cli under the drs-pull subcommand
+def list_files_in_drs_manifest(hostname, auth, infile: str) -> bool:
+    """
+    A wrapper function used by the cli to list files in a manifest.
+    Args:
+        hostname (str): hostname of Gen3 commons to use for access and WTS
+        auth: Gen3 Auth instance
+        infile (str): manifest file
+
+    Returns:
+        True if successfully listed
+    """
     return _listfiles(hostname, auth, infile)
 
 
-# These functions are exposed to the SDK's cli
 def list_drs_object(hostname, auth, object_id: str) -> bool:
+    """
+    A convenience function used to list a DRS object.
+    Args:
+        hostname (str): hostname of Gen3 commons to use for access and WTS
+        auth: Gen3 Auth instance
+        object_id (str): DRS object
+
+    Returns:
+        True if successfully listed
+    """
     return _list_object(hostname, auth, object_id)  # pragma: no cover
 
 
-def download_files_in_workspace_manifest(hostname, auth, infile, output_dir) -> None:
+def download_files_in_drs_manifest(hostname, auth, infile, output_dir) -> None:
+    """
+    A convenience function used to download a json manifest.
+    Args:
+        hostname (str): hostname of Gen3 commons to use for access and WTS
+        auth (str): Gen3 Auth instance
+        infile (str): manifest file
+        output_dir: directory to save downloaded files to
+
+    Returns:
+    """
     _download(hostname, auth, infile, output_dir)  # pragma: no cover
 
 
 def download_drs_object(hostname, auth, object_id, output_dir) -> None:
+    """
+    A convenience function used to download a single DRS object.
+    Args:
+        hostname (str): hostname of Gen3 commons to use for access and WTS
+        auth: Gen3 Auth instance
+        object_id (str): DRS object id
+        output_dir: directory to save downloaded files to
+
+    Returns:
+        List of DownloadStatus objects for the DRS object
+    """
     _download_obj(hostname, auth, object_id, output_dir)  # pragma: no cover
 
 
-def list_access_in_manifest(hostname, auth, infile) -> bool:
+def list_access_in_drs_manifest(hostname, auth, infile) -> bool:
+    """
+    A convenience function to list a users access for all DRS hostname in a manifest.
+    Args:
+        hostname (str): hostname of Gen3 commons to use for access and WTS
+        auth: Gen3 Auth instance
+        infile (str): manifest file
+
+    Returns:
+        True if successfully listed
+    """
     return _list_access(hostname, auth, infile)  # pragma: no cover

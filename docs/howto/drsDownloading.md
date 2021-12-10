@@ -9,7 +9,7 @@ TOC
 
 Downloading a DRS objectID or manifest containing DRS bundles requires resolving the DRS prefix 
 to an actual hostname. Most DRS resolver request that the resolved prefixes are cached to prevent 
-overloading these resolver services. Gen2 uses dataguid.org to resolve its prefixes but others
+overloading these resolver services. Gen3 uses dataguid.org to resolve its prefixes but others
 can be selected as well. 
 
 To configure the DRS resolvers there are number of environment variables that can be set to control
