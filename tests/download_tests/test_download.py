@@ -4,7 +4,7 @@ import base64
 import time
 import requests
 import requests_mock
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from dataclasses import asdict
 from pathlib import Path
 from unittest import mock
@@ -27,12 +27,11 @@ from gen3.tools.download.drs_download import (
     add_drs_object_info,
     _download,
     _download_obj,
-    _list_access,
+    list_access_in_drs_manifest,
     list_drs_object,
     list_files_in_drs_manifest,
     wts_get_token,
     get_download_url_using_drs,
-    get_download_url,
     download_file_from_url,
 )
 
@@ -343,14 +342,15 @@ def test_download_file_from_url_failures(download_dir):
             is False
         )
 
-        assert get_download_url("test.commons1.io", "blah", "s3", "bad token") is None
-
         # Timeout
         m.get(
             url=f"https://test.commons1.io/ga4gh/drs/v1/objects/blah/access/s3",
             exc=requests.exceptions.Timeout,
         )
-        assert get_download_url("test.commons1.io", "blah", "s3", "bad token") is None
+        assert (
+            get_download_url_using_drs("test.commons1.io", "blah", "s3", "bad token")
+            is None
+        )
 
         try:
             download_file_from_url(
@@ -369,7 +369,6 @@ def test_download_file_from_url_failures(download_dir):
 )
 def test_download_objects(
     capsys,
-    gen3_auth,
     wts_oidc,
     drs_object_info,
     drs_object_commons3,
@@ -378,36 +377,38 @@ def test_download_objects(
     download_test_files,
     hostname,
 ):
+    exp = time.time() + 300
     test_key = {
         "api_key": "whatever."
         + base64.urlsafe_b64encode(
-            ('{"iss": "http://%s", "exp": %d }' % (hostname, time.time() + 300)).encode(
-                "utf-8"
-            )
+            ('{"iss": "http://%s", "exp": %d }' % (hostname, exp)).encode("utf-8")
         ).decode("utf-8")
         + ".whatever"
     }
+
+    decoded_info = {"aud": "123", "exp": exp, "iss": f"http://{hostname}"}
 
     commons_url = "test.commons1.io"
     with mock.patch(
         "gen3.tools.download.drs_resolvers.DRS_CACHE",
         str(Path(download_dir, ".drs_cache", "resolved_drs_hosts.json")),
-    ):
-        with requests_mock.Mocker() as m:
-            # mock the initial credentials request
+    ), requests_mock.Mocker() as m:
+        with mock.patch(
+            "gen3.auth.get_access_token_with_key"
+        ) as mock_access_token, mock.patch(
+            "gen3.auth.Gen3Auth._write_to_file"
+        ) as mock_write_to_file, mock.patch(
+            "gen3.auth.decode_token"
+        ) as mock_decode_token, mock.patch(
+            "gen3.tools.download.drs_download.decode_token"
+        ) as mock_decode_token_drs:
+            mock_access_token.return_value = "new_access_token"
+            mock_write_to_file().return_value = True
+            mock_decode_token.return_value = decoded_info
+            mock_decode_token_drs.return_value = decoded_info
+            auth = gen3.auth.Gen3Auth(refresh_token=test_key)
             with capsys.disabled():
-                m.post(
-                    f"http://{hostname}/user/credentials/cdis/access_token",
-                    json={
-                        "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTYzMTI5MTI0NywiaWF0IjoxNjMxMjkxMjQ3fQ.DRcKE6Zr5aDzrh2Hz-0Zo8N0kGNQfgWIwmt6W_MTkls"
-                    },
-                )
-                with mock.patch(
-                    "gen3.auth.Gen3Auth._write_to_file"
-                ) as mock_write_to_file:  # do not cache fake token
-                    mock_write_to_file().return_value = True
-                    auth = gen3.auth.Gen3Auth(refresh_token=test_key)
-                    auth.get_access_token()
+                auth.get_access_token()
 
                 # mock the WTS and other responses
                 m.get(f"https://{hostname}/wts/external_oidc/", json=wts_oidc[hostname])
@@ -468,7 +469,6 @@ def test_download_objects(
                         assert fin.read() == download_test_files[id]["content"]
 
                 # test _download manifest
-
                 results = _download(
                     hostname,
                     auth,
@@ -481,6 +481,7 @@ def test_download_objects(
                         download_dir.join("_download", item.filename), "rt"
                     ) as fin:
                         assert fin.read() == download_test_files[id]["content"]
+
                 # test various other failures
 
                 # Test if manifest has commons not in WTS
@@ -529,36 +530,22 @@ def test_download_objects(
                     ) as fin:
                         assert fin.read() == download_test_files[id]["content"]
 
-                # test download object with no auth
+                # test timeout
+                for object in object_list[:1]:
+                    m.get(
+                        f"https://default-download.s3.amazon.com/{object.object_id}",
+                        exc=requests.exceptions.ConnectTimeout,
+                    )
 
-                m.post(
-                    f"http://{hostname}/user/credentials/cdis/access_token",
-                    json={},
-                    status_code=404,
+                downloader = DownloadManager(hostname, auth, object_list[:1])
+                results = downloader.download(
+                    object_list=[object_list[0]], save_directory=download_dir
                 )
-                results = _download_obj(
-                    hostname,
-                    auth,
-                    "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e",
-                    download_dir.join("_download_obj"),
+                assert (
+                    results["dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e"].status
+                    == "error"
                 )
-                assert results is None
 
-                results = _download(
-                    hostname,
-                    auth,
-                    Path(DIR, "resources/manifest_test_2.json"),
-                    download_dir.join("_download"),
-                )
-                assert results is None
-
-                # test listfiles
-            m.post(
-                f"http://{hostname}/user/credentials/cdis/access_token",
-                json={
-                    "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTYzMTI5MTI0NywiaWF0IjoxNjMxMjkxMjQ3fQ.DRcKE6Zr5aDzrh2Hz-0Zo8N0kGNQfgWIwmt6W_MTkls"
-                },
-            )
             # test the Object string representations
             results = object_list[0].__repr__()
             expected = "(Downloadable: TestDataSet1.sav 1.57 MB test.commons1.io 04/06/2021, 11:22:19)"
@@ -628,6 +615,28 @@ def test_download_objects(
             }
             assert res == expected
 
+        # test download object with no auth
+        m.post(
+            f"http://{hostname}/user/credentials/cdis/access_token",
+            json={},
+            status_code=404,
+        )
+        results = _download_obj(
+            hostname,
+            auth,
+            "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e",
+            download_dir.join("_download_obj"),
+        )
+        assert results is None
+
+        results = _download(
+            hostname,
+            auth,
+            Path(DIR, "resources/manifest_test_2.json"),
+            download_dir.join("_download"),
+        )
+        assert results is None
+
 
 @pytest.mark.parametrize(
     "hostname,commons_url,manifest_file",
@@ -636,25 +645,19 @@ def test_download_objects(
 def test_list_auth(
     capsys, wts_oidc, drs_object_info, hostname, commons_url, manifest_file
 ):
+    exp = time.time() + 300
     test_key = {
         "api_key": "whatever."
         + base64.urlsafe_b64encode(
-            ('{"iss": "http://%s", "exp": %d }' % (hostname, time.time() + 300)).encode(
-                "utf-8"
-            )
+            ('{"iss": "http://%s", "exp": %d }' % (hostname, exp)).encode("utf-8")
         ).decode("utf-8")
         + ".whatever"
     }
 
+    decoded_info = {"aud": "123", "exp": exp, "iss": f"http://{hostname}"}
+
     with requests_mock.Mocker() as m:
         m.get(f"https://{hostname}/wts/external_oidc/", json=wts_oidc[hostname])
-        m.post(
-            f"http://{hostname}/user/credentials/cdis/access_token",
-            json={
-                "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTYzMTI5MTI0NywiaWF0IjoxNjMxMjkxMjQ3fQ.DRcKE6Zr5aDzrh2Hz-0Zo8N0kGNQfgWIwmt6W_MTkls"
-            },
-        )
-
         for object_id, info in drs_object_info.items():
             m.get(f"https://{commons_url}/ga4gh/drs/v1/objects/{object_id}", json=info)
 
@@ -672,15 +675,15 @@ def test_list_auth(
                     {"method": "read", "service": "*"},
                     {"method": "read-storage", "service": "*"},
                 ],
-                "/programs/open/projects/BACPAC": [
+                "/programs/open/projects/TEST1": [
                     {"method": "read", "service": "*"},
                     {"method": "read-storage", "service": "*"},
                 ],
-                "/programs/open/projects/HOPE": [
+                "/programs/open/projects/NOBE": [
                     {"method": "read", "service": "*"},
                     {"method": "read-storage", "service": "*"},
                 ],
-                "/programs/open/projects/Preventing_Opioid_Use_Disorder": [
+                "/programs/open/projects/Capturing_Errors_in_code": [
                     {"method": "read", "service": "*"},
                     {"method": "read-storage", "service": "*"},
                 ],
@@ -689,13 +692,23 @@ def test_list_auth(
             }
         }
         m.get(f"https://{hostname}/user/user", json=authz)
+
         with mock.patch(
+            "gen3.auth.get_access_token_with_key"
+        ) as mock_access_token, mock.patch(
             "gen3.auth.Gen3Auth._write_to_file"
-        ) as mock_write_to_file:  # do not cache fake token
+        ) as mock_write_to_file, mock.patch(
+            "gen3.auth.decode_token"
+        ) as mock_decode_token, mock.patch(
+            "gen3.tools.download.drs_download.decode_token"
+        ) as mock_decode_token_drs:
+            mock_access_token.return_value = "new_access_token"
             mock_write_to_file().return_value = True
+            mock_decode_token.return_value = decoded_info
+            mock_decode_token_drs.return_value = decoded_info
             auth = gen3.auth.Gen3Auth(refresh_token=test_key)
 
-            result = _list_access(
+            result = list_access_in_drs_manifest(
                 hostname, auth, Path(DIR, f"resources/{manifest_file}")
             )
             captured = capsys.readouterr()
@@ -704,9 +717,9 @@ Access for test.datacommons.io:
       /dictionary_page                                       :                                   access
       /programs/open                                         :                        read read-storage
       /programs/open/projects                                :                        read read-storage
-      /programs/open/projects/BACPAC                         :                        read read-storage
-      /programs/open/projects/HOPE                           :                        read read-storage
-      /programs/open/projects/Preventing_Opioid_Use_Disorder :                        read read-storage
+      /programs/open/projects/TEST1                          :                        read read-storage
+      /programs/open/projects/NOBE                           :                        read read-storage
+      /programs/open/projects/Capturing_Errors_in_code       :                        read read-storage
       /sower                                                 :                                   access
       /workspace                                             :                                   access
 """
@@ -714,14 +727,14 @@ Access for test.datacommons.io:
             assert captured.out == expected
 
             # Test missing manifest file
-            result = _list_access(
+            result = list_access_in_drs_manifest(
                 hostname, auth, Path(DIR, f"resources/non_existent_file.json")
             )
             assert result is False
 
             # Test HTTP failure of user auth
             m.get(f"https://{hostname}/user/user", json={}, status_code=404)
-            result = _list_access(
+            result = list_access_in_drs_manifest(
                 hostname, auth, Path(DIR, f"resources/{manifest_file}")
             )
             captured = capsys.readouterr()
@@ -777,7 +790,7 @@ def test_no_gen3_auth():
         ) as mock_write_to_file:  # do not cache fake token
             mock_write_to_file().return_value = False
             auth = gen3.auth.Gen3Auth(refresh_token=test_key)
-            result = _list_access(
+            result = list_access_in_drs_manifest(
                 hostname, auth, Path(DIR, f"resources/manifest_test_1.json")
             )
             assert result is False
@@ -805,7 +818,7 @@ def test_no_gen3_auth():
         )
     ],
 )
-def test_list(
+def test_list_no_auth(
     capsys,
     wts_oidc,
     drs_object_info,
@@ -830,45 +843,21 @@ def test_list(
         m.get(f"https://{hostname}/wts/external_oidc/", json=wts_oidc[hostname])
         m.post(
             f"http://{hostname}/user/credentials/cdis/access_token",
-            json={
-                "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTYzMTI5MTI0NywiaWF0IjoxNjMxMjkxMjQ3fQ.DRcKE6Zr5aDzrh2Hz-0Zo8N0kGNQfgWIwmt6W_MTkls"
-            },
+            json={"access_token": "test_access_token"},
         )
         for object_id, info in drs_object_info.items():
             m.get(f"https://{commons_url}/ga4gh/drs/v1/objects/{object_id}", json=info)
 
-        with mock.patch(
-            "gen3.auth.Gen3Auth._write_to_file"
-        ) as mock_write_to_file:  # do not cache fake token
+        with mock.patch("gen3.auth.Gen3Auth._write_to_file") as mock_write_to_file:
             mock_write_to_file().return_value = False
             auth = gen3.auth.Gen3Auth(refresh_token=test_key)
 
-            m.get(
-                f"http://{hostname}/mds/aggregate/info/dg.XXTS",
-                json={
-                    "host": f"https://{commons_url}/ga4gh/drs/v1/objects/",
-                    "name": "DataSTAGE",
-                    "type": "indexd",
-                },
-            )
-
-            # test list object
-            result = list_drs_object(
-                hostname, auth, "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e"
-            )
-            captured = capsys.readouterr()
-            list_results = captured.out.split()
-            assert expected == list_results
-
             # test getting auth error
-
             # test no auth
             m.post(
                 f"http://{hostname}/user/credentials/cdis/access_token",
-                json={
-                    "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTYzMTI5MTI0NywiaWF0IjoxNjMxMjkxMjQ3fQ.DRcKE6Zr5aDzrh2Hz-0Zo8N0kGNQfgWIwmt6W_MTkls"
-                },
-                status_code=404,
+                json={"access_token": "test_access_token"},
+                status_code=401,
             )
 
             result = list_drs_object(

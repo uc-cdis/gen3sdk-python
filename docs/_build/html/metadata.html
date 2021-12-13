@@ -4,11 +4,12 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Gen3 Metadata Class &#8212; Gen3 SDK  documentation</title>
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
     <script src="_static/doctools.js"></script>
@@ -32,11 +33,11 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="gen3-metadata-class">
+  <section id="gen3-metadata-class">
 <h1>Gen3 Metadata Class<a class="headerlink" href="#gen3-metadata-class" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
-<dt id="gen3.metadata.Gen3Metadata">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.metadata.</span></code><code class="sig-name descname"><span class="pre">Gen3Metadata</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">endpoint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth_provider</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service_location</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mds'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">admin_endpoint_suffix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'-admin'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.metadata.</span></span><span class="sig-name descname"><span class="pre">Gen3Metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">endpoint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth_provider</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service_location</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mds'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">admin_endpoint_suffix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'-admin'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>A class for interacting with the Gen3 Metadata services.</p>
 <p class="rubric">Examples</p>
@@ -47,8 +48,8 @@ using the credentials.json downloaded from the commons profile page.</p>
 </pre></div>
 </div>
 <dl class="py attribute">
-<dt id="gen3.metadata.Gen3Metadata.endpoint">
-<code class="sig-name descname"><span class="pre">endpoint</span></code><a class="headerlink" href="#gen3.metadata.Gen3Metadata.endpoint" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.endpoint">
+<span class="sig-name descname"><span class="pre">endpoint</span></span><a class="headerlink" href="#gen3.metadata.Gen3Metadata.endpoint" title="Permalink to this definition">¶</a></dt>
 <dd><p>public endpoint for reading/querying metadata - only necessary if auth_provider not provided</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -58,8 +59,8 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="gen3.metadata.Gen3Metadata.auth_provider">
-<code class="sig-name descname"><span class="pre">auth_provider</span></code><a class="headerlink" href="#gen3.metadata.Gen3Metadata.auth_provider" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.auth_provider">
+<span class="sig-name descname"><span class="pre">auth_provider</span></span><a class="headerlink" href="#gen3.metadata.Gen3Metadata.auth_provider" title="Permalink to this definition">¶</a></dt>
 <dd><p>auth manager</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -69,8 +70,8 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="gen3.metadata.Gen3Metadata.async_create">
-<em class="property"><span class="pre">async</span> </em><code class="sig-name descname"><span class="pre">async_create</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.async_create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.async_create" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.async_create">
+<em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">async_create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.async_create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.async_create" title="Permalink to this definition">¶</a></dt>
 <dd><p>Asynchronous function to create metadata</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -86,8 +87,8 @@ attached to the provided GUID as metadata</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt id="gen3.metadata.Gen3Metadata.async_get">
-<em class="property"><span class="pre">async</span> </em><code class="sig-name descname"><span class="pre">async_get</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.async_get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.async_get" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.async_get">
+<em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">async_get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.async_get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.async_get" title="Permalink to this definition">¶</a></dt>
 <dd><p>Asynchronous function to get metadata</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -106,8 +107,8 @@ attached to the provided GUID as metadata</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt id="gen3.metadata.Gen3Metadata.async_update">
-<em class="property"><span class="pre">async</span> </em><code class="sig-name descname"><span class="pre">async_update</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.async_update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.async_update" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.async_update">
+<em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">async_update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.async_update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.async_update" title="Permalink to this definition">¶</a></dt>
 <dd><p>Asynchronous function to update metadata</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -122,8 +123,8 @@ attached to the provided GUID as metadata</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt id="gen3.metadata.Gen3Metadata.batch_create">
-<code class="sig-name descname"><span class="pre">batch_create</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">metadata_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.batch_create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.batch_create" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.batch_create">
+<span class="sig-name descname"><span class="pre">batch_create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">metadata_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.batch_create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.batch_create" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create the list of metadata associated with the list of guids</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -138,8 +139,8 @@ fields where “data” is another JSON blob to add to the mds</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt id="gen3.metadata.Gen3Metadata.create">
-<code class="sig-name descname"><span class="pre">create</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.create" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.create">
+<span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.create" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create the metadata associated with the guid</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -154,8 +155,8 @@ attached to the provided GUID as metadata</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt id="gen3.metadata.Gen3Metadata.create_index_key_path">
-<code class="sig-name descname"><span class="pre">create_index_key_path</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.create_index_key_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.create_index_key_path" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.create_index_key_path">
+<span class="sig-name descname"><span class="pre">create_index_key_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.create_index_key_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.create_index_key_path" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a metadata key path indexed in the database.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -165,8 +166,8 @@ attached to the provided GUID as metadata</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt id="gen3.metadata.Gen3Metadata.delete">
-<code class="sig-name descname"><span class="pre">delete</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.delete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.delete" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.delete">
+<span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.delete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.delete" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete the metadata associated with the guid</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -176,8 +177,8 @@ attached to the provided GUID as metadata</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt id="gen3.metadata.Gen3Metadata.delete_index_key_path">
-<code class="sig-name descname"><span class="pre">delete_index_key_path</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.delete_index_key_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.delete_index_key_path" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.delete_index_key_path">
+<span class="sig-name descname"><span class="pre">delete_index_key_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.delete_index_key_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.delete_index_key_path" title="Permalink to this definition">¶</a></dt>
 <dd><p>List all the metadata key paths indexed in the database.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -187,8 +188,8 @@ attached to the provided GUID as metadata</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt id="gen3.metadata.Gen3Metadata.get">
-<code class="sig-name descname"><span class="pre">get</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.get" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.get">
+<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.get" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the metadata associated with the guid</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -204,8 +205,8 @@ attached to the provided GUID as metadata</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt id="gen3.metadata.Gen3Metadata.get_index_key_paths">
-<code class="sig-name descname"><span class="pre">get_index_key_paths</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.get_index_key_paths"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.get_index_key_paths" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.get_index_key_paths">
+<span class="sig-name descname"><span class="pre">get_index_key_paths</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.get_index_key_paths"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.get_index_key_paths" title="Permalink to this definition">¶</a></dt>
 <dd><p>List all the metadata key paths indexed in the database.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -218,8 +219,8 @@ attached to the provided GUID as metadata</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt id="gen3.metadata.Gen3Metadata.get_version">
-<code class="sig-name descname"><span class="pre">get_version</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.get_version"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.get_version" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.get_version">
+<span class="sig-name descname"><span class="pre">get_version</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.get_version"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.get_version" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return the version</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -232,8 +233,8 @@ attached to the provided GUID as metadata</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt id="gen3.metadata.Gen3Metadata.is_healthy">
-<code class="sig-name descname"><span class="pre">is_healthy</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.is_healthy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.is_healthy" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.is_healthy">
+<span class="sig-name descname"><span class="pre">is_healthy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.is_healthy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.is_healthy" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return if is healthy or not</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -246,8 +247,8 @@ attached to the provided GUID as metadata</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt id="gen3.metadata.Gen3Metadata.query">
-<code class="sig-name descname"><span class="pre">query</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_full_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_agg_mds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.query"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.query" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.query">
+<span class="sig-name descname"><span class="pre">query</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_full_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_agg_mds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.query"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.query" title="Permalink to this definition">¶</a></dt>
 <dd><p>Query the metadata given a query.</p>
 <dl>
 <dt>Query format is based off the logic used in the service:</dt><dd><p>‘’’
@@ -298,8 +299,8 @@ But won’t match these:</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="gen3.metadata.Gen3Metadata.update">
-<code class="sig-name descname"><span class="pre">update</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.update" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.update" title="Permalink to this definition">¶</a></dt>
 <dd><p>Update the metadata associated with the guid</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -314,7 +315,7 @@ attached to the provided GUID as metadata</p></li>
 
 </dd></dl>
 
-</div>
+</section>
 
 
           </div>
@@ -365,7 +366,7 @@ attached to the provided GUID as metadata</p></li>
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
     </form>
     </div>

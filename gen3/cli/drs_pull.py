@@ -43,34 +43,54 @@ def list_files_or_access(ctx, infile: str, access: bool, object: bool) -> bool:
 @click.command()
 @click.argument("infile")
 @click.argument("output_dir", default=".")
+@click.option(
+    "--no-progress",
+    default=True,
+    is_flag=True,
+    help="Hide the progress bar when downloading",
+)
 @click.pass_context
-def download_manifest(ctx, infile: str, output_dir: str):
+def download_manifest(ctx, infile: str, output_dir: str, no_progress: bool):
     """
     Pulls all DIR objects in manifest where the manifest can contain DRS objects.
     The user credentials use the Gen3Auth class so the Gen3Auth options are applicable (--auth and --endpoint)
     An example:
-        gen3 --endpoint mydata.org pull_manifest manifest1.json
+        gen3 --endpoint mydata.org drs-pull manifest manifest1.json
 
     """
     download_files_in_drs_manifest(
-        ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile, output_dir
+        ctx.obj["endpoint"],
+        ctx.obj["auth_factory"].get(),
+        infile,
+        output_dir,
+        no_progress,
     )
 
 
 @click.command()
 @click.argument("object_id")
 @click.argument("output_dir", default=".")
+@click.option(
+    "--no-progress",
+    default=True,
+    is_flag=True,
+    help="Hide the progress bar when downloading",
+)
 @click.pass_context
-def download_object(ctx, object_id: str, output_dir: str):
+def download_object(ctx, object_id: str, output_dir: str, no_progress: bool):
     """
     Download a DRS object by it's object id
     The user credentials use the Gen3Auth class so the Gen3Auth options are applicable (--auth and --endpoint)
     An example:
-        gen3 --endpoint mydata.org pull_object dg.XXXT/181af989-5d66-4139-91e7-69f4570ccd41
+        gen3 --endpoint mydata.org drs-pull object dg.XXXT/181af989-5d66-4139-91e7-69f4570ccd41
 
     """
     download_drs_object(
-        ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), object_id, output_dir
+        ctx.obj["endpoint"],
+        ctx.obj["auth_factory"].get(),
+        object_id,
+        output_dir,
+        no_progress,
     )
 
 
@@ -80,6 +100,6 @@ def drs_pull():
     pass
 
 
-drs_pull.add_command(download_manifest, name="pull_manifest")
-drs_pull.add_command(download_object, name="pull_object")
+drs_pull.add_command(download_manifest, name="manifest")
+drs_pull.add_command(download_object, name="object")
 drs_pull.add_command(list_files_or_access, name="ls")
