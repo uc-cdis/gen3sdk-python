@@ -35,9 +35,31 @@
   <div class="section" id="module-gen3.tools.download.drs_download">
 <span id="drs-download-tools"></span><h1>DRS Download Tools<a class="headerlink" href="#module-gen3.tools.download.drs_download" title="Permalink to this headline">¶</a></h1>
 <p>Module for downloading and listing JSON DRS manifest and DRS objects. The main classes in
-this module for downloading DRS objects are DownloadManager and Manifest.</p>
+this module for downloading DRS objects are DownloadManager and Manifest.
+A JSON manifest is a list of objects containing at a minimum a DRS object id.
+Additional information (file_name, file_size, md5sum, and commons_url) are
+supported:</p>
 <blockquote>
 <div><dl>
+<dt>Examples:</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="p">[</span>
+<span class="go">  {</span>
+<span class="go">    &quot;md5sum&quot;: &quot;65196806d31002bd48abed020d861cf1&quot;,</span>
+<span class="go">    &quot;file_name&quot;: &quot;TestDataSet1.sav&quot;,</span>
+<span class="go">    &quot;file_size&quot;: 1566369,</span>
+<span class="go">    &quot;object_id&quot;: &quot;dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e&quot;,</span>
+<span class="go">    &quot;commons_url&quot;: &quot;test.commons1.io&quot;</span>
+<span class="go">  },</span>
+<span class="go">  {</span>
+<span class="go">    &quot;md5sum&quot;: &quot;8371753a1324d421cc519cc03dcd477d&quot;,</span>
+<span class="go">    &quot;file_name&quot;: &quot;TestDataSet_April2020.sav&quot;,</span>
+<span class="go">    &quot;file_size&quot;: 313525,</span>
+<span class="go">    &quot;object_id&quot;: &quot;dg.XXTS/6d3eb293-8388-4c5d-83ef-d0c2bd5ba604&quot;,</span>
+<span class="go">    &quot;commons_url&quot;: &quot;test.commons1.io&quot;</span>
+<span class="go">  }</span>
+<span class="go">]</span>
+</pre></div>
+</div>
+</dd>
 <dt>Examples:</dt><dd><p>This generates the Gen3Jobs class pointed at the sandbox commons while
 using the credentials.json downloaded from the commons profile page.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">datafiles</span> <span class="o">=</span> <span class="n">Manifest</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;sample/manifest_1.json&#39;</span><span class="p">)</span>
@@ -66,21 +88,21 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dl>
 </div></blockquote>
 <p>Downloading a DRS objectID or manifest containing DRS bundles requires resolving the DRS prefix
-to an actual hostname. Most DRS resolver request that the resolved prefixes are cached to prevent
+to an actual hostname. Most DRS resolvers request that the resolved prefixes are cached to prevent
 overloading these resolver services. Gen3 uses dataguid.org to resolve its prefixes but others
 can be selected as well.</p>
 <p>To configure the DRS resolvers there are number of environment variables that can be set to control
 the DRS resolution process.</p>
 <ul class="simple">
 <li><p>DRS_CACHE_EXPIRE_DURATION=2</p></li>
-<li><p>DRS_RESOLVER_HOSTNAME=”<a class="reference external" href="http://dataguids.org">http://dataguids.org</a>”</p></li>
+<li><p>DRS_RESOLVER_HOSTNAME=”<a class="reference external" href="https://dataguids.org">https://dataguids.org</a>”</p></li>
 <li><p>LOCALLY_CACHE_RESOLVED_HOSTS=True</p></li>
 <li><p>DRS_RESOLUTION_ORDER=”cache_file:commons_mds:dataguids_dist:dataguids”</p></li>
 </ul>
-<p><em>DRS_CACHE_EXPIRE_DURATION</em> controls the number of days to keeps a resolved DRS hostname, the default
+<p><em>DRS_CACHE_EXPIRE_DURATION</em> controls the number of days to keep a resolved DRS hostname, the default
 value is 2 day but typically DRS hostnames do not change that often, so the value can be higher.</p>
 <p><em>DRS_RESOLVER_HOSTNAME</em> set the hostname of the resolver service to use. Currently, the default
-value of “<a class="reference external" href="http://dataguids.org">http://dataguids.org</a>” is the only supported resolver, but others will be added in
+value of “<a class="reference external" href="https://dataguids.org">https://dataguids.org</a>” is the only supported resolver, but others will be added in
 the future.</p>
 <p><em>LOCALLY_CACHE_RESOLVED_HOSTS</em> Set to True (the default) to create a local cache file to store the
 resolved hostnames. Use of this is highly recommended as it will reduce the resolution time
@@ -97,19 +119,17 @@ resolver. This is recommended as one way to increase download performance.</p>
 <dl class="py class">
 <dt id="gen3.tools.download.drs_download.DownloadManager">
 <em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">DownloadManager</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hostname</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="../auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><span class="pre">gen3.auth.Gen3Auth</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">download_list</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><span class="pre">gen3.tools.download.drs_download.Downloadable</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DownloadManager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadManager" title="Permalink to this definition">¶</a></dt>
-<dd><p>Class to assist in downloading a list of Downloadable object  which at a minimum is a json manifest
+<dd><p>Class to assist in downloading a list of Downloadable object which at a minimum is a json manifest
 of DRS object ids. The methods of interest are download and user_access.</p>
 <dl class="py method">
 <dt id="gen3.tools.download.drs_download.DownloadManager.cache_hosts_wts_tokens">
-<code class="sig-name descname"><span class="pre">cache_hosts_wts_tokens</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_list</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><span class="pre">gen3.tools.download.drs_download.Downloadable</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DownloadManager.cache_hosts_wts_tokens"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadManager.cache_hosts_wts_tokens" title="Permalink to this definition">¶</a></dt>
-<dd><p>Given a object list, get WTS token for all DRS hosts in the list
-:param object_list: list of object to cache
-:type object_list: List[Downloadable]</p>
+<code class="sig-name descname"><span class="pre">cache_hosts_wts_tokens</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_list</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DownloadManager.cache_hosts_wts_tokens"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadManager.cache_hosts_wts_tokens" title="Permalink to this definition">¶</a></dt>
+<dd><p>Using the list of DRS host obtain a WTS token for all DRS hosts in the list. It’s is possible</p>
 </dd></dl>
 
 <dl class="py method">
 <dt id="gen3.tools.download.drs_download.DownloadManager.download">
-<code class="sig-name descname"><span class="pre">download</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_list</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><span class="pre">gen3.tools.download.drs_download.Downloadable</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_directory</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'.'</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DownloadManager.download"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadManager.download" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">download</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_list</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><span class="pre">gen3.tools.download.drs_download.Downloadable</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_directory</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'.'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#DownloadManager.download"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.DownloadManager.download" title="Permalink to this definition">¶</a></dt>
 <dd><p>Downloads objects to the directory or current working directory.
 The input is an list of Downloadable object created by loading a manifest
 using the Manifest class or a call to Manifest.load(…</p>
@@ -122,6 +142,7 @@ of the download.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>object_list</strong> (<em>List</em><em>[</em><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable" title="gen3.tools.download.drs_download.Downloadable"><em>Downloadable</em></a><em>]</em>) – </p></li>
 <li><p><strong>save_directory</strong> (<em>str</em>) – directory to save to (will be created)</p></li>
+<li><p><strong>show_progress</strong> (<em>bool</em>) – show a download progress bar</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -341,8 +362,8 @@ by retrieving the information from a DRS server.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="gen3.tools.download.drs_download.Downloadable.printprint">
-<code class="sig-name descname"><span class="pre">printprint</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indent</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#Downloadable.printprint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.Downloadable.printprint" title="Permalink to this definition">¶</a></dt>
+<dt id="gen3.tools.download.drs_download.Downloadable.pprint">
+<code class="sig-name descname"><span class="pre">pprint</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indent</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#Downloadable.pprint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.Downloadable.pprint" title="Permalink to this definition">¶</a></dt>
 <dd><p>Pretty prints the object information. This is used for listing an object.
 In the case of a DRS bundle the child objects are listed similar to the linux tree command</p>
 </dd></dl>
@@ -449,7 +470,7 @@ This list is passed to the DownloadManager methods of download, and list</p>
 
 <dl class="py function">
 <dt id="gen3.tools.download.drs_download.download_drs_object">
-<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">download_drs_object</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hostname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#download_drs_object"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.download_drs_object" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">download_drs_object</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hostname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#download_drs_object"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.download_drs_object" title="Permalink to this definition">¶</a></dt>
 <dd><p>A convenience function used to download a single DRS object.
 :param hostname: hostname of Gen3 commons to use for access and WTS
 :type hostname: str
@@ -466,7 +487,7 @@ This list is passed to the DownloadManager methods of download, and list</p>
 
 <dl class="py function">
 <dt id="gen3.tools.download.drs_download.download_files_in_drs_manifest">
-<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">download_files_in_drs_manifest</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hostname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">infile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#download_files_in_drs_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.download_files_in_drs_manifest" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">download_files_in_drs_manifest</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hostname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">infile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#download_files_in_drs_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.download_files_in_drs_manifest" title="Permalink to this definition">¶</a></dt>
 <dd><p>A convenience function used to download a json manifest.
 :param hostname: hostname of Gen3 commons to use for access and WTS
 :type hostname: str
