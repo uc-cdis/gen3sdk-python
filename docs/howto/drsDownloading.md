@@ -26,14 +26,14 @@ supported:
 ```json
 [
   {
-    "md5sum": "65196806d31002bd48abed020d861cf1",
+    "md5sum": "6519xxxxxxxxxxxxxxxxxxxxxxxcf1",
     "file_name": "TestDataSet1.sav",
     "file_size": 1566369,
     "object_id": "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e",
     "commons_url": "test.commons1.io"
   },
   {
-    "md5sum": "8371753a1324d421cc519cc03dcd477d",
+    "md5sum": "8371xxxxxxxxxxxxxxxxxxxxxxxxx77d",
     "file_name": "TestDataSet_April2020.sav",
     "file_size": 313525,
     "object_id": "dg.XXTS/6d3eb293-8388-4c5d-83ef-d0c2bd5ba604",
@@ -85,13 +85,13 @@ gen3 cli --endpoint mycommons.datacommons.tw dir-pull ls --object dg.XXST/9bdc79
 ```
 the response:
 ```
-ISPY1_series_1.3.6.1.4.1.14519.5.2.1.7695.1700.100392922143281268049004312967/1.3.6.1.4.1.14519.5.2.1.7695.1700.157333248288758912755025909591     23.22 MB nci-crdc.datacommons.io 12/04/2020, 18:55:40
-    ├── 1.3.6.1.4.1.14519.5.2.1.7695.1700.339899736221920019384025688457.dcm#1592595549672921    527.66 KB nci-crdc.datacommons.io 09/20/2020, 00:29:37
-    ├── 1.3.6.1.4.1.14519.5.2.1.7695.1700.118050407182881310601914734559.dcm#1592595549347460    527.66 KB nci-crdc.datacommons.io 09/18/2020, 16:52:39
-    ├── 1.3.6.1.4.1.14519.5.2.1.7695.1700.663484117525683838268121809173.dcm#1592595549753443    527.66 KB nci-crdc.datacommons.io 09/18/2020, 22:17:39
-    ├── 1.3.6.1.4.1.14519.5.2.1.7695.1700.307923524868494279703016890148.dcm#1592595549547255    527.66 KB nci-crdc.datacommons.io 09/19/2020, 00:11:53
-    ├── 1.3.6.1.4.1.14519.5.2.1.7695.1700.177741488444741406265552879434.dcm#1592595549340161    527.66 KB nci-crdc.datacommons.io 09/19/2020, 09:12:09
-    └── 1.3.6.1.4.1.14519.5.2.1.7695.1700.193538014659307853778370216921.dcm#1592595549438034    527.66 KB nci-crdc.datacommons.io 09/18/2020, 14:48:53
+BIG_DataCollection.5.2.1.7695.1700.100392922143281268049004312967/1.3.6.1.4.1.14519.5.2.1.7695.1700.157333248288758912755025909591     23.22 MB test.datacommons4.io 12/04/2020, 18:55:40
+    ├── BIG_Datafile.1700.339899736221920019384025688457.dcm#1592595549672921    527.66 KB test.datacommons4.io 09/20/2020, 00:29:37
+    ├── BIG_Datafile.118050407182881310601914734559.dcm#1592595549347460    527.66 KB test.datacommons4.io 09/18/2020, 16:52:39
+    ├── BIG_Datafile.663484117525683838268121809173.dcm#1592595549753443    527.66 KB test.datacommons4.io 09/18/2020, 22:17:39
+    ├── BIG_Datafile307923524868494279703016890148.dcm#1592595549547255    527.66 KB test.datacommons4.io 09/19/2020, 00:11:53
+    ├── BIG_Datafile.177741488444741406265552879434.dcm#1592595549340161    527.66 KB test.datacommons4.io 09/19/2020, 09:12:09
+    └── BIG_Datafile.193538014659307853778370216921.dcm#1592595549438034    527.66 KB test.datacommons4.io 09/18/2020, 14:48:53
 ```
 #### List Access
 Given a manifest or DRS object id, you can query the access rights for that object's host commons, or in the case of a manifest all of the host commons
