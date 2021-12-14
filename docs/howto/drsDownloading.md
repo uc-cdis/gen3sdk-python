@@ -7,7 +7,7 @@ TOC
 
 ## JSON Object Manifests
 
-A JSON manifest is a list of objects containing at a minimum a DRS 
+A JSON manifest is a list of objects containing at a minimum a [DRS](https://ga4gh.github.io/data-repository-service-schemas/preview/release/drs-1.0.0/docs/#:~:text=DRS%20IDs%20are%20strings%20made,whenever%20exposed%20by%20the%20API.) 
 object id:
 ```json
 [
@@ -44,10 +44,10 @@ supported:
 
 ## Pulling Object Manifests 
 
-To download using the CLI. Given a manifest JSON file. The cli can download the files in the 
+To download using the CLI, given a JSON manifest file, the cli can download the files in the 
 manifest using:
 ```
-gen3 cli pull_manifest <manifest.json> 
+gen3 cli drs-pull manifest <manifest.json> 
 ```
 You should see something like:
 ```
@@ -56,11 +56,11 @@ EXAMPLE_TEST_DATAFILE2_April2020.sav  : 100%|███████████�
 EXAMPLE_TEST_DATAFILE3_June2020.sav   : 100%|████████████████████████████████████████████████| 370k/370k [00:00<00:00, 3.57MiB/s]
 EXAMPLE_TEST_DATAFILE4_Oct2020.sav    : 100%|████████████████████████████████████████████████| 368k/368k [00:00<00:00, 3.30MiB/s]
 ```
-Any error will be reported in the console. 
+Any errors will be reported in the console. 
 
 To download an individual object, the command can be of the form:
 ```
-gen3 cli pull_object dg.XXTS/181af989-5d66-4139-91e7-69f4570ccd41
+gen3 cli drs-pull object dg.XXTS/181af989-5d66-4139-91e7-69f4570ccd41
 ```
 You should see something like:
 ```
@@ -73,7 +73,7 @@ Datafile05_T.csv    : 100%|█████████████████�
 
 To list the contents of a manifest file (or DRS object id):
 ```
-gen3 cli ls test1_manifest.json
+gen3 cli drs-pull ls test1_manifest.json
 ```
 response:
 ```
@@ -81,7 +81,7 @@ response:
 ```
 If the DRS object is a bundle, ls will expand the bundle and list it as a hierarchy:
 ```
-gen3 cli --endpoint mycommons.datacommons.tw dir-pull ls --object dg.XXST/9bdc7951-e479-4ddc-9db1-15cf3307116b
+gen3 cli drs-pull ls --object dg.XXST/9bdc7951-e479-4ddc-9db1-15cf3307116b
 ```
 the response:
 ```
@@ -130,11 +130,10 @@ Access for data.othercommons.io:
 ## Resolving DRS Identifiers
 
 Downloading a DRS objectID or JSON manifest containing DRS bundles requires resolving the DRS prefix 
-to an actual hostname. Most DRS resolvers request that the resolved prefixes are cached to prevent 
-overloading these resolver services. Gen3 uses dataguid.org to resolve its prefixes but others
-can be selected as well. 
+to an actual hostname. Most DRS resolvers requests that the resolved prefixes should be cached to prevent 
+overloading these resolver services. Gen3 uses dataguids.org to resolve its prefixes. 
 
-To configure the DRS resolvers there are number of environment variables that can be set to control
+To configure the DRS resolvers, there are number of environment variables that can be set to control
 the DRS resolution process.
 
 * DRS_CACHE_EXPIRE_DURATION=2
@@ -143,7 +142,7 @@ the DRS resolution process.
 * DRS_RESOLUTION_ORDER="cache_file:commons_mds:dataguids_dist:dataguids"
 
 *DRS_CACHE_EXPIRE_DURATION* controls the number of days to keep a resolved DRS hostname, the default
-value is 2 day but typically DRS hostnames do not change that often, so the value can be higher. 
+value is 2 days, however as typically DRS hostnames do not change that often, the value can be higher. 
 
 *DRS_RESOLVER_HOSTNAME* set the hostname of the resolver service to use. Currently, the default 
 value of "https://dataguids.org" is the only supported resolver, but others will be added in 
@@ -154,12 +153,13 @@ resolved hostnames. Use of this is highly recommended as it will reduce the reso
 significantly. 
 
 *DRS_RESOLUTION_ORDER* The order to apply the resolvers. The default value is the suggested one, and 
-there should be no need to change this order. Note that the last one dataguids is needed as it is 
+there should be no need to change this order. Note that the last one *dataguids* is needed as it is 
 the final resolver when all others fail to resolve a DRS prefix. Depending on the configuration 
-of the Gen3 commons the metadata service can also cache DRS prefixes but only when using the Aggregate
+of the Gen3 commons, the metadata service can also cache DRS prefixes but only when using the Aggregate
 Metadata service.
 
-Note that these environment variables allows for a Gen3 commons workspace to have a prepopulated 
+Note that these environment variables allows a Gen3 commons workspace to have a prepopulated 
 cache file provided, which when combined with a large *DRS_CACHE_EXPIRE_DURATION* and a 
 *DRS_RESOLUTION_ORDER* of "cache_file" only will prevent the DRS resolver from accessing any other 
-resolver. This is recommended as one way to increase download performance. 
+resolver. This is recommended as a way to increase download performance, but at a cost of having to ensure the cache
+files entries are up to date.
