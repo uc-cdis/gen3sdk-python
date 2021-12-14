@@ -80,10 +80,62 @@
         <span class="k">if</span> <span class="n">protocol</span><span class="p">:</span>
             <span class="n">api_url</span> <span class="o">+=</span> <span class="s2">&quot;?protocol=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">protocol</span><span class="p">)</span>
         <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+
         <span class="k">try</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
         <span class="k">except</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">output</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Gen3File.delete_file"><a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.delete_file">[docs]</a>    <span class="k">def</span> <span class="nf">delete_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Delete all locations of a stored data file and remove its record from indexd</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guid (str): provide a UUID for file id to delete</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            text: requests.delete text result</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/user/data/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">guid</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+
+        <span class="k">return</span> <span class="n">output</span></div>
+
+<div class="viewcode-block" id="Gen3File.upload_file"><a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.upload_file">[docs]</a>    <span class="k">def</span> <span class="nf">upload_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">authz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">expires_in</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get a presigned url for a file to upload</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            file_name (str): file_name to use for upload</span>
+<span class="sd">            authz (str): authorization scope for the file, optional.</span>
+<span class="sd">            protocol (str): Storage protocol to use for upload: &quot;s3&quot;, &quot;az&quot;.</span>
+<span class="sd">                If this isn&#39;t set, the default will be &quot;s3&quot;</span>
+<span class="sd">            expires_in (int): Amount in seconds that the signed url will expire from datetime.utcnow().</span>
+<span class="sd">                Be sure to use a positive integer.</span>
+<span class="sd">                This value will also be treated as &lt;= MAX_PRESIGNED_URL_TTL in the fence configuration.</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Document: json representation for the file upload</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="si">}</span><span class="s2">/user/data/upload&quot;</span>
+        <span class="n">body</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">protocol</span><span class="p">:</span>
+            <span class="n">body</span><span class="p">[</span><span class="s2">&quot;protocol&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">protocol</span>
+        <span class="k">if</span> <span class="n">authz</span><span class="p">:</span>
+            <span class="n">body</span><span class="p">[</span><span class="s2">&quot;authz&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">authz</span>
+        <span class="k">if</span> <span class="n">expires_in</span><span class="p">:</span>
+            <span class="n">body</span><span class="p">[</span><span class="s2">&quot;expires_in&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">expires_in</span>
+        <span class="k">if</span> <span class="n">file_name</span><span class="p">:</span>
+            <span class="n">body</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">file_name</span>
+
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Content-Type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">}</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+            <span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">body</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">text</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">output</span>
+
         <span class="k">return</span> <span class="n">data</span></div></div>
 </pre></div>
 
