@@ -1,80 +1,72 @@
 [
   {
     "hints": [
-      ".*dg\\.4503.*"
+      ".*dg\\.AB03.*"
     ],
-    "host": "https://gen3.biodatacatalyst.nhlbi.nih.gov/index/",
-    "name": "DataSTAGE",
+    "host": "https://gen3.mytestcommons1.io/index/",
+    "name": "DataTest",
     "type": "indexd"
   },
   {
     "hints": [
-      ".*dg\\.7C5B.*"
+      ".*dg\\.CD5B.*"
     ],
-    "host": "https://portal.occ-data.org/index/",
-    "name": "OCC Environmental DC",
+    "host": "https://portal.mytestcommons2.org/index/",
+    "name": "Test Environmental DC",
     "type": "indexd"
   },
   {
     "hints": [
-      ".*dg\\.F82A1A.*"
+      ".*dg\\.DXX1A.*"
     ],
-    "host": "https://data.kidsfirstdrc.org/index/",
-    "name": "Kids First",
+    "host": "https://data.datacommons4.org/index/",
+    "name": "Blanket Test",
     "type": "indexd"
-  },
-  {
-    "hints": [
-      "10\\..*"
-    ],
-    "host": "https://dx.doi.org/",
-    "name": "DX DOI",
-    "type": "doi"
   },
   {
     "hints": [],
-    "host": "https://nci-crdc.datacommons.io/index/",
-    "name": "NCI CRDC",
+    "host": "https://data.datacommons5.io/index/",
+    "name": "Data Science Test",
     "type": "indexd"
   },
   {
     "hints": [
-      ".*dg\\.ANV0.*"
+      ".*dg\\.ZYV0.*"
     ],
-    "host": "https://gen3.theanvil.io/index/",
-    "name": "AnVIL",
+    "host": "https://gen3.thecommons.io/index/",
+    "name": "DSIsG",
     "type": "indexd"
   },
   {
     "hints": [
-      ".*dg\\.6VTS.*"
+      ".*dg\\.3ETS.*"
     ],
-    "host": "https://jcoin.datacommons.io/index/",
-    "name": "JCOIN",
+    "host": "https://www.bigcommons.io/index/",
+    "name": "BOC",
     "type": "indexd"
   },
   {
     "hints": [
-      ".*dg\\.H34L.*"
+      ".*dg\\.XX4L.*"
     ],
-    "host": "https://healdata.org/index/",
-    "name": "HEAL",
+    "host": "https://datatest.org/index/",
+    "name": "DSTest",
     "type": "indexd"
   },
   {
     "hints": [
-      ".*dg\\.H35L.*"
+      ".*dg\\.XX5L.*"
     ],
-    "host": "https://externaldata.healdata.org/index/",
-    "name": "External Data HEAL",
+    "host": "https://externaldata.datatest.org/index/",
+    "name": "External DSTest",
     "type": "indexd"
   },
    {
     "hints": [
       ".*dg\\.XXTS.*"
     ],
-     "host": "https://test1.testcommons1.org/index/",
-     "name": "DataSTAGE",
+     "host": "https://test1.testcommons9.org/index/",
+     "name": "TestSTAGE",
      "type": "indexd"
    }
 ]

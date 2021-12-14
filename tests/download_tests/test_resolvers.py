@@ -39,8 +39,8 @@ def dataguids_object_id_request():
 @pytest.mark.parametrize(
     "identifier,expected, write_cache",
     [
-        ("dg.F82A1A", "data.kidsfirstdrc.org", False),
-        ("dg.ANV0", "gen3.theanvil.io", True),
+        ("dg.AB03", "gen3.mytestcommons1.io", False),
+        ("dg.CD5B", "portal.mytestcommons2.org", True),
         ("dg.5656", None, True),
     ],
 )
@@ -65,7 +65,7 @@ def test_resolve_drs_with_indexd_dist(
 @pytest.mark.parametrize(
     "identifier,expected",
     [
-        ("dg.ANV0", None),
+        ("dg.AB03", None),
     ],
 )
 def test_resolve_drs_with_indexd_dist_http_error(index_dist, identifier, expected):
@@ -84,8 +84,8 @@ def test_resolve_drs_with_indexd_dist_http_error(index_dist, identifier, expecte
 @pytest.mark.parametrize(
     "identifier,expected",
     [
-        ("dg.F82A1A", "data.kidsfirstdrc.org"),
-        ("dg.H35L", "externaldata.healdata.org"),
+        ("dg.XX5L", "externaldata.datatest.org"),
+        ("dg.XX4L", "datatest.org"),
         ("dg.5656", None),
     ],
 )
@@ -114,7 +114,7 @@ def test_resolve_drs_from_local_cache_exceptions(download_dir):
         "gen3.tools.download.drs_resolvers.DRS_CACHE",
         str(Path(download_dir, ".drs_cache", "resolved_drs_hosts_not_found.json")),
     ):
-        results = resolve_drs_from_local_cache("dg.H35L", None)
+        results = resolve_drs_from_local_cache("dg.XX5L", None)
         assert results is None
 
     # test with cache in un-parsable format
@@ -122,7 +122,7 @@ def test_resolve_drs_from_local_cache_exceptions(download_dir):
         "gen3.tools.download.drs_resolvers.DRS_CACHE",
         str(Path(DIR, "resources", "bad_format.json")),
     ):
-        results = resolve_drs_from_local_cache("dg.H35L", None)
+        results = resolve_drs_from_local_cache("dg.XX5L", None)
         assert results is None
 
 
@@ -152,9 +152,9 @@ def test_append_cache(download_dir):
         }
     }
     data_second = {
-        "dg.6VTS": {
-            "host": "https://jcoin.datacommons.io/ga4gh/drs/v1/objects/",
-            "name": "JCOIN",
+        "dg.ABTS": {
+            "host": "https://data.datacommons7.io/ga4gh/drs/v1/objects/",
+            "name": "DSTest",
             "type": "DRS",
         }
     }
@@ -191,10 +191,10 @@ def test_resolve_compact_drs_using_dataguids(download_dir):
         "file_name": None,
         "form": "object",
         "from_index_service": {
-            "host": "https://test.commons1.io/index/",
+            "host": "https://test.commons9.io/index/",
             "name": "TESTCommons",
         },
-        "hashes": {"md5": "4fe23cf4c6bdcf930df5765b48d81216"},
+        "hashes": {"md5": "4fe23cf4xxxxxxxxxxxxxxxx1216"},
         "metadata": {},
         "rev": "6046fb9f",
         "size": 9567026,
@@ -215,7 +215,7 @@ def test_resolve_compact_drs_using_dataguids(download_dir):
     identifier = "dg.XXTS"
 
     DRS_MDS_RESULTS = {
-        "host": "https://test.commons1.io/index/",
+        "host": "https://test.commons9.io/index/",
         "name": "TestCommons",
         "type": "indexd",
     }
@@ -231,7 +231,7 @@ def test_resolve_compact_drs_using_dataguids(download_dir):
             results = resolve_compact_drs_using_official_resolver(
                 identifier, object_id, resolver_hostname="https://dataguids_mock.org"
             )
-            expected = "test.commons1.io"
+            expected = "test.commons9.io"
             assert results == expected
 
             object_id = "dg.TEST/00e6cfa9-a183-42f6-bb44-b70347106bbe"
@@ -248,7 +248,7 @@ def test_resolve_compact_drs_using_dataguids(download_dir):
             results = resolve_compact_drs_using_official_resolver(
                 identifier, object_id, resolver_hostname="https://dataguids_mock.org"
             )
-            expected = "test.commons1.io"
+            expected = "test.commons9.io"
             assert results == expected
             m.get(
                 f"https://dataguids_mock.org/index/{object_id}",
@@ -308,21 +308,21 @@ def test_resolve_compact_drs_using_dataguids(download_dir):
 @pytest.mark.parametrize(
     "identifier,expected",
     [
-        ("dg.4503", "gen3.biodatacatalyst.nhlbi.nih.gov"),
-        ("dg.6VTS", "jcoin.datacommons.io"),
+        ("dg.XX4L", "datatest.org"),
+        ("dg.AB03", "gen3.mytestcommons1.io"),
         ("dg.5656", None),
     ],
 )
 def test_resolve_using_mds(download_dir, identifier, expected):
     MDS_RESPONSE = {
-        "dg.4503": {
-            "host": "https://gen3.biodatacatalyst.nhlbi.nih.gov/index/",
-            "name": "DataSTAGE",
+        "dg.XX4L": {
+            "host": "https://datatest.org/index/",
+            "name": "DSTest",
             "type": "indexd",
         },
-        "dg.6VTS": {
-            "host": "https://jcoin.datacommons.io/ga4gh/drs/v1/objects/",
-            "name": "JCOIN",
+        "dg.AB03": {
+            "host": "https://gen3.mytestcommons1.io/index/",
+            "name": "DataTest",
             "type": "DRS",
         },
     }
@@ -349,40 +349,40 @@ def test_resolve_using_mds(download_dir, identifier, expected):
 @pytest.mark.parametrize(
     "identifier,object_id, expected",
     [
-        ("dg.F82A1A", None, "data.kidsfirstdrc.org"),
-        ("dg.ANV0", None, "gen3.theanvil.io"),
+        ("dg.DXX1A", None, "data.datacommons4.org"),
+        ("dg.ZYV0", None, "gen3.thecommons.io"),
         (
             "dg.XXTS",
             "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e",
-            "test1.testcommons1.org",
+            "test1.testcommons9.org",
         ),
     ],
 )
 def test_resolve_drs_strategy(download_dir, identifier, object_id, expected):
     DATAGUIDS_MDS_RESPONSE = {
-        "dg.F82A1A": {
-            "host": "https://data.kidsfirstdrc.org/index/",
+        "dg.AB03": {
+            "host": "https://gen3.mytestcommons1.io/index/",
             "name": "DataSTAGE",
             "type": "indexd",
         },
         "dg.XXTS": {
-            "host": "https://test.commons1.io/index/",
+            "host": "https://test.commons9.io/index/",
             "name": "TestCommons",
             "type": "indexd",
         },
-        "dg.ANV0": {
-            "host": "https://gen3.theanvil.io/index/",
+        "dg.CD5B": {
+            "host": "https://portal.mytestcommons2.org/index/",
+            "name": "Test Environmental DC",
+            "type": "indexd",
+        },
+        "dg.DXX1A": {
+            "host": "https://data.datacommons4.org/index/",
             "name": "DataSTAGE",
             "type": "indexd",
         },
-        "dg.4503": {
-            "host": "https://gen3.biodatacatalyst.nhlbi.nih.gov/index/",
-            "name": "DataSTAGE",
-            "type": "indexd",
-        },
-        "dg.6VTS": {
-            "host": "https://jcoin.datacommons.io/ga4gh/drs/v1/objects/",
-            "name": "JCOIN",
+        "dg.ZYV0": {
+            "host": "https://gen3.thecommons.io/index/",
+            "name": "DSIsG",
             "type": "DRS",
         },
     }
