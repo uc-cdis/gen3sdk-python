@@ -34,28 +34,6 @@
 <span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">Module for downloading and listing JSON DRS manifest and DRS objects. The main classes in</span>
 <span class="sd">this module for downloading DRS objects are DownloadManager and Manifest.</span>
-<span class="sd">A JSON manifest is a list of objects containing at a minimum a DRS object id.</span>
-<span class="sd">Additional information (file_name, file_size, md5sum, and commons_url) are</span>
-<span class="sd">supported:</span>
-
-<span class="sd">    Examples:</span>
-<span class="sd">        &gt;&gt;&gt; [</span>
-<span class="sd">          {</span>
-<span class="sd">            &quot;md5sum&quot;: &quot;65196806d31002bd48abed020d861cf1&quot;,</span>
-<span class="sd">            &quot;file_name&quot;: &quot;TestDataSet1.sav&quot;,</span>
-<span class="sd">            &quot;file_size&quot;: 1566369,</span>
-<span class="sd">            &quot;object_id&quot;: &quot;dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e&quot;,</span>
-<span class="sd">            &quot;commons_url&quot;: &quot;test.commons1.io&quot;</span>
-<span class="sd">          },</span>
-<span class="sd">          {</span>
-<span class="sd">            &quot;md5sum&quot;: &quot;8371753a1324d421cc519cc03dcd477d&quot;,</span>
-<span class="sd">            &quot;file_name&quot;: &quot;TestDataSet_April2020.sav&quot;,</span>
-<span class="sd">            &quot;file_size&quot;: 313525,</span>
-<span class="sd">            &quot;object_id&quot;: &quot;dg.XXTS/6d3eb293-8388-4c5d-83ef-d0c2bd5ba604&quot;,</span>
-<span class="sd">            &quot;commons_url&quot;: &quot;test.commons1.io&quot;</span>
-<span class="sd">          }</span>
-<span class="sd">        ]</span>
-
 
 <span class="sd">    Examples:</span>
 <span class="sd">        This generates the Gen3Jobs class pointed at the sandbox commons while</span>
@@ -68,51 +46,7 @@
 <span class="sd">                print(i)</span>
 <span class="sd">            downloadManager.download(datafiles, &quot;.&quot;)</span>
 
-<span class="sd">In addition there are a few convenience functions  which wrap the download and list classes</span>
-<span class="sd">into a single function call.</span>
-
-<span class="sd">    Examples:</span>
-<span class="sd">        This generates the Gen3Jobs class pointed at the sandbox commons while</span>
-<span class="sd">        using the credentials.json downloaded from the commons profile page.</span>
-
-<span class="sd">        &gt;&gt;&gt; download_files_in_drs_manifest(&quot;source.my_commons.org&quot;,</span>
-<span class="sd">                                      Gen3Auth(refresh_file=&quot;~.gen3/my_credentials.json&quot;),</span>
-<span class="sd">                                      &#39;sample/manifest_1.json&#39;)</span>
-
-<span class="sd">Downloading a DRS objectID or manifest containing DRS bundles requires resolving the DRS prefix</span>
-<span class="sd">to an actual hostname. Most DRS resolvers request that the resolved prefixes are cached to prevent</span>
-<span class="sd">overloading these resolver services. Gen3 uses dataguid.org to resolve its prefixes but others</span>
-<span class="sd">can be selected as well.</span>
-
-<span class="sd">To configure the DRS resolvers there are number of environment variables that can be set to control</span>
-<span class="sd">the DRS resolution process.</span>
-
-<span class="sd">* DRS_CACHE_EXPIRE_DURATION=2</span>
-<span class="sd">* DRS_RESOLVER_HOSTNAME=&quot;https://dataguids.org&quot;</span>
-<span class="sd">* LOCALLY_CACHE_RESOLVED_HOSTS=True</span>
-<span class="sd">* DRS_RESOLUTION_ORDER=&quot;cache_file:commons_mds:dataguids_dist:dataguids&quot;</span>
-
-<span class="sd">*DRS_CACHE_EXPIRE_DURATION* controls the number of days to keep a resolved DRS hostname, the default</span>
-<span class="sd">value is 2 day but typically DRS hostnames do not change that often, so the value can be higher.</span>
-
-<span class="sd">*DRS_RESOLVER_HOSTNAME* set the hostname of the resolver service to use. Currently, the default</span>
-<span class="sd">value of &quot;https://dataguids.org&quot; is the only supported resolver, but others will be added in</span>
-<span class="sd">the future.</span>
-
-<span class="sd">*LOCALLY_CACHE_RESOLVED_HOSTS* Set to True (the default) to create a local cache file to store the</span>
-<span class="sd">resolved hostnames. Use of this is highly recommended as it will reduce the resolution time</span>
-<span class="sd">significantly.</span>
-
-<span class="sd">*DRS_RESOLUTION_ORDER* The order to apply the resolvers. The default value is the suggested one, and</span>
-<span class="sd">there should be no need to change this order, not that the last one dataguids is needed as it is</span>
-<span class="sd">the final resolver when all others fail to resolve a DRS prefix. Depending on the configuration</span>
-<span class="sd">of the Gen3 commons the metadata service can also cache DRS prefixes but only when using the Aggregate</span>
-<span class="sd">Metadata service.</span>
-
-<span class="sd">Note that these environment variables allows for a Gen3 commons workspace to have a prepopulated</span>
-<span class="sd">cache file provided, which when combined with a large *DRS_CACHE_EXPIRE_DURATION* and a</span>
-<span class="sd">*DRS_RESOLUTION_ORDER* of &quot;cache_file&quot; only will prevent the DRS resolver from accessing any other</span>
-<span class="sd">resolver. This is recommended as one way to increase download performance.</span>
+<span class="sd">        See docs/howto/drsDownloading.md for more details</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
 
@@ -745,7 +679,7 @@
 <span class="sd">    Args:</span>
 <span class="sd">        object_ids (List[Downloadable]): list of object to resolve</span>
 <span class="sd">        resolved_drs_prefix_cache (dict): cache of resolved DRS prefixes</span>
-<span class="sd">        mds_url (str): Gen3 metadata service to used to resolve DRS prefix</span>
+<span class="sd">        mds_url (str): Gen3 metadata service to resolve DRS prefixes</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">object_ids</span><span class="p">:</span>
