@@ -24,7 +24,7 @@ logger = get_logger("download", log_level="warning")
 )
 @click.pass_context
 def list_files_or_access(ctx, infile: str, access: bool, object: bool) -> bool:
-    """List files and size in manifest or if access is True list instead list user access"""
+    """List files and size in manifest or if access is True instead list user access"""
     if access:
         return list_access_in_drs_manifest(
             ctx.obj["endpoint"], ctx.obj["auth_factory"].get(), infile
@@ -52,7 +52,7 @@ def list_files_or_access(ctx, infile: str, access: bool, object: bool) -> bool:
 @click.pass_context
 def download_manifest(ctx, infile: str, output_dir: str, no_progress: bool):
     """
-    Pulls all DIR objects in manifest where the manifest can contain DRS objects.
+    Pulls all DRS objects in manifest where the manifest can contain DRS objects.
     The user credentials use the Gen3Auth class so the Gen3Auth options are applicable (--auth and --endpoint)
     An example:
         gen3 --endpoint mydata.org drs-pull manifest manifest1.json

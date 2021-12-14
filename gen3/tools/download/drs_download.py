@@ -1,28 +1,6 @@
 """
 Module for downloading and listing JSON DRS manifest and DRS objects. The main classes in
 this module for downloading DRS objects are DownloadManager and Manifest.
-A JSON manifest is a list of objects containing at a minimum a DRS object id.
-Additional information (file_name, file_size, md5sum, and commons_url) are
-supported:
-
-    Examples:
-        >>> [
-          {
-            "md5sum": "65196806d31002bd48abed020d861cf1",
-            "file_name": "TestDataSet1.sav",
-            "file_size": 1566369,
-            "object_id": "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e",
-            "commons_url": "test.commons1.io"
-          },
-          {
-            "md5sum": "8371753a1324d421cc519cc03dcd477d",
-            "file_name": "TestDataSet_April2020.sav",
-            "file_size": 313525,
-            "object_id": "dg.XXTS/6d3eb293-8388-4c5d-83ef-d0c2bd5ba604",
-            "commons_url": "test.commons1.io"
-          }
-        ]
-
 
     Examples:
         This generates the Gen3Jobs class pointed at the sandbox commons while
@@ -35,51 +13,7 @@ supported:
                 print(i)
             downloadManager.download(datafiles, ".")
 
-In addition there are a few convenience functions  which wrap the download and list classes
-into a single function call.
-
-    Examples:
-        This generates the Gen3Jobs class pointed at the sandbox commons while
-        using the credentials.json downloaded from the commons profile page.
-
-        >>> download_files_in_drs_manifest("source.my_commons.org",
-                                      Gen3Auth(refresh_file="~.gen3/my_credentials.json"),
-                                      'sample/manifest_1.json')
-
-Downloading a DRS objectID or manifest containing DRS bundles requires resolving the DRS prefix
-to an actual hostname. Most DRS resolvers request that the resolved prefixes are cached to prevent
-overloading these resolver services. Gen3 uses dataguid.org to resolve its prefixes but others
-can be selected as well.
-
-To configure the DRS resolvers there are number of environment variables that can be set to control
-the DRS resolution process.
-
-* DRS_CACHE_EXPIRE_DURATION=2
-* DRS_RESOLVER_HOSTNAME="https://dataguids.org"
-* LOCALLY_CACHE_RESOLVED_HOSTS=True
-* DRS_RESOLUTION_ORDER="cache_file:commons_mds:dataguids_dist:dataguids"
-
-*DRS_CACHE_EXPIRE_DURATION* controls the number of days to keep a resolved DRS hostname, the default
-value is 2 day but typically DRS hostnames do not change that often, so the value can be higher.
-
-*DRS_RESOLVER_HOSTNAME* set the hostname of the resolver service to use. Currently, the default
-value of "https://dataguids.org" is the only supported resolver, but others will be added in
-the future.
-
-*LOCALLY_CACHE_RESOLVED_HOSTS* Set to True (the default) to create a local cache file to store the
-resolved hostnames. Use of this is highly recommended as it will reduce the resolution time
-significantly.
-
-*DRS_RESOLUTION_ORDER* The order to apply the resolvers. The default value is the suggested one, and
-there should be no need to change this order, not that the last one dataguids is needed as it is
-the final resolver when all others fail to resolve a DRS prefix. Depending on the configuration
-of the Gen3 commons the metadata service can also cache DRS prefixes but only when using the Aggregate
-Metadata service.
-
-Note that these environment variables allows for a Gen3 commons workspace to have a prepopulated
-cache file provided, which when combined with a large *DRS_CACHE_EXPIRE_DURATION* and a
-*DRS_RESOLUTION_ORDER* of "cache_file" only will prevent the DRS resolver from accessing any other
-resolver. This is recommended as one way to increase download performance.
+        See docs/howto/drsDownloading.md for more details
 
 """
 
@@ -712,7 +646,7 @@ def resolve_objects_drs_hostname_from_id(
     Args:
         object_ids (List[Downloadable]): list of object to resolve
         resolved_drs_prefix_cache (dict): cache of resolved DRS prefixes
-        mds_url (str): Gen3 metadata service to used to resolve DRS prefix
+        mds_url (str): Gen3 metadata service to resolve DRS prefixes
 
     """
     for entry in object_ids:
