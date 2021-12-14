@@ -7,7 +7,7 @@ TOC
 
 ## JSON Object Manifests
 
-A JSON manifest is a list of objects containing at a minimum a [DRS](https://ga4gh.github.io/data-repository-service-schemas/preview/release/drs-1.0.0/docs/#:~:text=DRS%20IDs%20are%20strings%20made,whenever%20exposed%20by%20the%20API.) 
+A JSON manifest is a list of objects containing at a minimum a [DRS](https://ga4gh.github.io/data-repository-service-schemas/preview/release/drs-1.0.0/docs/#:~:text=DRS%20IDs%20are%20strings%20made,whenever%20exposed%20by%20the%20API) 
 object id:
 ```json
 [
