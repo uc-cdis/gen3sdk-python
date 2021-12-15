@@ -13,12 +13,12 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
-    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.8",
     "Topic :: Scientific/Engineering",
 ]
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = ">3.7,<=3.9"
 requests = "*"
 indexclient = ">=1.6.2"
 drsclient = "<1.0.0"
@@ -26,12 +26,17 @@ aiohttp = "*"
 backoff = "*"
 click = "*"
 pandas = "*"
+dataclasses-json = "*"
 pypfb = "<1.0.0"
 fastavro = "^1.4.7"
+tqdm = ">=4.61.2"
+humanfriendly ="*"
+python-dateutil = "*"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=3.2.3"
 pytest-cov = "^2.12.1"
+requests-mock = "*"
 cdisutilstest = { git = "https://github.com/uc-cdis/cdisutils-test.git", tag = "1.0.0" }
 doiclient = { git = "https://github.com/uc-cdis/doiclient.git", tag = "1.0.0" }
 dosclient = { git = "https://github.com/uc-cdis/dosclient.git", tag = "1.0.0" }

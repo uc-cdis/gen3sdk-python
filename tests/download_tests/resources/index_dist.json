@@ -1,0 +1,72 @@
+[
+  {
+    "hints": [
+      ".*dg\\.AB03.*"
+    ],
+    "host": "https://gen3.mytestcommons1.io/index/",
+    "name": "DataTest",
+    "type": "indexd"
+  },
+  {
+    "hints": [
+      ".*dg\\.CD5B.*"
+    ],
+    "host": "https://portal.mytestcommons2.org/index/",
+    "name": "Test Environmental DC",
+    "type": "indexd"
+  },
+  {
+    "hints": [
+      ".*dg\\.DXX1A.*"
+    ],
+    "host": "https://data.datacommons4.org/index/",
+    "name": "Blanket Test",
+    "type": "indexd"
+  },
+  {
+    "hints": [],
+    "host": "https://data.datacommons5.io/index/",
+    "name": "Data Science Test",
+    "type": "indexd"
+  },
+  {
+    "hints": [
+      ".*dg\\.ZYV0.*"
+    ],
+    "host": "https://gen3.thecommons.io/index/",
+    "name": "DSIsG",
+    "type": "indexd"
+  },
+  {
+    "hints": [
+      ".*dg\\.3ETS.*"
+    ],
+    "host": "https://www.bigcommons.io/index/",
+    "name": "BOC",
+    "type": "indexd"
+  },
+  {
+    "hints": [
+      ".*dg\\.XX4L.*"
+    ],
+    "host": "https://datatest.org/index/",
+    "name": "DSTest",
+    "type": "indexd"
+  },
+  {
+    "hints": [
+      ".*dg\\.XX5L.*"
+    ],
+    "host": "https://externaldata.datatest.org/index/",
+    "name": "External DSTest",
+    "type": "indexd"
+  },
+   {
+    "hints": [
+      ".*dg\\.XXTS.*"
+    ],
+     "host": "https://test1.testcommons9.org/index/",
+     "name": "TestSTAGE",
+     "type": "indexd"
+   }
+]

@@ -15,7 +15,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Metadata Tools" href="metadata.html" />
-    <link rel="prev" title="Gen3 Tools" href="../tools.html" />
+    <link rel="prev" title="DRS Download Tools" href="drs_pull.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -375,7 +375,7 @@ processes/threads</p>
 
 <dl class="py function">
 <dt id="gen3.tools.indexing.verify_manifest.async_verify_object_manifest">
-<em class="property"><span class="pre">async</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.verify_manifest.</span></code><code class="sig-name descname"><span class="pre">async_verify_object_manifest</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="pre">commons_url</span></em>, <em class="sig-param"><span class="pre">manifest_file</span></em>, <em class="sig-param"><span class="pre">max_concurrent_requests=24</span></em>, <em class="sig-param"><span class="pre">manifest_row_parsers={'acl':</span> <span class="pre">&lt;function</span> <span class="pre">_get_acl_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'authz':</span> <span class="pre">&lt;function</span> <span class="pre">_get_authz_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'file_name':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_name_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'file_size':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_size_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'guid':</span> <span class="pre">&lt;function</span> <span class="pre">_get_guid_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'md5':</span> <span class="pre">&lt;function</span> <span class="pre">_get_md5_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'urls':</span> <span class="pre">&lt;function</span> <span class="pre">_get_urls_from_row&gt;}</span></em>, <em class="sig-param"><span class="pre">manifest_file_delimiter=None</span></em>, <em class="sig-param"><span class="pre">output_filename='verify-manifest-errors-1639432555.766316.log'</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/verify_manifest.html#async_verify_object_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.indexing.verify_manifest.async_verify_object_manifest" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">async</span> </em><code class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.verify_manifest.</span></code><code class="sig-name descname"><span class="pre">async_verify_object_manifest</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="pre">commons_url</span></em>, <em class="sig-param"><span class="pre">manifest_file</span></em>, <em class="sig-param"><span class="pre">max_concurrent_requests=24</span></em>, <em class="sig-param"><span class="pre">manifest_row_parsers={'acl':</span> <span class="pre">&lt;function</span> <span class="pre">_get_acl_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'authz':</span> <span class="pre">&lt;function</span> <span class="pre">_get_authz_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'file_name':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_name_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'file_size':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_size_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'guid':</span> <span class="pre">&lt;function</span> <span class="pre">_get_guid_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'md5':</span> <span class="pre">&lt;function</span> <span class="pre">_get_md5_from_row&gt;</span></em>, <em class="sig-param"><span class="pre">'urls':</span> <span class="pre">&lt;function</span> <span class="pre">_get_urls_from_row&gt;}</span></em>, <em class="sig-param"><span class="pre">manifest_file_delimiter=None</span></em>, <em class="sig-param"><span class="pre">output_filename='verify-manifest-errors-1639516310.360178.log'</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/verify_manifest.html#async_verify_object_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.indexing.verify_manifest.async_verify_object_manifest" title="Permalink to this definition">¶</a></dt>
 <dd><p>Verify all file object records into a manifest csv</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -427,6 +427,7 @@ processes/threads</p>
 <li class="toctree-l1"><a class="reference internal" href="../query.html">Gen3 Query Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../submission.html">Gen3 Submission Class</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../tools.html">Gen3 Tools</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="drs_pull.html">DRS Download Tools</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Indexing Tools</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#module-gen3.tools.indexing.download_manifest">Download</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-gen3.tools.indexing.index_manifest">Index</a></li>
@@ -444,7 +445,7 @@ processes/threads</p>
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
   <li><a href="../tools.html">Gen3 Tools</a><ul>
-      <li>Previous: <a href="../tools.html" title="previous chapter">Gen3 Tools</a></li>
+      <li>Previous: <a href="drs_pull.html" title="previous chapter">DRS Download Tools</a></li>
       <li>Next: <a href="metadata.html" title="next chapter">Metadata Tools</a></li>
   </ul></li>
   </ul></li>
@@ -473,7 +474,7 @@ processes/threads</p>
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2020, Center for Translational Data Science.
+      &copy;2021, Center for Translational Data Science.
       
       |
       <a href="../_sources/tools/indexing.rst.txt"
