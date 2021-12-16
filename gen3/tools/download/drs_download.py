@@ -710,9 +710,8 @@ def get_download_url_using_drs(
     except requests.exceptions.Timeout:
         logger.critical(f"Was unable to download: {object_id}. Timeout Error.")
     except requests.exceptions.HTTPError as exc:
-        err_msg = exc.response.json()
         logger.critical(
-            f"HTTP Error ({exc.response.status_code}): requesting download url {err_msg}"
+            f"HTTP Error ({exc.response.status_code}): requesting download url from {access_method}"
         )
     return None
 
@@ -745,10 +744,7 @@ def get_user_auth(commons_url: str, access_token: str) -> Optional[List[str]]:
         authz = data["authz"]
         return authz
     except requests.exceptions.HTTPError as exc:
-        err_msg = exc.response.json()
-        logger.critical(
-            f"HTTP Error ({exc.response.status_code}): getting user access {err_msg}"
-        )
+        logger.critical(f"HTTP Error ({exc.response.status_code}): getting user access")
 
     return None
 
