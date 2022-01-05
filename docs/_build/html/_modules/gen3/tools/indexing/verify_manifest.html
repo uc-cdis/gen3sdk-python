@@ -250,6 +250,8 @@
             <span class="c1"># default, assume CSV</span>
             <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span>
 
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;detected </span><span class="si">{</span><span class="n">manifest_file_delimiter</span><span class="si">}</span><span class="s2"> as delimiter between columns&quot;</span><span class="p">)</span>
+
     <span class="k">await</span> <span class="n">_verify_all_index_records_in_file</span><span class="p">(</span>
         <span class="n">commons_url</span><span class="p">,</span>
         <span class="n">manifest_file</span><span class="p">,</span>
@@ -521,7 +523,7 @@
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2020, Center for Translational Data Science.
+      &copy;2021, Center for Translational Data Science.
       
     </div>
 

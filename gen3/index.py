@@ -743,7 +743,8 @@ class Gen3Index:
 
         """
         rec = self.client.get(guid)
-        rec.delete()
+        if rec:
+            rec.delete()
         return rec
 
     ### Query Requests

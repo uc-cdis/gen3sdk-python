@@ -1,0 +1,30 @@
+{
+  "test.datacommons.io": {
+    "providers": [
+      {
+        "base_url": "https://test.commons1.io",
+        "idp": "test-google",
+        "name": "TEST1 Google Login",
+        "refresh_token_expiration": "9 days",
+        "urls": [
+          {
+            "name": "TEST Google Login",
+            "url": "https://test.datacommons.io/wts/oauth2/authorization_url?idp=test-google"
+          }
+        ]
+      },
+      {
+        "base_url": "https://externaldata.commons2.org",
+        "idp": "externaldata-google",
+        "name": "FAIR Repository Google Login",
+        "refresh_token_expiration": "7 days",
+        "urls": [
+          {
+            "name": "FAIR Repository Google Login",
+            "url": "https://test.datacommons.io/wts/oauth2/authorization_url?idp=externaldata-google"
+          }
+        ]
+      }
+    ]
+  }
+}
