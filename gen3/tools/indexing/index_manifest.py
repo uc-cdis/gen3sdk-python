@@ -34,6 +34,7 @@ import os
 import csv
 import click
 from functools import partial
+import json
 import logging
 from multiprocessing.dummy import Pool as ThreadPool
 import threading
@@ -43,7 +44,10 @@ import traceback
 
 from gen3.index import Gen3Index
 from gen3.auth import Gen3Auth
+from gen3.metadata import Gen3Metadata
 from gen3.tools.indexing.manifest_columns import (
+    RECORD_TYPE_STANDARD_KEY,
+    RECORD_TYPE_ALLOWED_VALUES,
     GUID_COLUMN_NAMES,
     GUID_STANDARD_KEY,
     FILENAME_COLUMN_NAMES,
@@ -60,6 +64,9 @@ from gen3.tools.indexing.manifest_columns import (
     AUTHZ_STANDARD_KEY,
     PREV_GUID_COLUMN_NAMES,
     PREV_GUID_STANDARD_KEY,
+    PACKAGE_CONTENTS_COLUMN_NAME,
+    PACKAGE_CONTENTS_STANDARD_KEY,
+    PACKAGE_CONTENTS_SCHEMA,
 )
 from gen3.utils import (
     UUID_FORMAT,
@@ -69,6 +76,7 @@ from gen3.utils import (
     AUTHZ_FORMAT,
     SIZE_FORMAT,
     _verify_format,
+    _verify_schema,
     _standardize_str,
     get_urls,
 )
@@ -195,6 +203,33 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                             f"ERROR: {row[current_column_name]} is not in UUID_FORMAT format"
                         )
                         is_row_valid = False
+                elif current_column_name.lower() == RECORD_TYPE_STANDARD_KEY:
+                    output_column_name = RECORD_TYPE_STANDARD_KEY
+                    if row[current_column_name] not in RECORD_TYPE_ALLOWED_VALUES:
+                        logging.error(
+                            f"ERROR: '{row[current_column_name]}' is not one of the valid record types: {RECORD_TYPE_ALLOWED_VALUES}"
+                        )
+                        is_row_valid = False
+                elif current_column_name.lower() in PACKAGE_CONTENTS_COLUMN_NAME:
+                    fieldnames[
+                        fieldnames.index(current_column_name)
+                    ] = PACKAGE_CONTENTS_STANDARD_KEY
+                    output_column_name = PACKAGE_CONTENTS_STANDARD_KEY
+                    record_type = row.get(RECORD_TYPE_STANDARD_KEY, "").strip().lower()
+                    if row[current_column_name]:
+                        if record_type != "package":
+                            logging.error(
+                                f"ERROR: row #{row_number}: tried to set '{current_column_name}' for a non-package row. Set '{PACKAGE_CONTENTS_STANDARD_KEY}' to 'package' to create packages."
+                            )
+                            is_row_valid = False
+                        row[current_column_name] = json.loads(row[current_column_name])
+                        if not _verify_schema(
+                            row[current_column_name], PACKAGE_CONTENTS_SCHEMA
+                        ):
+                            logging.error(
+                                f"ERROR: {row[current_column_name]} is not in package contents format"
+                            )
+                            is_row_valid = False
                 elif include_additional_columns:
                     output_column_name = current_column_name
 
@@ -204,6 +239,8 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                             int(row[current_column_name])
                             if output_column_name == SIZE_STANDARD_KEY
                             else row[current_column_name].strip()
+                            if type(row[current_column_name]) == str
+                            else row[current_column_name]
                         )
                     except ValueError:
                         # don't break
@@ -236,12 +273,13 @@ def get_and_verify_fileinfos_from_manifest(
     manifest_file, include_additional_columns=False
 ):
     """
-    Wrapper for above function to determine the delimeter based on file extention
+    Wrapper for above function to determine the delimiter based on file extention
     """
     manifest_file_ext = os.path.splitext(manifest_file)
     if manifest_file_ext[-1].lower() == ".tsv":
         manifest_file_delimiter = "\t"
     else:
+        # default, assume CSV
         manifest_file_delimiter = ","
 
     return get_and_verify_fileinfos_from_tsv_manifest(
@@ -286,7 +324,7 @@ def _write_csv(filename, files, fieldnames=None):
     return filename
 
 
-def _index_record(indexclient, replace_urls, thread_control, fi):
+def _index_record(indexclient, mds, replace_urls, thread_control, fi):
     """
     Index single file
 
@@ -299,7 +337,7 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
         None
 
     """
-
+    index_success = True
     try:
         urls = (
             get_urls(fi[URLS_STANDARD_KEY])
@@ -367,7 +405,7 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
                 MD5_STANDARD_KEY
             ) != fi.get(MD5_STANDARD_KEY):
                 logging.error(
-                    "The guid {} with different size/hash already exist. Can not index it without getting a new guid".format(
+                    "The guid {} with different size/hash already exists. Can not index it without getting a new guid".format(
                         fi.get(GUID_STANDARD_KEY)
                     )
                 )
@@ -454,13 +492,53 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
 
     except Exception as e:
         # Don't break for any reason
+        index_success = False
         exc_info = sys.exc_info()
         traceback.print_exception(*exc_info)
         logging.error(
-            "Can not update/create an indexd record with guid {}. Detail {}".format(
+            "Can not update/create an indexd record with guid {}. Detail: {}".format(
                 fi.get(GUID_STANDARD_KEY), e
             )
         )
+
+    # submit package metadata to metadata service
+    if index_success and fi.get(RECORD_TYPE_STANDARD_KEY) == "package":
+        try:
+            if not mds:
+                raise Exception(
+                    "Can not create package metadata when using indexd basic auth"
+                )
+
+            url = doc.urls[0]  # assume single URL for packages
+            file_name = doc.file_name if doc.file_name else os.path.basename(url)
+            mds.submit_package_metadata(
+                guid=doc.did,
+                file_name=file_name,
+                file_size=doc.size,
+                hashes=doc.hashes,
+                authz=doc.authz,
+                url=url,
+                contents=fi.get(PACKAGE_CONTENTS_STANDARD_KEY) or None,
+            )
+        except Exception as e:
+            # Don't break, but delete indexd record
+            exc_info = sys.exc_info()
+            traceback.print_exception(*exc_info)
+            logging.error(
+                "Can not create package metadata for guid {}. Deleting indexd record. Detail: {}".format(
+                    fi[GUID_STANDARD_KEY], e
+                )
+            )
+            try:
+                doc.delete()
+            except Exception as e:
+                exc_info = sys.exc_info()
+                traceback.print_exception(*exc_info)
+                logging.error(
+                    "Cannot delete indexd record with {}. Detail: {}".format(
+                        fi[GUID_STANDARD_KEY], e
+                    )
+                )
 
     thread_control.mutexLock.acquire()
     thread_control.num_processed_files += 1
@@ -483,6 +561,7 @@ def index_object_manifest(
     replace_urls=True,
     manifest_file_delimiter=None,
     output_filename="indexing-output-manifest.csv",
+    # TODO should be `indexing-output-manifest.tsv` if input is tsv
 ):
     """
     Loop through all the files in the manifest, update/create records in indexd
@@ -526,23 +605,19 @@ def index_object_manifest(
 
     indexclient = client.IndexClient(commons_url, "v0", auth=auth)
 
-    # if delimter not specified, try to get based on file ext
-    if not manifest_file_delimiter:
-        file_ext = os.path.splitext(manifest_file)
-        if file_ext[-1].lower() == ".tsv":
-            manifest_file_delimiter = "\t"
-        else:
-            # default, assume CSV
-            manifest_file_delimiter = ","
+    if isinstance(auth, tuple):  # basic auth
+        # TODO print warning (packages)
+        # TODO document
+        mds = None
+    else:  # Gen3Auth
+        mds = Gen3Metadata(auth_provider=auth)
 
     try:
-        files, headers = get_and_verify_fileinfos_from_tsv_manifest(
-            manifest_file, manifest_file_delimiter
-        )
+        files, headers = get_and_verify_fileinfos_from_manifest(manifest_file)
     except Exception as e:
         exc_info = sys.exc_info()
         traceback.print_exception(*exc_info)
-        logging.error("Can not read {}. Detail {}".format(manifest_file, e))
+        logging.error("Can not read {}. Detail: {}".format(manifest_file, e))
         return None, None
 
     # Early terminate
@@ -557,7 +632,7 @@ def index_object_manifest(
     pool = ThreadPool(thread_num)
 
     thread_control = ThreadControl(num_total_files=len(files))
-    part_func = partial(_index_record, indexclient, replace_urls, thread_control)
+    part_func = partial(_index_record, indexclient, mds, replace_urls, thread_control)
 
     try:
         pool.map_async(part_func, files).get()
@@ -627,6 +702,7 @@ def index_object_manifest_cli(
         out_manifest_file(str): path to the output manifest
 
     """
+    # TODO cli should work with token auth for packages
 
     if api_key:
         auth = Gen3Auth(commons_url, refresh_file=api_key)

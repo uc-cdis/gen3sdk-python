@@ -3,10 +3,13 @@ Contains class for interacting with Gen3's Metadata Service.
 """
 import aiohttp
 import backoff
+from datetime import datetime
 import requests
 import urllib.parse
 import logging
+import os
 import sys
+from urllib.parse import urlparse
 
 from gen3.utils import append_query_params, DEFAULT_BACKOFF_SETTINGS, raise_for_status
 from gen3.auth import Gen3Auth
@@ -397,3 +400,41 @@ class Gen3Metadata:
         raise_for_status(response)
 
         return response.json()
+
+    def submit_package_metadata(
+        self, guid, file_name, file_size, hashes, authz, url, contents
+    ):
+        """
+        Create an MDS object by creating an MDS record with the expected
+        object fields.
+
+        Note: we can't hit the MDS /objects API directly because the file is
+        already uploaded. TODO: update the MDS objects API to not create
+        upload URLs if the relevant data is provided.
+        """
+
+        parsed = urlparse(url)
+        bucket_url = f"s3://{parsed.netloc}"
+
+        now = str(datetime.utcnow())
+        uploader = self._auth_provider._access_token_info.get("sub")
+        _, file_ext = os.path.splitext(file_name)
+        metadata = {
+            "type": "package",
+            "package": {
+                "version": "0.1",
+                "file_name": file_name,
+                "created_time": now,
+                "updated_time": now,
+                "size": file_size,
+                "hashes": hashes,
+                "contents": contents,
+            },
+            "_resource_paths": authz,
+            "_uploader_id": uploader,
+            "_bucket": bucket_url,
+            "_filename": file_name,
+            "_file_extension": file_ext,
+            "_upload_status": "uploaded",
+        }
+        self.create(guid, metadata, overwrite=True)

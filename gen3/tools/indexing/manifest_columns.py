@@ -10,6 +10,9 @@ from urllib.parse import urlparse
 from base64 import b64encode, b64decode
 
 # Pre-defined supported column names
+RECORD_TYPE_STANDARD_KEY = "record_type"
+RECORD_TYPE_ALLOWED_VALUES = ["object", "package"]
+
 GUID_COLUMN_NAMES = ["guid", "GUID"]
 GUID_STANDARD_KEY = "guid"
 
@@ -45,6 +48,28 @@ CHECKSUMS_COLUMN_NAME = ["checksums", "checksum"]
 TYPE_COLUMN_NAME = ["type", "types"]
 
 ALIASES_COLUMN_NAME = ["alias", "aliases"]
+
+PACKAGE_CONTENTS_COLUMN_NAME = ["package_contents", "contents"]
+PACKAGE_CONTENTS_STANDARD_KEY = "package_contents"
+PACKAGE_CONTENTS_SCHEMA = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "file_name": {
+                "type": "string",
+            },
+            "size": {
+                "type": "number",
+            },
+            "hashes": {
+                "type": "object",
+            },
+        },
+        "required": ["file_name"],
+        "additionalProperties": True,
+    },
+}
 
 
 @unique

@@ -1,14 +1,9 @@
 import asyncio
 import os
-import glob
-import sys
-import shutil
-import logging
 from unittest.mock import MagicMock, patch
 
 from gen3.tools.indexing import async_verify_object_manifest
 from gen3.tools.indexing import download_manifest
-from gen3.tools.indexing.download_manifest import TMP_FOLDER
 from gen3.tools.indexing import async_download_object_manifest
 from gen3.tools.indexing.index_manifest import (
     index_object_manifest,
@@ -34,7 +29,7 @@ def test_verify_manifest(mock_index):
     loop.run_until_complete(
         async_verify_object_manifest(
             "http://localhost",
-            manifest_file=CURRENT_DIR + "/test_manifest.csv",
+            manifest_file=CURRENT_DIR + "/test_data/test_manifest.csv",
             max_concurrent_requests=3,
             output_filename="test.log",
         )
@@ -378,7 +373,9 @@ def _mock_get_records_on_page(page, limit, **kwargs):
 
 
 def test_read_manifest():
-    files, headers = get_and_verify_fileinfos_from_tsv_manifest("./test.tsv")
+    files, headers = get_and_verify_fileinfos_from_tsv_manifest(
+        CURRENT_DIR + "/test_data/test.tsv"
+    )
     assert headers.index("guid") >= 0
     assert headers.index("md5") >= 0
     assert headers.index("urls") >= 0
@@ -405,7 +402,11 @@ def test_index_manifest(gen3_index, indexd_server):
     )
 
     index_object_manifest(
-        indexd_server.baseurl, "./test.tsv", 1, ("admin", "admin"), replace_urls=False
+        indexd_server.baseurl,
+        CURRENT_DIR + "/test_data/test.tsv",
+        1,
+        ("admin", "admin"),
+        replace_urls=False,
     )
     rec1 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada099c")
     rec2 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada010c")
@@ -455,7 +456,11 @@ def test_index_manifest_with_replace_urls(gen3_index, indexd_server):
         urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
     )
     index_object_manifest(
-        indexd_server.baseurl, "./test.tsv", 1, ("admin", "admin"), replace_urls=True
+        indexd_server.baseurl,
+        CURRENT_DIR + "/test_data/test.tsv",
+        1,
+        ("admin", "admin"),
+        replace_urls=True,
     )
     rec1 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada099c")
 
@@ -464,9 +469,106 @@ def test_index_manifest_with_replace_urls(gen3_index, indexd_server):
 
 def test_index_non_guid_manifest(gen3_index, indexd_server):
     files, _ = index_object_manifest(
-        indexd_server.baseurl, "./test2.tsv", 1, ("admin", "admin"), replace_urls=True
+        indexd_server.baseurl,
+        CURRENT_DIR + "/test_data/test2.tsv",
+        1,
+        ("admin", "admin"),
+        replace_urls=True,
     )
 
     assert "testprefix" in files[0]["guid"]
     rec1 = gen3_index.get(files[0]["guid"])
     assert rec1["urls"] == ["s3://pdcdatastore/test1.raw"]
+
+
+def test_index_manifest_packages(gen3_index, gen3_auth):
+    """
+    TODO
+    """
+    # TODO dynamically create valid manifest?
+    with patch(
+        "gen3.tools.indexing.index_manifest.Gen3Metadata.create", MagicMock()
+    ) as mock_mds_create:
+        index_object_manifest(
+            manifest_file=CURRENT_DIR + "/test_data/packages_manifest.tsv",
+            auth=gen3_auth,
+            commons_url=gen3_index.client.url,
+            thread_num=1,
+            replace_urls=False,
+        )
+
+        mds_records = {r[0][0]: r[0][1] for r in mock_mds_create.call_args_list}
+        assert len(mds_records) == 4
+
+    indexd_records = {r["did"]: r for r in gen3_index.get_all_records()}
+    assert len(indexd_records) == 5
+
+    # object (not a package) with all fields provided
+    guid = "255e396f-f1f8-11e9-9a07-0a80fada0900"
+    assert guid in indexd_records
+    assert guid not in mds_records
+
+    # package with all fields provided
+    guid = "255e396f-f1f8-11e9-9a07-0a80fada0901"
+    assert guid in indexd_records
+    assert indexd_records[guid]["file_name"] == "package.zip"
+    assert indexd_records[guid]["size"] == 363455714
+    assert indexd_records[guid]["hashes"] == {"md5": "473d83400bc1bc9dc635e334faddf33c"}
+    assert indexd_records[guid]["authz"] == ["/open/packages"]
+    assert indexd_records[guid]["urls"] == [
+        "s3://my-data-bucket/dg.1994/4bc4e600-1eda-4f81-aa2b-7c33dad78bec/package.zip"
+    ]
+
+    assert guid in mds_records
+    assert mds_records[guid]["type"] == "package"
+    assert mds_records[guid]["package"]["version"] == "0.1"
+    assert mds_records[guid]["package"]["file_name"] == "package.zip"
+    assert mds_records[guid]["package"]["size"] == 363455714
+    assert mds_records[guid]["package"]["hashes"] == {
+        "md5": "473d83400bc1bc9dc635e334faddf33c"
+    }
+    assert mds_records[guid]["package"]["contents"] == [
+        {
+            "hashes": {"md5sum": "2cd6ee2c70b0bde53fbe6cac3c8b8bb1"},
+            "file_name": "c.txt",
+            "size": 35,
+        },
+        {
+            "hashes": {"md5sum": "30cf3d7d133b08543cb6c8933c29dfd7"},
+            "file_name": "b.txt",
+            "size": 35,
+        },
+    ]
+    assert mds_records[guid]["_bucket"] == "s3://my-data-bucket"
+    assert mds_records[guid]["_filename"] == "package.zip"
+    assert mds_records[guid]["_file_extension"] == ".zip"
+    assert mds_records[guid]["_upload_status"] == "uploaded"
+    assert mds_records[guid]["_resource_paths"] == ["/open/packages"]
+
+    # package with no "package_contents" provided
+    guid = "255e396f-f1f8-11e9-9a07-0a80fada0902"
+    assert guid in indexd_records
+    assert guid in mds_records
+    assert mds_records[guid]["type"] == "package"
+    assert mds_records[guid]["package"]["contents"] == None
+
+    # package with no "file_name" provided
+    guid = "255e396f-f1f8-11e9-9a07-0a80fada0903"
+    assert guid in indexd_records
+    assert indexd_records[guid]["file_name"] == ""
+    assert guid in mds_records
+    assert mds_records[guid]["package"]["file_name"] == "package.zip"
+    assert mds_records[guid]["_filename"] == "package.zip"
+
+    # package with no "guid" provided
+    new_guids = [
+        guid
+        for guid in indexd_records
+        if not guid.startswith("255e396f-f1f8-11e9-9a07-0a80fada09")
+    ]
+    assert len(new_guids) == 1
+    guid = new_guids[0]
+    assert guid in mds_records
+
+    # TODO: bad contents
+    # TODO: missing field

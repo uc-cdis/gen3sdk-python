@@ -185,6 +185,7 @@ class Gen3Auth(AuthBase):
                 if not os.path.isfile(refresh_file) and refresh_file[-5:] != ".json":
                     refresh_file += ".json"
                 if not os.path.isfile(refresh_file):
+                    logging.warning("Unable to find refresh_file")
                     refresh_file = None
 
         if not self._access_token:

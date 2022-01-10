@@ -1,16 +1,20 @@
 """
 Conf Test for Gen3 test suite
 """
+from multiprocessing import Process
 from unittest.mock import patch
 import pytest
+import requests
 
 from drsclient.client import DrsClient
-from cdisutilstest.code.conftest import indexd_server
 from cdisutilstest.code.indexd_fixture import (
     setup_database,
     clear_database,
     create_user,
 )
+from indexd import get_app
+from indexd.default_settings import settings
+
 from gen3.file import Gen3File
 from gen3.index import Gen3Index
 from gen3.submission import Gen3Submission
@@ -26,6 +30,17 @@ class MockAuth:
     def __init__(self):
         self.endpoint = "https://example.commons.com"
         self.refresh_token = {"api_key": "123"}
+        self._access_token_info = {"sub": "42"}
+
+    @property
+    def __class__(self):
+        """
+        So that `isinstance(<MockAuth instance>, Gen3Auth)` returns True
+        """
+        return Gen3Auth
+
+    def __call__(self, request):
+        return request
 
 
 @pytest.fixture
@@ -84,7 +99,55 @@ def supported_protocol(request):
     return request.param
 
 
-# for unittest with mock server
+@pytest.fixture(scope="session")
+def indexd_server():
+    """
+    Fixture copied from cdisutils-test and updated to mock Arborist
+    """
+
+    class MockServer(object):
+        def __init__(self, port):
+            self.port = port
+            self.baseurl = "http://localhost:{}".format(port)
+
+    def run_indexd(port):
+        app = get_app()
+        app.run(host="localhost", port=port, debug=False)
+
+    def wait_for_indexd_alive(port):
+        url = "http://localhost:{}".format(port)
+        try:
+            requests.get(url)
+        except requests.ConnectionError:
+            return wait_for_indexd_alive(port)
+        else:
+            return
+
+    def wait_for_indexd_not_alive(port):
+        url = "http://localhost:{}".format(port)
+        try:
+            requests.get(url)
+        except requests.ConnectionError:
+            return
+        else:
+            return wait_for_indexd_not_alive(port)
+
+    class MockArboristClient(object):
+        def auth_request(*args, **kwargs):
+            return True
+
+    port = 8001
+    settings["auth"].arborist = MockArboristClient()
+    indexd = Process(target=run_indexd, args=[port])
+    indexd.start()
+    wait_for_indexd_alive(port)
+
+    yield MockServer(port=port)
+
+    indexd.terminate()
+    wait_for_indexd_not_alive(port)
+
+
 @pytest.fixture
 def index_client(indexd_server):
     """
@@ -104,7 +167,9 @@ def index_client(indexd_server):
         user = ("admin", "admin")
 
     client = Gen3Index(indexd_server.baseurl, user, service_location="")
+
     yield client
+
     clear_database()
 
 

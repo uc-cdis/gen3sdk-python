@@ -31,7 +31,7 @@ def test_is_valid_manifest_format_with_csv(caplog):
     """
     Test that alternative delimiter can be automatically detected
     """
-    assert is_valid_manifest_format("tests/test_manifest.csv") == True
+    assert is_valid_manifest_format("tests/test_data/test_manifest.csv") == True
     assert caplog.text == ""
 
 
