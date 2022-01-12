@@ -35,10 +35,64 @@ def get(ctx, guid, dist_resolution=True):
 
 
 @click.command()
+@click.argument("guid")
+@click.pass_context
+def get_record(ctx, guid):
+    """Get the indexd record from the GUID input"""
+    print(ctx.obj["index_factory"].get_record(guid))
+
+
+@click.command()
+@click.argument("guid")
+@click.pass_context
+def get_record_doc(ctx, guid):
+    """Get the indexd record from the GUID input"""
+    print(ctx.obj["index_factory"].get_record_doc(guid))
+
+
+@click.command()
+@click.argument("dids")
+@click.pass_context
+def get_records(ctx, dids):
+    """Get the indexd record from the GUID input"""
+    print(ctx.obj["index_factory"].get_records(dids))
+
+
+@click.command()
+@click.argument("guid")
+@click.pass_context
+def delete_record(ctx, guid):
+    """Get the indexd record from the GUID input"""
+    print(ctx.obj["index_factory"].delete_record(guid))
+
+
+@click.command()
 @click.pass_context
 def get_stats(ctx):
     """Get the stats associated with """
     print(ctx.obj["index_factory"].get_stats())
+
+
+@click.command()
+@click.pass_context
+def get_version(ctx):
+    """Get the version of indexd """
+    print(ctx.obj["index_factory"].get_version())
+
+
+@click.command()
+@click.argument("guid")
+@click.pass_context
+def get_versions(ctx, guid):
+    """Get the indexd record from the GUID input"""
+    print(ctx.obj["index_factory"].get_versions(guid))
+
+
+@click.command()
+@click.pass_context
+def is_healthy(ctx):
+    """Get the version of indexd """
+    print(ctx.obj["index_factory"].is_healthy())
 
 
 @click.group()
@@ -49,4 +103,11 @@ def index():
 
 index.add_command(get, name="get")
 index.add_command(get_all_records, name="get_all_records")
+index.add_command(get_record, name="get_record")
+index.add_command(get_record_doc, name="get_record_doc")
+index.add_command(get_records, name="get_records")
+index.add_command(delete_record, name="delete_record")
 index.add_command(get_stats, name="get_stats")
+index.add_command(get_version, name="get_version")
+index.add_command(get_versions, name="get_versions")
+index.add_command(is_healthy, name="is_healthy")
