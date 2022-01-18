@@ -34,7 +34,6 @@ import os
 import csv
 import click
 from functools import partial
-import json
 import logging
 from multiprocessing.dummy import Pool as ThreadPool
 import threading
@@ -64,9 +63,6 @@ from gen3.tools.indexing.manifest_columns import (
     AUTHZ_STANDARD_KEY,
     PREV_GUID_COLUMN_NAMES,
     PREV_GUID_STANDARD_KEY,
-    PACKAGE_CONTENTS_COLUMN_NAME,
-    PACKAGE_CONTENTS_STANDARD_KEY,
-    PACKAGE_CONTENTS_SCHEMA,
 )
 from gen3.utils import (
     UUID_FORMAT,
@@ -76,7 +72,6 @@ from gen3.utils import (
     AUTHZ_FORMAT,
     SIZE_FORMAT,
     _verify_format,
-    _verify_schema,
     _standardize_str,
     get_urls,
 )
@@ -210,26 +205,6 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                             f"ERROR: '{row[current_column_name]}' is not one of the valid record types: {RECORD_TYPE_ALLOWED_VALUES}"
                         )
                         is_row_valid = False
-                elif current_column_name.lower() in PACKAGE_CONTENTS_COLUMN_NAME:
-                    fieldnames[
-                        fieldnames.index(current_column_name)
-                    ] = PACKAGE_CONTENTS_STANDARD_KEY
-                    output_column_name = PACKAGE_CONTENTS_STANDARD_KEY
-                    record_type = row.get(RECORD_TYPE_STANDARD_KEY, "").strip().lower()
-                    if row[current_column_name]:
-                        if record_type != "package":
-                            logging.error(
-                                f"ERROR: row #{row_number}: tried to set '{current_column_name}' for a non-package row. Set '{PACKAGE_CONTENTS_STANDARD_KEY}' to 'package' to create packages."
-                            )
-                            is_row_valid = False
-                        row[current_column_name] = json.loads(row[current_column_name])
-                        if not _verify_schema(
-                            row[current_column_name], PACKAGE_CONTENTS_SCHEMA
-                        ):
-                            logging.error(
-                                f"ERROR: {row[current_column_name]} is not in package contents format"
-                            )
-                            is_row_valid = False
                 elif include_additional_columns:
                     output_column_name = current_column_name
 
@@ -270,17 +245,19 @@ def get_and_verify_fileinfos_from_tsv_manifest(
 
 
 def get_and_verify_fileinfos_from_manifest(
-    manifest_file, include_additional_columns=False
+    manifest_file, manifest_file_delimiter=None, include_additional_columns=False
 ):
     """
     Wrapper for above function to determine the delimiter based on file extention
     """
-    manifest_file_ext = os.path.splitext(manifest_file)
-    if manifest_file_ext[-1].lower() == ".tsv":
-        manifest_file_delimiter = "\t"
-    else:
-        # default, assume CSV
-        manifest_file_delimiter = ","
+    # if delimiter not specified, try to get based on file ext
+    if not manifest_file_delimiter:
+        manifest_file_ext = os.path.splitext(manifest_file)
+        if manifest_file_ext[-1].lower() == ".tsv":
+            manifest_file_delimiter = "\t"
+        else:
+            # default, assume CSV
+            manifest_file_delimiter = ","
 
     return get_and_verify_fileinfos_from_tsv_manifest(
         manifest_file=manifest_file,
@@ -324,13 +301,23 @@ def _write_csv(filename, files, fieldnames=None):
     return filename
 
 
-def _index_record(indexclient, mds, replace_urls, thread_control, fi):
+def _index_record(
+    indexclient,
+    mds,
+    replace_urls,
+    thread_control,
+    submit_additional_metadata_columns,
+    fi,
+):
     """
-    Index single file
+    Index a single file, and submit additional metadata to the metadata service if provided
 
     Args:
         indexclient(IndexClient): indexd client
+        mds(Gen3Metadata): optional Gen3Metadata instance
         replace_urls(bool): replace urls or not
+        thread_num(int): number of threads for indexing
+        submit_additional_metadata_columns(bool): whether to submit additional metadata to the metadata service
         fi(dict): file info
 
     Returns:
@@ -501,25 +488,16 @@ def _index_record(indexclient, mds, replace_urls, thread_control, fi):
             )
         )
 
-    # submit package metadata to metadata service
-    if index_success and fi.get(RECORD_TYPE_STANDARD_KEY) == "package":
+    # submit additional metadata to the metadata service
+    if submit_additional_metadata_columns and index_success:
         try:
             if not mds:
                 raise Exception(
-                    "Can not create package metadata when using indexd basic auth"
+                    "Can not submit to the metadata service when using indexd basic auth"
                 )
-
-            url = doc.urls[0]  # assume single URL for packages
-            file_name = doc.file_name if doc.file_name else os.path.basename(url)
-            mds.submit_package_metadata(
-                guid=doc.did,
-                file_name=file_name,
-                file_size=doc.size,
-                hashes=doc.hashes,
-                authz=doc.authz,
-                url=url,
-                contents=fi.get(PACKAGE_CONTENTS_STANDARD_KEY) or None,
-            )
+            metadata = mds._prepare_metadata(fi, doc)
+            if metadata:
+                mds.create(guid=doc.did, metadata=metadata, overwrite=True)
         except Exception as e:
             # Don't break, but delete indexd record
             exc_info = sys.exc_info()
@@ -561,7 +539,7 @@ def index_object_manifest(
     replace_urls=True,
     manifest_file_delimiter=None,
     output_filename="indexing-output-manifest.csv",
-    # TODO should be `indexing-output-manifest.tsv` if input is tsv
+    submit_additional_metadata_columns=False,
 ):
     """
     Loop through all the files in the manifest, update/create records in indexd
@@ -575,6 +553,7 @@ def index_object_manifest(
         replace_urls(bool): flag to indicate if replace urls or not
         manifest_file_delimiter(str): manifest's delimiter
         output_filename(str): output file name for manifest
+        submit_additional_metadata_columns(bool): whether to submit additional metadata to the metadata service
 
     Returns:
         files(list(dict)): list of file info
@@ -606,14 +585,18 @@ def index_object_manifest(
     indexclient = client.IndexClient(commons_url, "v0", auth=auth)
 
     if isinstance(auth, tuple):  # basic auth
-        # TODO print warning (packages)
-        # TODO document
+        if submit_additional_metadata_columns:
+            logging.warning(
+                f"'submit_additional_metadata_columns' is on, but using indexd basic auth. Will not be able to submit to the metadata service. To create metadata, use Gen3Auth instance instead."
+            )
         mds = None
     else:  # Gen3Auth
         mds = Gen3Metadata(auth_provider=auth)
 
     try:
-        files, headers = get_and_verify_fileinfos_from_manifest(manifest_file)
+        files, headers = get_and_verify_fileinfos_from_manifest(
+            manifest_file, manifest_file_delimiter, include_additional_columns=True
+        )
     except Exception as e:
         exc_info = sys.exc_info()
         traceback.print_exception(*exc_info)
@@ -632,7 +615,14 @@ def index_object_manifest(
     pool = ThreadPool(thread_num)
 
     thread_control = ThreadControl(num_total_files=len(files))
-    part_func = partial(_index_record, indexclient, mds, replace_urls, thread_control)
+    part_func = partial(
+        _index_record,
+        indexclient,
+        mds,
+        replace_urls,
+        thread_control,
+        submit_additional_metadata_columns,
+    )
 
     try:
         pool.map_async(part_func, files).get()
@@ -662,10 +652,15 @@ def index_object_manifest(
     required=True,
 )
 @click.option("--manifest_file", help="The path to input manifest")
-@click.option("--thread_num", type=int, help="Number of threads", default=1)
+@click.option("--thread_num", type=int, help="Number of threads (default 1)", default=1)
 @click.option("--api_key", help="path to api key")
 @click.option("--auth", help="basic auth")
-@click.option("--replace_urls", type=bool, help="Replace urls or not", default=False)
+@click.option(
+    "--replace_urls",
+    type=bool,
+    help="If supplied, will replace urls for existing records. e.g. existing urls will be overwritten by the new ones (default False)",
+    default=False,
+)
 @click.option(
     "--manifest_file_delimiter",
     help="string character that delimites the file (tab or comma). Defaults to tab.",
@@ -673,7 +668,7 @@ def index_object_manifest(
 )
 @click.option(
     "--out_manifest_file",
-    help="The path to output manifest",
+    help="The path to output manifest (default indexing-output-manifest.csv)",
     default="indexing-output-manifest.csv",
 )
 def index_object_manifest_cli(
@@ -702,7 +697,6 @@ def index_object_manifest_cli(
         out_manifest_file(str): path to the output manifest
 
     """
-    # TODO cli should work with token auth for packages
 
     if api_key:
         auth = Gen3Auth(commons_url, refresh_file=api_key)

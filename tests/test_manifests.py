@@ -1,5 +1,6 @@
 import asyncio
 import os
+import pytest
 from unittest.mock import MagicMock, patch
 
 from gen3.tools.indexing import async_verify_object_manifest
@@ -481,23 +482,63 @@ def test_index_non_guid_manifest(gen3_index, indexd_server):
     assert rec1["urls"] == ["s3://pdcdatastore/test1.raw"]
 
 
-def test_index_manifest_packages(gen3_index, gen3_auth):
+def test_index_manifest_additional_metadata(gen3_index, gen3_auth):
     """
-    TODO
+    When `submit_additional_metadata_columns` is set, the data for any
+    provided column that is not in indexd should be submitted to the
+    metadata service.
     """
-    # TODO dynamically create valid manifest?
     with patch(
         "gen3.tools.indexing.index_manifest.Gen3Metadata.create", MagicMock()
     ) as mock_mds_create:
         index_object_manifest(
-            manifest_file=CURRENT_DIR + "/test_data/packages_manifest.tsv",
+            manifest_file=CURRENT_DIR + "/test_data/manifest_additional_metadata.tsv",
             auth=gen3_auth,
             commons_url=gen3_index.client.url,
             thread_num=1,
             replace_urls=False,
+            submit_additional_metadata_columns=True,
+        )
+        mds_records = {
+            kwargs["guid"]: kwargs["metadata"]
+            for (_, kwargs) in mock_mds_create.call_args_list
+        }
+        assert len(mds_records) == 1
+
+    indexd_records = {r["did"]: r for r in gen3_index.get_all_records()}
+    assert len(indexd_records) == 1
+
+    guid = list(indexd_records.keys())[0]
+    assert indexd_records[guid]["file_name"] == "file.txt"
+    assert indexd_records[guid]["size"] == 363455714
+    assert indexd_records[guid]["hashes"] == {"md5": "473d83400bc1bc9dc635e334faddf33c"}
+    assert indexd_records[guid]["authz"] == ["/open"]
+    assert indexd_records[guid]["urls"] == ["s3://my-data-bucket/dg.1234/path/file.txt"]
+    assert guid in mds_records
+    assert mds_records[guid] == {"fancy_column": "fancy_data"}
+
+
+def test_index_manifest_packages(gen3_index, gen3_auth):
+    """
+    When `record_type == package`, packages should be created in the metadata service and any `package_contents` values should be parsed and submitted.
+    """
+    with patch(
+        "gen3.tools.indexing.index_manifest.Gen3Metadata.create", MagicMock()
+    ) as mock_mds_create:
+        index_object_manifest(
+            manifest_file=CURRENT_DIR + "/test_data/packages_manifest_ok.tsv",
+            auth=gen3_auth,
+            commons_url=gen3_index.client.url,
+            thread_num=1,
+            replace_urls=False,
+            submit_additional_metadata_columns=True,
         )
 
-        mds_records = {r[0][0]: r[0][1] for r in mock_mds_create.call_args_list}
+        print("MDS create calls:", mock_mds_create.call_args_list)
+        mds_records = {
+            kwargs["guid"]: kwargs["metadata"]
+            for (_, kwargs) in mock_mds_create.call_args_list
+        }
         assert len(mds_records) == 4
 
     indexd_records = {r["did"]: r for r in gen3_index.get_all_records()}
@@ -516,7 +557,7 @@ def test_index_manifest_packages(gen3_index, gen3_auth):
     assert indexd_records[guid]["hashes"] == {"md5": "473d83400bc1bc9dc635e334faddf33c"}
     assert indexd_records[guid]["authz"] == ["/open/packages"]
     assert indexd_records[guid]["urls"] == [
-        "s3://my-data-bucket/dg.1994/4bc4e600-1eda-4f81-aa2b-7c33dad78bec/package.zip"
+        "s3://my-data-bucket/dg.1234/path/package.zip"
     ]
 
     assert guid in mds_records
@@ -530,12 +571,12 @@ def test_index_manifest_packages(gen3_index, gen3_auth):
     assert mds_records[guid]["package"]["contents"] == [
         {
             "hashes": {"md5sum": "2cd6ee2c70b0bde53fbe6cac3c8b8bb1"},
-            "file_name": "c.txt",
+            "file_name": "yes.txt",
             "size": 35,
         },
         {
             "hashes": {"md5sum": "30cf3d7d133b08543cb6c8933c29dfd7"},
-            "file_name": "b.txt",
+            "file_name": "hi.txt",
             "size": 35,
         },
     ]
@@ -570,5 +611,53 @@ def test_index_manifest_packages(gen3_index, gen3_auth):
     guid = new_guids[0]
     assert guid in mds_records
 
-    # TODO: bad contents
-    # TODO: missing field
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        # invalid package_contents format
+        {
+            "manifest": "packages_manifest_bad_format.tsv",
+            "expected_error_msgs": [
+                "Can not create package metadata",
+                "Metadata is not valid",
+                "not in package contents format",
+            ],
+        },
+        # specify package_contents for a non-package row
+        {
+            "manifest": "packages_manifest_not_a_package.tsv",
+            "expected_error_msgs": [
+                "Can not create package metadata",
+                "Metadata is not valid",
+                "tried to set 'package_contents' for a non-package row",
+            ],
+        },
+    ],
+)
+def test_index_manifest_packages_failure(data, gen3_index, gen3_auth, caplog):
+    """
+    Test that the expected errors are thrown when the manifest contains invalid package rows.
+    """
+    with patch(
+        "gen3.tools.indexing.index_manifest.Gen3Metadata.create", MagicMock()
+    ) as mock_mds_create:
+        index_object_manifest(
+            manifest_file=f"{CURRENT_DIR}/test_data/{data['manifest']}",
+            auth=gen3_auth,
+            commons_url=gen3_index.client.url,
+            thread_num=1,
+            replace_urls=False,
+            submit_additional_metadata_columns=True,
+        )
+        mds_records = {
+            kwargs["guid"]: kwargs["metadata"]
+            for (_, kwargs) in mock_mds_create.call_args_list
+        }
+        assert len(mds_records) == 0
+
+    indexd_records = {r["did"]: r for r in gen3_index.get_all_records()}
+    assert len(indexd_records) == 0
+
+    for error in data["expected_error_msgs"]:
+        assert error in caplog.text

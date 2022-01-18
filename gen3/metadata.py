@@ -5,14 +5,31 @@ import aiohttp
 import backoff
 from datetime import datetime
 import requests
-import urllib.parse
 import logging
+import json
 import os
-import sys
 from urllib.parse import urlparse
 
-from gen3.utils import append_query_params, DEFAULT_BACKOFF_SETTINGS, raise_for_status
+from gen3.utils import (
+    append_query_params,
+    DEFAULT_BACKOFF_SETTINGS,
+    raise_for_status,
+    _verify_schema,
+)
 from gen3.auth import Gen3Auth
+from gen3.tools.indexing.manifest_columns import (
+    RECORD_TYPE_STANDARD_KEY,
+    GUID_COLUMN_NAMES,
+    FILENAME_COLUMN_NAMES,
+    SIZE_COLUMN_NAMES,
+    MD5_COLUMN_NAMES,
+    ACLS_COLUMN_NAMES,
+    URLS_COLUMN_NAMES,
+    AUTHZ_COLUMN_NAMES,
+    PREV_GUID_COLUMN_NAMES,
+    PACKAGE_CONTENTS_STANDARD_KEY,
+    PACKAGE_CONTENTS_SCHEMA,
+)
 
 
 class Gen3Metadata:
@@ -401,24 +418,108 @@ class Gen3Metadata:
 
         return response.json()
 
-    def submit_package_metadata(
-        self, guid, file_name, file_size, hashes, authz, url, contents
+    def create_object(self, file_name, authz, metadata=None, aliases=None):
+        url = self.endpoint + "/objects"
+        body = {
+            "file_name": file_name,
+            "authz": authz,
+            "metadata": metadata,
+            "aliases": aliases,
+        }
+        response = requests.post(url, json=body, auth=self._auth_provider)
+        raise_for_status(response)
+        data = response.json()
+        return data["guid"], data["upload_url"]
+
+    def _prepare_metadata(self, metadata, indexd_doc):
+        """
+        Validate and generate the provided metadata for submission to the metadata
+        service.
+
+        If the record is of type "package", also prepare package metadata.
+
+        Args:
+            metadata (dict): metadata provided by the submitter
+            indexd_doc (dict): the indexd document created for this data
+
+        Returns:
+            dict: metadata ready to be submitted to the metadata service
+        """
+
+        def _extract_non_indexd_metadata(metadata):
+            """
+            Get the "additional metadata": metadata that was provided but is
+            not stored in indexd, so should be stored in the metadata service.
+            """
+            return {
+                k: v
+                for k, v in metadata.items()
+                if k.lower()
+                not in GUID_COLUMN_NAMES
+                + FILENAME_COLUMN_NAMES
+                + SIZE_COLUMN_NAMES
+                + MD5_COLUMN_NAMES
+                + ACLS_COLUMN_NAMES
+                + URLS_COLUMN_NAMES
+                + AUTHZ_COLUMN_NAMES
+                + PREV_GUID_COLUMN_NAMES
+            }
+
+        to_submit = _extract_non_indexd_metadata(metadata)
+
+        # some additional metadata columns must be validated
+        valid = True
+
+        # validate package columns
+        record_type = to_submit.pop(RECORD_TYPE_STANDARD_KEY, "").strip().lower()
+        package_contents = to_submit.pop(PACKAGE_CONTENTS_STANDARD_KEY, None)
+        if record_type == "package":
+            if package_contents:
+                package_contents = json.loads(package_contents)
+                if not _verify_schema(package_contents, PACKAGE_CONTENTS_SCHEMA):
+                    logging.error(
+                        f"ERROR: {package_contents} is not in package contents format"
+                    )
+                    valid = False
+            # generate package metadata
+            package_metadata = self._get_package_metadata(
+                indexd_doc.file_name,
+                indexd_doc.size,
+                indexd_doc.hashes,
+                indexd_doc.authz,
+                indexd_doc.urls,
+                package_contents,
+            )
+            to_submit.update(package_metadata)
+        elif package_contents:
+            logging.error(
+                f"ERROR: tried to set '{PACKAGE_CONTENTS_STANDARD_KEY}' for a non-package row. Ignoring '{PACKAGE_CONTENTS_STANDARD_KEY}'. Set '{RECORD_TYPE_STANDARD_KEY}' to 'package' to create packages."
+            )
+            valid = False
+
+        if not valid:
+            raise Exception(f"Metadata is not valid: {metadata}")
+
+        return to_submit
+
+    def _get_package_metadata(
+        self, file_name, file_size, hashes, authz, urls, contents
     ):
         """
-        Create an MDS object by creating an MDS record with the expected
-        object fields.
-
-        Note: we can't hit the MDS /objects API directly because the file is
-        already uploaded. TODO: update the MDS objects API to not create
-        upload URLs if the relevant data is provided.
+        The MDS /objects API currently expects files that have not been
+        uploaded yet. For files we only needs to index, not upload, create
+        object records manually by generating the expected object fields.
+        TODO: update the MDS objects API to not create upload URLs if the
+        relevant data is provided.
         """
-
-        parsed = urlparse(url)
-        bucket_url = f"s3://{parsed.netloc}"
-
-        now = str(datetime.utcnow())
-        uploader = self._auth_provider._access_token_info.get("sub")
+        _url = urls[0]  # pick a URL to get the file name and bucket from
+        if not file_name:
+            file_name = os.path.basename(_url)
         _, file_ext = os.path.splitext(file_name)
+        parsed = urlparse(_url)
+        bucket_url = f"s3://{parsed.netloc}"
+        uploader = self._auth_provider._access_token_info.get("sub")
+        now = str(datetime.utcnow())
         metadata = {
             "type": "package",
             "package": {
@@ -428,7 +529,7 @@ class Gen3Metadata:
                 "updated_time": now,
                 "size": file_size,
                 "hashes": hashes,
-                "contents": contents,
+                "contents": contents or None,
             },
             "_resource_paths": authz,
             "_uploader_id": uploader,
@@ -437,4 +538,4 @@ class Gen3Metadata:
             "_file_extension": file_ext,
             "_upload_status": "uploaded",
         }
-        self.create(guid, metadata, overwrite=True)
+        return metadata

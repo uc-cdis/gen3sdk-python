@@ -49,7 +49,6 @@ TYPE_COLUMN_NAME = ["type", "types"]
 
 ALIASES_COLUMN_NAME = ["alias", "aliases"]
 
-PACKAGE_CONTENTS_COLUMN_NAME = ["package_contents", "contents"]
 PACKAGE_CONTENTS_STANDARD_KEY = "package_contents"
 PACKAGE_CONTENTS_SCHEMA = {
     "type": "array",

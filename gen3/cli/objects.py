@@ -7,8 +7,8 @@ import sys
 from urllib.parse import urlparse
 
 from gen3.tools import indexing
-from gen3.tools.indexing import (
-    is_valid_manifest_format,
+from gen3.tools.indexing.validate_manifest_format import is_valid_manifest_format
+from gen3.tools.indexing.index_manifest import (
     index_object_manifest,
     delete_all_guids,
 )
@@ -207,7 +207,7 @@ def objects_manifest_validate_format(
 @click.option(
     "--thread-num",
     "thread_num",
-    help="number of threads for indexing",
+    help="number of threads for indexing (default 8)",
     default=8,
     type=int,
 )
@@ -223,8 +223,33 @@ def objects_manifest_validate_format(
     is_flag=True,
     default=False,
 )
+@click.option(
+    "--manifest_file_delimiter",
+    help="string character that delimites the file (tab or comma). Defaults to tab.",
+    default="\t",
+)
+@click.option(
+    "--out_manifest_file",
+    help="The path to output manifest (default indexing-output-manifest.csv)",
+    default="indexing-output-manifest.csv",
+)
+@click.option(
+    "--submit-additional-metadata-columns",
+    "submit_additional_metadata_columns",
+    help="If supplied, will submit additional metadata to the metadata service (default True)",
+    is_flag=True,
+    default=True,
+)
 @click.pass_context
-def objects_manifest_publish(ctx, file, thread_num, append_urls):
+def objects_manifest_publish(
+    ctx,
+    file,
+    thread_num,
+    append_urls,
+    manifest_file_delimiter,
+    out_manifest_file,
+    submit_additional_metadata_columns,
+):
     auth = ctx.obj["auth_factory"].get()
     loop = asyncio.get_event_loop()
 
@@ -241,6 +266,9 @@ def objects_manifest_publish(ctx, file, thread_num, append_urls):
         thread_num=thread_num,
         auth=auth,
         replace_urls=not append_urls,
+        manifest_file_delimiter=manifest_file_delimiter,
+        output_filename=out_manifest_file,
+        submit_additional_metadata_columns=submit_additional_metadata_columns,
     )
 
 
