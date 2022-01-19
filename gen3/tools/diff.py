@@ -7,9 +7,8 @@ TODO: Able to handle situations where only specific columns should be compared
 import os
 import logging
 import csv
-import copy
 
-from collections import OrderedDict
+from datetime import datetime
 
 
 def manifest_diff(
@@ -40,28 +39,38 @@ def manifest_diff(
         None
     """
 
+    start = datetime.now()
+
     files = files or []
     if not files:
         logging.info(f"Iterating over manifests in {directory} directory")
         for file in sorted(os.listdir(directory)):
             files.append(os.path.join(directory, file))
 
+    start1 = datetime.now()
     content = _precheck_manifests(
         allow_additional_columns=allow_additional_columns,
         files=files,
     )
+    print(datetime.now() - start1)
 
     if content:
+        start2 = datetime.now()
         diff_content = _compare_manifest_columns(
             allow_additional_columns=allow_additional_columns,
             manifest_content=content,
         )
+        print(datetime.now() - start2)
 
+        start3 = datetime.now()
         _write_csv(
             output_manifest_file_delimiter=output_manifest_file_delimiter,
             output_manifest=output_manifest,
             diff_content=diff_content,
         )
+        print(datetime.now() - start3)
+
+    print(datetime.now() - start)
 
 
 def _precheck_manifests(
@@ -70,18 +79,31 @@ def _precheck_manifests(
     **kwargs,
 ):
     """
+    Precheck of all manifests for:
+    - two files given
+    - files share same extension
+    - if additional columns not allowed, check for all headers are matching between two files
+
     Args:
         allow_additional_columns(bool)
         files(list[str])
 
     Returns:
-        List of CSVDict and headers if pass all checks
+        if pass all checks, dict(list, set): CSV content and headers
+        else, bool False
+
+        {
+            csvdict:[
+                [{"header1": "", "header2": "", ...}], [{}], ...
+            ],
+            headers: {"header1", "header2", ...}
+        }
     """
 
     logging.info(f"Prechecking manifest files: {files}")
 
-    if not len(files) > 1:
-        logging.error("Must take difference of more than file")
+    if not len(files) == 2:
+        logging.error("Must take difference of two files")
         return False
 
     tsv_files = [file_name for file_name in files if ".tsv" in file_name.lower()]
@@ -111,32 +133,31 @@ def _precheck_manifests(
             for row in csv_reader:
                 content.append(row)
 
-            manifest_content.append({"csvdict": content, "headers": headers})
+            manifest_content.append(content)
 
-    return manifest_content
+    return {"csvdict": manifest_content, "headers": headers}
 
 
 def _compare_manifest_columns(
     allow_additional_columns,
-    manifest_content=[],
+    manifest_content={},
     **kwargs,
 ):
     """
     Args:
-        manifest_content(list(dict)): List of CSVDict and headers
+        manifest_content(dict(list, set)): Dict of CSV list and headers set
         allow_additional_columns(bool)
 
     Returns:
-        Dict containing list of diff and headers
+        Dict containing dict of diff list and headers set
     """
 
-    headers = manifest_content[0]["headers"]
+    headers = manifest_content["headers"]
     diff_content = []
-    # TODO make it so that not limited to only two list being compared
-    # also make comparing logic more efficient
-    # also make it so only certain headers being compared
-    for i in manifest_content[0]["csvdict"]:
-        if i not in manifest_content[1]["csvdict"]:
+    # TODO make comparing logic more efficient
+    # ability to only have certain headers compared
+    for i in manifest_content["csvdict"][0]:
+        if i not in manifest_content["csvdict"][1]:
             diff_content.append(i)
 
     return {"headers": headers, "csvdict": diff_content}
@@ -179,3 +200,6 @@ def _write_csv(output_manifest_file_delimiter, output_manifest, diff_content={})
             output_writer.writerow(record)
 
         logging.info(f"Finished writing merged manifest to {output_manifest}")
+
+
+manifest_diff(directory="./gen3sdk-python/gen3/tools/test")
