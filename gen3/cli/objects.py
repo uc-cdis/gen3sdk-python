@@ -231,13 +231,15 @@ def objects_manifest_validate_format(
     show_default=True,
 )
 @click.option(
-    "--manifest_file_delimiter",
+    "--manifest-file-delimiter",
+    "manifest_file_delimiter",
     help="string character that delimites the file (tab or comma). Defaults to tab.",
     default="\t",
     show_default=True,
 )
 @click.option(
-    "--out_manifest_file",
+    "--out-manifest-file",
+    "out_manifest_file",
     help="The path to output manifest",
     default="indexing-output-manifest.csv",
     show_default=True,

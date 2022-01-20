@@ -27,9 +27,29 @@ from gen3.tools.indexing.manifest_columns import (
     URLS_COLUMN_NAMES,
     AUTHZ_COLUMN_NAMES,
     PREV_GUID_COLUMN_NAMES,
-    PACKAGE_CONTENTS_STANDARD_KEY,
-    PACKAGE_CONTENTS_SCHEMA,
 )
+
+
+PACKAGE_CONTENTS_STANDARD_KEY = "package_contents"
+PACKAGE_CONTENTS_SCHEMA = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "file_name": {
+                "type": "string",
+            },
+            "size": {
+                "type": "number",
+            },
+            "hashes": {
+                "type": "object",
+            },
+        },
+        "required": ["file_name"],
+        "additionalProperties": True,
+    },
+}
 
 
 class Gen3Metadata:
