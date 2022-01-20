@@ -214,6 +214,16 @@ class Gen3Auth(AuthBase):
         else:
             self.endpoint = endpoint_from_token(self._refresh_token["api_key"])
 
+    @property
+    def _token_info(self):
+        """
+        Wrapper to fix intermittent errors when the token is being refreshed
+        and `_access_token_info` == None
+        """
+        if not self._access_token_info:
+            self.refresh_access_token()
+        return self._access_token_info
+
     def __call__(self, request):
         """Adds authorization header to the request
 

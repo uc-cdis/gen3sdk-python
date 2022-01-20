@@ -518,7 +518,7 @@ class Gen3Metadata:
         _, file_ext = os.path.splitext(file_name)
         parsed = urlparse(_url)
         bucket_url = f"s3://{parsed.netloc}"
-        uploader = self._auth_provider._access_token_info.get("sub")
+        uploader = self._auth_provider._token_info.get("sub")
         now = str(datetime.utcnow())
         metadata = {
             "type": "package",

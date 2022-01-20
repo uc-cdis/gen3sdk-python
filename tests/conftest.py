@@ -30,7 +30,7 @@ class MockAuth:
     def __init__(self):
         self.endpoint = "https://example.commons.com"
         self.refresh_token = {"api_key": "123"}
-        self._access_token_info = {"sub": "42"}
+        self._token_info = {"sub": "42"}
 
     @property
     def __class__(self):
