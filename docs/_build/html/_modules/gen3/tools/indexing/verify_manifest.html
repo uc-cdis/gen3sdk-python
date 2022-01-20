@@ -238,7 +238,7 @@
     <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
     <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;start time: </span><span class="si">{</span><span class="n">start_time</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-    <span class="c1"># if delimter not specified, try to get based on file ext</span>
+    <span class="c1"># if delimiter not specified, try to get based on file ext</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">manifest_file_delimiter</span><span class="p">:</span>
         <span class="n">file_ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">file_ext</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.tsv&quot;</span><span class="p">:</span>
