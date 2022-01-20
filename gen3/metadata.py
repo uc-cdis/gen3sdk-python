@@ -483,6 +483,7 @@ class Gen3Metadata:
                     valid = False
             # generate package metadata
             package_metadata = self._get_package_metadata(
+                metadata,
                 indexd_doc.file_name,
                 indexd_doc.size,
                 indexd_doc.hashes,
@@ -503,7 +504,7 @@ class Gen3Metadata:
         return to_submit
 
     def _get_package_metadata(
-        self, file_name, file_size, hashes, authz, urls, contents
+        self, submitted_metadata, file_name, file_size, hashes, authz, urls, contents
     ):
         """
         The MDS /objects API currently expects files that have not been
@@ -512,12 +513,34 @@ class Gen3Metadata:
         TODO: update the MDS objects API to not create upload URLs if the
         relevant data is provided.
         """
-        _url = urls[0]  # pick a URL to get the file name and bucket from
+
+        def _get_bucket_and_filename_from_urls(submitted_metadata, urls):
+            file_name = ""
+            bucket_url = ""
+            if not urls:
+                logging.warning(f"No URLs provided for: {submitted_metadata}")
+            for url in urls:
+                _file_name = os.path.basename(url)
+                parsed = urlparse(url)
+                _bucket_url = f"{parsed.scheme}://{parsed.netloc}"
+                if not file_name:
+                    file_name = _file_name
+                    bucket_url = _bucket_url
+                else:
+                    if file_name != _file_name or _bucket_url != bucket_url:
+                        logging.warning(
+                            f"Received multiple URLs with different bucket names or file names; will use the first URL: {submitted_metadata}"
+                        )
+                        break
+            return file_name, bucket_url
+
+        file_name_from_url, bucket_url = _get_bucket_and_filename_from_urls(
+            submitted_metadata, urls
+        )
         if not file_name:
-            file_name = os.path.basename(_url)
+            file_name = file_name_from_url
+
         _, file_ext = os.path.splitext(file_name)
-        parsed = urlparse(_url)
-        bucket_url = f"{parsed.scheme}://{parsed.netloc}"
         uploader = self._auth_provider._token_info.get("sub")
         now = str(datetime.utcnow())
         metadata = {
