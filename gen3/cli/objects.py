@@ -36,6 +36,7 @@ def manifest():
     default="object-manifest.csv",
     help="filename for output",
     type=click.Path(writable=True),
+    show_default=True,
 )
 @click.option(
     "--num-processes",
@@ -43,6 +44,7 @@ def manifest():
     default=4,
     help="Number of parallel Python processes to start",
     type=int,
+    show_default=True,
 )
 @click.option(
     "--max-concurrent-requests",
@@ -50,6 +52,7 @@ def manifest():
     help="Maximum concurrent requests to Gen3",
     default=24,
     type=int,
+    show_default=True,
 )
 @click.pass_context
 def objects_manifest_read(ctx, output_file, num_processes, max_concurrent_requests):
@@ -77,6 +80,7 @@ def objects_manifest_read(ctx, output_file, num_processes, max_concurrent_reques
     help="Maximum concurrent requests to Gen3",
     default=24,
     type=int,
+    show_default=True,
 )
 @click.pass_context
 def objects_manifest_verify(ctx, file, max_concurrent_requests):
@@ -108,7 +112,7 @@ def objects_manifest_verify(ctx, file, max_concurrent_requests):
     "--allowed-protocols",
     "allowed_protocols",
     help="""
-    space-delimited string list of allowed protocols for url validation. (default: "s3 gs")
+    space-delimited string list of allowed protocols for url validation.
 
     Note that if allowed_protocols is provided, url values will only be
     validated using the provided protocols (e.g. if
@@ -116,12 +120,13 @@ def objects_manifest_verify(ctx, file, max_concurrent_requests):
     validating "s3://valid_bucket/valid_key" url)
     """,
     default="s3 gs",
+    show_default=True,
 )
 @click.option(
     "--allow-base64-encoded-md5",
     "allow_base64_encoded_md5",
     help="""
-    whether or not Base64 encoded md5 values are allowed. (default: False)
+    whether or not Base64 encoded md5 values are allowed.
 
     if False, only hexadecimal encoded 128-bit md5 values are considered valid,
     and Base64 encoded values will be logged as errors.
@@ -130,13 +135,13 @@ def objects_manifest_verify(ctx, file, max_concurrent_requests):
     valid
     """,
     is_flag=True,
-    default=False,
+    show_default=True,
 )
 @click.option(
     "--error-on-empty-url",
     "error_on_empty_url",
     help="""
-    whether to treat completely empty url values as errors (default: False)
+    whether to treat completely empty url values as errors
 
     for the following example manifest, if error_on_empty_url is False,
     a warning would be logged for the completely empty url value on
@@ -160,14 +165,14 @@ def objects_manifest_verify(ctx, file, max_concurrent_requests):
     ```
     """,
     is_flag=True,
-    default=False,
+    show_default=True,
 )
 @click.option(
     "--line-limit",
     "line_limit",
     help="""
     number of lines in manifest to validate including the header. if
-    not provided, every line is validated. (default: None)
+    not provided, every line is validated.
 
     This can be helpful as a way to only attempt validation of a few rows to get
     an idea if there are large format issues without needing to run against every
@@ -175,6 +180,7 @@ def objects_manifest_verify(ctx, file, max_concurrent_requests):
     """,
     default=None,
     type=int,
+    show_default=True,
 )
 @click.pass_context
 def objects_manifest_validate_format(
@@ -207,9 +213,10 @@ def objects_manifest_validate_format(
 @click.option(
     "--thread-num",
     "thread_num",
-    help="number of threads for indexing (default 8)",
+    help="number of threads for indexing",
     default=8,
     type=int,
+    show_default=True,
 )
 @click.option(
     "--append-urls",
@@ -221,24 +228,19 @@ def objects_manifest_validate_format(
     By default the newly provided urls will REPLACE existing urls
     """,
     is_flag=True,
-    default=False,
+    show_default=True,
 )
 @click.option(
     "--manifest_file_delimiter",
     help="string character that delimites the file (tab or comma). Defaults to tab.",
     default="\t",
+    show_default=True,
 )
 @click.option(
     "--out_manifest_file",
-    help="The path to output manifest (default indexing-output-manifest.csv)",
+    help="The path to output manifest",
     default="indexing-output-manifest.csv",
-)
-@click.option(
-    "--submit-additional-metadata-columns",
-    "submit_additional_metadata_columns",
-    help="If supplied, will submit additional metadata to the metadata service (default True)",
-    is_flag=True,
-    default=True,
+    show_default=True,
 )
 @click.pass_context
 def objects_manifest_publish(
@@ -248,7 +250,6 @@ def objects_manifest_publish(
     append_urls,
     manifest_file_delimiter,
     out_manifest_file,
-    submit_additional_metadata_columns,
 ):
     auth = ctx.obj["auth_factory"].get()
     loop = asyncio.get_event_loop()
@@ -268,7 +269,7 @@ def objects_manifest_publish(
         replace_urls=not append_urls,
         manifest_file_delimiter=manifest_file_delimiter,
         output_filename=out_manifest_file,
-        submit_additional_metadata_columns=submit_additional_metadata_columns,
+        submit_additional_metadata_columns=True,
     )
 
 

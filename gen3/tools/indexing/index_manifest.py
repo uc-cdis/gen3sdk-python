@@ -652,24 +652,29 @@ def index_object_manifest(
     required=True,
 )
 @click.option("--manifest_file", help="The path to input manifest")
-@click.option("--thread_num", type=int, help="Number of threads (default 1)", default=1)
+@click.option(
+    "--thread_num", type=int, help="Number of threads", default=1, show_default=True
+)
 @click.option("--api_key", help="path to api key")
 @click.option("--auth", help="basic auth")
 @click.option(
     "--replace_urls",
     type=bool,
-    help="If supplied, will replace urls for existing records. e.g. existing urls will be overwritten by the new ones (default False)",
+    help="If supplied, will replace urls for existing records. e.g. existing urls will be overwritten by the new ones",
     default=False,
+    show_default=True,
 )
 @click.option(
     "--manifest_file_delimiter",
     help="string character that delimites the file (tab or comma). Defaults to tab.",
     default="\t",
+    show_default=True,
 )
 @click.option(
     "--out_manifest_file",
-    help="The path to output manifest (default indexing-output-manifest.csv)",
+    help="The path to output manifest",
     default="indexing-output-manifest.csv",
+    show_default=True,
 )
 def index_object_manifest_cli(
     commons_url,
