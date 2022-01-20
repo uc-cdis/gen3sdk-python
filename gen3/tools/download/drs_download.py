@@ -44,6 +44,8 @@ from gen3.metadata import Gen3Metadata
 
 DEFAULT_EXPIRE: timedelta = timedelta(hours=1)
 
+PACKAGE_EXTENSIONS = [".zip"]
+
 logger = get_logger("drs-pull", log_level="warning")
 
 
@@ -555,7 +557,6 @@ def download_file_from_url(
         else InvisibleProgress()
     )
     try:
-        print("This is the filename", filename)
         with open(filename, "wb") as file:
             for data in response.iter_content(block_size):
                 progress_bar.update(len(data))
@@ -574,10 +575,8 @@ def download_file_from_url(
 
 
 def unpackage_object(filepath: str):
-    filename = str(filepath).split("/")[-1]
-    extract_dir = str(filepath).replace(filename, "")
     with zipfile.ZipFile(filepath, "r") as package:
-        package.extractall(extract_dir)
+        package.extractall(os.path.dirname(filepath))
 
 
 def parse_drs_identifier(drs_candidate: str) -> Tuple[str, str, str]:
@@ -1000,10 +999,10 @@ class DownloadManager:
             )
 
             # check if object is a zip file and a package
-            if entry.file_name.split(".")[-1] == "zip":
+            if os.path.splitext(entry.file_name)[-1] in PACKAGE_EXTENSIONS:
                 # if so expand in place
                 mds_entry = self.metadata.get(entry.object_id)
-                if mds_entry["type"] == "package":
+                if mds_entry.get("type") == "package":
                     unpackage_object(filepath)
 
             completed[entry.object_id].status = "downloaded" if res else "error"
