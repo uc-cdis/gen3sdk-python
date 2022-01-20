@@ -16,7 +16,7 @@ def clean_path(path):
 
 
 @click.command()
-@click.argument("path", default="", show_default=True)
+@click.argument("path", default="")
 @click.pass_context
 def ls(ctx, path=""):
     """List the given workspace key"""
