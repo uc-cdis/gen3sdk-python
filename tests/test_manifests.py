@@ -550,6 +550,7 @@ def test_index_manifest_packages(gen3_index, gen3_auth):
     assert guid not in mds_records
 
     # package with all fields provided
+    # S3 URL
     guid = "255e396f-f1f8-11e9-9a07-0a80fada0901"
     assert guid in indexd_records
     assert indexd_records[guid]["file_name"] == "package.zip"
@@ -587,11 +588,16 @@ def test_index_manifest_packages(gen3_index, gen3_auth):
     assert mds_records[guid]["_resource_paths"] == ["/open/packages"]
 
     # package with no "package_contents" provided
+    # GS URL
     guid = "255e396f-f1f8-11e9-9a07-0a80fada0902"
     assert guid in indexd_records
+    assert indexd_records[guid]["urls"] == [
+        "gs://my-data-bucket/dg.1234/path/package.zip"
+    ]
     assert guid in mds_records
     assert mds_records[guid]["type"] == "package"
     assert mds_records[guid]["package"]["contents"] == None
+    assert mds_records[guid]["_bucket"] == "gs://my-data-bucket"
 
     # package with no "file_name" provided
     guid = "255e396f-f1f8-11e9-9a07-0a80fada0903"

@@ -1,6 +1,6 @@
 record_type	guid	md5	size	authz	url	file_name	package_contents
 object	255e396f-f1f8-11e9-9a07-0a80fada0900	473d83400bc1bc9dc635e334faddf33c	363455714	['/open/packages']	s3://my-data-bucket/dg.1234/path/package.zip	package.zip	
 package	255e396f-f1f8-11e9-9a07-0a80fada0901	473d83400bc1bc9dc635e334faddf33c	363455714	['/open/packages']	s3://my-data-bucket/dg.1234/path/package.zip	package.zip	[{"hashes":{"md5sum":"2cd6ee2c70b0bde53fbe6cac3c8b8bb1"},"file_name":"yes.txt","size":35},{"hashes":{"md5sum":"30cf3d7d133b08543cb6c8933c29dfd7"},"file_name":"hi.txt","size":35}]
-package	255e396f-f1f8-11e9-9a07-0a80fada0902	473d83400bc1bc9dc635e334faddf33c	363455714	['/open/packages']	s3://my-data-bucket/dg.1234/path/package.zip	package.zip
+package	255e396f-f1f8-11e9-9a07-0a80fada0902	473d83400bc1bc9dc635e334faddf33c	363455714	['/open/packages']	gs://my-data-bucket/dg.1234/path/package.zip	package.zip
 package	255e396f-f1f8-11e9-9a07-0a80fada0903	473d83400bc1bc9dc635e334faddf33c	363455714	['/open/packages']	s3://my-data-bucket/dg.1234/path/package.zip		[{"hashes":{"md5sum":"2cd6ee2c70b0bde53fbe6cac3c8b8bb1"},"file_name":"yes.txt","size":35},{"hashes":{"md5sum":"30cf3d7d133b08543cb6c8933c29dfd7"},"file_name":"hi.txt","size":35}]
 package		473d83400bc1bc9dc635e334faddf33c	363455714	['/open/packages']	s3://my-data-bucket/dg.1234/path/package.zip	package.zip	[{"hashes":{"md5sum":"2cd6ee2c70b0bde53fbe6cac3c8b8bb1"},"file_name":"yes.txt","size":35},{"hashes":{"md5sum":"30cf3d7d133b08543cb6c8933c29dfd7"},"file_name":"hi.txt","size":35}]
