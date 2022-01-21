@@ -46,7 +46,7 @@ def list_files_or_access(ctx, infile: str, access: bool, object: bool) -> bool:
 
 @click.command()
 @click.argument("infile")
-@click.argument("output_dir", default=".", show_default=True)
+@click.argument("output_dir", default=".")
 @click.option(
     "--no-progress",
     is_flag=True,
@@ -73,7 +73,7 @@ def download_manifest(ctx, infile: str, output_dir: str, no_progress: bool):
 
 @click.command()
 @click.argument("object_id")
-@click.argument("output_dir", default=".", show_default=True)
+@click.argument("output_dir", default=".")
 @click.option(
     "--no-progress",
     is_flag=True,
