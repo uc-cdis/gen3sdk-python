@@ -581,7 +581,7 @@ def test_index_manifest_packages(gen3_index, gen3_auth):
             "size": 35,
         },
     ]
-    assert mds_records[guid]["_bucket"] == "s3://my-data-bucket"
+    assert mds_records[guid]["_buckets"] == ["s3://my-data-bucket"]
     assert mds_records[guid]["_filename"] == "package.zip"
     assert mds_records[guid]["_file_extension"] == ".zip"
     assert mds_records[guid]["_upload_status"] == "uploaded"
@@ -592,20 +592,36 @@ def test_index_manifest_packages(gen3_index, gen3_auth):
     guid = "255e396f-f1f8-11e9-9a07-0a80fada0902"
     assert guid in indexd_records
     assert indexd_records[guid]["urls"] == [
-        "gs://my-data-bucket/dg.1234/path/package.zip"
+        "gs://my-google-data-bucket/dg.1234/path/package.zip"
     ]
     assert guid in mds_records
     assert mds_records[guid]["type"] == "package"
     assert mds_records[guid]["package"]["contents"] == None
-    assert mds_records[guid]["_bucket"] == "gs://my-data-bucket"
+    assert mds_records[guid]["_buckets"] == ["gs://my-google-data-bucket"]
 
     # package with no "file_name" provided
+    # and 2 URLs with different file names.
+    # the file name from the first URL is used as the package file name -
+    # depending on the order of the URLs in the indexd record, it could be
+    # either one
     guid = "255e396f-f1f8-11e9-9a07-0a80fada0903"
     assert guid in indexd_records
     assert indexd_records[guid]["file_name"] == ""
+    assert sorted(indexd_records[guid]["urls"]) == sorted(
+        [
+            "s3://my-data-bucket/dg.1234/path/package.zip",
+            "gs://my-google-data-bucket/dg.1234/path/other_file_name.zip",
+        ]
+    )
     assert guid in mds_records
-    assert mds_records[guid]["package"]["file_name"] == "package.zip"
-    assert mds_records[guid]["_filename"] == "package.zip"
+    assert sorted(mds_records[guid]["_buckets"]) == sorted(
+        ["s3://my-data-bucket", "gs://my-google-data-bucket"]
+    )
+    assert mds_records[guid]["package"]["file_name"] in [
+        "package.zip",
+        "other_file_name.zip",
+    ]
+    assert mds_records[guid]["_filename"] in ["package.zip", "other_file_name.zip"]
 
     # package with no "guid" provided
     new_guids = [

@@ -534,27 +534,26 @@ class Gen3Metadata:
         relevant data is provided.
         """
 
-        def _get_bucket_and_filename_from_urls(submitted_metadata, urls):
+        def _get_buckets_and_filename_from_urls(submitted_metadata, urls):
             file_name = ""
-            bucket_url = ""
+            bucket_urls = []
             if not urls:
                 logging.warning(f"No URLs provided for: {submitted_metadata}")
             for url in urls:
                 _file_name = os.path.basename(url)
-                parsed = urlparse(url)
-                _bucket_url = f"{parsed.scheme}://{parsed.netloc}"
                 if not file_name:
                     file_name = _file_name
-                    bucket_url = _bucket_url
                 else:
-                    if file_name != _file_name or _bucket_url != bucket_url:
+                    if file_name != _file_name:
                         logging.warning(
-                            f"Received multiple URLs with different bucket names or file names; will use the first URL: {submitted_metadata}"
+                            f"Received multiple URLs with different file names; will use the first URL (file name '{file_name}'): {submitted_metadata}"
                         )
-                        break
-            return file_name, bucket_url
+                parsed = urlparse(url)
+                _bucket_url = f"{parsed.scheme}://{parsed.netloc}"
+                bucket_urls.append(_bucket_url)
+            return file_name, bucket_urls
 
-        file_name_from_url, bucket_url = _get_bucket_and_filename_from_urls(
+        file_name_from_url, bucket_urls = _get_buckets_and_filename_from_urls(
             submitted_metadata, urls
         )
         if not file_name:
@@ -576,7 +575,7 @@ class Gen3Metadata:
             },
             "_resource_paths": authz,
             "_uploader_id": uploader,
-            "_bucket": bucket_url,
+            "_buckets": bucket_urls,
             "_filename": file_name,
             "_file_extension": file_ext,
             "_upload_status": "uploaded",
