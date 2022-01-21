@@ -349,7 +349,7 @@ class Gen3Expansion:
 
         for project_id in projects:
             now = datetime.datetime.now()
-            date = "{}-{}-{}".format(now.year, now.month, now.day)
+            date = "{}-{}-{}-{}.{}.{}".format(now.year, now.month, now.day, now.hour, now.minute, now.second)
             mydir = "{}_{}/{}_tsvs".format(outdir, date, project_id)  # create the directory to store TSVs
 
             if not os.path.exists(mydir):
@@ -3735,7 +3735,7 @@ class Gen3Expansion:
 
 
 
-    def get_mds(self, data=True, limit=1000, args=None, guids=None):
+    def get_mds(self, data=True, limit=1000, args=None, guids=None, save=True):
         """
             Gets all the data in the metadata service for a data commons environment.
             Set data=False to get only the "guids" of the metadata entries.
@@ -3771,6 +3771,13 @@ class Gen3Expansion:
                     murl = "{}/mds/metadata/{}".format(self._endpoint, guid)
                     response = requests.get(murl)
                     md.append(json.loads(response.text))
+        if save == True:
+            now = datetime.datetime.now()
+            date = "{}-{}-{}-{}.{}.{}".format(now.year, now.month, now.day, now.hour, now.minute, now.second)
+            filename = "MDS_{}.json".format(date)
+
+            with open(filename, 'w') as fp:
+                json.dump(md, fp)
 
         return md
 
