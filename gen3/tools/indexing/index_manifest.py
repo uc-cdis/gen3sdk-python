@@ -43,7 +43,10 @@ import traceback
 
 from gen3.index import Gen3Index
 from gen3.auth import Gen3Auth
+from gen3.metadata import Gen3Metadata
 from gen3.tools.indexing.manifest_columns import (
+    RECORD_TYPE_STANDARD_KEY,
+    RECORD_TYPE_ALLOWED_VALUES,
     GUID_COLUMN_NAMES,
     GUID_STANDARD_KEY,
     FILENAME_COLUMN_NAMES,
@@ -195,6 +198,13 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                             f"ERROR: {row[current_column_name]} is not in UUID_FORMAT format"
                         )
                         is_row_valid = False
+                elif current_column_name.lower() == RECORD_TYPE_STANDARD_KEY:
+                    output_column_name = RECORD_TYPE_STANDARD_KEY
+                    if row[current_column_name] not in RECORD_TYPE_ALLOWED_VALUES:
+                        logging.error(
+                            f"ERROR: '{row[current_column_name]}' is not one of the valid record types: {RECORD_TYPE_ALLOWED_VALUES}"
+                        )
+                        is_row_valid = False
                 elif include_additional_columns:
                     output_column_name = current_column_name
 
@@ -204,6 +214,8 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                             int(row[current_column_name])
                             if output_column_name == SIZE_STANDARD_KEY
                             else row[current_column_name].strip()
+                            if type(row[current_column_name]) == str
+                            else row[current_column_name]
                         )
                     except ValueError:
                         # don't break
@@ -233,16 +245,19 @@ def get_and_verify_fileinfos_from_tsv_manifest(
 
 
 def get_and_verify_fileinfos_from_manifest(
-    manifest_file, include_additional_columns=False
+    manifest_file, manifest_file_delimiter=None, include_additional_columns=False
 ):
     """
-    Wrapper for above function to determine the delimeter based on file extention
+    Wrapper for above function to determine the delimiter based on file extention
     """
-    manifest_file_ext = os.path.splitext(manifest_file)
-    if manifest_file_ext[-1].lower() == ".tsv":
-        manifest_file_delimiter = "\t"
-    else:
-        manifest_file_delimiter = ","
+    # if delimiter not specified, try to get based on file ext
+    if not manifest_file_delimiter:
+        manifest_file_ext = os.path.splitext(manifest_file)
+        if manifest_file_ext[-1].lower() == ".tsv":
+            manifest_file_delimiter = "\t"
+        else:
+            # default, assume CSV
+            manifest_file_delimiter = ","
 
     return get_and_verify_fileinfos_from_tsv_manifest(
         manifest_file=manifest_file,
@@ -286,20 +301,30 @@ def _write_csv(filename, files, fieldnames=None):
     return filename
 
 
-def _index_record(indexclient, replace_urls, thread_control, fi):
+def _index_record(
+    indexclient,
+    mds,
+    replace_urls,
+    thread_control,
+    submit_additional_metadata_columns,
+    fi,
+):
     """
-    Index single file
+    Index a single file, and submit additional metadata to the metadata service if provided
 
     Args:
         indexclient(IndexClient): indexd client
+        mds(Gen3Metadata): optional Gen3Metadata instance
         replace_urls(bool): replace urls or not
+        thread_num(int): number of threads for indexing
+        submit_additional_metadata_columns(bool): whether to submit additional metadata to the metadata service
         fi(dict): file info
 
     Returns:
         None
 
     """
-
+    index_success = True
     try:
         urls = (
             get_urls(fi[URLS_STANDARD_KEY])
@@ -367,7 +392,7 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
                 MD5_STANDARD_KEY
             ) != fi.get(MD5_STANDARD_KEY):
                 logging.error(
-                    "The guid {} with different size/hash already exist. Can not index it without getting a new guid".format(
+                    "The guid {} with different size/hash already exists. Can not index it without getting a new guid".format(
                         fi.get(GUID_STANDARD_KEY)
                     )
                 )
@@ -454,13 +479,44 @@ def _index_record(indexclient, replace_urls, thread_control, fi):
 
     except Exception as e:
         # Don't break for any reason
+        index_success = False
         exc_info = sys.exc_info()
         traceback.print_exception(*exc_info)
         logging.error(
-            "Can not update/create an indexd record with guid {}. Detail {}".format(
+            "Can not update/create an indexd record with guid {}. Detail: {}".format(
                 fi.get(GUID_STANDARD_KEY), e
             )
         )
+
+    # submit additional metadata to the metadata service
+    if submit_additional_metadata_columns and index_success:
+        try:
+            if not mds:
+                raise Exception(
+                    "Can not submit to the metadata service when using indexd basic auth"
+                )
+            metadata = mds._prepare_metadata(fi, doc)
+            if metadata:
+                mds.create(guid=doc.did, metadata=metadata, overwrite=True)
+        except Exception as e:
+            # Don't break, but delete indexd record
+            exc_info = sys.exc_info()
+            traceback.print_exception(*exc_info)
+            logging.error(
+                "Can not create package metadata for guid {}. Deleting indexd record. Detail: {}".format(
+                    fi[GUID_STANDARD_KEY], e
+                )
+            )
+            try:
+                doc.delete()
+            except Exception as e:
+                exc_info = sys.exc_info()
+                traceback.print_exception(*exc_info)
+                logging.error(
+                    "Cannot delete indexd record with {}. Detail: {}".format(
+                        fi[GUID_STANDARD_KEY], e
+                    )
+                )
 
     thread_control.mutexLock.acquire()
     thread_control.num_processed_files += 1
@@ -483,6 +539,7 @@ def index_object_manifest(
     replace_urls=True,
     manifest_file_delimiter=None,
     output_filename="indexing-output-manifest.csv",
+    submit_additional_metadata_columns=False,
 ):
     """
     Loop through all the files in the manifest, update/create records in indexd
@@ -496,6 +553,7 @@ def index_object_manifest(
         replace_urls(bool): flag to indicate if replace urls or not
         manifest_file_delimiter(str): manifest's delimiter
         output_filename(str): output file name for manifest
+        submit_additional_metadata_columns(bool): whether to submit additional metadata to the metadata service
 
     Returns:
         files(list(dict)): list of file info
@@ -526,23 +584,23 @@ def index_object_manifest(
 
     indexclient = client.IndexClient(commons_url, "v0", auth=auth)
 
-    # if delimter not specified, try to get based on file ext
-    if not manifest_file_delimiter:
-        file_ext = os.path.splitext(manifest_file)
-        if file_ext[-1].lower() == ".tsv":
-            manifest_file_delimiter = "\t"
-        else:
-            # default, assume CSV
-            manifest_file_delimiter = ","
+    if isinstance(auth, tuple):  # basic auth
+        if submit_additional_metadata_columns:
+            logging.warning(
+                f"'submit_additional_metadata_columns' is on, but using indexd basic auth. Will not be able to submit to the metadata service. To create metadata, use Gen3Auth instance instead."
+            )
+        mds = None
+    else:  # Gen3Auth
+        mds = Gen3Metadata(auth_provider=auth)
 
     try:
-        files, headers = get_and_verify_fileinfos_from_tsv_manifest(
-            manifest_file, manifest_file_delimiter
+        files, headers = get_and_verify_fileinfos_from_manifest(
+            manifest_file, manifest_file_delimiter, include_additional_columns=True
         )
     except Exception as e:
         exc_info = sys.exc_info()
         traceback.print_exception(*exc_info)
-        logging.error("Can not read {}. Detail {}".format(manifest_file, e))
+        logging.error("Can not read {}. Detail: {}".format(manifest_file, e))
         return None, None
 
     # Early terminate
@@ -557,7 +615,14 @@ def index_object_manifest(
     pool = ThreadPool(thread_num)
 
     thread_control = ThreadControl(num_total_files=len(files))
-    part_func = partial(_index_record, indexclient, replace_urls, thread_control)
+    part_func = partial(
+        _index_record,
+        indexclient,
+        mds,
+        replace_urls,
+        thread_control,
+        submit_additional_metadata_columns,
+    )
 
     try:
         pool.map_async(part_func, files).get()
@@ -582,24 +647,43 @@ def index_object_manifest(
 
 @click.command()
 @click.option(
-    "--commons_url",
+    "--commons-url",
+    "commons_url",
     help="Root domain (url) for a commons containing indexd.",
     required=True,
 )
 @click.option("--manifest_file", help="The path to input manifest")
-@click.option("--thread_num", type=int, help="Number of threads", default=1)
-@click.option("--api_key", help="path to api key")
-@click.option("--auth", help="basic auth")
-@click.option("--replace_urls", type=bool, help="Replace urls or not", default=False)
 @click.option(
-    "--manifest_file_delimiter",
-    help="string character that delimites the file (tab or comma). Defaults to tab.",
-    default="\t",
+    "--thread-num",
+    "thread_num",
+    type=int,
+    help="Number of threads",
+    default=1,
+    show_default=True,
+)
+@click.option("--api-key", "api_key", help="path to api key")
+@click.option("--auth", help="basic auth")
+@click.option(
+    "--replace-urls",
+    "replace_urls",
+    type=bool,
+    help="If supplied, will replace urls for existing records. e.g. existing urls will be overwritten by the new ones",
+    default=False,
+    show_default=True,
 )
 @click.option(
-    "--out_manifest_file",
+    "--manifest-file-delimiter",
+    "manifest_file_delimiter",
+    help="string character that delimites the file (tab or comma). Defaults to tab.",
+    default="\t",
+    show_default=True,
+)
+@click.option(
+    "--out-manifest-file",
+    "out_manifest_file",
     help="The path to output manifest",
     default="indexing-output-manifest.csv",
+    show_default=True,
 )
 def index_object_manifest_cli(
     commons_url,

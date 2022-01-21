@@ -1,0 +1,2 @@
+authz	md5	package_contents	record_type	size	url
+["/open"]	473d83400bc1bc9dc635e334faddf33c	[{"file_name": "file.text"}]	object	363455714	s3://my-data-bucket/dg.1234/path/file.text

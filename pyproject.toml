@@ -18,7 +18,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">3.7,<=3.10"
+python = ">=3.6,<=3.10"
 requests = "*"
 indexclient = ">=1.6.2"
 drsclient = "<1.0.0"
@@ -26,6 +26,7 @@ aiohttp = "*"
 backoff = "*"
 click = "*"
 pandas = "*"
+jsonschema = "*"
 dataclasses-json = "*"
 pypfb = "<1.0.0"
 fastavro = "^1.4.7"
@@ -35,7 +36,7 @@ python-dateutil = "*"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=3.2.3"
-pytest-cov = "^2.12.1"
+pytest-cov = "*"
 requests-mock = "*"
 cdisutilstest = { git = "https://github.com/uc-cdis/cdisutils-test.git", tag = "1.0.0" }
 doiclient = { git = "https://github.com/uc-cdis/doiclient.git", tag = "1.0.0" }

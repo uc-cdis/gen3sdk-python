@@ -1,6 +1,6 @@
 import csv
 import pytest
-from gen3.tools.indexing import merge_bucket_manifests
+from gen3.tools.indexing.merge_manifests import merge_bucket_manifests
 from gen3.tools.indexing.manifest_columns import MD5_STANDARD_KEY, GUID_STANDARD_KEY
 
 

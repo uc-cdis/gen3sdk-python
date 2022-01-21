@@ -18,9 +18,13 @@ logger = get_logger("download", log_level="warning")
     "--access",
     is_flag=True,
     help="list access rights to Gen3 commons hosting DRS objects, instead of files",
+    show_default=True,
 )
 @click.option(
-    "--object", is_flag=True, help="list file or access for object instead of manifest"
+    "--object",
+    is_flag=True,
+    help="list file or access for object instead of manifest",
+    show_default=True,
 )
 @click.pass_context
 def list_files_or_access(ctx, infile: str, access: bool, object: bool) -> bool:
@@ -45,9 +49,9 @@ def list_files_or_access(ctx, infile: str, access: bool, object: bool) -> bool:
 @click.argument("output_dir", default=".")
 @click.option(
     "--no-progress",
-    default=True,
     is_flag=True,
     help="Hide the progress bar when downloading",
+    show_default=True,
 )
 @click.pass_context
 def download_manifest(ctx, infile: str, output_dir: str, no_progress: bool):
@@ -72,9 +76,9 @@ def download_manifest(ctx, infile: str, output_dir: str, no_progress: bool):
 @click.argument("output_dir", default=".")
 @click.option(
     "--no-progress",
-    default=True,
     is_flag=True,
     help="Hide the progress bar when downloading",
+    show_default=True,
 )
 @click.pass_context
 def download_object(ctx, object_id: str, output_dir: str, no_progress: bool):
