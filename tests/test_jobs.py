@@ -1,15 +1,9 @@
 import os
-import glob
-import sys
-import shutil
-import logging
 from unittest.mock import MagicMock, patch
-import pytest
 import requests
 from requests.exceptions import HTTPError
 
 from gen3.jobs import Gen3Jobs, DBGAP_METADATA_JOB
-from gen3.utils import split_url_and_query_params
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
