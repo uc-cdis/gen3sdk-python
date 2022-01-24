@@ -8,8 +8,6 @@ import os
 import logging
 import csv
 
-from datetime import datetime
-
 
 def manifest_diff(
     directory=".",
@@ -39,38 +37,30 @@ def manifest_diff(
         None
     """
 
-    start = datetime.now()
-
     files = files or []
     if not files:
         logging.info(f"Iterating over manifests in {directory} directory")
         for file in sorted(os.listdir(directory)):
             files.append(os.path.join(directory, file))
 
-    start1 = datetime.now()
+    files.sort()
+
     content = _precheck_manifests(
         allow_additional_columns=allow_additional_columns,
         files=files,
     )
-    print(datetime.now() - start1)
 
     if content:
-        start2 = datetime.now()
         diff_content = _compare_manifest_columns(
             allow_additional_columns=allow_additional_columns,
             manifest_content=content,
         )
-        print(datetime.now() - start2)
 
-        start3 = datetime.now()
         _write_csv(
             output_manifest_file_delimiter=output_manifest_file_delimiter,
             output_manifest=output_manifest,
             diff_content=diff_content,
         )
-        print(datetime.now() - start3)
-
-    print(datetime.now() - start)
 
 
 def _precheck_manifests(
@@ -93,9 +83,11 @@ def _precheck_manifests(
         else, bool False
 
         {
-            csvdict:[
-                [{"header1": "", "header2": "", ...}], [{}], ...
-            ],
+            csvdict:{}
+                "id1": [{"header1": "", "header2": "", ...}],
+                "id2": [{}],
+                ...
+            },
             headers: {"header1", "header2", ...}
         }
     """
@@ -129,9 +121,9 @@ def _precheck_manifests(
                     logging.error("Headers are not the same among manifests")
                     return False
 
-            content = []
+            content = {}
             for row in csv_reader:
-                content.append(row)
+                content[row["id"]] = row
 
             manifest_content.append(content)
 
@@ -153,12 +145,11 @@ def _compare_manifest_columns(
     """
 
     headers = manifest_content["headers"]
-    diff_content = []
-    # TODO make comparing logic more efficient
-    # ability to only have certain headers compared
-    for i in manifest_content["csvdict"][0]:
-        if i not in manifest_content["csvdict"][1]:
-            diff_content.append(i)
+    # TODO ability to only have certain headers compared
+    dict1 = manifest_content["csvdict"][0]
+    dict2 = manifest_content["csvdict"][1]
+
+    diff_content = [dict2[i] for i in dict2 if i not in dict1]
 
     return {"headers": headers, "csvdict": diff_content}
 
@@ -184,7 +175,6 @@ def _write_csv(output_manifest_file_delimiter, output_manifest, diff_content={})
         else:
             output_manifest_file_delimiter = ","
 
-    # figure headers
     headers = diff_content["headers"]
 
     logging.info(f"Writing diff manifest to {output_manifest}")
@@ -200,6 +190,3 @@ def _write_csv(output_manifest_file_delimiter, output_manifest, diff_content={})
             output_writer.writerow(record)
 
         logging.info(f"Finished writing merged manifest to {output_manifest}")
-
-
-manifest_diff(directory="./gen3sdk-python/gen3/tools/test")
