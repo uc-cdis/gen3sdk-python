@@ -12,6 +12,7 @@ import csv
 def manifest_diff(
     directory=".",
     files=None,
+    key_column="id",
     allow_additional_columns=False,
     output_manifest_file_delimiter=None,
     output_manifest="diff-manifest.tsv",
@@ -23,6 +24,8 @@ def manifest_diff(
             Path of the directory containing the input manifests. All of the manifests contained in directory are assumed to be in a delimiter-separated values (DSV) format, and that there are no other non-DSV files in directory.
         files(list[str]):
             List of paths containing the input manifests. All of the manifests contained in directory are assumed to be in a delimiter-separated values (DSV) format, and that there are no other non-DSV files in directory
+        key_column(str):
+            column of unique identifier in manifest
         manifest_content(dict(dict)):
             Dict of manifest content being compared
         allow_additional_columns(boolean):
@@ -48,6 +51,7 @@ def manifest_diff(
     content = _precheck_manifests(
         allow_additional_columns=allow_additional_columns,
         files=files,
+        key_column=key_column,
     )
 
     if content:
@@ -65,6 +69,7 @@ def manifest_diff(
 
 def _precheck_manifests(
     allow_additional_columns,
+    key_column,
     files=[],
     **kwargs,
 ):
@@ -77,6 +82,7 @@ def _precheck_manifests(
     Args:
         allow_additional_columns(bool)
         files(list[str])
+        key_column(str)
 
     Returns:
         if pass all checks, dict(list, set): CSV content and headers
@@ -123,7 +129,7 @@ def _precheck_manifests(
 
             content = {}
             for row in csv_reader:
-                content[row["id"]] = row
+                content[row[key_column]] = row
 
             manifest_content.append(content)
 
