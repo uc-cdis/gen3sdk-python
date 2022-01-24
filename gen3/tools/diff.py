@@ -149,7 +149,7 @@ def _compare_manifest_columns(
     dict1 = manifest_content["csvdict"][0]
     dict2 = manifest_content["csvdict"][1]
 
-    diff_content = [dict2[i] for i in dict2 if i not in dict1]
+    diff_content = [dict2[i] for i in dict2 if i not in dict1 or dict2[i] != dict1[i]]
 
     return {"headers": headers, "csvdict": diff_content}
 
