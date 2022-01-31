@@ -65,6 +65,8 @@ def manifest_diff(
             output_manifest=output_manifest,
             diff_content=diff_content,
         )
+    else:
+        return "Manifests did not pass precheck conditions, check logs for errors"
 
 
 def _precheck_manifests(
@@ -105,9 +107,10 @@ def _precheck_manifests(
         return False
 
     tsv_files = [file_name for file_name in files if ".tsv" in file_name.lower()]
+    csv_files = [file_name for file_name in files if ".csv" in file_name.lower()]
     if len(tsv_files) == len(files):
         file_delimiter = "\t"
-    elif len(tsv_files) == 0:
+    elif len(csv_files) == len(files):
         file_delimiter = ","
     else:
         logging.error("Not all files have the same extension type")
@@ -124,7 +127,9 @@ def _precheck_manifests(
             headers.update(set(field_names))
             if not allow_additional_columns:
                 if not len(field_names) == len(headers):
-                    logging.error("Headers are not the same among manifests")
+                    logging.error(
+                        f"Headers are not the same among manifests. {headers.difference(field_names)}"
+                    )
                     return False
 
             content = {}
