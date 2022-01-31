@@ -1,0 +1,197 @@
+{
+    "dg.xxTS/4bc4e600-1eda-4f81-aa2b-7c33dad78bec": {
+        "_bucket": "s3://devplanetv1-data-bucket",
+        "_file_extension": "zip",
+        "_filename": "0.zip",
+        "_resource_paths": [
+            "/open/packages"
+        ],
+        "_upload_status": "uploaded",
+        "_uploader_id": "16",
+        "package": {
+            "contents": [
+                {
+                    "file_name": "c.txt",
+                    "file_size": 35,
+                    "hashes": {
+                        "md5sum": "2cd6ee2c70b0bde53fbe6cac3c8b8bb1"
+                    },
+                    "updated_time": "2022-01-04 16:45:30.796299"
+                },
+                {
+                    "file_name": "b.txt",
+                    "file_size": 35,
+                    "hashes": {
+                        "md5sum": "30cf3d7d133b08543cb6c8933c29dfd7"
+                    },
+                    "updated_time": "2022-01-04 16:45:26.946766"
+                }
+            ],
+            "created_time": "2022-01-07 23:17:02.356981",
+            "file_name": "0.zip",
+            "file_size": 231,
+            "hashes": {
+                "md5sum": "300bc7269e92189236025afc222539ec"
+            },
+            "updated_time": "2022-01-07 23:17:02.356981",
+            "version": "0.1"
+        },
+        "type": "package"
+    },
+    "dg.xxTS/4bc4e600-1eda-4f81-aa2b-7c33dad78bed": {
+        "_bucket": "s3://devplanetv1-data-bucket",
+        "_file_extension": "zip",
+        "_filename": "1.zip",
+        "_resource_paths": [
+            "/open/packages"
+        ],
+        "_upload_status": "uploaded",
+        "_uploader_id": "16",
+        "package": {
+            "contents": [
+                {
+                    "file_name": "c.txt",
+                    "file_size": 35,
+                    "hashes": {
+                        "md5sum": "2cd6ee2c70b0bde53fbe6cac3c8b8bb1"
+                    },
+                    "updated_time": "2022-01-04 16:45:30.796299"
+                },
+                {
+                    "file_name": "b.txt",
+                    "file_size": 35,
+                    "hashes": {
+                        "md5sum": "30cf3d7d133b08543cb6c8933c29dfd7"
+                    },
+                    "updated_time": "2022-01-04 16:45:26.946766"
+                }
+            ],
+            "created_time": "2022-01-07 23:17:02.356981",
+            "file_name": "1.zip",
+            "file_size": 231,
+            "hashes": {
+                "md5sum": "300bc7269e92189236025afc222539ec"
+            },
+            "updated_time": "2022-01-07 23:17:02.356981",
+            "version": "0.1"
+        },
+        "type": "not_package"
+    },
+    "dg.xxTS/4bc4e600-1eda-4f81-aa2b-7c33dad78bef": {
+        "_bucket": "s3://devplanetv1-data-bucket",
+        "_file_extension": "tar",
+        "_filename": "3.tar",
+        "_resource_paths": [
+            "/open/packages"
+        ],
+        "_upload_status": "uploaded",
+        "_uploader_id": "16",
+        "package": {
+            "contents": [
+                {
+                    "file_name": "c.txt",
+                    "file_size": 35,
+                    "hashes": {
+                        "md5sum": "2cd6ee2c70b0bde53fbe6cac3c8b8bb1"
+                    },
+                    "updated_time": "2022-01-04 16:45:30.796299"
+                },
+                {
+                    "file_name": "b.txt",
+                    "file_size": 35,
+                    "hashes": {
+                        "md5sum": "30cf3d7d133b08543cb6c8933c29dfd7"
+                    },
+                    "updated_time": "2022-01-04 16:45:26.946766"
+                }
+            ],
+            "created_time": "2022-01-07 23:17:02.356981",
+            "file_name": "3.tar",
+            "file_size": 231,
+            "hashes": {
+                "md5sum": "300bc7269e92189236025afc222539ec"
+            },
+            "updated_time": "2022-01-07 23:17:02.356981",
+            "version": "0.1"
+        },
+        "type": "package"
+    },
+    "dg.xxTS/4bc4e600-1eda-4f81-aa2b-7c33dad78beg": {
+        "_bucket": "s3://devplanetv1-data-bucket",
+        "_file_extension": "zip",
+        "_filename": "4.zip",
+        "_resource_paths": [
+            "/open/packages"
+        ],
+        "_upload_status": "uploaded",
+        "_uploader_id": "16",
+        "package": {
+            "contents": [
+                {
+                    "file_name": "c.txt",
+                    "file_size": 35,
+                    "hashes": {
+                        "md5sum": "2cd6ee2c70b0bde53fbe6cac3c8b8bb1"
+                    },
+                    "updated_time": "2022-01-04 16:45:30.796299"
+                },
+                {
+                    "file_name": "b.txt",
+                    "file_size": 35,
+                    "hashes": {
+                        "md5sum": "30cf3d7d133b08543cb6c8933c29dfd7"
+                    },
+                    "updated_time": "2022-01-04 16:45:26.946766"
+                }
+            ],
+            "created_time": "2022-01-07 23:17:02.356981",
+            "file_name": "4.zip",
+            "file_size": 231,
+            "hashes": {
+                "md5sum": "300bc7269e92189236025afc222539ec"
+            },
+            "updated_time": "2022-01-07 23:17:02.356981",
+            "version": "0.1"
+        },
+        "type": "package"
+    },
+    "dg.xxTS/4bc4e600-1eda-4f81-aa2b-7c33dad78bex": {
+        "_bucket": "s3://devplanetv1-data-bucket",
+        "_file_extension": "zip",
+        "_filename": "a/b/5.zip",
+        "_resource_paths": [
+            "/open/packages"
+        ],
+        "_upload_status": "uploaded",
+        "_uploader_id": "16",
+        "package": {
+            "contents": [
+                {
+                    "file_name": "c.txt",
+                    "file_size": 35,
+                    "hashes": {
+                        "md5sum": "2cd6ee2c70b0bde53fbe6cac3c8b8bb1"
+                    },
+                    "updated_time": "2022-01-04 16:45:30.796299"
+                },
+                {
+                    "file_name": "b.txt",
+                    "file_size": 35,
+                    "hashes": {
+                        "md5sum": "30cf3d7d133b08543cb6c8933c29dfd7"
+                    },
+                    "updated_time": "2022-01-04 16:45:26.946766"
+                }
+            ],
+            "created_time": "2022-01-07 23:17:02.356981",
+            "file_name": "a/b/5.zip",
+            "file_size": 231,
+            "hashes": {
+                "md5sum": "300bc7269e92189236025afc222539ec"
+            },
+            "updated_time": "2022-01-07 23:17:02.356981",
+            "version": "0.1"
+        },
+        "type": "package"
+    }
+}

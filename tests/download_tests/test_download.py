@@ -4,6 +4,7 @@ import base64
 import time
 import requests
 import requests_mock
+import os
 from datetime import datetime
 from dataclasses import asdict
 from pathlib import Path
@@ -33,6 +34,7 @@ from gen3.tools.download.drs_download import (
     wts_get_token,
     get_download_url_using_drs,
     download_file_from_url,
+    unpackage_object,
 )
 
 from gen3.tools.download.drs_resolvers import (
@@ -379,7 +381,7 @@ def test_download_objects(
 ):
     exp = time.time() + 300
     test_key = {
-        "api_key": "whatever."
+        "api_key": "whatever."  # pragma: allowlist secret
         + base64.urlsafe_b64encode(
             ('{"iss": "http://%s", "exp": %d }' % (hostname, exp)).encode("utf-8")
         ).decode("utf-8")
@@ -647,7 +649,7 @@ def test_list_auth(
 ):
     exp = time.time() + 300
     test_key = {
-        "api_key": "whatever."
+        "api_key": "whatever."  # pragma: allowlist secret
         + base64.urlsafe_b64encode(
             ('{"iss": "http://%s", "exp": %d }' % (hostname, exp)).encode("utf-8")
         ).decode("utf-8")
@@ -770,7 +772,7 @@ def test_download_status_repr_and_str():
 def test_no_gen3_auth():
     hostname = "test.datacommons.io"
     test_key = {
-        "api_key": "whatever."
+        "api_key": "whatever."  # pragma: allowlist secret
         + base64.urlsafe_b64encode(
             ('{"iss": "http://%s", "exp": %d }' % (hostname, time.time() + 300)).encode(
                 "utf-8"
@@ -830,7 +832,7 @@ def test_list_no_auth(
 ):
 
     test_key = {
-        "api_key": "whatever."
+        "api_key": "whatever."  # pragma: allowlist secret
         + base64.urlsafe_b64encode(
             ('{"iss": "http://%s", "exp": %d }' % (hostname, time.time() + 300)).encode(
                 "utf-8"
@@ -864,3 +866,175 @@ def test_list_no_auth(
                 hostname, auth, "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e"
             )
             assert result is False
+
+
+@pytest.mark.parametrize(
+    "hostname",
+    [
+        ("test.datacommons.io"),
+    ],
+)
+def test_unpackage_objects(
+    capsys,
+    wts_oidc,
+    drs_object_info,
+    drs_object_commons3,
+    drs_resolver_dataguids,
+    download_dir,
+    download_test_files,
+    hostname,
+):
+
+    exp = time.time() + 300
+    test_key = {
+        "api_key": "whatever."  # pragma: allowlist secret
+        + base64.urlsafe_b64encode(
+            ('{"iss": "http://%s", "exp": %d }' % (hostname, exp)).encode("utf-8")
+        ).decode("utf-8")
+        + ".whatever"
+    }
+
+    decoded_info = {"aud": "123", "exp": exp, "iss": f"http://{hostname}"}
+
+    commons_url = "test.commons1.io"
+    with mock.patch(
+        "gen3.tools.download.drs_resolvers.DRS_CACHE",
+        str(Path(download_dir, ".drs_cache", "resolved_drs_hosts.json")),
+    ), requests_mock.Mocker() as m:
+        with mock.patch(
+            "gen3.auth.get_access_token_with_key"
+        ) as mock_access_token, mock.patch(
+            "gen3.auth.Gen3Auth._write_to_file"
+        ) as mock_write_to_file, mock.patch(
+            "gen3.auth.decode_token"
+        ) as mock_decode_token, mock.patch(
+            "gen3.tools.download.drs_download.decode_token"
+        ) as mock_decode_token_drs:
+            mock_access_token.return_value = "new_access_token"
+            mock_write_to_file().return_value = True
+            mock_decode_token.return_value = decoded_info
+            mock_decode_token_drs.return_value = decoded_info
+            auth = gen3.auth.Gen3Auth(refresh_token=test_key)
+            with capsys.disabled():
+                auth.get_access_token()
+
+                # mock the WTS and other responses
+                m.get(f"https://{hostname}/wts/external_oidc/", json=wts_oidc[hostname])
+                object_list = Manifest.load(
+                    Path(DIR, "resources/manifest_package.json")
+                )
+                mds_response = json.load(open(str(DIR) + "/resources/mds_package.json"))
+                m.get(
+                    f"https://dataguids.org/index/{drs_resolver_dataguids['did']}",
+                    json=drs_resolver_dataguids,
+                )
+                m.get(
+                    f"https://{hostname}/wts/token/?idp=test-google",
+                    json={"token": "whatever1"},
+                )
+
+                m.get(
+                    "http://test.datacommons.io/mds/aggregate/info/dg.XXTS",
+                    json={},
+                    status_code=404,
+                )
+
+                m.get(
+                    "https://dataguids.org/index/_dist",
+                    json={},
+                    status_code=404,
+                )
+                for object_id, info in drs_object_info.items():
+                    m.get(
+                        f"https://{commons_url}/ga4gh/drs/v1/objects/{object_id}",
+                        json=info,
+                    )
+                    m.get(
+                        f"http://test.datacommons.io/mds/metadata/{object_id}",
+                        json=mds_response.get(object_id),
+                    )
+                    m.get(
+                        f"https://{commons_url}/ga4gh/drs/v1/objects/{object_id}/access/s3",
+                        json={
+                            "url": f"https://default-download.s3.amazon.com/{object_id}"
+                        },
+                    )
+                for object in object_list:
+                    m.get(
+                        f"https://default-download.s3.amazon.com/{object.object_id}",
+                        headers={
+                            "content-length": download_test_files[object.object_id][
+                                "content_length"
+                            ]
+                        },
+                        # have to use base64 to encode bytes array in josn
+                        content=base64.b64decode(
+                            download_test_files[object.object_id]["content"]
+                        ),
+                    )
+
+                downloader = DownloadManager(hostname, auth, object_list)
+                results = downloader.download(
+                    object_list=[object_list[0]], save_directory=download_dir
+                )
+
+                # test that we downloaded the file and that the zip is unpacked
+                for id, item in results.items():
+                    dir_list = os.listdir(download_dir)
+                    assert "b.txt" in dir_list and "c.txt" in dir_list
+                    with open(download_dir.join(item.filename), "rb") as fin:
+                        assert fin.read() == base64.b64decode(
+                            download_test_files[id]["content"]
+                        )
+
+                    # clean up download directory for other tests
+                    os.remove(download_dir.join("b.txt"))
+                    os.remove(download_dir.join("c.txt"))
+
+                # test that we download the file that is not a package in mds and it's not unpacked
+                results = downloader.download(
+                    object_list=[object_list[1]], save_directory=download_dir
+                )
+                for id, item in results.items():
+                    dir_list = os.listdir(download_dir)
+                    assert "b.txt" not in dir_list and "c.txt" not in dir_list
+                    with open(download_dir.join(item.filename), "rb") as fin:
+                        assert fin.read() == base64.b64decode(
+                            download_test_files[id]["content"]
+                        )
+
+                # test that we don't undpack when entry is not in mds
+                results = downloader.download(
+                    object_list=[object_list[2]], save_directory=download_dir
+                )
+                for id, item in results.items():
+                    dir_list = os.listdir(download_dir)
+                    assert "b.txt" not in dir_list and "c.txt" not in dir_list
+                    with open(download_dir.join(item.filename), "rb") as fin:
+                        assert fin.read() == base64.b64decode(
+                            download_test_files[id]["content"]
+                        )
+
+                # test file that is in the mds but is not the correct extension
+                results = downloader.download(
+                    object_list=[object_list[3]], save_directory=download_dir
+                )
+                for id, item in results.items():
+                    dir_list = os.listdir(download_dir)
+                    assert "b.txt" not in dir_list and "c.txt" not in dir_list
+                    with open(download_dir.join(item.filename), "rb") as fin:
+                        assert fin.read() == base64.b64decode(
+                            download_test_files[id]["content"]
+                        )
+
+                # test everything is right but extraction doesn't work
+                results = downloader.download(
+                    object_list=[object_list[4]], save_directory=download_dir
+                )
+                for id, item in results.items():
+                    dir_list = os.listdir(download_dir)
+                    assert "b.txt" not in dir_list and "c.txt" not in dir_list
+                    with open(download_dir.join(item.filename), "rb") as fin:
+                        assert fin.read() == base64.b64decode(
+                            download_test_files[id]["content"]
+                        )

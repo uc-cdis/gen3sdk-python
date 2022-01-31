@@ -6,6 +6,7 @@ repos:
         args: ['--baseline', '.secrets.baseline']
         exclude: 'docs/_build/*'
         exclude: 'poetry.lock'
+        exclude: 'tests/download_tests/resources/*'
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v2.5.0
     hooks:
