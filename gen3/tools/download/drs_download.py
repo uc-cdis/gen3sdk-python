@@ -1001,9 +1001,16 @@ class DownloadManager:
             # check if object is a zip file and a package
             if os.path.splitext(entry.file_name)[-1] in PACKAGE_EXTENSIONS:
                 # if so expand in place
-                mds_entry = self.metadata.get(entry.object_id)
-                if mds_entry.get("type") == "package":
-                    unpackage_object(filepath)
+                try:
+                    # if the metadata type is package then unpack
+                    mds_entry = self.metadata.get(entry.object_id)
+
+                    if mds_entry.get("type") == "package":
+                        unpackage_object(filepath)
+                except:
+                    logger.critical(
+                        f"{entry.file_name} is not a package and will not be expanded"
+                    )
 
             completed[entry.object_id].status = "downloaded" if res else "error"
             completed[entry.object_id].end_time = datetime.now(timezone.utc)
