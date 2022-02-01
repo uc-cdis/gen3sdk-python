@@ -1006,9 +1006,14 @@ class DownloadManager:
                     mds_entry = self.metadata.get(entry.object_id)
 
                     if mds_entry.get("type") == "package":
-                        unpackage_object(filepath)
-                except:
-                    logger.critical(
+                        try:
+                            unpackage_object(filepath)
+                        except Exception:
+                            logger.critical(
+                                f"{entry.file_name} had and issue while being unpackaged"
+                            )
+                except Exception:
+                    logger.warning(
                         f"{entry.file_name} is not a package and will not be expanded"
                     )
 
