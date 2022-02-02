@@ -40,7 +40,7 @@ PACKAGE_CONTENTS_SCHEMA = {
                 "type": "string",
             },
             "size": {
-                "type": "number",
+                "type": "integer",
             },
             "hashes": {
                 "type": "object",
