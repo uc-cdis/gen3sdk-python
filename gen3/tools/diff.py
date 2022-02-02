@@ -7,6 +7,8 @@ TODO: Able to handle situations where only specific columns should be compared
 import os
 import logging
 import csv
+import sys
+import traceback
 
 
 def manifest_diff(
@@ -66,7 +68,10 @@ def manifest_diff(
             diff_content=diff_content,
         )
     except Exception as e:
-        return e
+        exc_info = sys.exc_info()
+        traceback.print_exception(*exc_info)
+        logging.error("Detail {}", e)
+        return None
 
 
 def _precheck_manifests(
@@ -202,3 +207,6 @@ def _write_csv(output_manifest_file_delimiter, output_manifest, diff_content={})
             output_writer.writerow(record)
 
         logging.info(f"Finished writing merged manifest to {output_manifest}")
+
+
+manifest_diff(directory="./gen3sdk-python/gen3/tools/test")
