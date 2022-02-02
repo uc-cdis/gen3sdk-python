@@ -87,7 +87,7 @@ def _precheck_manifests(
         key_column(str)
 
     Returns:
-        if pass all checks, dict(list, set): CSV content and headers
+        if pass all checks, dict(list, list): CSV content and headers
         else, bool False
 
         {
@@ -96,7 +96,7 @@ def _precheck_manifests(
                 "id2": [{}],
                 ...
             },
-            headers: {"header1", "header2", ...}
+            headers: ["header1", "header2", ...]
         }
     """
 
@@ -149,11 +149,11 @@ def _compare_manifest_columns(
 ):
     """
     Args:
-        manifest_content(dict(list, set)): Dict of CSV list and headers set
+        manifest_content(dict(list, list)): Dict of CSV list and headers set
         allow_additional_columns(bool)
 
     Returns:
-        Dict containing dict of diff list and headers set
+        Dict containing dict of diff list and headers list
     """
 
     headers = manifest_content["headers"]
