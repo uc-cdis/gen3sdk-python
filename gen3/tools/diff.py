@@ -48,13 +48,13 @@ def manifest_diff(
 
     files.sort()
 
-    content = _precheck_manifests(
-        allow_additional_columns=allow_additional_columns,
-        files=files,
-        key_column=key_column,
-    )
+    try:
+        content = _precheck_manifests(
+            allow_additional_columns=allow_additional_columns,
+            files=files,
+            key_column=key_column,
+        )
 
-    if content:
         diff_content = _compare_manifest_columns(
             allow_additional_columns=allow_additional_columns,
             manifest_content=content,
@@ -65,8 +65,8 @@ def manifest_diff(
             output_manifest=output_manifest,
             diff_content=diff_content,
         )
-    else:
-        return "Manifests did not pass precheck conditions, check logs for errors"
+    except Exception as e:
+        return e
 
 
 def _precheck_manifests(
@@ -103,8 +103,7 @@ def _precheck_manifests(
     logging.info(f"Prechecking manifest files: {files}")
 
     if not len(files) == 2:
-        logging.error("Must take difference of two files")
-        return False
+        raise Exception("Must take difference of two files")
 
     tsv_files = [file_name for file_name in files if ".tsv" in file_name.lower()]
     csv_files = [file_name for file_name in files if ".csv" in file_name.lower()]
@@ -113,8 +112,7 @@ def _precheck_manifests(
     elif len(csv_files) == len(files):
         file_delimiter = ","
     else:
-        logging.error("Not all files have the same extension type")
-        return False
+        raise Exception("Not all files have the same extension type")
 
     headers = []
     manifest_content = []
@@ -128,10 +126,9 @@ def _precheck_manifests(
             if len(headers) == 2:
                 if not allow_additional_columns:
                     if not headers[0] == headers[1]:
-                        logging.error(
+                        raise Exception(
                             f"Headers are not the same among manifests. {set(headers[1]) ^ set(headers[0])}"
                         )
-                        return False
 
             content = {}
             for row in csv_reader:
@@ -139,7 +136,10 @@ def _precheck_manifests(
 
             manifest_content.append(content)
 
-    return {"csvdict": manifest_content, "headers": headers}
+    return {
+        "csvdict": manifest_content,
+        "headers": [x for x in headers[0] if x in headers[1]],
+    }
 
 
 def _compare_manifest_columns(
