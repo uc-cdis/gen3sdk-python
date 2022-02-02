@@ -207,6 +207,3 @@ def _write_csv(output_manifest_file_delimiter, output_manifest, diff_content={})
             output_writer.writerow(record)
 
         logging.info(f"Finished writing merged manifest to {output_manifest}")
-
-
-manifest_diff(directory="./gen3sdk-python/gen3/tools/test")
