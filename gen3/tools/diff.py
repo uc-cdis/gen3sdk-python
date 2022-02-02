@@ -116,7 +116,7 @@ def _precheck_manifests(
         logging.error("Not all files have the same extension type")
         return False
 
-    headers = set()
+    headers = []
     manifest_content = []
     for manifest in files:
         with open(manifest, "r", encoding="utf-8-sig") as csvfile:
@@ -124,13 +124,14 @@ def _precheck_manifests(
 
             field_names = csv_reader.fieldnames
             logging.debug(f"Field names from {manifest}: {field_names}")
-            headers.update(set(field_names))
-            if not allow_additional_columns:
-                if not len(field_names) == len(headers):
-                    logging.error(
-                        f"Headers are not the same among manifests. {headers.difference(field_names)}"
-                    )
-                    return False
+            headers.append(field_names)
+            if len(headers) == 2:
+                if not allow_additional_columns:
+                    if not headers[0] == headers[1]:
+                        logging.error(
+                            f"Headers are not the same among manifests. {set(headers[1]) ^ set(headers[0])}"
+                        )
+                        return False
 
             content = {}
             for row in csv_reader:
