@@ -501,7 +501,8 @@
     <span class="k">if</span> <span class="n">info</span><span class="o">.</span><span class="n">hostname</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">False</span>
 
-    <span class="k">if</span> <span class="p">(</span><span class="n">object_info</span> <span class="o">:=</span> <span class="n">get_drs_object_info</span><span class="p">(</span><span class="n">info</span><span class="o">.</span><span class="n">hostname</span><span class="p">,</span> <span class="n">info</span><span class="o">.</span><span class="n">object_id</span><span class="p">))</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">object_info</span> <span class="o">=</span> <span class="n">get_drs_object_info</span><span class="p">(</span><span class="n">info</span><span class="o">.</span><span class="n">hostname</span><span class="p">,</span> <span class="n">info</span><span class="o">.</span><span class="n">object_id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">object_info</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">False</span>
 
     <span class="c1"># Get common information we want</span>

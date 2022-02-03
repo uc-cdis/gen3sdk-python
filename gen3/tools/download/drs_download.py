@@ -468,7 +468,8 @@ def add_drs_object_info(info: Downloadable) -> bool:
     if info.hostname is None:
         return False
 
-    if (object_info := get_drs_object_info(info.hostname, info.object_id)) is None:
+    object_info = get_drs_object_info(info.hostname, info.object_id)
+    if (object_info) is None:
         return False
 
     # Get common information we want
