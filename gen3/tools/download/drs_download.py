@@ -1006,17 +1006,20 @@ class DownloadManager:
                     # if the metadata type is package then unpack
                     mds_entry = self.metadata.get(entry.object_id)
 
-                    if mds_entry.get("type") == "package":
-                        try:
-                            unpackage_object(filepath)
-                        except Exception:
-                            logger.critical(
-                                f"{entry.file_name} had and issue while being unpackaged"
-                            )
                 except Exception:
+                    mds_entry = {}  # no MDS or object not in MDS
                     logger.warning(
                         f"{entry.file_name} is not a package and will not be expanded"
                     )
+
+                if mds_entry.get("type") == "package":
+                    try:
+                        unpackage_object(filepath)
+                    except Exception:
+                        logger.critical(
+                            f"{entry.file_name} had and issue while being unpackaged"
+                        )
+                        res = False
 
             completed[entry.object_id].status = "downloaded" if res else "error"
             completed[entry.object_id].end_time = datetime.now(timezone.utc)

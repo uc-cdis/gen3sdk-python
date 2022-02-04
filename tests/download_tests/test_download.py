@@ -1027,7 +1027,7 @@ def test_unpackage_objects(
                             download_test_files[id]["content"]
                         )
 
-                # test that file is correct extension and is package in mds but extraction doesn't work
+                # test that file is correct extension and is package in mds but extraction doesn't work because the file is corupted
                 results = downloader.download(
                     object_list=[object_list[4]], save_directory=download_dir
                 )
