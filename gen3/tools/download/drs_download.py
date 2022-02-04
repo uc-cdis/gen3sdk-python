@@ -19,6 +19,7 @@ this module for downloading DRS objects are DownloadManager and Manifest.
 
 
 import re
+import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
 from enum import Enum
@@ -28,6 +29,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import humanfriendly
 import requests
+import zipfile
 from cdiserrors import get_logger
 from dataclasses_json import dataclass_json, LetterCase
 from dateutil import parser as date_parser
@@ -38,7 +40,11 @@ from gen3.auth import Gen3Auth, Gen3AuthError, decode_token
 from gen3.auth import _handle_access_token_response
 from gen3.tools.download.drs_resolvers import resolve_drs
 
+from gen3.metadata import Gen3Metadata
+
 DEFAULT_EXPIRE: timedelta = timedelta(hours=1)
+
+PACKAGE_EXTENSIONS = [".zip"]
 
 logger = get_logger("drs-pull", log_level="warning")
 
@@ -569,6 +575,11 @@ def download_file_from_url(
     return True
 
 
+def unpackage_object(filepath: str):
+    with zipfile.ZipFile(filepath, "r") as package:
+        package.extractall(os.path.dirname(filepath))
+
+
 def parse_drs_identifier(drs_candidate: str) -> Tuple[str, str, str]:
     """
     Parses a DRS identifier to extract a hostname in the case of hostname based DRS
@@ -795,6 +806,7 @@ class DownloadManager:
 
         self.hostname = hostname
         self.access_token = auth.get_access_token()
+        self.metadata = Gen3Metadata(auth)
         self.wts_endpoints = wts_external_oidc(hostname)
         self.resolved_compact_drs = {}
         # add COMMONS host as a DRSEndpoint as it does not use the WTS
@@ -850,6 +862,9 @@ class DownloadManager:
             endpoint.renew_token(self.hostname, self.access_token)
             self.known_hosts[drs_hostname] = endpoint
         for drs_hostname in drs_not_in_wts:
+            # if we already know the host then we don't need to reset the host
+            if drs_hostname in self.known_hosts:
+                continue
             # mark hostname as unavailable
             self.known_hosts[drs_hostname] = KnownDRSEndpoint(
                 hostname=drs_hostname,
@@ -983,6 +998,29 @@ class DownloadManager:
             res = download_file_from_url(
                 url=download_url, filename=filepath, show_progress=show_progress
             )
+
+            # check if object is a zip file and a package
+            if os.path.splitext(entry.file_name)[-1] in PACKAGE_EXTENSIONS:
+                # if so expand in place
+                try:
+                    # if the metadata type is package then unpack
+                    mds_entry = self.metadata.get(entry.object_id)
+
+                except Exception:
+                    mds_entry = {}  # no MDS or object not in MDS
+                    logger.warning(
+                        f"{entry.file_name} is not a package and will not be expanded"
+                    )
+
+                if mds_entry.get("type") == "package":
+                    try:
+                        unpackage_object(filepath)
+                    except Exception:
+                        logger.critical(
+                            f"{entry.file_name} had and issue while being unpackaged"
+                        )
+                        res = False
+
             completed[entry.object_id].status = "downloaded" if res else "error"
             completed[entry.object_id].end_time = datetime.now(timezone.utc)
 
