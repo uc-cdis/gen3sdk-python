@@ -21,15 +21,15 @@ def discovery():
     "--default-file",
     "use_default_file",
     is_flag=True,
-    default=False,
     help="Publishes {commons}-discovery_metadata.tsv from current directory",
+    show_default=True,
 )
 @click.option(
     "--omit-empty",
     "omit_empty",
     is_flag=True,
-    default=False,
     help="omit fields from empty columns if set",
+    show_default=True,
 )
 @click.pass_context
 def discovery_publish(ctx, file, use_default_file, omit_empty):
@@ -54,13 +54,15 @@ def discovery_publish(ctx, file, use_default_file, omit_empty):
 @click.option(
     "--limit",
     "limit",
-    help="max number of metadata records to fetch (default 500)",
+    help="max number of metadata records to fetch",
     default=500,
+    show_default=True,
 )
 @click.option(
     "--agg",
     is_flag=True,
     help="use aggregate metadata service instead of the metadata service",
+    show_default=True,
 )
 @click.pass_context
 def discovery_read(ctx, limit, agg):

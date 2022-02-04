@@ -2,6 +2,8 @@
 
 TOC
 - [Ingest Manifest](#ingest-manifest)
+- [Index and ingest manifest](#index-and-ingest-manifest)
+  - [Index and ingest packages](#index-and-ingest-packages)
 - [Searching Indexd to get GUID for Metadata Ingestion](#searching-indexd-to-get-guid-for-metadata-ingestion)
 - [Manifest Merge](#manifest-merge)
   - [Ideal Scenario (Column to Column Match, Indexing:Metadata Manifest Rows)](#ideal-scenario-column-to-column-match-indexingmetadata-manifest-rows)
@@ -124,6 +126,110 @@ Would result in the following metadata records in the metadata service:
 ```
 
 > NOTE: `_guid_type` is populated automatically, depending on if the provided GUID exists in indexd or not. Either `indexed_file_object` or `metadata_object`.
+
+### Index and ingest manifest
+
+The module for indexing object files in a manifest (against indexd's API) can be configured to submit any additional columns (metadata that are not stored in indexd) to the metadata service. The `submit_additional_metadata_columns` flag should be set to `True` like in the example below.
+
+See the [indexing docs](./diirmIndexing.md#indexing-manifest) for details about other parameters and the input manifest.
+
+The following is an example of tsv manifest. Submitting this manifest would result in the creation of an indexd record containing the `md5`, `size`, `authz` and `url` data, and an MDS record containing the `my_column` data.
+
+```
+guid	my_column	md5	size	authz	url
+255e396f-f1f8-11e9-9a07-0a80fada099c	my_additional_metadata	473d83400bc1bc9dc635e334faddf33c	363455714	/programs/DEV/project/test	['Open']	[s3://examplebucket/test1.raw]
+```
+
+```python
+import sys
+import logging
+
+from gen3.auth import Gen3Auth
+from gen3.tools.indexing.index_manifest import index_object_manifest
+
+logging.basicConfig(filename="output.log", level=logging.DEBUG)
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
+MANIFEST = "./example_manifest.tsv"
+
+
+def main():
+    auth = Gen3Auth(refresh_file="credentials.json")
+    # basic auth for admin privileges in indexd cannot be
+    # used when submitting to the metadata service
+
+    index_object_manifest(
+        commons_url=auth.endpoint,
+        manifest_file=MANIFEST,
+        thread_num=8,
+        auth=auth,
+        replace_urls=False,
+        manifest_file_delimiter="\t", # put "," if the manifest is csv file
+        submit_additional_metadata_columns=True, # submit additional metadata to the metadata service
+    )
+
+if __name__ == "__main__":
+    main()
+
+```
+
+#### Index and ingest packages
+
+A package is a set of files. For example, it could be a zip file grouping all individual files for a study.
+
+When `submit_additional_metadata_columns` is set to `True` and additional metadata is submitted to the metadata service, the predefined `record_type` and `package_contents` metadata columns allow the creation of packages.
+
+- `record_type` is an optional column. The allowed values are `object` (default) and `package`. The same manifest can contain both object and package rows.
+- If the `record_type` is `package`, the `package_contents` column can be used to describe the individual files in the package. The value is a JSON list of objects. Each object must include a `file_name`, can include a `size` and/or `hashes`, and can include additional arbitrary metadata to describe the files.
+
+The following is an example of tsv manifest describing a package.
+
+```
+record_type	guid	md5	size	authz	url	file_name	package_contents
+package	255e396f-f1f8-11e9-9a07-0a80fada0901	473d83400bc1bc9dc635e334faddf33c	363455714	['/open/packages']	s3://my-data-bucket/dg.1234/path/package.zip	package.zip	[{"hashes":{"md5sum":"2cd6ee2c70b0bde53fbe6cac3c8b8bb1"},"file_name":"yes.txt","size":35},{"hashes":{"md5sum":"30cf3d7d133b08543cb6c8933c29dfd7"},"file_name":"hi.txt","size":35}]
+```
+
+Submitting this manifest would result in the creation of an indexd record containing the `md5`, `size`, `authz`, `url` and `file_name` data, and an MDS record describing the package:
+
+```
+{
+    "type": "package",
+    "package": {
+        "version": "0.1",
+        "file_name": "package.zip",
+        "file_size": 363455714,
+        "hashes": {
+            "md5sum": "473d83400bc1bc9dc635e334faddf33c"
+        },
+        "contents": [
+            {
+                "hashes": {
+                    "md5sum": "2cd6ee2c70b0bde53fbe6cac3c8b8bb1"
+                },
+                "file_name": "yes.txt",
+                "file_size": 35,
+            },
+            {
+                "hashes": {
+                    "md5sum": "30cf3d7d133b08543cb6c8933c29dfd7"
+                },
+                "file_name": "hi.txt",
+                "file_size": 35,
+            }
+        ],
+        "created_time": "2022-01-07 23:17:02.356981",
+        "updated_time": "2022-01-07 23:17:02.356981"
+    },
+    "_bucket": "s3://my-data-bucket",
+    "_filename": "package.zip",
+    "_uploader_id": "16",
+    "_upload_status": "uploaded",
+    "_file_extension": "zip",
+    "_resource_paths": [
+        "/open/packages"
+    ]
+}
+```
 
 ### Searching Indexd to get GUID for Metadata Ingestion
 
