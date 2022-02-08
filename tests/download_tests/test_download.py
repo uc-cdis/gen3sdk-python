@@ -960,17 +960,22 @@ def test_unpackage_objects(
                         },
                     )
                 for object in object_list:
+                    # we used base64 to store the ZIP files bytes in json, so
+                    # we must decode in the response
+                    decoded_length = str(
+                        len(
+                            base64.b64decode(
+                                download_test_files[object.object_id]["content"]
+                            )
+                        )
+                    )
+                    download_test_files[object.object_id]["content"] = base64.b64decode(
+                        download_test_files[object.object_id]["content"]
+                    )
                     m.get(
                         f"https://default-download.s3.amazon.com/{object.object_id}",
-                        headers={
-                            "content-length": download_test_files[object.object_id][
-                                "content_length"
-                            ]
-                        },
-                        # have to use base64 to encode bytes array in josn
-                        content=base64.b64decode(
-                            download_test_files[object.object_id]["content"]
-                        ),
+                        headers={"content-length": decoded_length},
+                        content=download_test_files[object.object_id]["content"],
                     )
 
                 downloader = DownloadManager(hostname, auth, object_list)
@@ -983,9 +988,7 @@ def test_unpackage_objects(
                     dir_list = os.listdir(download_dir)
                     assert "b.txt" in dir_list and "c.txt" in dir_list
                     with open(download_dir.join(item.filename), "rb") as fin:
-                        assert fin.read() == base64.b64decode(
-                            download_test_files[id]["content"]
-                        )
+                        assert fin.read() == download_test_files[id]["content"]
 
                     # clean up download directory for other tests
                     os.remove(download_dir.join("b.txt"))
@@ -999,9 +1002,7 @@ def test_unpackage_objects(
                     dir_list = os.listdir(download_dir)
                     assert "b.txt" not in dir_list and "c.txt" not in dir_list
                     with open(download_dir.join(item.filename), "rb") as fin:
-                        assert fin.read() == base64.b64decode(
-                            download_test_files[id]["content"]
-                        )
+                        assert fin.read() == download_test_files[id]["content"]
 
                 # test that we don't undpack when entry is not in mds
                 results = downloader.download(
@@ -1011,9 +1012,7 @@ def test_unpackage_objects(
                     dir_list = os.listdir(download_dir)
                     assert "b.txt" not in dir_list and "c.txt" not in dir_list
                     with open(download_dir.join(item.filename), "rb") as fin:
-                        assert fin.read() == base64.b64decode(
-                            download_test_files[id]["content"]
-                        )
+                        assert fin.read() == download_test_files[id]["content"]
 
                 # test file that is in the mds but is not the correct extension
                 results = downloader.download(
@@ -1023,9 +1022,7 @@ def test_unpackage_objects(
                     dir_list = os.listdir(download_dir)
                     assert "b.txt" not in dir_list and "c.txt" not in dir_list
                     with open(download_dir.join(item.filename), "rb") as fin:
-                        assert fin.read() == base64.b64decode(
-                            download_test_files[id]["content"]
-                        )
+                        assert fin.read() == download_test_files[id]["content"]
 
                 # test that file is correct extension and is package in mds but extraction doesn't work because the file is corupted
                 results = downloader.download(
@@ -1035,6 +1032,4 @@ def test_unpackage_objects(
                     dir_list = os.listdir(download_dir)
                     assert "b.txt" not in dir_list and "c.txt" not in dir_list
                     with open(download_dir.join(item.filename), "rb") as fin:
-                        assert fin.read() == base64.b64decode(
-                            download_test_files[id]["content"]
-                        )
+                        assert fin.read() == download_test_files[id]["content"]
