@@ -34,7 +34,6 @@ from gen3.tools.download.drs_download import (
     wts_get_token,
     get_download_url_using_drs,
     download_file_from_url,
-    unpackage_object,
 )
 
 from gen3.tools.download.drs_resolvers import (
@@ -760,12 +759,12 @@ def test_download_status_repr_and_str():
         end_time=datetime.fromisoformat("2011-11-04T00:07:12"),
     )
 
+    expected = "filename: test.csv; status: downloaded; start_time: 11/04/2011, 00:05:23; end_time: 11/04/2011, 00:07:12"
+
     results = download1.__repr__()
-    expected = "filename: test.csv status: downloaded start_time: 11/04/2011, 00:05:23 end_time: 11/04/2011, 00:07:12"
     assert results == expected
 
     results = download1.__str__()
-    expected = "filename: test.csv status: downloaded start_time: 11/04/2011, 00:05:23 end_time: 11/04/2011, 00:07:12"
     assert results == expected
 
 
@@ -878,7 +877,6 @@ def test_unpackage_objects(
     capsys,
     wts_oidc,
     drs_object_info,
-    drs_object_commons3,
     drs_resolver_dataguids,
     download_dir,
     download_test_files,
@@ -962,19 +960,16 @@ def test_unpackage_objects(
                 for object in object_list:
                     # we used base64 to store the ZIP files bytes in json, so
                     # we must decode in the response
-                    decoded_length = str(
-                        len(
-                            base64.b64decode(
-                                download_test_files[object.object_id]["content"]
-                            )
-                        )
-                    )
                     download_test_files[object.object_id]["content"] = base64.b64decode(
                         download_test_files[object.object_id]["content"]
                     )
                     m.get(
                         f"https://default-download.s3.amazon.com/{object.object_id}",
-                        headers={"content-length": decoded_length},
+                        headers={
+                            "content-length": str(
+                                len(download_test_files[object.object_id]["content"])
+                            )
+                        },
                         content=download_test_files[object.object_id]["content"],
                     )
 
@@ -985,6 +980,7 @@ def test_unpackage_objects(
 
                 # test that we downloaded the file and that the zip is unpacked
                 for id, item in results.items():
+                    assert item.status == "downloaded"
                     dir_list = os.listdir(download_dir)
                     assert "b.txt" in dir_list and "c.txt" in dir_list
                     with open(download_dir.join(item.filename), "rb") as fin:
@@ -999,6 +995,7 @@ def test_unpackage_objects(
                     object_list=[object_list[1]], save_directory=download_dir
                 )
                 for id, item in results.items():
+                    assert item.status == "downloaded"
                     dir_list = os.listdir(download_dir)
                     assert "b.txt" not in dir_list and "c.txt" not in dir_list
                     with open(download_dir.join(item.filename), "rb") as fin:
@@ -1009,6 +1006,7 @@ def test_unpackage_objects(
                     object_list=[object_list[2]], save_directory=download_dir
                 )
                 for id, item in results.items():
+                    assert item.status == "downloaded"
                     dir_list = os.listdir(download_dir)
                     assert "b.txt" not in dir_list and "c.txt" not in dir_list
                     with open(download_dir.join(item.filename), "rb") as fin:
@@ -1019,17 +1017,36 @@ def test_unpackage_objects(
                     object_list=[object_list[3]], save_directory=download_dir
                 )
                 for id, item in results.items():
+                    assert item.status == "downloaded"
                     dir_list = os.listdir(download_dir)
                     assert "b.txt" not in dir_list and "c.txt" not in dir_list
                     with open(download_dir.join(item.filename), "rb") as fin:
                         assert fin.read() == download_test_files[id]["content"]
 
-                # test that file is correct extension and is package in mds but extraction doesn't work because the file is corupted
+                # test that file is correct extension and is package in mds
+                # but extraction doesn't work because the file is corrupted
                 results = downloader.download(
                     object_list=[object_list[4]], save_directory=download_dir
                 )
                 for id, item in results.items():
+                    assert item.status == "error"
                     dir_list = os.listdir(download_dir)
                     assert "b.txt" not in dir_list and "c.txt" not in dir_list
+                    with open(download_dir.join(item.filename), "rb") as fin:
+                        assert fin.read() == download_test_files[id]["content"]
+
+                # test that when the file name contains '/', the file is
+                # downloaded and extracted in subdirectories
+                results = downloader.download(
+                    object_list=[object_list[5]], save_directory=download_dir
+                )
+                for id, item in results.items():
+                    assert item.status == "downloaded"
+                    dir_list = os.listdir(download_dir)
+                    assert "a" in dir_list
+                    dir_list = os.listdir(download_dir.join("a"))
+                    assert "b" in dir_list
+                    dir_list = os.listdir(download_dir.join("a", "b"))
+                    assert "b.txt" in dir_list and "c.txt" in dir_list
                     with open(download_dir.join(item.filename), "rb") as fin:
                         assert fin.read() == download_test_files[id]["content"]
