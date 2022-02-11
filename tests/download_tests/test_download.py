@@ -141,7 +141,7 @@ def test_add_object_info(drs_object_info):
 
         assert (
             object.__repr__()
-            == "(Downloadable: TestDataSet1.sav 1.57 MB test.commons1.io 04/06/2021, 11:22:19)"
+            == "(Downloadable: TestDataSet1.sav; 1.57 MB; test.commons1.io; 04/06/2021, 11:22:19)"
         )
 
         m.get(
@@ -549,7 +549,7 @@ def test_download_objects(
 
             # test the Object string representations
             results = object_list[0].__repr__()
-            expected = "(Downloadable: TestDataSet1.sav 1.57 MB test.commons1.io 04/06/2021, 11:22:19)"
+            expected = "(Downloadable: TestDataSet1.sav; 1.57 MB; test.commons1.io; 04/06/2021, 11:22:19)"
             assert results == expected
 
             # test list files
@@ -560,10 +560,10 @@ def test_download_objects(
             )
             captured = capsys.readouterr()
             expected = [
-                "TestDataSet1.sav",
+                "TestDataSet1.sav;",
                 "1.57",
-                "MB",
-                "test.commons1.io",
+                "MB;",
+                "test.commons1.io;",
                 "04/06/2021,",
                 "11:22:19",
             ]
@@ -591,11 +591,11 @@ def test_download_objects(
             )
             expected = [
                 "not",
-                "available",
+                "available;",
                 "-1",
-                "bytes",
+                "bytes;",
                 "not",
-                "resolved",
+                "resolved;",
                 "not",
                 "available",
             ]
