@@ -224,8 +224,8 @@ def test_drs_object_info(drs_object_info):
     [
         (0, "TestDataSet1.sav"),
         (1, "TestDataSet_April2020.sav"),
-        (6, "TestDataSet_November2020.csv"),
-        (7, None),
+        (7, "TestDataSet_November2020.csv"),
+        (8, None),
     ],
 )
 def test_extract_filename_from_drs_object(drs_objects, index, expected):
@@ -236,8 +236,8 @@ def test_extract_filename_from_drs_object(drs_objects, index, expected):
     "index,expected",
     [
         (0, DRSObjectType.object),
-        (9, DRSObjectType.bundle),
-        (10, DRSObjectType.object),
+        (10, DRSObjectType.bundle),
+        (11, DRSObjectType.object),
     ],
 )
 def test_get_drs_object_type(drs_objects, index, expected):
@@ -466,6 +466,20 @@ def test_download_objects(
                 # test to see if file is downloaded
                 for id, item in results.items():
                     assert item.status == "downloaded"
+                    with open(download_dir.join(item.filename), "rt") as fin:
+                        assert fin.read() == download_test_files[id]["content"]
+
+                # test that when the file name contains '/' ("a/b/<filename>"
+                # here), the file is downloaded in subdirectories
+                results = downloader.download(
+                    object_list=[object_list[4]], save_directory=download_dir
+                )
+                for id, item in results.items():
+                    assert item.status == "downloaded"
+                    dir_list = os.listdir(download_dir)
+                    assert "a" in dir_list
+                    dir_list = os.listdir(download_dir.join("a"))
+                    assert "b" in dir_list
                     with open(download_dir.join(item.filename), "rt") as fin:
                         assert fin.read() == download_test_files[id]["content"]
 
@@ -1035,8 +1049,8 @@ def test_unpackage_objects(
                     with open(download_dir.join(item.filename), "rb") as fin:
                         assert fin.read() == download_test_files[id]["content"]
 
-                # test that when the file name contains '/', the file is
-                # downloaded and extracted in subdirectories
+                # test that when the file name contains '/' ("a/b/<filename>"
+                # here), the file is downloaded and extracted in subdirectories
                 results = downloader.download(
                     object_list=[object_list[5]], save_directory=download_dir
                 )
