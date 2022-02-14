@@ -124,6 +124,36 @@
         {
           "access_id": "s3",
           "access_url": {
+            "url": "s3://testprod-default-258867494168-upload/dg.XXTS/0b9ba42d-5d54-4308-bd49-47b4512d3ff6/a/b/TestDataSet_Oct2020.sav"
+          },
+          "region": "",
+          "type": "s3"
+        }
+      ],
+      "aliases": [],
+      "checksums": [
+        {
+          "checksum": "7f1378afee0cbd72e159036fa64c4aa4",
+          "type": "md5"
+        }
+      ],
+      "contents": [],
+      "created_time": "2021-05-08T14:11:26.077119",
+      "description": null,
+      "form": "object",
+      "id": "dg.XXTS/0e618fef-e359-424b-b844-0ca32010517a",
+      "mime_type": "application/json",
+      "name": "a/b/TestDataSet_Oct2020.sav",
+      "self_uri": "drs://test.commons1.io/dg.XXTS/0e618fef-e359-424b-b844-0ca32010517a",
+      "size": 367990,
+      "updated_time": "2021-07-09T12:46:22.568962",
+      "version": "833fd2bd"
+    },
+    {
+      "access_methods": [
+        {
+          "access_id": "s3",
+          "access_url": {
             "url": "s3://testprod-default-258867494168-upload/dg.XXTS/0c5ddbb3-c801-4dc9-aae0-804c2c1591bf/EC03_2018_C.csv"
           },
           "region": "",

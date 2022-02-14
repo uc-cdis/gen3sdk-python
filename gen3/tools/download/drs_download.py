@@ -213,17 +213,17 @@ class Downloadable:
 
     def __str__(self):
         return (
-            f'{self.file_name if self.file_name is not None else "not available" : >45} '
-            f"{humanfriendly.format_size(self.file_size) :>12} "
-            f'{self.hostname if self.hostname is not None else "not resolved"} '
+            f'{self.file_name if self.file_name is not None else "not available" : >45}; '
+            f"{humanfriendly.format_size(self.file_size) :>12}; "
+            f'{self.hostname if self.hostname is not None else "not resolved"}; '
             f'{self.created_time.strftime("%m/%d/%Y, %H:%M:%S") if self.created_time is not None else "not available"}'
         )
 
     def __repr__(self):
         return (
-            f'(Downloadable: {self.file_name if self.file_name is not None else "not available"} '
-            f"{humanfriendly.format_size(self.file_size)} "
-            f'{self.hostname if self.hostname is not None else "not resolved"} '
+            f'(Downloadable: {self.file_name if self.file_name is not None else "not available"}; '
+            f"{humanfriendly.format_size(self.file_size)}; "
+            f'{self.hostname if self.hostname is not None else "not resolved"}; '
             f'{self.created_time.strftime("%m/%d/%Y, %H:%M:%S") if self.created_time is not None else "not available"})'
         )
 
@@ -273,19 +273,14 @@ class DownloadStatus:
 
     def __str__(self):
         return (
-            f'filename: {self.filename if self.filename is not None else "not available"} '
-            f"status: {self.status} "
-            f'start_time: {self.start_time.strftime("%m/%d/%Y, %H:%M:%S") if self.start_time is not None else "n/a"} '
+            f'filename: {self.filename if self.filename is not None else "not available"}; '
+            f"status: {self.status}; "
+            f'start_time: {self.start_time.strftime("%m/%d/%Y, %H:%M:%S") if self.start_time is not None else "n/a"}; '
             f'end_time: {self.end_time.strftime("%m/%d/%Y, %H:%M:%S") if self.start_time is not None else "n/a"}'
         )
 
     def __repr__(self):
-        return (
-            f'filename: {self.filename if self.filename is not None else "not available"} '
-            f"status: {self.status} "
-            f'start_time: {self.start_time.strftime("%m/%d/%Y, %H:%M:%S") if self.start_time is not None else "n/a"} '
-            f'end_time: {self.end_time.strftime("%m/%d/%Y, %H:%M:%S") if self.start_time is not None else "n/a"}'
-        )
+        return self.__str__()
 
 
 def wts_external_oidc(hostname: str) -> Dict[str, Any]:
@@ -557,6 +552,10 @@ def download_file_from_url(
         if show_progress
         else InvisibleProgress()
     )
+
+    # if the file name contains '/', create subdirectories and download there
+    ensure_dirpath_exists(Path(os.path.dirname(filename)))
+
     try:
         with open(filename, "wb") as file:
             for data in response.iter_content(block_size):
@@ -564,12 +563,12 @@ def download_file_from_url(
                 total_downloaded += len(data)
                 file.write(data)
     except IOError as ex:
-        logger.critical(f"IOError {ex} opening {filename} for writing.")
+        logger.critical(f"IOError opening {filename} for writing: {ex}")
         return False
 
     if total_downloaded != total_size_in_bytes:
         logger.critical(
-            f"Error in downloading {filename} expected {total_size_in_bytes} bytes, downloaded {total_downloaded} bytes"
+            f"Error in downloading {filename}: expected {total_size_in_bytes} bytes, downloaded {total_downloaded} bytes"
         )
         return False
     return True
@@ -1008,16 +1007,16 @@ class DownloadManager:
 
                 except Exception:
                     mds_entry = {}  # no MDS or object not in MDS
-                    logger.warning(
+                    logger.debug(
                         f"{entry.file_name} is not a package and will not be expanded"
                     )
 
                 if mds_entry.get("type") == "package":
                     try:
                         unpackage_object(filepath)
-                    except Exception:
+                    except Exception as e:
                         logger.critical(
-                            f"{entry.file_name} had and issue while being unpackaged"
+                            f"{entry.file_name} had an issue while being unpackaged: {e}"
                         )
                         res = False
 

@@ -42,5 +42,16 @@
     "created_time": null,
     "access_methods": [],
     "children": []
+  },
+  {
+    "object_id": "dg.XXTS/0e618fef-e359-424b-b844-0ca32010517a",
+    "object_type": "unknown",
+    "hostname": null,
+    "file_size": -1,
+    "file_name": null,
+    "updated_time": null,
+    "created_time": null,
+    "access_methods": [],
+    "children": []
   }
 ]
