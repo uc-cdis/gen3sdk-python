@@ -79,6 +79,7 @@
 <span class="kn">import</span> <span class="nn">time</span>
 
 <span class="kn">from</span> <span class="nn">gen3.index</span> <span class="kn">import</span> <span class="n">Gen3Index</span>
+<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">get_or_create_event_loop_for_thread</span>
 
 <span class="n">MAX_CONCURRENT_REQUESTS</span> <span class="o">=</span> <span class="mi">24</span>
 <span class="n">CURRENT_DIR</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
@@ -349,7 +350,7 @@
 <span class="sd">        commons_url (str): root domain for commons where indexd lives</span>
 <span class="sd">        output_queue (asyncio.Queue): queue for output</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_event_loop</span><span class="p">()</span>
+    <span class="n">loop</span> <span class="o">=</span> <span class="n">get_or_create_event_loop_for_thread</span><span class="p">()</span>
 
     <span class="n">row</span> <span class="o">=</span> <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
 
