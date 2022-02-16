@@ -13,6 +13,7 @@ from gen3.tools.indexing.index_manifest import (
     delete_all_guids,
 )
 from gen3.tools.indexing.verify_manifest import manifest_row_parsers
+from gen3.utils import get_or_create_event_loop_for_thread
 
 
 @click.group()
@@ -57,7 +58,7 @@ def manifest():
 @click.pass_context
 def objects_manifest_read(ctx, output_file, num_processes, max_concurrent_requests):
     auth = ctx.obj["auth_factory"].get()
-    loop = asyncio.get_event_loop()
+    loop = get_or_create_event_loop_for_thread()
     click.echo(f"Getting minimal object metadata from {auth.endpoint}")
     loop.run_until_complete(
         indexing.async_download_object_manifest(
@@ -85,7 +86,7 @@ def objects_manifest_read(ctx, output_file, num_processes, max_concurrent_reques
 @click.pass_context
 def objects_manifest_verify(ctx, file, max_concurrent_requests):
     auth = ctx.obj["auth_factory"].get()
-    loop = asyncio.get_event_loop()
+    loop = get_or_create_event_loop_for_thread()
 
     if not file:
         file = click.prompt("Enter Discovery metadata file path to publish")
@@ -254,7 +255,7 @@ def objects_manifest_publish(
     out_manifest_file,
 ):
     auth = ctx.obj["auth_factory"].get()
-    loop = asyncio.get_event_loop()
+    loop = get_or_create_event_loop_for_thread()
 
     if not file:
         file = click.prompt("Enter Discovery metadata file path to publish")
@@ -280,7 +281,7 @@ def objects_manifest_publish(
 @click.pass_context
 def objects_manifest_delete_all_guids(ctx, file):
     auth = ctx.obj["auth_factory"].get()
-    loop = asyncio.get_event_loop()
+    loop = get_or_create_event_loop_for_thread()
 
     if not file:
         file = click.prompt("Enter Discovery metadata file path to delete")

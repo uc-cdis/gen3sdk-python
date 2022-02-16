@@ -1,3 +1,4 @@
+import asyncio
 from jsonschema import Draft4Validator
 import logging
 import sys
@@ -18,6 +19,21 @@ SIZE_FORMAT = r"^[0-9]*$"
 ACL_FORMAT = r"^.*$"
 URL_FORMAT = r"^.*$"
 AUTHZ_FORMAT = r"^.*$"
+
+
+def get_or_create_event_loop_for_thread():
+    """
+    Asyncio helper function to attempt to get a currently running loop and
+    if there isn't one in the thread, create one and set it so future calls
+    get the same event loop.
+    """
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # no loop for this thread, so create one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop
 
 
 def raise_for_status(response):
