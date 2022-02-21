@@ -10,6 +10,9 @@ from urllib.parse import urlparse
 from base64 import b64encode, b64decode
 
 # Pre-defined supported column names
+RECORD_TYPE_STANDARD_KEY = "record_type"
+RECORD_TYPE_ALLOWED_VALUES = ["object", "package"]
+
 GUID_COLUMN_NAMES = ["guid", "GUID"]
 GUID_STANDARD_KEY = "guid"
 

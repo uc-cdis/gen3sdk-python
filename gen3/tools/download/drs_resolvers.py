@@ -282,7 +282,8 @@ def resolve_compact_drs_using_official_resolver(
         response = requests.get(f"{resolver_hostname}/index/{object_id}")
         response.raise_for_status()
         results = response.json()
-        if (hn := results.get("from_index_service", {}).get("host", None)) is not None:
+        hn = results.get("from_index_service", {}).get("host", None)
+        if (hn) is not None:
             hn = clean_http_url(hn)
             if cache_results:
                 # create and entry to append to the cache

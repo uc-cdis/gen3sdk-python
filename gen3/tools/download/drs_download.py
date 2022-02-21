@@ -19,6 +19,7 @@ this module for downloading DRS objects are DownloadManager and Manifest.
 
 
 import re
+import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
 from enum import Enum
@@ -28,6 +29,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import humanfriendly
 import requests
+import zipfile
 from cdiserrors import get_logger
 from dataclasses_json import dataclass_json, LetterCase
 from dateutil import parser as date_parser
@@ -38,7 +40,11 @@ from gen3.auth import Gen3Auth, Gen3AuthError, decode_token
 from gen3.auth import _handle_access_token_response
 from gen3.tools.download.drs_resolvers import resolve_drs
 
+from gen3.metadata import Gen3Metadata
+
 DEFAULT_EXPIRE: timedelta = timedelta(hours=1)
+
+PACKAGE_EXTENSIONS = [".zip"]
 
 logger = get_logger("drs-pull", log_level="warning")
 
@@ -207,17 +213,17 @@ class Downloadable:
 
     def __str__(self):
         return (
-            f'{self.file_name if self.file_name is not None else "not available" : >45} '
-            f"{humanfriendly.format_size(self.file_size) :>12} "
-            f'{self.hostname if self.hostname is not None else "not resolved"} '
+            f'{self.file_name if self.file_name is not None else "not available" : >45}; '
+            f"{humanfriendly.format_size(self.file_size) :>12}; "
+            f'{self.hostname if self.hostname is not None else "not resolved"}; '
             f'{self.created_time.strftime("%m/%d/%Y, %H:%M:%S") if self.created_time is not None else "not available"}'
         )
 
     def __repr__(self):
         return (
-            f'(Downloadable: {self.file_name if self.file_name is not None else "not available"} '
-            f"{humanfriendly.format_size(self.file_size)} "
-            f'{self.hostname if self.hostname is not None else "not resolved"} '
+            f'(Downloadable: {self.file_name if self.file_name is not None else "not available"}; '
+            f"{humanfriendly.format_size(self.file_size)}; "
+            f'{self.hostname if self.hostname is not None else "not resolved"}; '
             f'{self.created_time.strftime("%m/%d/%Y, %H:%M:%S") if self.created_time is not None else "not available"})'
         )
 
@@ -267,19 +273,14 @@ class DownloadStatus:
 
     def __str__(self):
         return (
-            f'filename: {self.filename if self.filename is not None else "not available"} '
-            f"status: {self.status} "
-            f'start_time: {self.start_time.strftime("%m/%d/%Y, %H:%M:%S") if self.start_time is not None else "n/a"} '
+            f'filename: {self.filename if self.filename is not None else "not available"}; '
+            f"status: {self.status}; "
+            f'start_time: {self.start_time.strftime("%m/%d/%Y, %H:%M:%S") if self.start_time is not None else "n/a"}; '
             f'end_time: {self.end_time.strftime("%m/%d/%Y, %H:%M:%S") if self.start_time is not None else "n/a"}'
         )
 
     def __repr__(self):
-        return (
-            f'filename: {self.filename if self.filename is not None else "not available"} '
-            f"status: {self.status} "
-            f'start_time: {self.start_time.strftime("%m/%d/%Y, %H:%M:%S") if self.start_time is not None else "n/a"} '
-            f'end_time: {self.end_time.strftime("%m/%d/%Y, %H:%M:%S") if self.start_time is not None else "n/a"}'
-        )
+        return self.__str__()
 
 
 def wts_external_oidc(hostname: str) -> Dict[str, Any]:
@@ -468,7 +469,8 @@ def add_drs_object_info(info: Downloadable) -> bool:
     if info.hostname is None:
         return False
 
-    if (object_info := get_drs_object_info(info.hostname, info.object_id)) is None:
+    object_info = get_drs_object_info(info.hostname, info.object_id)
+    if (object_info) is None:
         return False
 
     # Get common information we want
@@ -550,6 +552,10 @@ def download_file_from_url(
         if show_progress
         else InvisibleProgress()
     )
+
+    # if the file name contains '/', create subdirectories and download there
+    ensure_dirpath_exists(Path(os.path.dirname(filename)))
+
     try:
         with open(filename, "wb") as file:
             for data in response.iter_content(block_size):
@@ -557,15 +563,20 @@ def download_file_from_url(
                 total_downloaded += len(data)
                 file.write(data)
     except IOError as ex:
-        logger.critical(f"IOError {ex} opening {filename} for writing.")
+        logger.critical(f"IOError opening {filename} for writing: {ex}")
         return False
 
     if total_downloaded != total_size_in_bytes:
         logger.critical(
-            f"Error in downloading {filename} expected {total_size_in_bytes} bytes, downloaded {total_downloaded} bytes"
+            f"Error in downloading {filename}: expected {total_size_in_bytes} bytes, downloaded {total_downloaded} bytes"
         )
         return False
     return True
+
+
+def unpackage_object(filepath: str):
+    with zipfile.ZipFile(filepath, "r") as package:
+        package.extractall(os.path.dirname(filepath))
 
 
 def parse_drs_identifier(drs_candidate: str) -> Tuple[str, str, str]:
@@ -794,6 +805,7 @@ class DownloadManager:
 
         self.hostname = hostname
         self.access_token = auth.get_access_token()
+        self.metadata = Gen3Metadata(auth)
         self.wts_endpoints = wts_external_oidc(hostname)
         self.resolved_compact_drs = {}
         # add COMMONS host as a DRSEndpoint as it does not use the WTS
@@ -849,6 +861,9 @@ class DownloadManager:
             endpoint.renew_token(self.hostname, self.access_token)
             self.known_hosts[drs_hostname] = endpoint
         for drs_hostname in drs_not_in_wts:
+            # if we already know the host then we don't need to reset the host
+            if drs_hostname in self.known_hosts:
+                continue
             # mark hostname as unavailable
             self.known_hosts[drs_hostname] = KnownDRSEndpoint(
                 hostname=drs_hostname,
@@ -982,6 +997,29 @@ class DownloadManager:
             res = download_file_from_url(
                 url=download_url, filename=filepath, show_progress=show_progress
             )
+
+            # check if object is a zip file and a package
+            if os.path.splitext(entry.file_name)[-1] in PACKAGE_EXTENSIONS:
+                # if so expand in place
+                try:
+                    # if the metadata type is package then unpack
+                    mds_entry = self.metadata.get(entry.object_id)
+
+                except Exception:
+                    mds_entry = {}  # no MDS or object not in MDS
+                    logger.debug(
+                        f"{entry.file_name} is not a package and will not be expanded"
+                    )
+
+                if mds_entry.get("type") == "package":
+                    try:
+                        unpackage_object(filepath)
+                    except Exception as e:
+                        logger.critical(
+                            f"{entry.file_name} had an issue while being unpackaged: {e}"
+                        )
+                        res = False
+
             completed[entry.object_id].status = "downloaded" if res else "error"
             completed[entry.object_id].end_time = datetime.now(timezone.utc)
 

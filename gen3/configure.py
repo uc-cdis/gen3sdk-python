@@ -19,8 +19,7 @@ min_shepherd_version=
 
 """
 import json
-from cdislogging import get_logger
-
+import logging
 from os.path import expanduser
 from pathlib import Path
 from collections import OrderedDict
@@ -28,8 +27,6 @@ import gen3.auth as auth_tool
 
 
 CONFIG_FILE_PATH = expanduser("~/.gen3/config")
-
-logging = get_logger("__name__")
 
 
 def get_profile_from_creds(profile, cred):
@@ -51,9 +48,7 @@ def get_profile_from_creds(profile, cred):
 
 
 def get_current_config_lines():
-    """
-    Read lines from the config file if exists in ~/.gen3 folder, else create new config file
-    """
+    """Read lines from the config file if exists in ~/.gen3 folder, else create new config file"""
     try:
         with open(CONFIG_FILE_PATH) as configFile:
             logging.info(f"Reading existing config file at {CONFIG_FILE_PATH}")
@@ -65,9 +60,7 @@ def get_current_config_lines():
 
 
 def update_config_lines(lines, profile_title, new_lines):
-    """
-    Update config file contents with the new profile values
-    """
+    """Update config file contents with the new profile values"""
 
     if profile_title in lines:
         profile_line_index = lines.index(profile_title)

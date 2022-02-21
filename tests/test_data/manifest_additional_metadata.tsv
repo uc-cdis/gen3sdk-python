@@ -1,0 +1,2 @@
+authz	fancy_column	file_name	md5	size	url
+['/open']	fancy_data	file.txt	473d83400bc1bc9dc635e334faddf33c	363455714	s3://my-data-bucket/dg.1234/path/file.txt

@@ -176,7 +176,7 @@ async def async_ingest_metadata_manifest(
                 if is_indexed_file_object
                 else GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT)
     """
-    # if delimter not specified, try to get based on file ext
+    # if delimiter not specified, try to get based on file ext
     if not manifest_file_delimiter:
         file_ext = os.path.splitext(manifest_file)
         if file_ext[-1].lower() == ".tsv":

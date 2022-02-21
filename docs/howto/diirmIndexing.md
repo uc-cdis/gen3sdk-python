@@ -178,7 +178,7 @@ import sys
 import logging
 
 from gen3.auth import Gen3Auth
-from gen3.tools.indexing import index_object_manifest
+from gen3.tools.indexing.index_manifest import index_object_manifest
 
 logging.basicConfig(filename="output.log", level=logging.DEBUG)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
@@ -198,7 +198,8 @@ def main():
         thread_num=8,
         auth=auth,
         replace_urls=False,
-        manifest_file_delimiter="\t" # put "," if the manifest is csv file
+        manifest_file_delimiter="\t", # put "," if the manifest is csv file
+        submit_additional_metadata_columns=False, # set to True to submit additional metadata to the metadata service
     )
 
 if __name__ == "__main__":
@@ -213,7 +214,7 @@ To merge bucket manifests contained in `/input_manifests` into one output manife
 import sys
 import logging
 
-from gen3.tools.indexing import merge_bucket_manifests
+from gen3.tools.indexing.merge_manifests import merge_bucket_manifests
 
 logging.basicConfig(filename="output.log", level=logging.DEBUG)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))

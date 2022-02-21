@@ -166,7 +166,7 @@ def merge_guids_into_metadata(
     start_time = time.perf_counter()
     logging.info(f"start time: {start_time}")
 
-    # if delimter not specified, try to get based on file ext
+    # if delimiter not specified, try to get based on file ext
     if not indexing_manifest_file_delimiter:
         indexing_manifest_file_delimiter = _get_delimiter_from_extension(
             indexing_manifest

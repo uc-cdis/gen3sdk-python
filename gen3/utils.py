@@ -1,5 +1,5 @@
-from cdislogging import get_logger
-
+from jsonschema import Draft4Validator
+import logging
 import sys
 import re
 import requests
@@ -18,8 +18,6 @@ SIZE_FORMAT = r"^[0-9]*$"
 ACL_FORMAT = r"^.*$"
 URL_FORMAT = r"^.*$"
 AUTHZ_FORMAT = r"^.*$"
-
-logging = get_logger("__name__")
 
 
 def raise_for_status(response):
@@ -125,6 +123,18 @@ def _verify_format(s, format):
     if r.match(s) is not None:
         return True
     return False
+
+
+def _verify_schema(data, schema):
+    validator = Draft4Validator(schema)
+    validator.iter_errors(data)
+    errors = [e.message for e in validator.iter_errors(data)]
+    if errors:
+        logging.error(
+            f"Error validating package contents {data} against schema {schema}. Details: {errors}"
+        )
+        return False
+    return True
 
 
 def _standardize_str(s):
