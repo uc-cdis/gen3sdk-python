@@ -235,7 +235,7 @@ def objects_manifest_validate_format(
     "--manifest-file-delimiter",
     "manifest_file_delimiter",
     help="string character that delimites the file (tab or comma). Defaults to tab.",
-    default="\t",
+    default=None,
     show_default=True,
 )
 @click.option(
