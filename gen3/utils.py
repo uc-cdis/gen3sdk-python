@@ -34,9 +34,11 @@ def get_or_create_event_loop_for_thread():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
     except AttributeError:
-        # likely asyncio version without that function exposed
-        # this version creates or gets
+        # handle older versions of asyncio for previous versions of Python,
+        # specifically this allows Python 3.6 asyncio to get a loop
         loop = asyncio._get_running_loop()
+        if not loop:
+            loop = asyncio.get_event_loop()
 
     return loop
 
