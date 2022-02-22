@@ -1,5 +1,4 @@
 from jsonschema import Draft4Validator
-import logging
 import sys
 import re
 import requests
@@ -8,6 +7,10 @@ from urllib.parse import urlunsplit
 from urllib.parse import urlencode
 from urllib.parse import urlsplit
 from urllib.parse import parse_qs
+
+from cdislogging import get_logger
+
+logging = get_logger("__name__")
 
 
 UUID_FORMAT = (

@@ -1,8 +1,6 @@
 """
 Module to implement is_valid_manifest_format
 """
-from cdislogging import get_logger
-
 import warnings
 import csv
 
@@ -15,6 +13,8 @@ from gen3.tools.indexing.manifest_columns import (
     EmptyWarning,
     MultiValueError,
 )
+
+from cdislogging import get_logger
 
 logging = get_logger("__name__")
 

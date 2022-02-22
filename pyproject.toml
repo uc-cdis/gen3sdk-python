@@ -29,13 +29,14 @@ pandas = "*"
 jsonschema = "*"
 dataclasses-json = "*"
 pypfb = "<1.0.0"
+cdislogging = ">=1.1.1"
 fastavro = "^1.4.7"
 tqdm = ">=4.61.2"
 humanfriendly ="*"
 python-dateutil = "*"
 
 [tool.poetry.dev-dependencies]
-pytest = ">=3.2.3"
+pytest = ">=6.0"
 pytest-cov = "*"
 requests-mock = "*"
 cdisutilstest = { git = "https://github.com/uc-cdis/cdisutils-test.git", tag = "1.0.0" }
@@ -43,6 +44,13 @@ doiclient = { git = "https://github.com/uc-cdis/doiclient.git", tag = "1.0.0" }
 dosclient = { git = "https://github.com/uc-cdis/dosclient.git", tag = "1.0.0" }
 hsclient = { git = "https://github.com/uc-cdis/hsclient.git", tag = "1.0.0" }
 indexd = { git = "https://github.com/uc-cdis/indexd.git", tag = "2.14.1" }
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-v"
+testpaths = [
+    "tests",
+]
 
 [tool.poetry.scripts]
 gen3 = 'gen3.cli.__main__:main'
