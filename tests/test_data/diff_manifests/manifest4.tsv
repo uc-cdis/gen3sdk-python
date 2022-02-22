@@ -1,0 +1,4 @@
+guid	md5	size	authz	url
+255e396f-f1f8-11e9-9a07-0a80fada096c	473d83400bc1bc9dc635e334fadd133c	363455714	['phs0002', 'phs0001']	['s3://pdcdatastore/test4.raw']
+255e396f-f1f8-11e9-9a07-0a80fada010c	473d83400bc1bc9dc635e334fadde33c	363455714	['Open']	['s3://pdcdatastore/test4.raw']
+255e396f-f1f8-11e9-9a07-0a80fada012c	473d83400bc1bc9dc635e334fadde33c	363455715	['Open']	['s3://pdcdatastore/test6.raw']
