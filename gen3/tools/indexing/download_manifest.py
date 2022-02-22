@@ -21,6 +21,7 @@ Attributes:
               them all post-processing.
 """
 import asyncio
+import aiofiles
 import click
 import time
 import csv
@@ -33,6 +34,7 @@ import shutil
 import math
 
 from gen3.index import Gen3Index
+from gen3.utils import get_or_create_event_loop_for_thread
 
 INDEXD_RECORD_PAGE_SIZE = 1024
 MAX_CONCURRENT_REQUESTS = 24
@@ -207,7 +209,8 @@ def write_page_records_to_files(
         raise AttributeError("No pages specified to get records from.")
 
     pages = pages.strip().split(",")
-    loop = asyncio.get_event_loop()
+    loop = get_or_create_event_loop_for_thread()
+
     result = loop.run_until_complete(
         _get_records_and_write_to_file(
             commons_url, pages, num_processes, max_concurrent_requests
@@ -282,9 +285,10 @@ async def _parse_from_queue(queue):
     Args:
         queue (asyncio.Queue): queue to read indexd records from
     """
-    loop = asyncio.get_event_loop()
+    loop = get_or_create_event_loop_for_thread()
+
     file_name = TMP_FOLDER + f"{os.getpid()}.csv"
-    with open(file_name, "w+", encoding="utf8") as file:
+    async with aiofiles.open(file_name, "w+", encoding="utf8") as file:
         logging.info(f"Write to {file_name}")
         csv_writer = csv.writer(file)
 
@@ -314,7 +318,7 @@ async def _parse_from_queue(queue):
                         record.get("size"),
                         record.get("file_name"),
                     ]
-                    loop.run_in_executor(None, csv_writer.writerow, manifest_row)
+                    await csv_writer.writerow(manifest_row)
 
             records = await queue.get()
 

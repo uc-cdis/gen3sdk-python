@@ -47,6 +47,7 @@ import os
 import time
 
 from gen3.index import Gen3Index
+from gen3.utils import get_or_create_event_loop_for_thread
 
 MAX_CONCURRENT_REQUESTS = 24
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -323,7 +324,7 @@ async def _parse_from_queue(queue, lock, commons_url, output_queue):
         commons_url (str): root domain for commons where indexd lives
         output_queue (asyncio.Queue): queue for output
     """
-    loop = asyncio.get_event_loop()
+    loop = get_or_create_event_loop_for_thread()
 
     row = await queue.get()
 

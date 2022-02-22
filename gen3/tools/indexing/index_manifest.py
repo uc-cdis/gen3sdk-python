@@ -226,6 +226,11 @@ def get_and_verify_fileinfos_from_tsv_manifest(
             if not {URLS_STANDARD_KEY, MD5_STANDARD_KEY, SIZE_STANDARD_KEY}.issubset(
                 set(output_row.keys())
             ):
+                logging.error(
+                    f"ERROR: '{row[current_column_name]}' (columns names: "
+                    f"{set(output_row.keys())}) does not have required rows: "
+                    f"{URLS_STANDARD_KEY}, {MD5_STANDARD_KEY}, {SIZE_STANDARD_KEY}"
+                )
                 is_row_valid = False
 
             if not is_row_valid:
