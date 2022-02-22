@@ -257,6 +257,11 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="p">{</span><span class="n">URLS_STANDARD_KEY</span><span class="p">,</span> <span class="n">MD5_STANDARD_KEY</span><span class="p">,</span> <span class="n">SIZE_STANDARD_KEY</span><span class="p">}</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span>
                 <span class="nb">set</span><span class="p">(</span><span class="n">output_row</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
             <span class="p">):</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;ERROR: &#39;</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="n">current_column_name</span><span class="p">]</span><span class="si">}</span><span class="s2">&#39; (columns names: &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">set</span><span class="p">(</span><span class="n">output_row</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">) does not have required rows: &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">URLS_STANDARD_KEY</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">MD5_STANDARD_KEY</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">SIZE_STANDARD_KEY</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
                 <span class="n">is_row_valid</span> <span class="o">=</span> <span class="kc">False</span>
 
             <span class="k">if</span> <span class="ow">not</span> <span class="n">is_row_valid</span><span class="p">:</span>
