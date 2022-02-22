@@ -33,6 +33,7 @@ import os
 import time
 
 from gen3.metadata import Gen3Metadata
+from gen3.utils import get_or_create_event_loop_for_thread
 
 MAX_CONCURRENT_REQUESTS = 24
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -214,7 +215,7 @@ async def _parse_from_queue(queue, lock, commons_url, output_queue, metadata_sou
         metadata_source (str): the source of the metadata you are verifying, in practice
             this means the first nested section in the metadata service
     """
-    loop = asyncio.get_event_loop()
+    loop = get_or_create_event_loop_for_thread()
 
     while not queue.empty():
         row = await queue.get()
