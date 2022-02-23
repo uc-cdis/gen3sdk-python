@@ -56,6 +56,24 @@ using the credentials.json downloaded from the commons profile page.</p>
 <dl class="py method">
 <dt id="gen3.file.Gen3File.delete_file">
 <code class="sig-name descname"><span class="pre">delete_file</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.delete_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.delete_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method is DEPRECATED. Use delete_file_locations() instead.
+Delete all locations of a stored data file and remove its record from indexd</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>guid</strong> (<em>str</em>) – provide a UUID for file id to delete</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>requests.delete result</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>requests.Response</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="gen3.file.Gen3File.delete_file_locations">
+<code class="sig-name descname"><span class="pre">delete_file_locations</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.delete_file_locations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.delete_file_locations" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete all locations of a stored data file and remove its record from indexd</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>

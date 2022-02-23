@@ -89,6 +89,21 @@
 
 <div class="viewcode-block" id="Gen3File.delete_file"><a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.delete_file">[docs]</a>    <span class="k">def</span> <span class="nf">delete_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method is DEPRECATED. Use delete_file_locations() instead.</span>
+<span class="sd">        Delete all locations of a stored data file and remove its record from indexd</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guid (str): provide a UUID for file id to delete</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            requests.Response : requests.delete result</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/user/data/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">guid</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+
+        <span class="k">return</span> <span class="n">output</span></div>
+
+<div class="viewcode-block" id="Gen3File.delete_file_locations"><a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.delete_file_locations">[docs]</a>    <span class="k">def</span> <span class="nf">delete_file_locations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Delete all locations of a stored data file and remove its record from indexd</span>
 
 <span class="sd">        Args:</span>
@@ -97,7 +112,7 @@
 <span class="sd">            text: requests.delete text result</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/user/data/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">guid</span><span class="p">)</span>
-        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">output</span></div>
 
