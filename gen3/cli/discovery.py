@@ -7,6 +7,7 @@ from gen3.tools.metadata.discovery import (
     output_expanded_discovery_metadata,
     try_delete_discovery_guid,
 )
+from gen3.utils import get_or_create_event_loop_for_thread
 
 
 @click.group()
@@ -41,7 +42,7 @@ def discovery_publish(ctx, file, use_default_file, omit_empty):
     if not file and not use_default_file:
         file = click.prompt("Enter discovery metadata TSV file to publish")
 
-    loop = asyncio.get_event_loop()
+    loop = get_or_create_event_loop_for_thread()
     endpoint = ctx.obj.get("endpoint")
     loop.run_until_complete(
         publish_discovery_metadata(
@@ -71,7 +72,7 @@ def discovery_read(ctx, limit, agg):
     Outputs the TSV filename with format {commons-url}-discovery_metadata.tsv
     """
     auth = ctx.obj["auth_factory"].get()
-    loop = asyncio.get_event_loop()
+    loop = get_or_create_event_loop_for_thread()
     endpoint = ctx.obj.get("endpoint")
     output_file = loop.run_until_complete(
         output_expanded_discovery_metadata(
