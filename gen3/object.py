@@ -1,3 +1,4 @@
+import logging
 from gen3 import file, metadata, auth as auth_tool, index as indexd
 
 
@@ -47,9 +48,9 @@ class Gen3Object:
         if metadata_response_object:
             try:
                 metadata_response_object = meta.delete(guid)
-                print(metadata_response_object)
+                logging.info(metadata_response_object)
             except Exception as exp:
-                return f"Error in deleting object with {guid} from Metadata Service. Response -- {exp}"
+                return f"Error in deleting object with {guid} from Metadata Service. Exception -- {exp}"
 
         index = indexd.Gen3Index(auth_provider=self._auth_provider)
         idx_record = index.get(guid)
@@ -65,8 +66,6 @@ class Gen3Object:
                 return f"Error in deleting object with {guid} from Fence. Response -- {response}"
         else:
             response = index.delete_record(guid)
-            print(type(response))
-            print(response)
         return "Success"
 
 

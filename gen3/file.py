@@ -62,7 +62,7 @@ class Gen3File:
         Args:
             guid (str): provide a UUID for file id to delete
         Returns:
-            requests.Response : requests.delete result
+            text: requests.delete text result
         """
         api_url = "{}/user/data/{}".format(self._endpoint, guid)
         output = requests.delete(api_url, auth=self._auth_provider).text
@@ -76,7 +76,7 @@ class Gen3File:
         Args:
             guid (str): provide a UUID for file id to delete
         Returns:
-            text: requests.delete text result
+            requests.Response : requests.delete result
         """
         api_url = "{}/user/data/{}".format(self._endpoint, guid)
         output = requests.delete(api_url, auth=self._auth_provider)
