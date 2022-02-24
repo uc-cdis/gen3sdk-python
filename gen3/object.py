@@ -41,9 +41,7 @@ class Gen3Object:
         fence = file.Gen3File(auth_provider=self._auth_provider)
         meta = metadata.Gen3Metadata(auth_provider=self._auth_provider)
         metadata_response_object = None
-        metadata_response_object = meta.query(
-            query=f"guid={guid}&data=True", return_full_metadata=True
-        )
+        metadata_response_object = meta.query(f"guid={guid}&data=True", True)
 
         if metadata_response_object:
             try:
@@ -64,9 +62,10 @@ class Gen3Object:
                 if metadata_response_object:
                     meta.create(guid, metadata_response_object)
                 return f"Error in deleting object with {guid} from Fence. Response -- {response}"
+            return "Deleted files succesfully"
         else:
             response = index.delete_record(guid)
-        return "Success"
+            return "Deleted records succesfully"
 
 
 if __name__ == "__main__":
