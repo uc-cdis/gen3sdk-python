@@ -23,5 +23,5 @@ poetry env use python3
 poetry run python --version
 poetry run python -m pip install --upgrade pip
 poetry run pip install poetry
-poetry install -vv
+poetry install -vvv
 poetry run bash tests/smokeTest.sh test-all
