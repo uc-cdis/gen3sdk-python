@@ -117,10 +117,13 @@ def get_and_verify_fileinfos_from_tsv_manifest(
         headers(list(str)): field names
 
     """
+    csv.field_size_limit(sys.maxsize)  # handle large values such as "package_contents"
     files = []
     with open(manifest_file, "r", encoding="utf-8-sig") as csvfile:
         csvReader = csv.DictReader(csvfile, delimiter=manifest_file_delimiter)
         fieldnames = csvReader.fieldnames
+        if len(fieldnames) < 2:
+            logging.warning(f"The manifest delimiter ({manifest_file_delimiter}) does not seem to match the provided file")
 
         logging.debug(f"got fieldnames from {manifest_file}: {fieldnames}")
         pass_verification = True

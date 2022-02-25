@@ -139,7 +139,7 @@ class Gen3Query:
             raise
         try:
             return response.json()
-        except:
+        except Exception:
             print(f"Did not receive JSON: {response.text}")
             raise
 
@@ -205,7 +205,7 @@ class Gen3Query:
             raise
         try:
             data = response.json()
-        except:
+        except Exception:
             print(f"Did not receive JSON: {response.text}")
             raise
 
