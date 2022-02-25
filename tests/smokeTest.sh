@@ -1,4 +1,5 @@
 #!/bin/bash
+# TODO convert this to Python Unit tests in the test_wss.py file
 
 XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}"
 
@@ -15,7 +16,7 @@ pipecheck() {
 }
 
 
-# 
+#
 # Adapted from cloud-automation/gen3/lib/shunit.sh
 #
 because() {

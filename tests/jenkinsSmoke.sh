@@ -2,6 +2,9 @@
 #
 # Run tests/smokeTest.sh in a Jenkins environment
 #
+# TODO These things should probably be migrated to our integration tests suite and/or
+#      just converted to unit tests with WSS mocked. This mixture of bash testing in our
+#      Python SDK is confusing
 
 source "${GEN3_HOME}/gen3/lib/utils.sh"
 gen3_load "gen3/gen3setup"
@@ -17,5 +20,6 @@ export GEN3_API_KEY="accesstoken:///$(gen3 api access-token cdis.autotest@gmail.
 poetry config virtualenvs.path "${WORKSPACE}/pysdkvirtenv" --local
 pip install virtualenv==20.7.2
 poetry env use python3
+poetry run python --version
 poetry install -vv
 poetry run bash tests/smokeTest.sh test-all
