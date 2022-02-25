@@ -59,9 +59,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">tokenParts</span> <span class="o">=</span> <span class="n">token_str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tokenParts</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Invalid JWT. Could not split into parts. Provided: </span><span class="si">{</span><span class="n">token_str</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Invalid JWT. Could not split into parts.&quot;</span><span class="p">)</span>
     <span class="n">padding</span> <span class="o">=</span> <span class="s2">&quot;====&quot;</span>
     <span class="n">infoStr</span> <span class="o">=</span> <span class="n">tokenParts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">padding</span><span class="p">[</span><span class="mi">0</span> <span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">tokenParts</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">%</span> <span class="mi">4</span><span class="p">]</span>
     <span class="n">jsonStr</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">urlsafe_b64decode</span><span class="p">(</span><span class="n">infoStr</span><span class="p">)</span>
