@@ -26,9 +26,7 @@ def decode_token(token_str):
     """
     tokenParts = token_str.split(".")
     if len(tokenParts) < 3:
-        raise Exception(
-            f"Invalid JWT. Could not split into parts. Provided: {token_str}"
-        )
+        raise Exception("Invalid JWT. Could not split into parts.")
     padding = "===="
     infoStr = tokenParts[1] + padding[0 : len(tokenParts[1]) % 4]
     jsonStr = base64.urlsafe_b64decode(infoStr)
