@@ -21,5 +21,7 @@ poetry config virtualenvs.path "${WORKSPACE}/pysdkvirtenv" --local
 pip install virtualenv==20.7.2
 poetry env use python3
 poetry run python --version
+poetry run python -m pip install --upgrade pip
+poetry run pip install poetry
 poetry install -vv
 poetry run bash tests/smokeTest.sh test-all
