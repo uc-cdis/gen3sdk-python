@@ -24,7 +24,8 @@ into one.
 
 """
 import os
-import logging
+from cdislogging import get_logger
+
 import csv
 import copy
 
@@ -38,6 +39,8 @@ from gen3.tools.indexing.manifest_columns import (
     URLS_STANDARD_KEY,
     AUTHZ_STANDARD_KEY,
 )
+
+logging = get_logger("__name__")
 
 
 def merge_bucket_manifests(

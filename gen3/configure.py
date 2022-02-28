@@ -19,12 +19,14 @@ min_shepherd_version=
 
 """
 import json
-import logging
 from os.path import expanduser
 from pathlib import Path
 from collections import OrderedDict
 import gen3.auth as auth_tool
 
+from cdislogging import get_logger
+
+logging = get_logger("__name__")
 
 CONFIG_FILE_PATH = expanduser("~/.gen3/config")
 

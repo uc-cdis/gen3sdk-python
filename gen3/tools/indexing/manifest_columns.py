@@ -246,7 +246,7 @@ class MD5Validator(Validator):
             if len(base64_decoded_md5) * 8 != 128:
                 base64_error_message = f'{base64_error_message}. Base64 decoded value for "{md5_hash}" contains {len(base64_decoded_md5)*8} bits, expecting 128 bits'
                 raise Exception
-        except:
+        except Exception:
             raise ValueError(base64_error_message)
 
 
@@ -282,7 +282,7 @@ class SizeValidator(Validator):
         """
         try:
             x = int(size)
-        except:
+        except Exception:
             raise ValueError(f'"{size}" is not an integer')
         if x < 0:
             raise ValueError(f'"{size}" is negative, expecting non-negative integer')
@@ -359,7 +359,7 @@ class URLValidator(Validator):
                 or result.path == "/"
             ):
                 raise Exception()
-        except:
+        except Exception:
             return False
         return True
 
