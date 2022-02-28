@@ -19,11 +19,11 @@ def test_get(sub):
         assert sub.get_programs()
         try:
             sub.get_graphql_schema()
-        except:
+        except Exception:
             assert False
         try:
             sub.get_dictionary_all()
-        except:
+        except Exception:
             assert False
 
 
