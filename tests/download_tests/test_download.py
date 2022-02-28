@@ -769,8 +769,8 @@ def test_download_status_repr_and_str():
     download1 = DownloadStatus(
         filename="test.csv",
         status="downloaded",
-        start_time=datetime.fromisoformat("2011-11-04T00:05:23"),
-        end_time=datetime.fromisoformat("2011-11-04T00:07:12"),
+        start_time=datetime.strptime("2011-11-04T00:05:23Z", "%Y-%m-%dT%H:%M:%SZ"),
+        end_time=datetime.strptime("2011-11-04T00:07:12Z", "%Y-%m-%dT%H:%M:%SZ"),
     )
 
     expected = "filename: test.csv; status: downloaded; start_time: 11/04/2011, 00:05:23; end_time: 11/04/2011, 00:07:12"

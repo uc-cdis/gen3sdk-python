@@ -1,7 +1,7 @@
 import csv
 import json
 import datetime
-import logging
+from cdislogging import get_logger
 import tempfile
 import asyncio
 import os
@@ -21,6 +21,8 @@ BASE_CSV_PARSER_SETTINGS = {
     "quoting": csv.QUOTE_NONE,
     "escapechar": "\\",
 }
+
+logging = get_logger("__name__")
 
 
 async def output_expanded_discovery_metadata(

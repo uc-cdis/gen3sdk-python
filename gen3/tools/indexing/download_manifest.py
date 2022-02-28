@@ -26,7 +26,8 @@ import click
 import time
 import csv
 import glob
-import logging
+from cdislogging import get_logger
+
 import os
 import sys
 import shutil
@@ -39,6 +40,8 @@ INDEXD_RECORD_PAGE_SIZE = 1024
 MAX_CONCURRENT_REQUESTS = 24
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 TMP_FOLDER = os.path.abspath(CURRENT_DIR + "/tmp") + "/"
+
+logging = get_logger("__name__")
 
 
 async def async_download_object_manifest(
@@ -323,6 +326,4 @@ async def _parse_from_queue(queue):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(filename="output.log", level=logging.DEBUG)
-    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
     write_page_records_to_files()

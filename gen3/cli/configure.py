@@ -1,6 +1,8 @@
-import logging
+from cdislogging import get_logger
 import click
 import gen3.configure as config_tool
+
+logging = get_logger("__name__")
 
 
 @click.command()
