@@ -2,6 +2,8 @@ import asyncio
 import os
 import pytest
 from unittest.mock import MagicMock, patch
+import logging as default_logging
+from gen3 import logging, LOG_FORMAT
 
 from gen3.tools.indexing import async_verify_object_manifest
 from gen3.tools.indexing import download_manifest
@@ -13,6 +15,46 @@ from gen3.tools.indexing.index_manifest import (
 
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+
+
+@pytest.fixture(autouse=True)
+def set_log_level_to_error():
+    """
+    By default, only log errors and setup a log output file to read from later
+    """
+    logging.setLevel(default_logging.ERROR)
+
+    if os.path.exists("gen3tests.logs"):
+        os.remove("gen3tests.logs")
+    logfile_handler = default_logging.FileHandler("gen3tests.logs")
+    logfile_handler.setFormatter(default_logging.Formatter(LOG_FORMAT))
+    logging.addHandler(logfile_handler)
+    yield
+
+
+@pytest.fixture()
+def logfile():
+    """
+    Read from log output file
+    """
+
+    class Logfile(object):
+        def __init__(self, filename, *args, **kwargs):
+            super(Logfile, self).__init__(*args, **kwargs)
+            self.filename = filename
+            self.logs = ""
+
+        def read(self):
+            with open(self.filename) as file:
+                for line in file:
+                    self.logs += line
+            return self.logs
+
+    yield Logfile(filename="gen3tests.logs")
+
+    # cleanup after each use
+    if os.path.exists("gen3tests.logs"):
+        os.remove("gen3tests.logs")
 
 
 @patch("gen3.tools.indexing.verify_manifest.Gen3Index")
@@ -657,7 +699,7 @@ def test_index_manifest_packages(gen3_index, gen3_auth):
         },
     ],
 )
-def test_index_manifest_packages_failure(data, gen3_index, gen3_auth, caplog):
+def test_index_manifest_packages_failure(data, gen3_index, gen3_auth, logfile):
     """
     Test that the expected errors are thrown when the manifest contains invalid package rows.
     """
@@ -682,4 +724,4 @@ def test_index_manifest_packages_failure(data, gen3_index, gen3_auth, caplog):
     assert len(indexd_records) == 0
 
     for error in data["expected_error_msgs"]:
-        assert error in caplog.text
+        assert error in logfile.read()

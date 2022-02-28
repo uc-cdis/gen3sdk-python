@@ -34,7 +34,6 @@ import os
 import csv
 import click
 from functools import partial
-import logging
 from multiprocessing.dummy import Pool as ThreadPool
 import threading
 import copy
@@ -77,9 +76,12 @@ from gen3.utils import (
 )
 import indexclient.client as client
 from indexclient.client import Document
+from cdislogging import get_logger
 
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+
+logging = get_logger("__name__")
 
 
 class ThreadControl(object):
