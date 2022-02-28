@@ -152,10 +152,15 @@
 <span class="sd">        headers(list(str)): field names</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">csv</span><span class="o">.</span><span class="n">field_size_limit</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">maxsize</span><span class="p">)</span>  <span class="c1"># handle large values such as &quot;package_contents&quot;</span>
     <span class="n">files</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8-sig&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvfile</span><span class="p">:</span>
         <span class="n">csvReader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">csvfile</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">manifest_file_delimiter</span><span class="p">)</span>
         <span class="n">fieldnames</span> <span class="o">=</span> <span class="n">csvReader</span><span class="o">.</span><span class="n">fieldnames</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fieldnames</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;The manifest delimiter (</span><span class="si">{</span><span class="n">manifest_file_delimiter</span><span class="si">}</span><span class="s2">) does not seem to match the provided file&quot;</span>
+            <span class="p">)</span>
 
         <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;got fieldnames from </span><span class="si">{</span><span class="n">manifest_file</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">fieldnames</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">pass_verification</span> <span class="o">=</span> <span class="kc">True</span>
