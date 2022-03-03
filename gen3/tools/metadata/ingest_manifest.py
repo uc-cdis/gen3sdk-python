@@ -23,7 +23,8 @@ import aiohttp
 import asyncio
 import csv
 import json
-import logging
+from cdislogging import get_logger
+
 import os
 import time
 import urllib.parse
@@ -38,6 +39,8 @@ MAX_CONCURRENT_REQUESTS = 24
 COLUMN_TO_USE_AS_GUID = "guid"
 GUID_TYPE_FOR_INDEXED_FILE_OBJECT = "indexed_file_object"
 GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT = "metadata_object"
+
+logging = get_logger("__name__")
 
 
 def _get_guid_for_row(commons_url, row, lock):

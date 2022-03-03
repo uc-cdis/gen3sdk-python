@@ -1,5 +1,9 @@
 import click
 import os
+import sys
+
+import cdislogging
+
 import gen3.cli.auth as auth
 import gen3.cli.pfb as pfb
 import gen3.cli.wss as wss
@@ -8,6 +12,7 @@ import gen3.cli.configure as configure
 import gen3.cli.objects as objects
 import gen3.cli.drs_pull as drs_pull
 import gen3
+from gen3 import logging as sdklogging
 
 
 class AuthFactory:
@@ -41,13 +46,55 @@ class AuthFactory:
     default=os.getenv("GEN3_ENDPOINT", "default"),
     help="commons hostname - optional if API Key given",
 )
+@click.option(
+    "-v",
+    "verbose_logs",
+    is_flag=True,
+    default=False,
+    help="verbose logs show INFO, WARNING & ERROR logs",
+)
+@click.option(
+    "-vv",
+    "very_verbose_logs",
+    is_flag=True,
+    default=False,
+    help="very verbose logs show DEGUG, INFO, WARNING & ERROR logs",
+)
+@click.option(
+    "--only-error-logs",
+    "only_error_logs",
+    is_flag=True,
+    default=False,
+    help="only show ERROR logs",
+)
 @click.pass_context
-def main(ctx=None, auth_config=None, endpoint=None):
+def main(ctx, auth_config, endpoint, verbose_logs, very_verbose_logs, only_error_logs):
     """Gen3 Command Line Interface"""
     ctx.ensure_object(dict)
     ctx.obj["auth_config"] = auth_config
     ctx.obj["endpoint"] = endpoint
     ctx.obj["auth_factory"] = AuthFactory(auth_config)
+
+    if very_verbose_logs:
+        logger = cdislogging.get_logger(
+            __name__, format=gen3.LOG_FORMAT, log_level="debug"
+        )
+        sdklogging.setLevel("DEBUG")
+    elif verbose_logs:
+        logger = cdislogging.get_logger(
+            __name__, format=gen3.LOG_FORMAT, log_level="info"
+        )
+        sdklogging.setLevel("INFO")
+    elif only_error_logs:
+        logger = cdislogging.get_logger(
+            __name__, format=gen3.LOG_FORMAT, log_level="error"
+        )
+        sdklogging.setLevel("ERROR")
+    else:
+        logger = cdislogging.get_logger(
+            __name__, format=gen3.LOG_FORMAT, log_level="warning"
+        )
+        sdklogging.setLevel("WARNING")
 
 
 main.add_command(auth.auth)

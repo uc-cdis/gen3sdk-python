@@ -2,13 +2,16 @@ import aiohttp
 import backoff
 import requests
 import urllib.parse
-import logging
+from cdislogging import get_logger
+
 import sys
 
 import indexclient.client as client
 
 from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status
 from gen3.auth import Gen3Auth
+
+logging = get_logger("__name__")
 
 
 class Gen3Index:

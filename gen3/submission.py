@@ -3,9 +3,11 @@ import json
 import requests
 import pandas as pd
 import os
-import logging
+from cdislogging import get_logger
 
 from gen3.utils import raise_for_status
+
+logging = get_logger("__name__")
 
 
 class Gen3Error(Exception):

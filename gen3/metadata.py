@@ -5,7 +5,6 @@ import aiohttp
 import backoff
 from datetime import datetime
 import requests
-import logging
 import json
 import os
 from urllib.parse import urlparse
@@ -28,6 +27,10 @@ from gen3.tools.indexing.manifest_columns import (
     AUTHZ_COLUMN_NAMES,
     PREV_GUID_COLUMN_NAMES,
 )
+
+from cdislogging import get_logger
+
+logging = get_logger("__name__")
 
 
 PACKAGE_CONTENTS_STANDARD_KEY = "package_contents"

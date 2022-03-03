@@ -1,6 +1,5 @@
 import os
 import sys
-import logging
 from unittest.mock import MagicMock, patch
 from drsclient.client import DrsClient
 
@@ -8,6 +7,10 @@ from gen3.tools.bundle.ingest_manifest import (
     _replace_bundle_name_with_guid,
     ingest_bundle_manifest,
 )
+
+from cdislogging import get_logger
+
+logging = get_logger("__name__")
 
 
 def test_replace_bundle_name_with_guid():

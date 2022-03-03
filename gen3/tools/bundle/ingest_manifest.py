@@ -1,6 +1,6 @@
 import csv
 import json
-import logging
+from cdislogging import get_logger
 import os
 import time
 import sys
@@ -20,6 +20,8 @@ from gen3.tools.indexing.manifest_columns import (
     TYPE_COLUMN_NAME,
     ALIASES_COLUMN_NAME,
 )
+
+logging = get_logger("__name__")
 
 """
 NOTES:
