@@ -27,9 +27,7 @@ class Gen3Object:
     """
 
     def __init__(self, auth_provider=None):
-        # auth_provider legacy interface required endpoint as 1st arg
         self._auth_provider = auth_provider
-        self._endpoint = self._auth_provider.endpoint
 
     def create_object(self, file_name, authz, metadata=None, aliases=None):
         url = self.endpoint + "/objects"
@@ -54,7 +52,6 @@ class Gen3Object:
         Returns:
             Nothing
         """
-        fence = file.Gen3File(auth_provider=self._auth_provider)
         meta = metadata.Gen3Metadata(auth_provider=self._auth_provider)
         metadata_response_object = meta.query(f"guid={guid}&data=True", True)
 
@@ -67,13 +64,9 @@ class Gen3Object:
                     f"Error in deleting object with {guid} from Metadata Service. Exception -- {exp}"
                 )
 
-        index = indexd.Gen3Index(auth_provider=self._auth_provider)
-        idx_record = index.get(guid)
-
         try:
-            if not idx_record:
-                raise Exception(f"No indexd record found with guid- {guid}")
             if delete_record:
+                fence = file.Gen3File(auth_provider=self._auth_provider)
                 response = fence.delete_file_locations(guid)
                 if response.status_code != 204:
                     raise Exception(
@@ -81,6 +74,7 @@ class Gen3Object:
                     )
                 logging.info("Deleted files succesfully")
             else:
+                index = indexd.Gen3Index(auth_provider=self._auth_provider)
                 response = index.delete_record(guid)
                 logging.info("Deleted records succesfully")
         except Exception as exp:
