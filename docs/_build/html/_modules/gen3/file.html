@@ -97,6 +97,7 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            text: requests.delete text result</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;This method is DEPRECATED. Use delete_file_locations() instead.&quot;</span><span class="p">)</span>
         <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/user/data/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">guid</span><span class="p">)</span>
         <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
 
@@ -183,6 +184,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../indexing.html">Gen3 Index Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../jobs.html">Gen3 Jobs Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../metadata.html">Gen3 Metadata Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../object.html">Gen3 Object Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../query.html">Gen3 Query Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../submission.html">Gen3 Submission Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../tools.html">Gen3 Tools</a></li>
