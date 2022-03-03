@@ -1,5 +1,7 @@
 import logging
+import requests
 from gen3 import file, metadata, auth as auth_tool, index as indexd
+from gen3.utils import raise_for_status
 
 
 class Gen3ObjectError(Exception):
@@ -24,23 +26,36 @@ class Gen3Object:
 
     """
 
-    def __init__(self, endpoint=None, auth_provider=None):
+    def __init__(self, auth_provider=None):
         # auth_provider legacy interface required endpoint as 1st arg
-        self._auth_provider = auth_provider or endpoint
+        self._auth_provider = auth_provider
         self._endpoint = self._auth_provider.endpoint
+
+    def create_object(self, file_name, authz, metadata=None, aliases=None):
+        url = self.endpoint + "/objects"
+        body = {
+            "file_name": file_name,
+            "authz": authz,
+            "metadata": metadata,
+            "aliases": aliases,
+        }
+        response = requests.post(url, json=body, auth=self._auth_provider)
+        raise_for_status(response)
+        data = response.json()
+        return data["guid"], data["upload_url"]
 
     def delete_object(self, guid, delete_record=False):
         """
-        Delete the all the records of the guid from all storage locations, indexd and metadata service
+        Delete the object from indexd, metadata service and optionally all storage locations
 
         Args:
             guid (str): provide a UUID for file id to delete
+            delete_record (boolean) : [Optional] If True, delete the record from all storage locations
         Returns:
-            text: requests.delete text result
+            Nothing
         """
         fence = file.Gen3File(auth_provider=self._auth_provider)
         meta = metadata.Gen3Metadata(auth_provider=self._auth_provider)
-        metadata_response_object = None
         metadata_response_object = meta.query(f"guid={guid}&data=True", True)
 
         if metadata_response_object:
@@ -48,32 +63,27 @@ class Gen3Object:
                 metadata_response_object = meta.delete(guid)
                 logging.info(metadata_response_object)
             except Exception as exp:
-                return f"Error in deleting object with {guid} from Metadata Service. Exception -- {exp}"
+                raise Exception(
+                    f"Error in deleting object with {guid} from Metadata Service. Exception -- {exp}"
+                )
 
         index = indexd.Gen3Index(auth_provider=self._auth_provider)
         idx_record = index.get(guid)
 
-        if not idx_record:
-            return f"No record found with guid- {guid}"
-
-        if delete_record:
-            response = fence.delete_file_locations(guid)
-            if response.status_code != 204:
-                if metadata_response_object:
-                    meta.create(guid, metadata_response_object)
-                return f"Error in deleting object with {guid} from Fence. Response -- {response}"
-            return "Deleted files succesfully"
-        else:
-            response = index.delete_record(guid)
-            return "Deleted records succesfully"
-
-
-if __name__ == "__main__":
-    auth = auth_tool.Gen3Auth(
-        refresh_file="/Users/saishanmukhanarumanchi/Documents/git_projects/playground/sai_creds.json"
-    )
-    gen3Obj = Gen3Object(auth_provider=auth)
-    fence = file.Gen3File(auth)
-    guid = fence.upload_file("query.py", protocol="s3")["guid"]
-    print(guid)
-    print(gen3Obj.delete_object(guid, delete_record=True))
+        try:
+            if not idx_record:
+                raise Exception(f"No indexd record found with guid- {guid}")
+            if delete_record:
+                response = fence.delete_file_locations(guid)
+                if response.status_code != 204:
+                    raise Exception(
+                        f"Error in deleting object with {guid} from Fence. Response -- {response}"
+                    )
+                logging.info("Deleted files succesfully")
+            else:
+                response = index.delete_record(guid)
+                logging.info("Deleted records succesfully")
+        except Exception as exp:
+            if metadata_response_object:
+                meta.create(guid, metadata_response_object)
+            raise

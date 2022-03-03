@@ -734,7 +734,7 @@ class Gen3Index:
 
         Args:
             guid: string
-                 - record id
+                - record id
 
         Returns: Nothing
 

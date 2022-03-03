@@ -64,6 +64,7 @@ class Gen3File:
         Returns:
             text: requests.delete text result
         """
+        print("This method is DEPRECATED. Use delete_file_locations() instead.")
         api_url = "{}/user/data/{}".format(self._endpoint, guid)
         output = requests.delete(api_url, auth=self._auth_provider).text
 
