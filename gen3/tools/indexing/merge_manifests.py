@@ -125,7 +125,7 @@ def merge_bucket_manifests(
                     continue
 
                 # If this record is one of the records which are expected duplicates
-                # (eg topmed EA ancestry files), then don't attempt to merge this record
+                # then don't attempt to merge this record
                 # with any records that share its md5sum: just add it to the list
                 if record[MD5_STANDARD_KEY] in expected_duplicate_md5s:
                     all_rows[record[MD5_STANDARD_KEY]].append(record)
