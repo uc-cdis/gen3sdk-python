@@ -1317,7 +1317,13 @@ def download_files_in_drs_manifest(
 
 
 def download_drs_object(
-    hostname, auth, object_id, output_dir, show_progress=True
+    hostname,
+    auth,
+    object_id,
+    output_dir,
+    show_progress=True,
+    unpack_packages=True,
+    delete_unpacked_packages=False,
 ) -> None:
     """
     A convenience function used to download a single DRS object.
@@ -1326,11 +1332,21 @@ def download_drs_object(
         auth: Gen3 Auth instance
         object_id (str): DRS object id
         output_dir: directory to save downloaded files to
+        unpack_packages (bool): set to False to disable the unpacking of downloaded packages
+        delete_unpacked_packages (bool): set to True to delete package files after unpacking them
 
     Returns:
         List of DownloadStatus objects for the DRS object
     """
-    _download_obj(hostname, auth, object_id, output_dir, show_progress)
+    _download_obj(
+        hostname,
+        auth,
+        object_id,
+        output_dir,
+        show_progress,
+        unpack_packages,
+        delete_unpacked_packages,
+    )
 
 
 def list_access_in_drs_manifest(hostname, auth, infile) -> bool:
