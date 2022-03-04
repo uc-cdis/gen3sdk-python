@@ -214,6 +214,7 @@ class Downloadable:
     def __str__(self):
         return (
             f'{self.file_name if self.file_name is not None else "not available" : >45}; '
+            f"{self.object_id}; "
             f"{humanfriendly.format_size(self.file_size) :>12}; "
             f'{self.hostname if self.hostname is not None else "not resolved"}; '
             f'{self.created_time.strftime("%m/%d/%Y, %H:%M:%S") if self.created_time is not None else "not available"}'
