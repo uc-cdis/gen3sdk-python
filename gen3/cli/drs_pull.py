@@ -53,8 +53,27 @@ def list_files_or_access(ctx, infile: str, access: bool, object: bool) -> bool:
     help="Hide the progress bar when downloading",
     show_default=True,
 )
+@click.option(
+    "--no-unpack-packages",
+    is_flag=True,
+    help="disable the unpacking of downloaded packages",
+    show_default=True,
+)
+@click.option(
+    "--delete-unpacked-packages",
+    is_flag=True,
+    help="delete package files after unpacking them",
+    show_default=True,
+)
 @click.pass_context
-def download_manifest(ctx, infile: str, output_dir: str, no_progress: bool):
+def download_manifest(
+    ctx,
+    infile: str,
+    output_dir: str,
+    no_progress: bool,
+    no_unpack_packages: bool,
+    delete_unpacked_packages: bool,
+):
     """
     Pulls all DRS objects in manifest where the manifest can contain DRS objects.
     The user credentials use the Gen3Auth class so the Gen3Auth options are applicable (--auth and --endpoint)
@@ -68,6 +87,8 @@ def download_manifest(ctx, infile: str, output_dir: str, no_progress: bool):
         infile,
         output_dir,
         no_progress,
+        not no_unpack_packages,
+        delete_unpacked_packages,
     )
 
 
@@ -80,8 +101,27 @@ def download_manifest(ctx, infile: str, output_dir: str, no_progress: bool):
     help="Hide the progress bar when downloading",
     show_default=True,
 )
+@click.option(
+    "--no-unpack-packages",
+    is_flag=True,
+    help="disable the unpacking of downloaded packages",
+    show_default=True,
+)
+@click.option(
+    "--delete-unpacked-packages",
+    is_flag=True,
+    help="delete package files after unpacking them",
+    show_default=True,
+)
 @click.pass_context
-def download_object(ctx, object_id: str, output_dir: str, no_progress: bool):
+def download_object(
+    ctx,
+    object_id: str,
+    output_dir: str,
+    no_progress: bool,
+    no_unpack_packages: bool,
+    delete_unpacked_packages: bool,
+):
     """
     Download a DRS object by it's object id
     The user credentials use the Gen3Auth class so the Gen3Auth options are applicable (--auth and --endpoint)
@@ -95,6 +135,8 @@ def download_object(ctx, object_id: str, output_dir: str, no_progress: bool):
         object_id,
         output_dir,
         no_progress,
+        not no_unpack_packages,
+        delete_unpacked_packages,
     )
 
 
