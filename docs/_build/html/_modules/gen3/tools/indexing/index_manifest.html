@@ -67,15 +67,18 @@
 <span class="kn">import</span> <span class="nn">csv</span>
 <span class="kn">import</span> <span class="nn">click</span>
 <span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
-<span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">from</span> <span class="nn">multiprocessing.dummy</span> <span class="kn">import</span> <span class="n">Pool</span> <span class="k">as</span> <span class="n">ThreadPool</span>
 <span class="kn">import</span> <span class="nn">threading</span>
 <span class="kn">import</span> <span class="nn">copy</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">traceback</span>
 
+<span class="kn">from</span> <span class="nn">gen3.index</span> <span class="kn">import</span> <span class="n">Gen3Index</span>
 <span class="kn">from</span> <span class="nn">gen3.auth</span> <span class="kn">import</span> <span class="n">Gen3Auth</span>
+<span class="kn">from</span> <span class="nn">gen3.metadata</span> <span class="kn">import</span> <span class="n">Gen3Metadata</span>
 <span class="kn">from</span> <span class="nn">gen3.tools.indexing.manifest_columns</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">RECORD_TYPE_STANDARD_KEY</span><span class="p">,</span>
+    <span class="n">RECORD_TYPE_ALLOWED_VALUES</span><span class="p">,</span>
     <span class="n">GUID_COLUMN_NAMES</span><span class="p">,</span>
     <span class="n">GUID_STANDARD_KEY</span><span class="p">,</span>
     <span class="n">FILENAME_COLUMN_NAMES</span><span class="p">,</span>
@@ -106,9 +109,12 @@
 <span class="p">)</span>
 <span class="kn">import</span> <span class="nn">indexclient.client</span> <span class="k">as</span> <span class="nn">client</span>
 <span class="kn">from</span> <span class="nn">indexclient.client</span> <span class="kn">import</span> <span class="n">Document</span>
+<span class="kn">from</span> <span class="nn">cdislogging</span> <span class="kn">import</span> <span class="n">get_logger</span>
 
 
 <span class="n">CURRENT_DIR</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+
+<span class="n">logging</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="s2">&quot;__name__&quot;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="ThreadControl"><a class="viewcode-back" href="../../../../tools/indexing.html#gen3.tools.indexing.index_manifest.ThreadControl">[docs]</a><span class="k">class</span> <span class="nc">ThreadControl</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -146,10 +152,15 @@
 <span class="sd">        headers(list(str)): field names</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">csv</span><span class="o">.</span><span class="n">field_size_limit</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">maxsize</span><span class="p">)</span>  <span class="c1"># handle large values such as &quot;package_contents&quot;</span>
     <span class="n">files</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8-sig&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvfile</span><span class="p">:</span>
         <span class="n">csvReader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">csvfile</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">manifest_file_delimiter</span><span class="p">)</span>
         <span class="n">fieldnames</span> <span class="o">=</span> <span class="n">csvReader</span><span class="o">.</span><span class="n">fieldnames</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fieldnames</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;The manifest delimiter (</span><span class="si">{</span><span class="n">manifest_file_delimiter</span><span class="si">}</span><span class="s2">) does not seem to match the provided file&quot;</span>
+            <span class="p">)</span>
 
         <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;got fieldnames from </span><span class="si">{</span><span class="n">manifest_file</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">fieldnames</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">pass_verification</span> <span class="o">=</span> <span class="kc">True</span>
@@ -227,6 +238,13 @@
                             <span class="sa">f</span><span class="s2">&quot;ERROR: </span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="n">current_column_name</span><span class="p">]</span><span class="si">}</span><span class="s2"> is not in UUID_FORMAT format&quot;</span>
                         <span class="p">)</span>
                         <span class="n">is_row_valid</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">elif</span> <span class="n">current_column_name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">RECORD_TYPE_STANDARD_KEY</span><span class="p">:</span>
+                    <span class="n">output_column_name</span> <span class="o">=</span> <span class="n">RECORD_TYPE_STANDARD_KEY</span>
+                    <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="n">current_column_name</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">RECORD_TYPE_ALLOWED_VALUES</span><span class="p">:</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;ERROR: &#39;</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="n">current_column_name</span><span class="p">]</span><span class="si">}</span><span class="s2">&#39; is not one of the valid record types: </span><span class="si">{</span><span class="n">RECORD_TYPE_ALLOWED_VALUES</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="p">)</span>
+                        <span class="n">is_row_valid</span> <span class="o">=</span> <span class="kc">False</span>
                 <span class="k">elif</span> <span class="n">include_additional_columns</span><span class="p">:</span>
                     <span class="n">output_column_name</span> <span class="o">=</span> <span class="n">current_column_name</span>
 
@@ -236,6 +254,8 @@
                             <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">current_column_name</span><span class="p">])</span>
                             <span class="k">if</span> <span class="n">output_column_name</span> <span class="o">==</span> <span class="n">SIZE_STANDARD_KEY</span>
                             <span class="k">else</span> <span class="n">row</span><span class="p">[</span><span class="n">current_column_name</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">current_column_name</span><span class="p">])</span> <span class="o">==</span> <span class="nb">str</span>
+                            <span class="k">else</span> <span class="n">row</span><span class="p">[</span><span class="n">current_column_name</span><span class="p">]</span>
                         <span class="p">)</span>
                     <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
                         <span class="c1"># don&#39;t break</span>
@@ -244,6 +264,11 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="p">{</span><span class="n">URLS_STANDARD_KEY</span><span class="p">,</span> <span class="n">MD5_STANDARD_KEY</span><span class="p">,</span> <span class="n">SIZE_STANDARD_KEY</span><span class="p">}</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span>
                 <span class="nb">set</span><span class="p">(</span><span class="n">output_row</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
             <span class="p">):</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;ERROR: &#39;</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="n">current_column_name</span><span class="p">]</span><span class="si">}</span><span class="s2">&#39; (columns names: &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">set</span><span class="p">(</span><span class="n">output_row</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">) does not have required rows: &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">URLS_STANDARD_KEY</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">MD5_STANDARD_KEY</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">SIZE_STANDARD_KEY</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
                 <span class="n">is_row_valid</span> <span class="o">=</span> <span class="kc">False</span>
 
             <span class="k">if</span> <span class="ow">not</span> <span class="n">is_row_valid</span><span class="p">:</span>
@@ -265,16 +290,19 @@
 
 
 <div class="viewcode-block" id="get_and_verify_fileinfos_from_manifest"><a class="viewcode-back" href="../../../../tools/indexing.html#gen3.tools.indexing.index_manifest.get_and_verify_fileinfos_from_manifest">[docs]</a><span class="k">def</span> <span class="nf">get_and_verify_fileinfos_from_manifest</span><span class="p">(</span>
-    <span class="n">manifest_file</span><span class="p">,</span> <span class="n">include_additional_columns</span><span class="o">=</span><span class="kc">False</span>
+    <span class="n">manifest_file</span><span class="p">,</span> <span class="n">manifest_file_delimiter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">include_additional_columns</span><span class="o">=</span><span class="kc">False</span>
 <span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Wrapper for above function to determine the delimeter based on file extention</span>
+<span class="sd">    Wrapper for above function to determine the delimiter based on file extention</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">manifest_file_ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">manifest_file_ext</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.tsv&quot;</span><span class="p">:</span>
-        <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span>
+    <span class="c1"># if delimiter not specified, try to get based on file ext</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">manifest_file_delimiter</span><span class="p">:</span>
+        <span class="n">manifest_file_ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">manifest_file_ext</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.tsv&quot;</span><span class="p">:</span>
+            <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># default, assume CSV</span>
+            <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span>
 
     <span class="k">return</span> <span class="n">get_and_verify_fileinfos_from_tsv_manifest</span><span class="p">(</span>
         <span class="n">manifest_file</span><span class="o">=</span><span class="n">manifest_file</span><span class="p">,</span>
@@ -318,20 +346,30 @@
     <span class="k">return</span> <span class="n">filename</span>
 
 
-<span class="k">def</span> <span class="nf">_index_record</span><span class="p">(</span><span class="n">indexclient</span><span class="p">,</span> <span class="n">replace_urls</span><span class="p">,</span> <span class="n">thread_control</span><span class="p">,</span> <span class="n">fi</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_index_record</span><span class="p">(</span>
+    <span class="n">indexclient</span><span class="p">,</span>
+    <span class="n">mds</span><span class="p">,</span>
+    <span class="n">replace_urls</span><span class="p">,</span>
+    <span class="n">thread_control</span><span class="p">,</span>
+    <span class="n">submit_additional_metadata_columns</span><span class="p">,</span>
+    <span class="n">fi</span><span class="p">,</span>
+<span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Index single file</span>
+<span class="sd">    Index a single file, and submit additional metadata to the metadata service if provided</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        indexclient(IndexClient): indexd client</span>
+<span class="sd">        mds(Gen3Metadata): optional Gen3Metadata instance</span>
 <span class="sd">        replace_urls(bool): replace urls or not</span>
+<span class="sd">        thread_num(int): number of threads for indexing</span>
+<span class="sd">        submit_additional_metadata_columns(bool): whether to submit additional metadata to the metadata service</span>
 <span class="sd">        fi(dict): file info</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        None</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-
+    <span class="n">index_success</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">urls</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">get_urls</span><span class="p">(</span><span class="n">fi</span><span class="p">[</span><span class="n">URLS_STANDARD_KEY</span><span class="p">])</span>
@@ -399,7 +437,7 @@
                 <span class="n">MD5_STANDARD_KEY</span>
             <span class="p">)</span> <span class="o">!=</span> <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">MD5_STANDARD_KEY</span><span class="p">):</span>
                 <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
-                    <span class="s2">&quot;The guid </span><span class="si">{}</span><span class="s2"> with different size/hash already exist. Can not index it without getting a new guid&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="s2">&quot;The guid </span><span class="si">{}</span><span class="s2"> with different size/hash already exists. Can not index it without getting a new guid&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
                         <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">GUID_STANDARD_KEY</span><span class="p">)</span>
                     <span class="p">)</span>
                 <span class="p">)</span>
@@ -486,13 +524,44 @@
 
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="c1"># Don&#39;t break for any reason</span>
+        <span class="n">index_success</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="n">exc_info</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
         <span class="n">traceback</span><span class="o">.</span><span class="n">print_exception</span><span class="p">(</span><span class="o">*</span><span class="n">exc_info</span><span class="p">)</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
-            <span class="s2">&quot;Can not update/create an indexd record with guid </span><span class="si">{}</span><span class="s2">. Detail </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="s2">&quot;Can not update/create an indexd record with guid </span><span class="si">{}</span><span class="s2">. Detail: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
                 <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">GUID_STANDARD_KEY</span><span class="p">),</span> <span class="n">e</span>
             <span class="p">)</span>
         <span class="p">)</span>
+
+    <span class="c1"># submit additional metadata to the metadata service</span>
+    <span class="k">if</span> <span class="n">submit_additional_metadata_columns</span> <span class="ow">and</span> <span class="n">index_success</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">mds</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                    <span class="s2">&quot;Can not submit to the metadata service when using indexd basic auth&quot;</span>
+                <span class="p">)</span>
+            <span class="n">metadata</span> <span class="o">=</span> <span class="n">mds</span><span class="o">.</span><span class="n">_prepare_metadata</span><span class="p">(</span><span class="n">fi</span><span class="p">,</span> <span class="n">doc</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">metadata</span><span class="p">:</span>
+                <span class="n">mds</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">guid</span><span class="o">=</span><span class="n">doc</span><span class="o">.</span><span class="n">did</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="c1"># Don&#39;t break, but delete indexd record</span>
+            <span class="n">exc_info</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
+            <span class="n">traceback</span><span class="o">.</span><span class="n">print_exception</span><span class="p">(</span><span class="o">*</span><span class="n">exc_info</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                <span class="s2">&quot;Can not create package metadata for guid </span><span class="si">{}</span><span class="s2">. Deleting indexd record. Detail: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">fi</span><span class="p">[</span><span class="n">GUID_STANDARD_KEY</span><span class="p">],</span> <span class="n">e</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">doc</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">exc_info</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
+                <span class="n">traceback</span><span class="o">.</span><span class="n">print_exception</span><span class="p">(</span><span class="o">*</span><span class="n">exc_info</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                    <span class="s2">&quot;Cannot delete indexd record with </span><span class="si">{}</span><span class="s2">. Detail: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">fi</span><span class="p">[</span><span class="n">GUID_STANDARD_KEY</span><span class="p">],</span> <span class="n">e</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
 
     <span class="n">thread_control</span><span class="o">.</span><span class="n">mutexLock</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
     <span class="n">thread_control</span><span class="o">.</span><span class="n">num_processed_files</span> <span class="o">+=</span> <span class="mi">1</span>
@@ -515,6 +584,7 @@
     <span class="n">replace_urls</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">manifest_file_delimiter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">output_filename</span><span class="o">=</span><span class="s2">&quot;indexing-output-manifest.csv&quot;</span><span class="p">,</span>
+    <span class="n">submit_additional_metadata_columns</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
 <span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Loop through all the files in the manifest, update/create records in indexd</span>
@@ -528,6 +598,7 @@
 <span class="sd">        replace_urls(bool): flag to indicate if replace urls or not</span>
 <span class="sd">        manifest_file_delimiter(str): manifest&#39;s delimiter</span>
 <span class="sd">        output_filename(str): output file name for manifest</span>
+<span class="sd">        submit_additional_metadata_columns(bool): whether to submit additional metadata to the metadata service</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        files(list(dict)): list of file info</span>
@@ -558,23 +629,23 @@
 
     <span class="n">indexclient</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">IndexClient</span><span class="p">(</span><span class="n">commons_url</span><span class="p">,</span> <span class="s2">&quot;v0&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="n">auth</span><span class="p">)</span>
 
-    <span class="c1"># if delimter not specified, try to get based on file ext</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">manifest_file_delimiter</span><span class="p">:</span>
-        <span class="n">file_ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">file_ext</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.tsv&quot;</span><span class="p">:</span>
-            <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># default, assume CSV</span>
-            <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>  <span class="c1"># basic auth</span>
+        <span class="k">if</span> <span class="n">submit_additional_metadata_columns</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;&#39;submit_additional_metadata_columns&#39; is on, but using indexd basic auth. Will not be able to submit to the metadata service. To create metadata, use Gen3Auth instance instead.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">mds</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># Gen3Auth</span>
+        <span class="n">mds</span> <span class="o">=</span> <span class="n">Gen3Metadata</span><span class="p">(</span><span class="n">auth_provider</span><span class="o">=</span><span class="n">auth</span><span class="p">)</span>
 
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">files</span><span class="p">,</span> <span class="n">headers</span> <span class="o">=</span> <span class="n">get_and_verify_fileinfos_from_tsv_manifest</span><span class="p">(</span>
-            <span class="n">manifest_file</span><span class="p">,</span> <span class="n">manifest_file_delimiter</span>
+        <span class="n">files</span><span class="p">,</span> <span class="n">headers</span> <span class="o">=</span> <span class="n">get_and_verify_fileinfos_from_manifest</span><span class="p">(</span>
+            <span class="n">manifest_file</span><span class="p">,</span> <span class="n">manifest_file_delimiter</span><span class="p">,</span> <span class="n">include_additional_columns</span><span class="o">=</span><span class="kc">True</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="n">exc_info</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
         <span class="n">traceback</span><span class="o">.</span><span class="n">print_exception</span><span class="p">(</span><span class="o">*</span><span class="n">exc_info</span><span class="p">)</span>
-        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Can not read </span><span class="si">{}</span><span class="s2">. Detail </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">,</span> <span class="n">e</span><span class="p">))</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Can not read </span><span class="si">{}</span><span class="s2">. Detail: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">,</span> <span class="n">e</span><span class="p">))</span>
         <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
 
     <span class="c1"># Early terminate</span>
@@ -589,7 +660,14 @@
     <span class="n">pool</span> <span class="o">=</span> <span class="n">ThreadPool</span><span class="p">(</span><span class="n">thread_num</span><span class="p">)</span>
 
     <span class="n">thread_control</span> <span class="o">=</span> <span class="n">ThreadControl</span><span class="p">(</span><span class="n">num_total_files</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">))</span>
-    <span class="n">part_func</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">_index_record</span><span class="p">,</span> <span class="n">indexclient</span><span class="p">,</span> <span class="n">replace_urls</span><span class="p">,</span> <span class="n">thread_control</span><span class="p">)</span>
+    <span class="n">part_func</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span>
+        <span class="n">_index_record</span><span class="p">,</span>
+        <span class="n">indexclient</span><span class="p">,</span>
+        <span class="n">mds</span><span class="p">,</span>
+        <span class="n">replace_urls</span><span class="p">,</span>
+        <span class="n">thread_control</span><span class="p">,</span>
+        <span class="n">submit_additional_metadata_columns</span><span class="p">,</span>
+    <span class="p">)</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="n">pool</span><span class="o">.</span><span class="n">map_async</span><span class="p">(</span><span class="n">part_func</span><span class="p">,</span> <span class="n">files</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
@@ -614,24 +692,43 @@
 
 <span class="nd">@click</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
-    <span class="s2">&quot;--commons_url&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;--commons-url&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;commons_url&quot;</span><span class="p">,</span>
     <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Root domain (url) for a commons containing indexd.&quot;</span><span class="p">,</span>
     <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--manifest_file&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;The path to input manifest&quot;</span><span class="p">)</span>
-<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--thread_num&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Number of threads&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--api_key&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;path to api key&quot;</span><span class="p">)</span>
-<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--auth&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;basic auth&quot;</span><span class="p">)</span>
-<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--replace_urls&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Replace urls or not&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
-    <span class="s2">&quot;--manifest_file_delimiter&quot;</span><span class="p">,</span>
-    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;string character that delimites the file (tab or comma). Defaults to tab.&quot;</span><span class="p">,</span>
-    <span class="n">default</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;--thread-num&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;thread_num&quot;</span><span class="p">,</span>
+    <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Number of threads&quot;</span><span class="p">,</span>
+    <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">show_default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--api-key&quot;</span><span class="p">,</span> <span class="s2">&quot;api_key&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;path to api key&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--auth&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;basic auth&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--replace-urls&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;replace_urls&quot;</span><span class="p">,</span>
+    <span class="nb">type</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;If supplied, will replace urls for existing records. e.g. existing urls will be overwritten by the new ones&quot;</span><span class="p">,</span>
+    <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">show_default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
-    <span class="s2">&quot;--out_manifest_file&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;--manifest-file-delimiter&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;manifest_file_delimiter&quot;</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;string character that delimites the file (tab or comma). Defaults to tab.&quot;</span><span class="p">,</span>
+    <span class="n">default</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="n">show_default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--out-manifest-file&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;out_manifest_file&quot;</span><span class="p">,</span>
     <span class="n">help</span><span class="o">=</span><span class="s2">&quot;The path to output manifest&quot;</span><span class="p">,</span>
     <span class="n">default</span><span class="o">=</span><span class="s2">&quot;indexing-output-manifest.csv&quot;</span><span class="p">,</span>
+    <span class="n">show_default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="k">def</span> <span class="nf">index_object_manifest_cli</span><span class="p">(</span>
     <span class="n">commons_url</span><span class="p">,</span>
@@ -680,6 +777,51 @@
     <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="s2">&quot;index_object_manifest.log&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
     <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">))</span>
     <span class="n">index_object_manifest_cli</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="delete_all_guids"><a class="viewcode-back" href="../../../../tools/indexing.html#gen3.tools.indexing.index_manifest.delete_all_guids">[docs]</a><span class="k">def</span> <span class="nf">delete_all_guids</span><span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="n">file</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Delete all GUIDs specified in the object manifest.</span>
+
+<span class="sd">    WARNING: THIS COMPLETELY REMOVES INDEX RECORDS. USE THIS ONLY IF YOU KNOW</span>
+<span class="sd">             THE IMPLICATIONS.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">Gen3Index</span><span class="p">(</span><span class="n">auth</span><span class="o">.</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">auth_provider</span><span class="o">=</span><span class="n">auth</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">index</span><span class="o">.</span><span class="n">is_healthy</span><span class="p">():</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;uh oh! The indexing service is not healthy in the commons </span><span class="si">{</span><span class="n">auth</span><span class="o">.</span><span class="n">endpoint</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="n">exit</span><span class="p">()</span>
+
+    <span class="c1"># try to get delimeter based on file ext</span>
+    <span class="n">file_ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">file_ext</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.tsv&quot;</span><span class="p">:</span>
+        <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># default, assume CSV</span>
+        <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8-sig&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">input_file</span><span class="p">:</span>
+        <span class="n">csvReader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">manifest_file_delimiter</span><span class="p">)</span>
+        <span class="n">fieldnames</span> <span class="o">=</span> <span class="n">csvReader</span><span class="o">.</span><span class="n">fieldnames</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;got fieldnames from </span><span class="si">{</span><span class="n">file</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">fieldnames</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># figure out which permutation of the name GUID is being used 1 time</span>
+        <span class="c1"># then use it for all future rows</span>
+        <span class="n">guid_name</span> <span class="o">=</span> <span class="s2">&quot;guid&quot;</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;guid&quot;</span><span class="p">,</span> <span class="s2">&quot;GUID&quot;</span><span class="p">,</span> <span class="s2">&quot;did&quot;</span><span class="p">,</span> <span class="s2">&quot;DID&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">fieldnames</span><span class="p">:</span>
+                <span class="n">guid_name</span> <span class="o">=</span> <span class="n">name</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;using </span><span class="si">{</span><span class="n">guid_name</span><span class="si">}</span><span class="s2"> to retrieve GUID to delete...&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">csvReader</span><span class="p">:</span>
+            <span class="n">guid</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">guid_name</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">guid</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;deleting GUID record:</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">index</span><span class="o">.</span><span class="n">delete_record</span><span class="p">(</span><span class="n">guid</span><span class="o">=</span><span class="n">guid</span><span class="p">))</span></div>
 </pre></div>
 
           </div>
@@ -749,7 +891,7 @@
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2020, Center for Translational Data Science.
+      &copy;2021, Center for Translational Data Science.
       
     </div>
 

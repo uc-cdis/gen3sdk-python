@@ -21,22 +21,27 @@ Attributes:
               them all post-processing.
 """
 import asyncio
+import aiofiles
 import click
 import time
 import csv
 import glob
-import logging
+from cdislogging import get_logger
+
 import os
 import sys
 import shutil
 import math
 
 from gen3.index import Gen3Index
+from gen3.utils import get_or_create_event_loop_for_thread
 
 INDEXD_RECORD_PAGE_SIZE = 1024
 MAX_CONCURRENT_REQUESTS = 24
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 TMP_FOLDER = os.path.abspath(CURRENT_DIR + "/tmp") + "/"
+
+logging = get_logger("__name__")
 
 
 async def async_download_object_manifest(
@@ -204,7 +209,8 @@ def write_page_records_to_files(
         raise AttributeError("No pages specified to get records from.")
 
     pages = pages.strip().split(",")
-    loop = asyncio.get_event_loop()
+    loop = get_or_create_event_loop_for_thread()
+
     result = loop.run_until_complete(
         _get_records_and_write_to_file(
             commons_url, pages, num_processes, max_concurrent_requests
@@ -279,9 +285,10 @@ async def _parse_from_queue(queue):
     Args:
         queue (asyncio.Queue): queue to read indexd records from
     """
-    loop = asyncio.get_event_loop()
+    loop = get_or_create_event_loop_for_thread()
+
     file_name = TMP_FOLDER + f"{os.getpid()}.csv"
-    with open(file_name, "w+", encoding="utf8") as file:
+    async with aiofiles.open(file_name, "w+", encoding="utf8") as file:
         logging.info(f"Write to {file_name}")
         csv_writer = csv.writer(file)
 
@@ -292,17 +299,26 @@ async def _parse_from_queue(queue):
                     manifest_row = [
                         record.get("did"),
                         " ".join(
-                            [url.replace(" ", "%20") for url in record.get("urls")]
+                            sorted(
+                                [url.replace(" ", "%20") for url in record.get("urls")]
+                            )
                         ),
                         " ".join(
-                            [auth.replace(" ", "%20") for auth in record.get("authz")]
+                            sorted(
+                                [
+                                    auth.replace(" ", "%20")
+                                    for auth in record.get("authz")
+                                ]
+                            )
                         ),
-                        " ".join([a.replace(" ", "%20") for a in record.get("acl")]),
+                        " ".join(
+                            sorted([a.replace(" ", "%20") for a in record.get("acl")])
+                        ),
                         record.get("hashes", {}).get("md5"),
                         record.get("size"),
                         record.get("file_name"),
                     ]
-                    loop.run_in_executor(None, csv_writer.writerow, manifest_row)
+                    await csv_writer.writerow(manifest_row)
 
             records = await queue.get()
 
@@ -310,6 +326,4 @@ async def _parse_from_queue(queue):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(filename="output.log", level=logging.DEBUG)
-    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
     write_page_records_to_files()

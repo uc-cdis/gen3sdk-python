@@ -28,14 +28,18 @@ import csv
 from collections import OrderedDict
 from collections.abc import Mapping
 import json
-import logging
+from cdislogging import get_logger
+
 import os
 import time
 
 from gen3.metadata import Gen3Metadata
+from gen3.utils import get_or_create_event_loop_for_thread
 
 MAX_CONCURRENT_REQUESTS = 24
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+
+logging = get_logger("__name__")
 
 
 def _get_guid_from_row(row):
@@ -103,7 +107,7 @@ async def async_verify_metadata_manifest(
     start_time = time.perf_counter()
     logging.info(f"start time: {start_time}")
 
-    # if delimter not specified, try to get based on file ext
+    # if delimiter not specified, try to get based on file ext
     if not manifest_file_delimiter:
         file_ext = os.path.splitext(manifest_file)
         if file_ext[-1].lower() == ".tsv":
@@ -214,7 +218,7 @@ async def _parse_from_queue(queue, lock, commons_url, output_queue, metadata_sou
         metadata_source (str): the source of the metadata you are verifying, in practice
             this means the first nested section in the metadata service
     """
-    loop = asyncio.get_event_loop()
+    loop = get_or_create_event_loop_for_thread()
 
     while not queue.empty():
         row = await queue.get()

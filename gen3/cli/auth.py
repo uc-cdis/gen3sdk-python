@@ -5,9 +5,13 @@ import requests
 import sys
 import gen3.auth as auth_tool
 
+from cdislogging import get_logger
+
+logging = get_logger("__name__")
+
 
 def stderr(*str):
-    print(*str, sys.stderr)
+    logging.error(*str, sys.stderr)
 
 
 @click.command()
@@ -21,7 +25,7 @@ def curl(ctx, path, request=None, data=None):
     """Curl the endpoint with a token - ex: gen3 curl /user/user"""
     auth_provider = ctx.obj["auth_factory"].get()
     output = auth_provider.curl(path, request, data)
-    print(output.text)
+    logging.info(output.text)
     if output.status_code < 200 or output.status_code > 299:
         stderr("err status code %i" % output.status_code)
         sys.exit(1)
@@ -31,14 +35,14 @@ def curl(ctx, path, request=None, data=None):
 @click.pass_context
 def endpoint(ctx):
     """Get the endpoint associated with the active authenticator"""
-    print(ctx.obj["auth_factory"].get().endpoint)
+    logging.info(ctx.obj["auth_factory"].get().endpoint)
 
 
 @click.command()
 @click.pass_context
 def get_access_token(ctx):
     """Get an access token suitable to pass as an Authorization header bearer"""
-    print(ctx.obj["auth_factory"].get().get_access_token())
+    logging.info(ctx.obj["auth_factory"].get().get_access_token())
 
 
 @click.command()
@@ -51,19 +55,19 @@ def token_decode(token_file):
         with open(token_file) as f:
             tokenStr = f.read()
     token = auth_tool.decode_token(tokenStr)
-    print(json.dumps(token, indent=2))
+    logging.info(json.dumps(token, indent=2))
 
 
 @click.command()
 def wts_endpoint():
     """Get the wts endpoint"""
-    print(auth_tool.get_wts_endpoint())
+    logging.info(auth_tool.get_wts_endpoint())
 
 
 @click.command()
 def wts_list():
-    """list the idp's available from the wts in a Gen3 workspace environment """
-    print(json.dumps(auth_tool.get_wts_idps(), indent=2))
+    """list the idp's available from the wts in a Gen3 workspace environment"""
+    logging.info(json.dumps(auth_tool.get_wts_idps(), indent=2))
 
 
 @click.group()

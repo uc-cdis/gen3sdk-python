@@ -61,12 +61,6 @@ sheepdog_client = Gen3Submission(COMMONS_URL, auth)
 json_result = sheepdog_client.submit_record(PROGRAM_NAME, PROJECT_NAME, gen3_node_json)
 ```
 
-### Smoke test
-
-Most of the SDK functionality requires a backend Gen3 environment
-which is not available at unit test time.  The [smoke test](../../tests/smokeTest.sh) can be run as part of a CICD test suite
-with access to a gen3 environment for QA and testing.
-
 ### CLI
 
 If the `gen3` cli is not in your path, or is overwritten by a shell function, then you can still invoke the cli:

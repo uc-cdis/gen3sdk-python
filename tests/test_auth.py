@@ -6,7 +6,6 @@ import requests
 import time
 
 import gen3.auth
-from gen3.auth import Gen3Auth
 
 test_endpoint = "https://localhost"
 test_key = {

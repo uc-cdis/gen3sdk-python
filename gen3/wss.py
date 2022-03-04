@@ -1,11 +1,14 @@
 import backoff
 import requests
 import urllib.parse
-import logging
+from cdislogging import get_logger
+
 import sys
 from urllib.parse import urlparse
 
 from gen3.utils import append_query_params, DEFAULT_BACKOFF_SETTINGS, raise_for_status
+
+logging = get_logger("__name__")
 
 
 def wsurl_to_tokens(ws_urlstr):

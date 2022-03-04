@@ -3,13 +3,56 @@ Contains class for interacting with Gen3's Metadata Service.
 """
 import aiohttp
 import backoff
+from datetime import datetime
 import requests
-import urllib.parse
-import logging
-import sys
+import json
+import os
+from urllib.parse import urlparse
 
-from gen3.utils import append_query_params, DEFAULT_BACKOFF_SETTINGS, raise_for_status
+from gen3.utils import (
+    append_query_params,
+    DEFAULT_BACKOFF_SETTINGS,
+    raise_for_status,
+    _verify_schema,
+)
 from gen3.auth import Gen3Auth
+from gen3.tools.indexing.manifest_columns import (
+    RECORD_TYPE_STANDARD_KEY,
+    GUID_COLUMN_NAMES,
+    FILENAME_COLUMN_NAMES,
+    SIZE_COLUMN_NAMES,
+    MD5_COLUMN_NAMES,
+    ACLS_COLUMN_NAMES,
+    URLS_COLUMN_NAMES,
+    AUTHZ_COLUMN_NAMES,
+    PREV_GUID_COLUMN_NAMES,
+)
+
+from cdislogging import get_logger
+
+logging = get_logger("__name__")
+
+
+PACKAGE_CONTENTS_STANDARD_KEY = "package_contents"
+PACKAGE_CONTENTS_SCHEMA = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "file_name": {
+                "type": "string",
+            },
+            "size": {
+                "type": "integer",
+            },
+            "hashes": {
+                "type": "object",
+            },
+        },
+        "required": ["file_name"],
+        "additionalProperties": True,
+    },
+}
 
 
 class Gen3Metadata:
@@ -138,7 +181,15 @@ class Gen3Metadata:
         return response
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    def query(self, query, return_full_metadata=False, limit=10, offset=0, **kwargs):
+    def query(
+        self,
+        query,
+        return_full_metadata=False,
+        limit=10,
+        offset=0,
+        use_agg_mds=False,
+        **kwargs,
+    ):
         """
         Query the metadata given a query.
 
@@ -184,6 +235,7 @@ class Gen3Metadata:
             Dict{guid: {metadata}}: Dictionary with GUIDs as keys and associated
                 metadata JSON blobs as values
         """
+
         url = self.endpoint + f"/metadata?{query}"
 
         url_with_params = append_query_params(
@@ -388,3 +440,147 @@ class Gen3Metadata:
         raise_for_status(response)
 
         return response.json()
+
+    def create_object(self, file_name, authz, metadata=None, aliases=None):
+        url = self.endpoint + "/objects"
+        body = {
+            "file_name": file_name,
+            "authz": authz,
+            "metadata": metadata,
+            "aliases": aliases,
+        }
+        response = requests.post(url, json=body, auth=self._auth_provider)
+        raise_for_status(response)
+        data = response.json()
+        return data["guid"], data["upload_url"]
+
+    def _prepare_metadata(self, metadata, indexd_doc):
+        """
+        Validate and generate the provided metadata for submission to the metadata
+        service.
+
+        If the record is of type "package", also prepare package metadata.
+
+        Args:
+            metadata (dict): metadata provided by the submitter
+            indexd_doc (dict): the indexd document created for this data
+
+        Returns:
+            dict: metadata ready to be submitted to the metadata service
+        """
+
+        def _extract_non_indexd_metadata(metadata):
+            """
+            Get the "additional metadata": metadata that was provided but is
+            not stored in indexd, so should be stored in the metadata service.
+            """
+            return {
+                k: v
+                for k, v in metadata.items()
+                if k.lower()
+                not in GUID_COLUMN_NAMES
+                + FILENAME_COLUMN_NAMES
+                + SIZE_COLUMN_NAMES
+                + MD5_COLUMN_NAMES
+                + ACLS_COLUMN_NAMES
+                + URLS_COLUMN_NAMES
+                + AUTHZ_COLUMN_NAMES
+                + PREV_GUID_COLUMN_NAMES
+            }
+
+        to_submit = _extract_non_indexd_metadata(metadata)
+
+        # some additional metadata columns must be validated
+        valid = True
+
+        # validate package columns
+        record_type = to_submit.pop(RECORD_TYPE_STANDARD_KEY, "").strip().lower()
+        package_contents = to_submit.pop(PACKAGE_CONTENTS_STANDARD_KEY, None)
+        if record_type == "package":
+            if package_contents:
+                package_contents = json.loads(package_contents)
+                if not _verify_schema(package_contents, PACKAGE_CONTENTS_SCHEMA):
+                    logging.error(
+                        f"ERROR: {package_contents} is not in package contents format"
+                    )
+                    valid = False
+            # generate package metadata
+            package_metadata = self._get_package_metadata(
+                metadata,
+                indexd_doc.file_name,
+                indexd_doc.size,
+                indexd_doc.hashes,
+                indexd_doc.authz,
+                indexd_doc.urls,
+                package_contents,
+            )
+            to_submit.update(package_metadata)
+        elif package_contents:
+            logging.error(
+                f"ERROR: tried to set '{PACKAGE_CONTENTS_STANDARD_KEY}' for a non-package row. Ignoring '{PACKAGE_CONTENTS_STANDARD_KEY}'. Set '{RECORD_TYPE_STANDARD_KEY}' to 'package' to create packages."
+            )
+            valid = False
+
+        if not valid:
+            raise Exception(f"Metadata is not valid: {metadata}")
+
+        return to_submit
+
+    def _get_package_metadata(
+        self, submitted_metadata, file_name, file_size, hashes, authz, urls, contents
+    ):
+        """
+        The MDS /objects API currently expects files that have not been
+        uploaded yet. For files we only needs to index, not upload, create
+        object records manually by generating the expected object fields.
+        TODO: update the MDS objects API to not create upload URLs if the
+        relevant data is provided.
+        """
+
+        def _get_buckets_and_filename_from_urls(submitted_metadata, urls):
+            file_name = ""
+            bucket_urls = []
+            if not urls:
+                logging.warning(f"No URLs provided for: {submitted_metadata}")
+            for url in urls:
+                _file_name = os.path.basename(url)
+                if not file_name:
+                    file_name = _file_name
+                else:
+                    if file_name != _file_name:
+                        logging.warning(
+                            f"Received multiple URLs with different file names; will use the first URL (file name '{file_name}'): {submitted_metadata}"
+                        )
+                parsed = urlparse(url)
+                _bucket_url = f"{parsed.scheme}://{parsed.netloc}"
+                bucket_urls.append(_bucket_url)
+            return file_name, bucket_urls
+
+        file_name_from_url, bucket_urls = _get_buckets_and_filename_from_urls(
+            submitted_metadata, urls
+        )
+        if not file_name:
+            file_name = file_name_from_url
+
+        _, file_ext = os.path.splitext(file_name)
+        uploader = self._auth_provider._token_info.get("sub")
+        now = str(datetime.utcnow())
+        metadata = {
+            "type": "package",
+            "package": {
+                "version": "0.1",
+                "file_name": file_name,
+                "created_time": now,
+                "updated_time": now,
+                "size": file_size,
+                "hashes": hashes,
+                "contents": contents or None,
+            },
+            "_resource_paths": authz,
+            "_uploader_id": uploader,
+            "_buckets": bucket_urls,
+            "_filename": file_name,
+            "_file_extension": file_ext,
+            "_upload_status": "uploaded",
+        }
+        return metadata

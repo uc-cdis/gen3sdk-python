@@ -23,7 +23,8 @@ import aiohttp
 import asyncio
 import csv
 import json
-import logging
+from cdislogging import get_logger
+
 import os
 import time
 import urllib.parse
@@ -38,6 +39,8 @@ MAX_CONCURRENT_REQUESTS = 24
 COLUMN_TO_USE_AS_GUID = "guid"
 GUID_TYPE_FOR_INDEXED_FILE_OBJECT = "indexed_file_object"
 GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT = "metadata_object"
+
+logging = get_logger("__name__")
 
 
 def _get_guid_for_row(commons_url, row, lock):
@@ -173,7 +176,7 @@ async def async_ingest_metadata_manifest(
                 if is_indexed_file_object
                 else GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT)
     """
-    # if delimter not specified, try to get based on file ext
+    # if delimiter not specified, try to get based on file ext
     if not manifest_file_delimiter:
         file_ext = os.path.splitext(manifest_file)
         if file_ext[-1].lower() == ".tsv":

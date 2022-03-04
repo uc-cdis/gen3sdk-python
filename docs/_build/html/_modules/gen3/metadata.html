@@ -36,13 +36,56 @@
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">aiohttp</span>
 <span class="kn">import</span> <span class="nn">backoff</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
 <span class="kn">import</span> <span class="nn">requests</span>
-<span class="kn">import</span> <span class="nn">urllib.parse</span>
-<span class="kn">import</span> <span class="nn">logging</span>
-<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">urlparse</span>
 
-<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">append_query_params</span><span class="p">,</span> <span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">,</span> <span class="n">raise_for_status</span>
+<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">append_query_params</span><span class="p">,</span>
+    <span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">,</span>
+    <span class="n">raise_for_status</span><span class="p">,</span>
+    <span class="n">_verify_schema</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span> <span class="nn">gen3.auth</span> <span class="kn">import</span> <span class="n">Gen3Auth</span>
+<span class="kn">from</span> <span class="nn">gen3.tools.indexing.manifest_columns</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">RECORD_TYPE_STANDARD_KEY</span><span class="p">,</span>
+    <span class="n">GUID_COLUMN_NAMES</span><span class="p">,</span>
+    <span class="n">FILENAME_COLUMN_NAMES</span><span class="p">,</span>
+    <span class="n">SIZE_COLUMN_NAMES</span><span class="p">,</span>
+    <span class="n">MD5_COLUMN_NAMES</span><span class="p">,</span>
+    <span class="n">ACLS_COLUMN_NAMES</span><span class="p">,</span>
+    <span class="n">URLS_COLUMN_NAMES</span><span class="p">,</span>
+    <span class="n">AUTHZ_COLUMN_NAMES</span><span class="p">,</span>
+    <span class="n">PREV_GUID_COLUMN_NAMES</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">cdislogging</span> <span class="kn">import</span> <span class="n">get_logger</span>
+
+<span class="n">logging</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="s2">&quot;__name__&quot;</span><span class="p">)</span>
+
+
+<span class="n">PACKAGE_CONTENTS_STANDARD_KEY</span> <span class="o">=</span> <span class="s2">&quot;package_contents&quot;</span>
+<span class="n">PACKAGE_CONTENTS_SCHEMA</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;array&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;items&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;properties&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;string&quot;</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;integer&quot;</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="s2">&quot;hashes&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;required&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;additionalProperties&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">},</span>
+<span class="p">}</span>
 
 
 <div class="viewcode-block" id="Gen3Metadata"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata">[docs]</a><span class="k">class</span> <span class="nc">Gen3Metadata</span><span class="p">:</span>
@@ -171,7 +214,15 @@
         <span class="k">return</span> <span class="n">response</span></div>
 
 <div class="viewcode-block" id="Gen3Metadata.query"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.query">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
-    <span class="k">def</span> <span class="nf">query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">return_full_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">query</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">query</span><span class="p">,</span>
+        <span class="n">return_full_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">limit</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">offset</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">use_agg_mds</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Query the metadata given a query.</span>
 
@@ -217,6 +268,7 @@
 <span class="sd">            Dict{guid: {metadata}}: Dictionary with GUIDs as keys and associated</span>
 <span class="sd">                metadata JSON blobs as values</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/metadata?</span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s2">&quot;</span>
 
         <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span>
@@ -420,7 +472,151 @@
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">url_with_params</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
         <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div></div>
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">create_object</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">authz</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">aliases</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/objects&quot;</span>
+        <span class="n">body</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="n">file_name</span><span class="p">,</span>
+            <span class="s2">&quot;authz&quot;</span><span class="p">:</span> <span class="n">authz</span><span class="p">,</span>
+            <span class="s2">&quot;metadata&quot;</span><span class="p">:</span> <span class="n">metadata</span><span class="p">,</span>
+            <span class="s2">&quot;aliases&quot;</span><span class="p">:</span> <span class="n">aliases</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">body</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;guid&quot;</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;upload_url&quot;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_prepare_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">indexd_doc</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Validate and generate the provided metadata for submission to the metadata</span>
+<span class="sd">        service.</span>
+
+<span class="sd">        If the record is of type &quot;package&quot;, also prepare package metadata.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            metadata (dict): metadata provided by the submitter</span>
+<span class="sd">            indexd_doc (dict): the indexd document created for this data</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: metadata ready to be submitted to the metadata service</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">_extract_non_indexd_metadata</span><span class="p">(</span><span class="n">metadata</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Get the &quot;additional metadata&quot;: metadata that was provided but is</span>
+<span class="sd">            not stored in indexd, so should be stored in the metadata service.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="n">k</span><span class="p">:</span> <span class="n">v</span>
+                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">metadata</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                <span class="ow">not</span> <span class="ow">in</span> <span class="n">GUID_COLUMN_NAMES</span>
+                <span class="o">+</span> <span class="n">FILENAME_COLUMN_NAMES</span>
+                <span class="o">+</span> <span class="n">SIZE_COLUMN_NAMES</span>
+                <span class="o">+</span> <span class="n">MD5_COLUMN_NAMES</span>
+                <span class="o">+</span> <span class="n">ACLS_COLUMN_NAMES</span>
+                <span class="o">+</span> <span class="n">URLS_COLUMN_NAMES</span>
+                <span class="o">+</span> <span class="n">AUTHZ_COLUMN_NAMES</span>
+                <span class="o">+</span> <span class="n">PREV_GUID_COLUMN_NAMES</span>
+            <span class="p">}</span>
+
+        <span class="n">to_submit</span> <span class="o">=</span> <span class="n">_extract_non_indexd_metadata</span><span class="p">(</span><span class="n">metadata</span><span class="p">)</span>
+
+        <span class="c1"># some additional metadata columns must be validated</span>
+        <span class="n">valid</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># validate package columns</span>
+        <span class="n">record_type</span> <span class="o">=</span> <span class="n">to_submit</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">RECORD_TYPE_STANDARD_KEY</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">package_contents</span> <span class="o">=</span> <span class="n">to_submit</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">PACKAGE_CONTENTS_STANDARD_KEY</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">record_type</span> <span class="o">==</span> <span class="s2">&quot;package&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">package_contents</span><span class="p">:</span>
+                <span class="n">package_contents</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">package_contents</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">_verify_schema</span><span class="p">(</span><span class="n">package_contents</span><span class="p">,</span> <span class="n">PACKAGE_CONTENTS_SCHEMA</span><span class="p">):</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;ERROR: </span><span class="si">{</span><span class="n">package_contents</span><span class="si">}</span><span class="s2"> is not in package contents format&quot;</span>
+                    <span class="p">)</span>
+                    <span class="n">valid</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="c1"># generate package metadata</span>
+            <span class="n">package_metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_package_metadata</span><span class="p">(</span>
+                <span class="n">metadata</span><span class="p">,</span>
+                <span class="n">indexd_doc</span><span class="o">.</span><span class="n">file_name</span><span class="p">,</span>
+                <span class="n">indexd_doc</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>
+                <span class="n">indexd_doc</span><span class="o">.</span><span class="n">hashes</span><span class="p">,</span>
+                <span class="n">indexd_doc</span><span class="o">.</span><span class="n">authz</span><span class="p">,</span>
+                <span class="n">indexd_doc</span><span class="o">.</span><span class="n">urls</span><span class="p">,</span>
+                <span class="n">package_contents</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">to_submit</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">package_metadata</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">package_contents</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;ERROR: tried to set &#39;</span><span class="si">{</span><span class="n">PACKAGE_CONTENTS_STANDARD_KEY</span><span class="si">}</span><span class="s2">&#39; for a non-package row. Ignoring &#39;</span><span class="si">{</span><span class="n">PACKAGE_CONTENTS_STANDARD_KEY</span><span class="si">}</span><span class="s2">&#39;. Set &#39;</span><span class="si">{</span><span class="n">RECORD_TYPE_STANDARD_KEY</span><span class="si">}</span><span class="s2">&#39; to &#39;package&#39; to create packages.&quot;</span>
+            <span class="p">)</span>
+            <span class="n">valid</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">valid</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Metadata is not valid: </span><span class="si">{</span><span class="n">metadata</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">to_submit</span>
+
+    <span class="k">def</span> <span class="nf">_get_package_metadata</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">submitted_metadata</span><span class="p">,</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">file_size</span><span class="p">,</span> <span class="n">hashes</span><span class="p">,</span> <span class="n">authz</span><span class="p">,</span> <span class="n">urls</span><span class="p">,</span> <span class="n">contents</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The MDS /objects API currently expects files that have not been</span>
+<span class="sd">        uploaded yet. For files we only needs to index, not upload, create</span>
+<span class="sd">        object records manually by generating the expected object fields.</span>
+<span class="sd">        TODO: update the MDS objects API to not create upload URLs if the</span>
+<span class="sd">        relevant data is provided.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">_get_buckets_and_filename_from_urls</span><span class="p">(</span><span class="n">submitted_metadata</span><span class="p">,</span> <span class="n">urls</span><span class="p">):</span>
+            <span class="n">file_name</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="n">bucket_urls</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">urls</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No URLs provided for: </span><span class="si">{</span><span class="n">submitted_metadata</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">urls</span><span class="p">:</span>
+                <span class="n">_file_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">file_name</span><span class="p">:</span>
+                    <span class="n">file_name</span> <span class="o">=</span> <span class="n">_file_name</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">file_name</span> <span class="o">!=</span> <span class="n">_file_name</span><span class="p">:</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;Received multiple URLs with different file names; will use the first URL (file name &#39;</span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">&#39;): </span><span class="si">{</span><span class="n">submitted_metadata</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="p">)</span>
+                <span class="n">parsed</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+                <span class="n">_bucket_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">parsed</span><span class="o">.</span><span class="n">scheme</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">parsed</span><span class="o">.</span><span class="n">netloc</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">bucket_urls</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_bucket_url</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">bucket_urls</span>
+
+        <span class="n">file_name_from_url</span><span class="p">,</span> <span class="n">bucket_urls</span> <span class="o">=</span> <span class="n">_get_buckets_and_filename_from_urls</span><span class="p">(</span>
+            <span class="n">submitted_metadata</span><span class="p">,</span> <span class="n">urls</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">file_name</span><span class="p">:</span>
+            <span class="n">file_name</span> <span class="o">=</span> <span class="n">file_name_from_url</span>
+
+        <span class="n">_</span><span class="p">,</span> <span class="n">file_ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span>
+        <span class="n">uploader</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">_token_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;sub&quot;</span><span class="p">)</span>
+        <span class="n">now</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">())</span>
+        <span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;package&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;package&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;0.1&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="n">file_name</span><span class="p">,</span>
+                <span class="s2">&quot;created_time&quot;</span><span class="p">:</span> <span class="n">now</span><span class="p">,</span>
+                <span class="s2">&quot;updated_time&quot;</span><span class="p">:</span> <span class="n">now</span><span class="p">,</span>
+                <span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="n">file_size</span><span class="p">,</span>
+                <span class="s2">&quot;hashes&quot;</span><span class="p">:</span> <span class="n">hashes</span><span class="p">,</span>
+                <span class="s2">&quot;contents&quot;</span><span class="p">:</span> <span class="n">contents</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="s2">&quot;_resource_paths&quot;</span><span class="p">:</span> <span class="n">authz</span><span class="p">,</span>
+            <span class="s2">&quot;_uploader_id&quot;</span><span class="p">:</span> <span class="n">uploader</span><span class="p">,</span>
+            <span class="s2">&quot;_buckets&quot;</span><span class="p">:</span> <span class="n">bucket_urls</span><span class="p">,</span>
+            <span class="s2">&quot;_filename&quot;</span><span class="p">:</span> <span class="n">file_name</span><span class="p">,</span>
+            <span class="s2">&quot;_file_extension&quot;</span><span class="p">:</span> <span class="n">file_ext</span><span class="p">,</span>
+            <span class="s2">&quot;_upload_status&quot;</span><span class="p">:</span> <span class="s2">&quot;uploaded&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">metadata</span></div>
 </pre></div>
 
           </div>
@@ -490,7 +686,7 @@
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2020, Center for Translational Data Science.
+      &copy;2021, Center for Translational Data Science.
       
     </div>
 
