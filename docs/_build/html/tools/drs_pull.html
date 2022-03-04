@@ -408,14 +408,18 @@ This list is passed to the DownloadManager methods of download, and list</p>
 
 <dl class="py function">
 <dt id="gen3.tools.download.drs_download.download_drs_object">
-<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">download_drs_object</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hostname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#download_drs_object"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.download_drs_object" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">gen3.tools.download.drs_download.</span></code><code class="sig-name descname"><span class="pre">download_drs_object</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hostname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unpack_packages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delete_unpacked_packages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="reference internal" href="../_modules/gen3/tools/download/drs_download.html#download_drs_object"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.download.drs_download.download_drs_object" title="Permalink to this definition">¶</a></dt>
 <dd><p>A convenience function used to download a single DRS object.
 :param hostname: hostname of Gen3 commons to use for access and WTS
 :type hostname: str
 :param auth: Gen3 Auth instance
 :param object_id: DRS object id
 :type object_id: str
-:param output_dir: directory to save downloaded files to</p>
+:param output_dir: directory to save downloaded files to
+:param unpack_packages: set to False to disable the unpacking of downloaded packages
+:type unpack_packages: bool
+:param delete_unpacked_packages: set to True to delete package files after unpacking them
+:type delete_unpacked_packages: bool</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>List of DownloadStatus objects for the DRS object</p>

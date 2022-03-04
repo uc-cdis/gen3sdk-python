@@ -1350,7 +1350,13 @@
 
 
 <div class="viewcode-block" id="download_drs_object"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.download_drs_object">[docs]</a><span class="k">def</span> <span class="nf">download_drs_object</span><span class="p">(</span>
-    <span class="n">hostname</span><span class="p">,</span> <span class="n">auth</span><span class="p">,</span> <span class="n">object_id</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="n">show_progress</span><span class="o">=</span><span class="kc">True</span>
+    <span class="n">hostname</span><span class="p">,</span>
+    <span class="n">auth</span><span class="p">,</span>
+    <span class="n">object_id</span><span class="p">,</span>
+    <span class="n">output_dir</span><span class="p">,</span>
+    <span class="n">show_progress</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">unpack_packages</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">delete_unpacked_packages</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A convenience function used to download a single DRS object.</span>
@@ -1359,11 +1365,21 @@
 <span class="sd">        auth: Gen3 Auth instance</span>
 <span class="sd">        object_id (str): DRS object id</span>
 <span class="sd">        output_dir: directory to save downloaded files to</span>
+<span class="sd">        unpack_packages (bool): set to False to disable the unpacking of downloaded packages</span>
+<span class="sd">        delete_unpacked_packages (bool): set to True to delete package files after unpacking them</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        List of DownloadStatus objects for the DRS object</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">_download_obj</span><span class="p">(</span><span class="n">hostname</span><span class="p">,</span> <span class="n">auth</span><span class="p">,</span> <span class="n">object_id</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="n">show_progress</span><span class="p">)</span></div>
+    <span class="n">_download_obj</span><span class="p">(</span>
+        <span class="n">hostname</span><span class="p">,</span>
+        <span class="n">auth</span><span class="p">,</span>
+        <span class="n">object_id</span><span class="p">,</span>
+        <span class="n">output_dir</span><span class="p">,</span>
+        <span class="n">show_progress</span><span class="p">,</span>
+        <span class="n">unpack_packages</span><span class="p">,</span>
+        <span class="n">delete_unpacked_packages</span><span class="p">,</span>
+    <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="list_access_in_drs_manifest"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.list_access_in_drs_manifest">[docs]</a><span class="k">def</span> <span class="nf">list_access_in_drs_manifest</span><span class="p">(</span><span class="n">hostname</span><span class="p">,</span> <span class="n">auth</span><span class="p">,</span> <span class="n">infile</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
