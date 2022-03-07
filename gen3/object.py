@@ -30,7 +30,7 @@ class Gen3Object:
         self._auth_provider = auth_provider
 
     def create_object(self, file_name, authz, metadata=None, aliases=None):
-        url = self.endpoint + "/objects"
+        url = self._auth_provider.endpoint + "/objects"
         body = {
             "file_name": file_name,
             "authz": authz,
@@ -42,7 +42,7 @@ class Gen3Object:
         data = response.json()
         return data["guid"], data["upload_url"]
 
-    def delete_object(self, guid, delete_record=False):
+    def delete_object(self, guid, delete_file_locations=False):
         """
         Delete the object from indexd, metadata service and optionally all storage locations
 
@@ -60,16 +60,16 @@ class Gen3Object:
                 metadata_response_object = meta.delete(guid)
                 logging.info(metadata_response_object)
             except Exception as exp:
-                raise Exception(
+                raise Gen3ObjectError(
                     f"Error in deleting object with {guid} from Metadata Service. Exception -- {exp}"
                 )
 
         try:
-            if delete_record:
+            if delete_file_locations:
                 fence = file.Gen3File(auth_provider=self._auth_provider)
                 response = fence.delete_file_locations(guid)
                 if response.status_code != 204:
-                    raise Exception(
+                    raise Gen3ObjectError(
                         f"Error in deleting object with {guid} from Fence. Response -- {response}"
                     )
                 logging.info("Deleted files succesfully")

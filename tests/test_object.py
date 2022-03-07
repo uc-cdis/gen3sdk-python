@@ -17,7 +17,6 @@ from requests import HTTPError
             "",
             "Error in deleting object with 1234 from Metadata Service. Exception --",
         ),
-        (False, True, 204, "Deleted files succesfully"),
         (
             False,
             True,
@@ -44,7 +43,7 @@ def test_delete_object(
                         mock_indexd_get.return_value = {"did": "1234"}
                         mock_request.return_value = MagicMock()
                         mock_request.return_value.status_code = status_code
-                        response = gen3_object.delete_object(
-                            guid="1234", delete_record=delete_record
-                        )
-                        assert expected_response in response
+                        with pytest.raises(Exception) as exc:
+                            gen3_object.delete_object(
+                                guid="1234", delete_record=delete_record
+                            )
