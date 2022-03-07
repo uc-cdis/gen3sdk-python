@@ -769,8 +769,8 @@ def test_download_status_repr_and_str():
     download1 = DownloadStatus(
         filename="test.csv",
         status="downloaded",
-        start_time=datetime.fromisoformat("2011-11-04T00:05:23"),
-        end_time=datetime.fromisoformat("2011-11-04T00:07:12"),
+        start_time=datetime.strptime("2011-11-04T00:05:23Z", "%Y-%m-%dT%H:%M:%SZ"),
+        end_time=datetime.strptime("2011-11-04T00:07:12Z", "%Y-%m-%dT%H:%M:%SZ"),
     )
 
     expected = "filename: test.csv; status: downloaded; start_time: 11/04/2011, 00:05:23; end_time: 11/04/2011, 00:07:12"
@@ -988,11 +988,11 @@ def test_unpackage_objects(
                     )
 
                 downloader = DownloadManager(hostname, auth, object_list)
+
+                # test that we downloaded the file and that the zip is unpacked
                 results = downloader.download(
                     object_list=[object_list[0]], save_directory=download_dir
                 )
-
-                # test that we downloaded the file and that the zip is unpacked
                 for id, item in results.items():
                     assert item.status == "downloaded"
                     dir_list = os.listdir(download_dir)
@@ -1064,3 +1064,29 @@ def test_unpackage_objects(
                     assert "b.txt" in dir_list and "c.txt" in dir_list
                     with open(download_dir.join(item.filename), "rb") as fin:
                         assert fin.read() == download_test_files[id]["content"]
+
+                # test that when 'unpack_packages' is False, the package is
+                # downloaded but not extracted
+                results = downloader.download(
+                    object_list=[object_list[0]],
+                    save_directory=download_dir,
+                    unpack_packages=False,
+                )
+                for id, item in results.items():
+                    assert item.status == "downloaded"
+                    dir_list = os.listdir(download_dir)
+                    assert item.filename in dir_list
+                    assert "b.txt" not in dir_list and "c.txt" not in dir_list
+
+                # test that when 'delete_unpacked_packages' is True, the
+                # package is extracted and then deleted
+                results = downloader.download(
+                    object_list=[object_list[0]],
+                    save_directory=download_dir,
+                    delete_unpacked_packages=True,
+                )
+                for id, item in results.items():
+                    assert item.status == "downloaded"
+                    dir_list = os.listdir(download_dir)
+                    assert item.filename not in dir_list
+                    assert "b.txt" in dir_list and "c.txt" in dir_list

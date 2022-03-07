@@ -1,14 +1,18 @@
 import asyncio
 from jsonschema import Draft4Validator
-import logging
 import sys
 import re
 import requests
+import os
 
 from urllib.parse import urlunsplit
 from urllib.parse import urlencode
 from urllib.parse import urlsplit
 from urllib.parse import parse_qs
+
+from cdislogging import get_logger
+
+logging = get_logger("__name__")
 
 
 UUID_FORMAT = (
@@ -206,6 +210,6 @@ def get_urls(raw_urls_string):
 DEFAULT_BACKOFF_SETTINGS = {
     "on_backoff": log_backoff_retry,
     "on_giveup": log_backoff_giveup,
-    "max_tries": 3,
+    "max_tries": os.environ.get("GEN3SDK_MAX_RETRIES", 3),
     "giveup": exception_do_not_retry,
 }

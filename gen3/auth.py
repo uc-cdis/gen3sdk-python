@@ -6,11 +6,14 @@ import os
 import random
 import requests
 import time
-import logging
+from cdislogging import get_logger
+
 from urllib.parse import urlparse
 import backoff
 
 from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status
+
+logging = get_logger("__name__")
 
 
 class Gen3AuthError(Exception):
@@ -23,7 +26,7 @@ def decode_token(token_str):
     """
     tokenParts = token_str.split(".")
     if len(tokenParts) < 3:
-        raise Exception("invalid jwt token")
+        raise Exception("Invalid JWT. Could not split into parts.")
     padding = "===="
     infoStr = tokenParts[1] + padding[0 : len(tokenParts[1]) % 4]
     jsonStr = base64.urlsafe_b64decode(infoStr)

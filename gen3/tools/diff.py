@@ -5,10 +5,13 @@ TODO: Able to handle situations where only specific columns should be compared
 """
 
 import os
-import logging
 import csv
 import sys
 import traceback
+
+from cdislogging import get_logger
+
+logging = get_logger("__name__")
 
 
 def manifest_diff(
