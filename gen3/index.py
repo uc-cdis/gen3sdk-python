@@ -5,6 +5,7 @@ import urllib.parse
 from cdislogging import get_logger
 
 import sys
+import time
 
 import indexclient.client as client
 
@@ -155,7 +156,7 @@ class Gen3Index:
         return response.json().get("records")
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    async def async_get_record(self, guid=None, _ssl=None):
+    async def async_get_record(self, guid=None, sem=None, _ssl=None):
         """
         Asynchronous function to request a record from indexd.
 
@@ -167,7 +168,7 @@ class Gen3Index:
         """
         url = f"{self.client.url}/index/{guid}"
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, ssl=_ssl) as response:
+            async with sem, session.get(url, ssl=_ssl) as response:
                 raise_for_status(response)
                 response = await response.json()
 
@@ -419,6 +420,7 @@ class Gen3Index:
         version=None,
         authz=None,
         _ssl=None,
+        sem=None,
     ):
         """
         Asynchronous function to create a record in indexd.
@@ -450,26 +452,33 @@ class Gen3Index:
                 "hashes": hashes,
                 "size": size,
                 "file_name": file_name,
-                "metadata": metadata,
-                "urls_metadata": urls_metadata,
-                "baseid": baseid,
+                # "metadata": metadata,
+                # "urls_metadata": urls_metadata,
+                # "baseid": baseid,
                 "acl": acl,
                 "authz": authz,
-                "version": version,
+                # "version": version,
             }
-
+            token = str(self.client.auth.get_access_token())
             if did:
                 json["did"] = did
-
-            async with session.post(
+            headers = {
+                "content-type": "application/json",
+                "Authorization": "Bearer " + token,
+            }
+            async with sem, session.post(
                 f"{self.client.url}/index/",
                 json=json,
-                headers={"content-type": "application/json"},
+                headers=headers,
                 ssl=_ssl,
-                auth=self.client.auth,
+                # auth=self.client.auth,
             ) as response:
-                raise_for_status(response)
+                # print("we are sleeping")
+                time.sleep(0.01)
+                # raise_for_status(response)
                 response = await response.json()
+                # print("are we getting here?",response)
+                # if response["status_code"] != 409:
 
         return response
 
