@@ -474,8 +474,8 @@ class Gen3Index:
                 # auth=self.client.auth,
             ) as response:
                 # print("we are sleeping")
-                time.sleep(0.01)
-                # raise_for_status(response)
+                # time.sleep(0.01)
+                raise_for_status(response)
                 response = await response.json()
                 # print("are we getting here?",response)
                 # if response["status_code"] != 409:
