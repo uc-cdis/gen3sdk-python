@@ -126,7 +126,11 @@ async def output_expanded_discovery_metadata(
 
 
 async def publish_discovery_metadata(
-    auth, metadata_filename, endpoint=None, omit_empty_values=False
+    auth,
+    metadata_filename,
+    endpoint=None,
+    omit_empty_values=False,
+    guid_type="discovery_metadata",
 ):
     """
     Publish discovery metadata from a tsv file
@@ -177,7 +181,7 @@ async def publish_discovery_metadata(
                 }
 
             metadata = {
-                "_guid_type": "discovery_metadata",
+                "_guid_type": guid_type,
                 "gen3_discovery": discovery_metadata,
             }
 
