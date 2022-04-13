@@ -47,7 +47,7 @@ supported:
 To download using the CLI, given a JSON manifest file, the cli can download the files in the 
 manifest using:
 ```
-gen3 cli drs-pull manifest <manifest.json> 
+gen3 --endpoint my-commons.org --auth <path to API key> drs-pull manifest <path to JSON manifest>
 ```
 You should see something like:
 ```
@@ -60,7 +60,7 @@ Any errors will be reported in the console.
 
 To download an individual object, the command can be of the form:
 ```
-gen3 cli drs-pull object dg.XXTS/181af989-5d66-4139-91e7-69f4570ccd41
+gen3 --endpoint my-commons.org --auth <path to API key> drs-pull object dg.XXTS/181af989-5d66-4139-91e7-69f4570ccd41
 ```
 You should see something like:
 ```
@@ -73,7 +73,7 @@ Datafile05_T.csv    : 100%|█████████████████�
 
 To list the contents of a manifest file (or DRS object id):
 ```
-gen3 cli drs-pull ls test1_manifest.json
+gen3 --endpoint my-commons.org --auth <path to API key> drs-pull ls test1_manifest.json
 ```
 response:
 ```
@@ -81,7 +81,7 @@ response:
 ```
 If the DRS object is a bundle, ls will expand the bundle and list it as a hierarchy:
 ```
-gen3 cli drs-pull ls --object dg.XXST/9bdc7951-e479-4ddc-9db1-15cf3307116b
+gen3 --endpoint my-commons.org --auth <path to API key> drs-pull ls --object dg.XXST/9bdc7951-e479-4ddc-9db1-15cf3307116b
 ```
 the response:
 ```
@@ -97,7 +97,7 @@ BIG_DataCollection.5.2.1.7695.1700.100392922143281268049004312967/1.3.6.1.4.1.14
 Given a manifest or DRS object id, you can query the access rights for that object's host commons, or in the case of a manifest all of the host commons
 
 ```
-gen3 cli drs-pull ls --access test1_manifest.json
+gen3 --endpoint my-commons.org --auth <path to API key> drs-pull ls --access test1_manifest.json
 ```
 
 ```

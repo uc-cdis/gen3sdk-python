@@ -86,7 +86,7 @@ def download_manifest(
         ctx.obj["auth_factory"].get(),
         infile,
         output_dir,
-        no_progress,
+        not no_progress,
         not no_unpack_packages,
         delete_unpacked_packages,
     )
