@@ -89,7 +89,7 @@ class Gen3Query:
                 first=first,
                 offset=offset,
             )
-            return {"data": {"subject": data}}
+            return {"data": {data_type: data}}
 
         # convert sort_object to graphql: [ { field_name: "sort_method" } ]
         sorts = [f'{{{field}: "{val}"}}' for field, val in sort_object.items()]
