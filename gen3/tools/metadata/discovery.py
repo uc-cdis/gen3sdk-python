@@ -131,6 +131,8 @@ async def publish_discovery_metadata(
     endpoint=None,
     omit_empty_values=False,
     guid_type="discovery_metadata",
+    guid_field=None,
+    is_unregistered_metadata=False,
 ):
     """
     Publish discovery metadata from a tsv file
@@ -154,10 +156,24 @@ async def publish_discovery_metadata(
         ]
         pending_requests = []
 
+        if is_unregistered_metadata:
+            registered_metadata_guids = mds.query(
+                f"_guid_type={guid_type}", limit=2000, offset=0
+            )
+
         for metadata_line in metadata_reader:
             discovery_metadata = {
                 key: _try_parse(value) for key, value in metadata_line.items()
             }
+
+            if guid_field is None:
+                guid = discovery_metadata.pop("guid")
+            else:
+                guid = discovery_metadata.pop(guid_field)
+
+            # when publising unregistered metadata, skip those who are already registered
+            if is_unregistered_metadata and guid in registered_metadata_guids:
+                continue
 
             if len(tag_columns):
                 # all columns _tag_0 -> _tag_n are pushed to a "tags" column
@@ -171,14 +187,15 @@ async def publish_discovery_metadata(
                 ]
                 discovery_metadata["tags"] = coalesced_tags
 
-            guid = discovery_metadata.pop("guid")
-
             if omit_empty_values:
                 discovery_metadata = {
                     key: value
                     for key, value in discovery_metadata.items()
                     if value not in ["", [], {}]
                 }
+
+            if is_unregistered_metadata:
+                guid_type = f"unregistered_{guid_type}"
 
             metadata = {
                 "_guid_type": guid_type,
