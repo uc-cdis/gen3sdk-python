@@ -47,7 +47,7 @@ supported:
 To download using the CLI, given a JSON manifest file, the cli can download the files in the 
 manifest using:
 ```
-gen3 --endpoint my-commons.org --auth <path to API key> drs-pull manifest <path to JSON manifest>
+gen3 --endpoint my-commons.org --auth <path to API key> drs-pull manifest <path to JSON manifest> <output dir path; default ".">
 ```
 You should see something like:
 ```
