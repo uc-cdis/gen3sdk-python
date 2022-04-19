@@ -148,9 +148,11 @@ async def publish_discovery_metadata(
     delimiter = "," if metadata_filename.endswith(".csv") else "\t"
 
     with open(metadata_filename) as metadata_file:
-        metadata_reader = csv.DictReader(
-            metadata_file, **{**BASE_CSV_PARSER_SETTINGS, "delimiter": delimiter}
-        )
+        csv_parser_setting = {**BASE_CSV_PARSER_SETTINGS, "delimiter": delimiter}
+        if is_unregistered_metadata:
+            csv_parser_setting["quoting"] = csv.QUOTE_MINIMAL
+            csv_parser_setting["quotechar"] = '"'
+        metadata_reader = csv.DictReader(metadata_file, **{**csv_parser_setting})
         tag_columns = [
             column for column in metadata_reader.fieldnames if "_tag_" in column
         ]
@@ -160,6 +162,7 @@ async def publish_discovery_metadata(
             registered_metadata_guids = mds.query(
                 f"_guid_type={guid_type}", limit=2000, offset=0
             )
+            guid_type = f"unregistered_{guid_type}"
 
         for metadata_line in metadata_reader:
             discovery_metadata = {
@@ -193,9 +196,6 @@ async def publish_discovery_metadata(
                     for key, value in discovery_metadata.items()
                     if value not in ["", [], {}]
                 }
-
-            if is_unregistered_metadata:
-                guid_type = f"unregistered_{guid_type}"
 
             metadata = {
                 "_guid_type": guid_type,

@@ -367,6 +367,8 @@ class Gen3Metadata:
             # need to manually add JWT auth header
             headers = {"Authorization": self._auth_provider._get_auth_value()}
 
+            logging.debug(f"hitting: {url_with_params}")
+            logging.debug(f"data: {metadata}")
             async with session.post(
                 url_with_params, json=metadata, headers=headers, ssl=_ssl
             ) as response:
