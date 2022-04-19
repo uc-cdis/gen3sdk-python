@@ -46,7 +46,7 @@ def list_files_or_access(ctx, infile: str, access: bool, object: bool) -> bool:
 
 @click.command()
 @click.argument("infile")
-@click.argument("output_dir", default=".")
+@click.argument("output-dir", default=".")
 @click.option(
     "--no-progress",
     is_flag=True,
@@ -86,7 +86,7 @@ def download_manifest(
         ctx.obj["auth_factory"].get(),
         infile,
         output_dir,
-        no_progress,
+        not no_progress,
         not no_unpack_packages,
         delete_unpacked_packages,
     )
@@ -94,7 +94,7 @@ def download_manifest(
 
 @click.command()
 @click.argument("object_id")
-@click.argument("output_dir", default=".")
+@click.argument("output-dir", default=".")
 @click.option(
     "--no-progress",
     is_flag=True,
