@@ -1,6 +1,4 @@
-import logging
 import requests
-from gen3 import file, metadata, auth as auth_tool, index as indexd
 from gen3.utils import raise_for_status
 
 
@@ -42,42 +40,15 @@ class Gen3Object:
         data = response.json()
         return data["guid"], data["upload_url"]
 
-    def delete_object(self, guid, delete_file_locations=False):
+    def delete_object(self):
         """
         Delete the object from indexd, metadata service and optionally all storage locations
 
         Args:
-            guid (str): provide a UUID for file id to delete
-            delete_record (boolean) : [Optional] If True, delete the record from all storage locations
+            None
         Returns:
             Nothing
         """
-        meta = metadata.Gen3Metadata(auth_provider=self._auth_provider)
-        metadata_response_object = meta.query(f"guid={guid}&data=True", True)
-
-        if metadata_response_object:
-            try:
-                metadata_response_object = meta.delete(guid)
-                logging.info(metadata_response_object)
-            except Exception as exp:
-                raise Gen3ObjectError(
-                    f"Error in deleting object with {guid} from Metadata Service. Exception -- {exp}"
-                )
-
-        try:
-            if delete_file_locations:
-                fence = file.Gen3File(auth_provider=self._auth_provider)
-                response = fence.delete_file_locations(guid)
-                if response.status_code != 204:
-                    raise Gen3ObjectError(
-                        f"Error in deleting object with {guid} from Fence. Response -- {response}"
-                    )
-                logging.info("Deleted files succesfully")
-            else:
-                index = indexd.Gen3Index(auth_provider=self._auth_provider)
-                response = index.delete_record(guid)
-                logging.info("Deleted records succesfully")
-        except Exception as exp:
-            if metadata_response_object:
-                meta.create(guid, metadata_response_object)
-            raise
+        url = self._auth_provider.endpoint + "/objects"
+        response = requests.delete(url, auth=self._auth_provider)
+        raise_for_status(response)
