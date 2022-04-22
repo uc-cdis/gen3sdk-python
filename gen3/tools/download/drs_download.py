@@ -44,6 +44,7 @@ from gen3.metadata import Gen3Metadata
 
 DEFAULT_EXPIRE: timedelta = timedelta(hours=1)
 
+# package formats we handle for unpacking
 PACKAGE_EXTENSIONS = [".zip"]
 
 logger = get_logger("drs-pull", log_level="warning")
@@ -575,6 +576,7 @@ def download_file_from_url(
 
 
 def unpackage_object(filepath: str):
+    # allowed formats are set in PACKAGE_EXTENSIONS
     with zipfile.ZipFile(filepath, "r") as package:
         package.extractall(os.path.dirname(filepath))
 
@@ -791,6 +793,7 @@ class DownloadManager:
         hostname: str,
         auth: Gen3Auth,
         download_list: List[Downloadable],
+        show_progress: bool = False,
     ):
         """
         Initialize the DownloadManager so that is ready to start downloading.
@@ -818,9 +821,9 @@ class DownloadManager:
             )
         }
         self.download_list = download_list
-        self.resolve_objects(self.download_list)
+        self.resolve_objects(self.download_list, show_progress)
 
-    def resolve_objects(self, object_list: List[Downloadable]):
+    def resolve_objects(self, object_list: List[Downloadable], show_progress: bool):
         """
         Given an Downloadable object list, resolve the DRS hostnames and update each Downloadable
 
@@ -832,10 +835,16 @@ class DownloadManager:
             self.resolved_compact_drs,
             f"http://{self.hostname}/mds/aggregate/info",
         )
+        progress_bar = (
+            tqdm(desc=f"Resolving objects", total=len(object_list))
+            if show_progress
+            else InvisibleProgress()
+        )
         for entry in object_list:
             add_drs_object_info(entry)
             # sugar to allow download objects to self download
             entry._manager = self
+            progress_bar.update(1)
 
     def cache_hosts_wts_tokens(self, object_list):
         """
@@ -900,6 +909,8 @@ class DownloadManager:
         object_list: List[Downloadable],
         save_directory: str = ".",
         show_progress: bool = False,
+        unpack_packages: bool = True,
+        delete_unpacked_packages: bool = False,
     ) -> Dict[str, Any]:
         """
         Downloads objects to the directory or current working directory.
@@ -916,6 +927,8 @@ class DownloadManager:
             object_list (List[Downloadable]):
             save_directory (str): directory to save to (will be created)
             show_progress (bool): show a download progress bar
+            unpack_packages (bool): set to False to disable the unpacking of downloaded packages
+            delete_unpacked_packages (bool): set to True to delete package files after unpacking them
 
         Returns:
             List of DownloadStatus objects for each object id in object_list
@@ -935,7 +948,13 @@ class DownloadManager:
                 # append the filename to the directory path and
                 child_dir = Path(save_directory, entry.file_name)
                 # call download with the children object list
-                child_status = self.download(entry.children, child_dir)
+                child_status = self.download(
+                    entry.children,
+                    child_dir,
+                    show_progress,
+                    unpack_packages,
+                    delete_unpacked_packages,
+                )
                 # when complete, append the return status
                 completed[entry.object_id] = child_status
                 continue
@@ -998,19 +1017,18 @@ class DownloadManager:
                 url=download_url, filename=filepath, show_progress=show_progress
             )
 
-            # check if object is a zip file and a package
-            if os.path.splitext(entry.file_name)[-1] in PACKAGE_EXTENSIONS:
-                # if so expand in place
+            # check if the file is a package; if so, unpack it in place
+            ext = os.path.splitext(entry.file_name)[-1]
+            if unpack_packages and ext in PACKAGE_EXTENSIONS:
                 try:
-                    # if the metadata type is package then unpack
                     mds_entry = self.metadata.get(entry.object_id)
-
                 except Exception:
                     mds_entry = {}  # no MDS or object not in MDS
                     logger.debug(
                         f"{entry.file_name} is not a package and will not be expanded"
                     )
 
+                # if the metadata type is "package", then unpack
                 if mds_entry.get("type") == "package":
                     try:
                         unpackage_object(filepath)
@@ -1019,6 +1037,9 @@ class DownloadManager:
                             f"{entry.file_name} had an issue while being unpackaged: {e}"
                         )
                         res = False
+
+                    if delete_unpacked_packages:
+                        filepath.unlink()
 
             completed[entry.object_id].status = "downloaded" if res else "error"
             completed[entry.object_id].end_time = datetime.now(timezone.utc)
@@ -1050,7 +1071,13 @@ class DownloadManager:
 
 
 def _download(
-    hostname, auth, infile, output_dir=".", show_progress=False
+    hostname,
+    auth,
+    infile,
+    output_dir=".",
+    show_progress=False,
+    unpack_packages=True,
+    delete_unpacked_packages=False,
 ) -> Optional[Dict[str, Any]]:
     """
     A convenience function used to download a json manifest.
@@ -1060,6 +1087,8 @@ def _download(
         infile (str): manifest file
         output_dir: directory to save downloaded files to
         show_progress: show progress bar
+        unpack_packages (bool): set to False to disable the unpacking of downloaded packages
+        delete_unpacked_packages (bool): set to True to delete package files after unpacking them
 
     Returns:
         List of DownloadStatus objects for each object id in object_list
@@ -1078,16 +1107,27 @@ def _download(
         hostname=hostname,
         auth=auth,
         download_list=object_list,
+        show_progress=show_progress,
     )
 
     out_dir_path = ensure_dirpath_exists(Path(output_dir))
     return downloader.download(
-        object_list, str(out_dir_path), show_progress=show_progress
+        object_list,
+        str(out_dir_path),
+        show_progress=show_progress,
+        unpack_packages=unpack_packages,
+        delete_unpacked_packages=delete_unpacked_packages,
     )
 
 
 def _download_obj(
-    hostname, auth, object_id, output_dir=".", show_progress=False
+    hostname,
+    auth,
+    object_id,
+    output_dir=".",
+    show_progress=False,
+    unpack_packages=True,
+    delete_unpacked_packages=False,
 ) -> Optional[Dict[str, Any]]:
     """
     A convenience function used to download a single DRS object.
@@ -1097,6 +1137,8 @@ def _download_obj(
         object_id (str): DRS object id
         output_dir: directory to save downloaded files to
         show_progress: show progress bar
+        unpack_packages (bool): set to False to disable the unpacking of downloaded packages
+        delete_unpacked_packages (bool): set to True to delete package files after unpacking them
 
     Returns:
         List of DownloadStatus objects for the DRS object
@@ -1109,12 +1151,19 @@ def _download_obj(
 
     object_list = [Downloadable(object_id=object_id)]
     downloader = DownloadManager(
-        hostname=hostname, auth=auth, download_list=object_list
+        hostname=hostname,
+        auth=auth,
+        download_list=object_list,
+        show_progress=show_progress,
     )
 
     out_dir_path = ensure_dirpath_exists(Path(output_dir))
     return downloader.download(
-        object_list, str(out_dir_path), show_progress=show_progress
+        object_list,
+        str(out_dir_path),
+        show_progress=show_progress,
+        unpack_packages=unpack_packages,
+        delete_unpacked_packages=delete_unpacked_packages,
     )
 
 
@@ -1144,7 +1193,9 @@ def _listfiles(hostname, auth, infile: str) -> bool:
         )
         return False
 
-    DownloadManager(hostname=hostname, auth=auth, download_list=object_list)
+    DownloadManager(
+        hostname=hostname, auth=auth, download_list=object_list, show_progress=True
+    )
 
     for x in object_list:
         print(x.pprint())
@@ -1175,7 +1226,9 @@ def _list_object(hostname, auth, object_id: str) -> bool:
         return False
 
     object_list = [Downloadable(object_id=object_id)]
-    DownloadManager(hostname=hostname, auth=auth, download_list=object_list)
+    DownloadManager(
+        hostname=hostname, auth=auth, download_list=object_list, show_progress=False
+    )
 
     for x in object_list:
         print(x.pprint())
@@ -1209,7 +1262,9 @@ def _list_access(hostname, auth, infile: str) -> bool:
         )
         return False
 
-    download = DownloadManager(hostname=hostname, auth=auth, download_list=object_list)
+    download = DownloadManager(
+        hostname=hostname, auth=auth, download_list=object_list, show_progress=False
+    )
     access = download.user_access()
     for h, access in access.items():
         list_auth(h, access)
@@ -1247,7 +1302,13 @@ def list_drs_object(hostname, auth, object_id: str) -> bool:
 
 
 def download_files_in_drs_manifest(
-    hostname, auth, infile, output_dir, show_progress=True
+    hostname,
+    auth,
+    infile,
+    output_dir,
+    show_progress=True,
+    unpack_packages=True,
+    delete_unpacked_packages=False,
 ) -> None:
     """
     A convenience function used to download a json manifest.
@@ -1256,14 +1317,30 @@ def download_files_in_drs_manifest(
         auth (str): Gen3 Auth instance
         infile (str): manifest file
         output_dir: directory to save downloaded files to
+        unpack_packages (bool): set to False to disable the unpacking of downloaded packages
+        delete_unpacked_packages (bool): set to True to delete package files after unpacking them
 
     Returns:
     """
-    _download(hostname, auth, infile, output_dir, show_progress)  # pragma: no cover
+    _download(
+        hostname,
+        auth,
+        infile,
+        output_dir,
+        show_progress,
+        unpack_packages,
+        delete_unpacked_packages,
+    )
 
 
 def download_drs_object(
-    hostname, auth, object_id, output_dir, show_progress=True
+    hostname,
+    auth,
+    object_id,
+    output_dir,
+    show_progress=True,
+    unpack_packages=True,
+    delete_unpacked_packages=False,
 ) -> None:
     """
     A convenience function used to download a single DRS object.
@@ -1272,13 +1349,21 @@ def download_drs_object(
         auth: Gen3 Auth instance
         object_id (str): DRS object id
         output_dir: directory to save downloaded files to
+        unpack_packages (bool): set to False to disable the unpacking of downloaded packages
+        delete_unpacked_packages (bool): set to True to delete package files after unpacking them
 
     Returns:
         List of DownloadStatus objects for the DRS object
     """
     _download_obj(
-        hostname, auth, object_id, output_dir, show_progress
-    )  # pragma: no cover
+        hostname,
+        auth,
+        object_id,
+        output_dir,
+        show_progress,
+        unpack_packages,
+        delete_unpacked_packages,
+    )
 
 
 def list_access_in_drs_manifest(hostname, auth, infile) -> bool:

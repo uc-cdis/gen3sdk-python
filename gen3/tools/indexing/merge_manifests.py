@@ -51,6 +51,7 @@ def merge_bucket_manifests(
     continue_after_error=False,
     allow_mult_guids_per_hash=False,
     columns_with_arrays=None,
+    expected_duplicate_md5s=list(),
     **kwargs,
 ):
     """
@@ -83,6 +84,8 @@ def merge_bucket_manifests(
             together, this can be used.
         columns_with_arrays(list[str]): list of column names where their values should
             be treated like arrays (so that when merging we know to combine)
+        expected_duplicate_md5s(list[str]): list of md5sums that we EXPECT to be duplicated in the
+            input manifests; skip merging for these records
 
     Returns:
         None
@@ -124,14 +127,20 @@ def merge_bucket_manifests(
                     records_with_no_guid.append(record)
                     continue
 
-                updated_records = _get_updated_records(
-                    record=record,
-                    existing_records=all_rows[record[MD5_STANDARD_KEY]],
-                    continue_after_error=continue_after_error,
-                    allow_mult_guids_per_hash=allow_mult_guids_per_hash,
-                    columns_with_arrays=columns_with_arrays,
-                )
-                all_rows[record[MD5_STANDARD_KEY]] = updated_records.values()
+                # If this record is one of the records which are expected duplicates
+                # then don't attempt to merge this record
+                # with any records that share its md5sum: just add it to the list
+                if record[MD5_STANDARD_KEY] in expected_duplicate_md5s:
+                    all_rows[record[MD5_STANDARD_KEY]].append(record)
+                else:
+                    updated_records = _get_updated_records(
+                        record=record,
+                        existing_records=all_rows[record[MD5_STANDARD_KEY]],
+                        continue_after_error=continue_after_error,
+                        allow_mult_guids_per_hash=allow_mult_guids_per_hash,
+                        columns_with_arrays=columns_with_arrays,
+                    )
+                    all_rows[record[MD5_STANDARD_KEY]] = updated_records.values()
 
         # for the entries where there was no GUID specified, we will add that metadata
         # to all previous records
