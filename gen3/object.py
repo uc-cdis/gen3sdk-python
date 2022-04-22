@@ -10,7 +10,7 @@ class Gen3Object:
     """For interacting with Gen3 object level features.
 
     A class for interacting with the Gen3 object services.
-    Currently allows deleting of an object from the Gen3 System.
+    Currently allows creating and deleting of an object from the Gen3 System.
 
     Args:
         auth_provider (Gen3Auth): A Gen3Auth class instance.
@@ -20,7 +20,7 @@ class Gen3Object:
         using the credentials.json downloaded from the commons profile page.
 
         >>> auth = Gen3Auth(refresh_file="credentials.json")
-        ... file = Gen3File(auth)
+        ... object = Gen3Object(auth)
 
     """
 
