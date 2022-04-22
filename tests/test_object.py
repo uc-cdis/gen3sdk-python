@@ -69,3 +69,4 @@ def test_delete_object_success(requests_mock, gen3_object):
 
     requests_mock.side_effect = _mock_request
     gen3_object.delete_object()
+    assert requests_mock.called
