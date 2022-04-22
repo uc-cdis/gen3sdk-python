@@ -347,9 +347,10 @@ class Gen3Expansion:
         elif isinstance(projects, str):
             projects = [projects]
 
+        now = datetime.datetime.now()
+        date = "{}-{}-{}-{}.{}.{}".format(now.year, now.month, now.day, now.hour, now.minute, now.second)
+
         for project_id in projects:
-            now = datetime.datetime.now()
-            date = "{}-{}-{}-{}.{}.{}".format(now.year, now.month, now.day, now.hour, now.minute, now.second)
             mydir = "{}_{}/{}_tsvs".format(outdir, date, project_id)  # create the directory to store TSVs
 
             if not os.path.exists(mydir):
@@ -810,9 +811,7 @@ class Gen3Expansion:
             uuids = [uuids]
 
         if not isinstance(uuids, list):
-            raise Gen3Error(
-                "Please provide a list of UUID(s) to delete with the 'uuid' argument."
-            )
+            raise Gen3Error("Please provide a list of UUID(s) to delete with the 'uuid' argument.")
 
         if backup:
             ext = backup.split(".")[-1]
@@ -823,11 +822,7 @@ class Gen3Expansion:
                 backup = "{}_{}.{}".format(fname, count, ext)
 
             count = 0
-            print(
-                "Attempting to backup {} records to delete to file '{}'.".format(
-                    len(uuids), backup
-                )
-            )
+            print("Attempting to backup {} records to delete to file '{}'.".format(len(uuids), backup))
 
             records = []
             for uuid in uuids:
@@ -875,34 +870,23 @@ class Gen3Expansion:
             else:
                 list_ids = ",".join(uuids[len(tried) : len(tried) + chunk_size])
 
-            rurl = "{}/api/v0/submission/{}/{}/entities/{}".format(
-                self._endpoint, program, project, list_ids
-            )
+            rurl = "{}/api/v0/submission/{}/{}/entities/{}".format(self._endpoint, program, project, list_ids)
 
             try:
                 # print("\n\trurl='{}'\n".format(rurl)) # trouble-shooting
                 # print("\n\tresp = requests.delete(rurl, auth=auth)")
                 # print("\n\tprint(resp.text)")
                 resp = requests.delete(rurl, auth=self._auth_provider)
+
             except Exception as e:
                 chunk_size = int(chunk_size / 2)
-                print(
-                    "Exception occurred during delete request:\n\t{}.\n\tReducing chunk_size to '{}'.".format(
-                        e, chunk_size
-                    )
-                )
+                print("Exception occurred during delete request:\n\t{}.\n\tReducing chunk_size to '{}'.".format(e, chunk_size))
                 continue
 
-            if (
-                "414 Request-URI Too Large" in resp.text
-                or "service failure" in resp.text
-            ):
+            if ("414 Request-URI Too Large" in resp.text or "service failure" in resp.text):
                 chunk_size = int(chunk_size / 2)
-                print(
-                    "Service Failure. The chunk_size is too large. Reducing to '{}'".format(
-                        chunk_size
-                    )
-                )
+                print("Service Failure. The chunk_size is too large. Reducing to '{}'".format(chunk_size))
+
             elif "The requested URL was not found on the server." in resp.text:
                 print(
                     "\n Requested URL not found on server:\n\t{}\n\t{}".format(
@@ -919,27 +903,17 @@ class Gen3Expansion:
                     success = list(set(success + [x["id"] for x in output["entities"]]))
                 else:  # if one UUID fails to delete in the request, the entire request fails.
                     for entity in output["entities"]:
-                        if entity[
-                            "valid"
-                        ]:  # get the valid entities from repsonse to retry.
+                        if entity["valid"]:  # get the valid entities from repsonse to retry.
                             retry.append(entity["id"])
                         else:
                             errors.append(entity["errors"][0]["message"])
                             failure.append(entity["id"])
                             failure = list(set(failure))
                     for error in list(set(errors)):
-                        print(
-                            "Error message for {} records: {}".format(
-                                errors.count(error), error
-                            )
-                        )
+                        print("Error message for {} records: {}".format(errors.count(error), error))
 
             tried = list(set(success + failure))
-            print(
-                "\tProgress: {}/{} (Success: {}, Failure: {}).".format(
-                    len(tried), len(uuids), len(success), len(failure)
-                )
-            )
+            print("\tProgress: {}/{} (Success: {}, Failure: {}).".format(len(tried), len(uuids), len(success), len(failure)))
 
         # exit the while loop if
         results["failure"] = failure
@@ -967,41 +941,17 @@ class Gen3Expansion:
             )
 
         if len(uuids) != 0:
-            print(
-                "Attemping to delete "
-                + str(len(uuids))
-                + " records in the node '"
-                + node
-                + "' of project '"
-                + project_id
-                + "'."
-            )
+            print("Attemping to delete {} records in the node '{}' of project '{}'.".format(len(uuids),node,project_id))
 
             try:
                 results = self.delete_records(uuids, project_id, chunk_size)
-                print(
-                    "Successfully deleted "
-                    + str(len(results["success"]))
-                    + " records in the node '"
-                    + node
-                    + "' of project '"
-                    + project_id
-                    + "'."
-                )
+                print("Successfully deleted {} records in the node '{}' of project '{}'.".format(len(results["success"]),node,project_id))
+
                 if len(results["failure"]) > 0:
-                    print(
-                        "Failed to delete "
-                        + str(len(results["failure"]))
-                        + " records. See results['errors'] for the error messages."
-                    )
+                    print("Failed to delete {} records. See results['errors'] for the error messages.".format(len(results["failure"])))
+
             except:
-                raise Gen3Error(
-                    "Failed to delete UUIDs in the node '"
-                    + node
-                    + "' of project '"
-                    + project_id
-                    + "'."
-                )
+                raise Gen3Error("Failed to delete UUIDs in the node '{}' of project '{}'.".format(node,project_id))
 
             return results
 
@@ -2481,7 +2431,7 @@ class Gen3Expansion:
 
         return records
 
-    def get_indexd(self, limit=100, page=0, format="JSON", uploader=None, args=None):
+    def get_indexd(self, limit=1000, page=0, format="TSV", uploader=None, args=None):
         """get all the records in indexd
             api = "https://icgc.bionimbus.org/"
             args = lambda: None
@@ -2491,6 +2441,7 @@ class Gen3Expansion:
 
         Usage:
             i = exp.get_indexd(format="TSV", uploader=orcid)
+            i = exp.get_indexd(format="TSV", args="authz=/programs/TCIA/projects/COVID-19-AR")
         """
         if format in ["JSON", "TSV"]:
             dc_regex = re.compile(r"https:\/\/(.+)\/?$")
@@ -2535,15 +2486,15 @@ class Gen3Expansion:
         print(
             "\t\tScript finished. Total records retrieved: {}".format(len(all_records))
         )
+        now = datetime.datetime.now()
+        date = "{}-{}-{}_{}.{}".format(now.year, now.month, now.day, now.minute, now.second)
 
         if format == "JSON":
-            outname = "{}_indexd_records.json".format(dc)
+            outname = "{}_indexd_records_{}.json".format(dc,date)
             with open(outname, "w") as output:
                 output.write(json.dumps(all_records))
 
         if format == "TSV":
-            now = datetime.datetime.now()
-            date = "{}-{}-{}_{}.{}".format(now.year, now.month, now.day, now.minute, now.second)
             outname = "{}_indexd_records_{}.tsv".format(dc,date)
             all_records = pd.DataFrame(all_records)
             all_records['md5sum'] = [hashes.get('md5') for hashes in all_records.hashes]
