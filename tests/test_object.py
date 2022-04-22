@@ -2,48 +2,70 @@
 Tests gen3.object.Gen3Object for calls
 """
 from unittest.mock import MagicMock, patch
-import json
+import requests
 from httpx import delete
 import pytest
 from requests import HTTPError
 
 
-@pytest.mark.parametrize(
-    "raise_metadata_exception, delete_record, status_code, expected_response",
-    [
-        (
-            True,
-            False,
-            "",
-            "Error in deleting object with 1234 from Metadata Service. Exception --",
-        ),
-        (
-            False,
-            True,
-            500,
-            "Error in deleting object with 1234 from Fence. Response --",
-        ),
-    ],
-)
-def test_delete_object(
-    gen3_object, raise_metadata_exception, delete_record, status_code, expected_response
-):
-    with patch("gen3.object.metadata.Gen3Metadata.delete") as mock_request:
-        with patch("gen3.object.metadata.Gen3Metadata.query") as mock_query:
-            mock_query.return_value = {"guid": "1234"}
-            if raise_metadata_exception:
-                mock_request.side_effect = Exception("Delete Exception")
-            with patch(
-                "gen3.object.file.Gen3File.delete_file_locations"
-            ) as mock_request:
-                with patch("gen3.object.indexd.Gen3Index.get") as mock_indexd_get:
-                    with patch(
-                        "gen3.object.metadata.Gen3Metadata.create"
-                    ) as mock_meta_create:
-                        mock_indexd_get.return_value = {"did": "1234"}
-                        mock_request.return_value = MagicMock()
-                        mock_request.return_value.status_code = status_code
-                        with pytest.raises(Exception) as exc:
-                            gen3_object.delete_object(
-                                guid="1234", delete_record=delete_record
-                            )
+@patch("gen3.object.requests.post")
+def test_create_object_error(requests_mock, gen3_object):
+    def _mock_request(url, **kwargs):
+        assert url.endswith("/objects")
+        mocked_response = MagicMock(requests.Response)
+        mocked_response.status_code = 500
+        mocked_response.json.return_value = {"error": "blah"}
+        mocked_response.raise_for_status.side_effect = HTTPError("uh oh")
+        return mocked_response
+
+    requests_mock.side_effect = _mock_request
+    with pytest.raises(Exception):
+        gen3_object.create_object("abc.txt", authz=None)
+
+
+@patch("gen3.object.requests.post")
+def test_create_object_success(requests_mock, gen3_object):
+    mock_guid = "abcd"
+    mock_url = "https://example.com"
+
+    def _mock_request(url, **kwargs):
+        assert url.endswith("/objects")
+        mocked_response = MagicMock(requests.Response)
+        mocked_response.status_code = 200
+        mocked_response.json.return_value = {"guid": mock_guid, "upload_url": mock_url}
+        return mocked_response
+
+    requests_mock.side_effect = _mock_request
+    response_guid, response_upload_url = gen3_object.create_object(
+        "abc.txt", authz=None
+    )
+    assert response_guid == mock_guid
+    assert response_upload_url == mock_url
+
+
+@patch("gen3.object.requests.delete")
+def test_delete_object_error(requests_mock, gen3_object):
+    def _mock_request(url, **kwargs):
+        assert url.endswith("/objects")
+        mocked_response = MagicMock(requests.Response)
+        mocked_response.status_code = 500
+        mocked_response.json.return_value = {"error": "blah"}
+        mocked_response.raise_for_status.side_effect = HTTPError("uh oh")
+        return mocked_response
+
+    requests_mock.side_effect = _mock_request
+    with pytest.raises(Exception):
+        gen3_object.delete_object()
+
+
+@patch("gen3.object.requests.delete")
+def test_delete_object_success(requests_mock, gen3_object):
+    def _mock_request(url, **kwargs):
+        assert url.endswith("/objects")
+        mocked_response = MagicMock(requests.Response)
+        mocked_response.status_code = 200
+        mocked_response.json.return_value = {}
+        return mocked_response
+
+    requests_mock.side_effect = _mock_request
+    gen3_object.delete_object()
