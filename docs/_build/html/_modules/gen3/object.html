@@ -31,9 +31,7 @@
           <div class="body" role="main">
             
   <h1>Source code for gen3.object</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">logging</span>
-<span class="kn">import</span> <span class="nn">requests</span>
-<span class="kn">from</span> <span class="nn">gen3</span> <span class="kn">import</span> <span class="n">file</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">auth</span> <span class="k">as</span> <span class="n">auth_tool</span><span class="p">,</span> <span class="n">index</span> <span class="k">as</span> <span class="n">indexd</span>
+<span></span><span class="kn">import</span> <span class="nn">requests</span>
 <span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">raise_for_status</span>
 
 
@@ -45,7 +43,7 @@
     <span class="sd">&quot;&quot;&quot;For interacting with Gen3 object level features.</span>
 
 <span class="sd">    A class for interacting with the Gen3 object services.</span>
-<span class="sd">    Currently allows deleting of an object from the Gen3 System.</span>
+<span class="sd">    Currently allows creating and deleting of an object from the Gen3 System.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        auth_provider (Gen3Auth): A Gen3Auth class instance.</span>
@@ -55,7 +53,7 @@
 <span class="sd">        using the credentials.json downloaded from the commons profile page.</span>
 
 <span class="sd">        &gt;&gt;&gt; auth = Gen3Auth(refresh_file=&quot;credentials.json&quot;)</span>
-<span class="sd">        ... file = Gen3File(auth)</span>
+<span class="sd">        ... object = Gen3Object(auth)</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -63,7 +61,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span> <span class="o">=</span> <span class="n">auth_provider</span>
 
     <span class="k">def</span> <span class="nf">create_object</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">authz</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">aliases</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/objects&quot;</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/objects&quot;</span>
         <span class="n">body</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="n">file_name</span><span class="p">,</span>
             <span class="s2">&quot;authz&quot;</span><span class="p">:</span> <span class="n">authz</span><span class="p">,</span>
@@ -75,45 +73,18 @@
         <span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;guid&quot;</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;upload_url&quot;</span><span class="p">]</span>
 
-<div class="viewcode-block" id="Gen3Object.delete_object"><a class="viewcode-back" href="../../object.html#gen3.object.Gen3Object.delete_object">[docs]</a>    <span class="k">def</span> <span class="nf">delete_object</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">delete_record</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="Gen3Object.delete_object"><a class="viewcode-back" href="../../object.html#gen3.object.Gen3Object.delete_object">[docs]</a>    <span class="k">def</span> <span class="nf">delete_object</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Delete the object from indexd, metadata service and optionally all storage locations</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            guid (str): provide a UUID for file id to delete</span>
-<span class="sd">            delete_record (boolean) : [Optional] If True, delete the record from all storage locations</span>
+<span class="sd">            None</span>
 <span class="sd">        Returns:</span>
 <span class="sd">            Nothing</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">meta</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">Gen3Metadata</span><span class="p">(</span><span class="n">auth_provider</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
-        <span class="n">metadata_response_object</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;guid=</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&amp;data=True&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">metadata_response_object</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">metadata_response_object</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">guid</span><span class="p">)</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">metadata_response_object</span><span class="p">)</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exp</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;Error in deleting object with </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2"> from Metadata Service. Exception -- </span><span class="si">{</span><span class="n">exp</span><span class="si">}</span><span class="s2">&quot;</span>
-                <span class="p">)</span>
-
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">delete_record</span><span class="p">:</span>
-                <span class="n">fence</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">Gen3File</span><span class="p">(</span><span class="n">auth_provider</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
-                <span class="n">response</span> <span class="o">=</span> <span class="n">fence</span><span class="o">.</span><span class="n">delete_file_locations</span><span class="p">(</span><span class="n">guid</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">204</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;Error in deleting object with </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2"> from Fence. Response -- </span><span class="si">{</span><span class="n">response</span><span class="si">}</span><span class="s2">&quot;</span>
-                    <span class="p">)</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Deleted files succesfully&quot;</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">index</span> <span class="o">=</span> <span class="n">indexd</span><span class="o">.</span><span class="n">Gen3Index</span><span class="p">(</span><span class="n">auth_provider</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
-                <span class="n">response</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">delete_record</span><span class="p">(</span><span class="n">guid</span><span class="p">)</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Deleted records succesfully&quot;</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exp</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">metadata_response_object</span><span class="p">:</span>
-                <span class="n">meta</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">metadata_response_object</span><span class="p">)</span>
-            <span class="k">raise</span></div></div>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/objects&quot;</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span></div></div>
 </pre></div>
 
           </div>

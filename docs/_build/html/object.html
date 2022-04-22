@@ -40,7 +40,7 @@
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>For interacting with Gen3 object level features.</p>
 <p>A class for interacting with the Gen3 object services.
-Currently allows deleting of an object from the Gen3 System.</p>
+Currently allows creating and deleting of an object from the Gen3 System.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>auth_provider</strong> (<a class="reference internal" href="auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><em>Gen3Auth</em></a>) – A Gen3Auth class instance.</p>
@@ -50,19 +50,16 @@ Currently allows deleting of an object from the Gen3 System.</p>
 <p>This generates the Gen3Object class pointed at the sandbox commons while
 using the credentials.json downloaded from the commons profile page.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
-<span class="gp">... </span><span class="n">file</span> <span class="o">=</span> <span class="n">Gen3File</span><span class="p">(</span><span class="n">auth</span><span class="p">)</span>
+<span class="gp">... </span><span class="nb">object</span> <span class="o">=</span> <span class="n">Gen3Object</span><span class="p">(</span><span class="n">auth</span><span class="p">)</span>
 </pre></div>
 </div>
 <dl class="py method">
 <dt id="gen3.object.Gen3Object.delete_object">
-<code class="sig-name descname"><span class="pre">delete_object</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delete_record</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/object.html#Gen3Object.delete_object"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.object.Gen3Object.delete_object" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">delete_object</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/object.html#Gen3Object.delete_object"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.object.Gen3Object.delete_object" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete the object from indexd, metadata service and optionally all storage locations</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>guid</strong> (<em>str</em>) – provide a UUID for file id to delete</p></li>
-<li><p><strong>delete_record</strong> (<em>boolean</em>) – [Optional] If True, delete the record from all storage locations</p></li>
-</ul>
+<dd class="field-odd"><p><strong>None</strong> – </p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>Nothing</p>
