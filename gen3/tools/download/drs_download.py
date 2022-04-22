@@ -793,6 +793,7 @@ class DownloadManager:
         hostname: str,
         auth: Gen3Auth,
         download_list: List[Downloadable],
+        show_progress: bool = False,
     ):
         """
         Initialize the DownloadManager so that is ready to start downloading.
@@ -820,9 +821,9 @@ class DownloadManager:
             )
         }
         self.download_list = download_list
-        self.resolve_objects(self.download_list)
+        self.resolve_objects(self.download_list, show_progress)
 
-    def resolve_objects(self, object_list: List[Downloadable]):
+    def resolve_objects(self, object_list: List[Downloadable], show_progress: bool):
         """
         Given an Downloadable object list, resolve the DRS hostnames and update each Downloadable
 
@@ -834,10 +835,16 @@ class DownloadManager:
             self.resolved_compact_drs,
             f"http://{self.hostname}/mds/aggregate/info",
         )
+        progress_bar = (
+            tqdm(desc=f"Resolving objects", total=len(object_list))
+            if show_progress
+            else InvisibleProgress()
+        )
         for entry in object_list:
             add_drs_object_info(entry)
             # sugar to allow download objects to self download
             entry._manager = self
+            progress_bar.update(1)
 
     def cache_hosts_wts_tokens(self, object_list):
         """
@@ -1100,6 +1107,7 @@ def _download(
         hostname=hostname,
         auth=auth,
         download_list=object_list,
+        show_progress=show_progress,
     )
 
     out_dir_path = ensure_dirpath_exists(Path(output_dir))
@@ -1143,7 +1151,10 @@ def _download_obj(
 
     object_list = [Downloadable(object_id=object_id)]
     downloader = DownloadManager(
-        hostname=hostname, auth=auth, download_list=object_list
+        hostname=hostname,
+        auth=auth,
+        download_list=object_list,
+        show_progress=show_progress,
     )
 
     out_dir_path = ensure_dirpath_exists(Path(output_dir))
@@ -1182,7 +1193,9 @@ def _listfiles(hostname, auth, infile: str) -> bool:
         )
         return False
 
-    DownloadManager(hostname=hostname, auth=auth, download_list=object_list)
+    DownloadManager(
+        hostname=hostname, auth=auth, download_list=object_list, show_progress=True
+    )
 
     for x in object_list:
         print(x.pprint())
@@ -1213,7 +1226,9 @@ def _list_object(hostname, auth, object_id: str) -> bool:
         return False
 
     object_list = [Downloadable(object_id=object_id)]
-    DownloadManager(hostname=hostname, auth=auth, download_list=object_list)
+    DownloadManager(
+        hostname=hostname, auth=auth, download_list=object_list, show_progress=False
+    )
 
     for x in object_list:
         print(x.pprint())
@@ -1247,7 +1262,9 @@ def _list_access(hostname, auth, infile: str) -> bool:
         )
         return False
 
-    download = DownloadManager(hostname=hostname, auth=auth, download_list=object_list)
+    download = DownloadManager(
+        hostname=hostname, auth=auth, download_list=object_list, show_progress=False
+    )
     access = download.user_access()
     for h, access in access.items():
         list_auth(h, access)
