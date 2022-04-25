@@ -19,7 +19,7 @@ def test_create_object_error(requests_mock, gen3_object):
         return mocked_response
 
     requests_mock.side_effect = _mock_request
-    with pytest.raises(Exception):
+    with pytest.raises(HTTPError):
         gen3_object.create_object("abc.txt", authz=None)
 
 
@@ -54,19 +54,28 @@ def test_delete_object_error(requests_mock, gen3_object):
         return mocked_response
 
     requests_mock.side_effect = _mock_request
-    with pytest.raises(Exception):
+    with pytest.raises(HTTPError):
         gen3_object.delete_object()
 
 
+@pytest.mark.parametrize(
+    "delete_file_locations",
+    [True, False],
+)
 @patch("gen3.object.requests.delete")
-def test_delete_object_success(requests_mock, gen3_object):
+def test_delete_object_success(requests_mock, gen3_object, delete_file_locations):
     def _mock_request(url, **kwargs):
-        assert url.endswith("/objects")
+        assert (
+            url.endswith("/objects?delete_file_locations")
+            if delete_file_locations
+            else url.endswith("/objects")
+        )
+
         mocked_response = MagicMock(requests.Response)
         mocked_response.status_code = 200
         mocked_response.json.return_value = {}
         return mocked_response
 
     requests_mock.side_effect = _mock_request
-    gen3_object.delete_object()
+    gen3_object.delete_object(delete_file_locations)
     assert requests_mock.called

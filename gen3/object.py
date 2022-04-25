@@ -40,15 +40,16 @@ class Gen3Object:
         data = response.json()
         return data["guid"], data["upload_url"]
 
-    def delete_object(self):
+    def delete_object(self, delete_file_locations=False):
         """
         Delete the object from indexd, metadata service and optionally all storage locations
 
         Args:
-            None
+            `delete_file_locations` -- if True, removes the object from existing bucket location(s) through fence
         Returns:
             Nothing
         """
-        url = self._auth_provider.endpoint + "/objects"
+        delete_param = "?delete_file_locations" if delete_file_locations else ""
+        url = self._auth_provider.endpoint + "/objects" + delete_param
         response = requests.delete(url, auth=self._auth_provider)
         raise_for_status(response)

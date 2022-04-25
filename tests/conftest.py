@@ -91,11 +91,11 @@ def gen3_file(mock_gen3_auth):
 
 
 @pytest.fixture
-def gen3_object(mock_gen3_auth):
+def gen3_object(gen3_auth):
     """
     Mock Gen3Object with auth
     """
-    return Gen3Object(auth_provider=mock_gen3_auth)
+    return Gen3Object(auth_provider=gen3_auth)
 
 
 @pytest.fixture(scope="function", params=("s3", "http", "ftp", "https", "gs", "az"))
