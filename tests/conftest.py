@@ -20,6 +20,7 @@ from gen3.index import Gen3Index
 from gen3.submission import Gen3Submission
 from gen3.query import Gen3Query
 from gen3.auth import Gen3Auth
+from gen3.object import Gen3Object
 
 
 class MockAuth:
@@ -87,6 +88,14 @@ def gen3_file(mock_gen3_auth):
     Mock Gen3File with auth
     """
     return Gen3File(endpoint=mock_gen3_auth.endpoint, auth_provider=mock_gen3_auth)
+
+
+@pytest.fixture
+def gen3_object(gen3_auth):
+    """
+    Mock Gen3Object with auth
+    """
+    return Gen3Object(auth_provider=gen3_auth)
 
 
 @pytest.fixture(scope="function", params=("s3", "http", "ftp", "https", "gs", "az"))

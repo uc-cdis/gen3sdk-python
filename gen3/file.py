@@ -56,6 +56,7 @@ class Gen3File:
 
     def delete_file(self, guid):
         """
+        This method is DEPRECATED. Use delete_file_locations() instead.
         Delete all locations of a stored data file and remove its record from indexd
 
         Args:
@@ -63,8 +64,23 @@ class Gen3File:
         Returns:
             text: requests.delete text result
         """
+        print("This method is DEPRECATED. Use delete_file_locations() instead.")
         api_url = "{}/user/data/{}".format(self._endpoint, guid)
         output = requests.delete(api_url, auth=self._auth_provider).text
+
+        return output
+
+    def delete_file_locations(self, guid):
+        """
+        Delete all locations of a stored data file and remove its record from indexd
+
+        Args:
+            guid (str): provide a UUID for file id to delete
+        Returns:
+            requests.Response : requests.delete result
+        """
+        api_url = "{}/user/data/{}".format(self._endpoint, guid)
+        output = requests.delete(api_url, auth=self._auth_provider)
 
         return output
 

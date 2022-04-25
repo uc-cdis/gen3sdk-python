@@ -441,19 +441,6 @@ class Gen3Metadata:
 
         return response.json()
 
-    def create_object(self, file_name, authz, metadata=None, aliases=None):
-        url = self.endpoint + "/objects"
-        body = {
-            "file_name": file_name,
-            "authz": authz,
-            "metadata": metadata,
-            "aliases": aliases,
-        }
-        response = requests.post(url, json=body, auth=self._auth_provider)
-        raise_for_status(response)
-        data = response.json()
-        return data["guid"], data["upload_url"]
-
     def _prepare_metadata(self, metadata, indexd_doc):
         """
         Validate and generate the provided metadata for submission to the metadata
