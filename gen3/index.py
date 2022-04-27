@@ -210,10 +210,10 @@ class Gen3Index:
         distributed identifier
 
         Args:
-             guid: string
-                 - record id
-             dist_resolution: boolean
-                - *optional* Specify if we want distributed dist_resolution or not
+            guid: string
+                - record id
+            dist_resolution: boolean
+            - *optional* Specify if we want distributed dist_resolution or not
 
         """
         rec = self.client.global_get(guid, dist_resolution)
@@ -737,7 +737,7 @@ class Gen3Index:
 
         Args:
             guid: string
-                 - record id
+                - record id
 
         Returns: Nothing
 

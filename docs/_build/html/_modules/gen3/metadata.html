@@ -488,19 +488,6 @@
 
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
-    <span class="k">def</span> <span class="nf">create_object</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">authz</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">aliases</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/objects&quot;</span>
-        <span class="n">body</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="n">file_name</span><span class="p">,</span>
-            <span class="s2">&quot;authz&quot;</span><span class="p">:</span> <span class="n">authz</span><span class="p">,</span>
-            <span class="s2">&quot;metadata&quot;</span><span class="p">:</span> <span class="n">metadata</span><span class="p">,</span>
-            <span class="s2">&quot;aliases&quot;</span><span class="p">:</span> <span class="n">aliases</span><span class="p">,</span>
-        <span class="p">}</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">body</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;guid&quot;</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;upload_url&quot;</span><span class="p">]</span>
-
     <span class="k">def</span> <span class="nf">_prepare_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">indexd_doc</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Validate and generate the provided metadata for submission to the metadata</span>
@@ -662,6 +649,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../indexing.html">Gen3 Index Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../jobs.html">Gen3 Jobs Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../metadata.html">Gen3 Metadata Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../object.html">Gen3 Object Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../query.html">Gen3 Query Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../submission.html">Gen3 Submission Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../tools.html">Gen3 Tools</a></li>
