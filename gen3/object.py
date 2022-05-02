@@ -26,9 +26,14 @@ class Gen3Object:
 
     def __init__(self, auth_provider=None):
         self._auth_provider = auth_provider
+        self.service_endpoint = "/mds"
 
     def create_object(self, file_name, authz, metadata=None, aliases=None):
-        url = self._auth_provider.endpoint + "/objects"
+        url = (
+            self._auth_provider.endpoint.rstrip("/")
+            + self.service_endpoint
+            + "/objects"
+        )
         body = {
             "file_name": file_name,
             "authz": authz,
@@ -50,6 +55,11 @@ class Gen3Object:
             Nothing
         """
         delete_param = "?delete_file_locations" if delete_file_locations else ""
-        url = self._auth_provider.endpoint + "/objects" + delete_param
+        url = (
+            self._auth_provider.endpoint.rstrip("/")
+            + self.service_endpoint
+            + "/objects"
+            + delete_param
+        )
         response = requests.delete(url, auth=self._auth_provider)
         raise_for_status(response)

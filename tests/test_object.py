@@ -11,7 +11,7 @@ from requests import HTTPError
 @patch("gen3.object.requests.post")
 def test_create_object_error(requests_mock, gen3_object):
     def _mock_request(url, **kwargs):
-        assert url.endswith("/objects")
+        assert url.endswith("/mds/objects")
         mocked_response = MagicMock(requests.Response)
         mocked_response.status_code = 500
         mocked_response.json.return_value = {"error": "blah"}
@@ -29,7 +29,7 @@ def test_create_object_success(requests_mock, gen3_object):
     mock_url = "https://example.com"
 
     def _mock_request(url, **kwargs):
-        assert url.endswith("/objects")
+        assert url.endswith("/mds/objects")
         mocked_response = MagicMock(requests.Response)
         mocked_response.status_code = 200
         mocked_response.json.return_value = {"guid": mock_guid, "upload_url": mock_url}
@@ -46,7 +46,7 @@ def test_create_object_success(requests_mock, gen3_object):
 @patch("gen3.object.requests.delete")
 def test_delete_object_error(requests_mock, gen3_object):
     def _mock_request(url, **kwargs):
-        assert url.endswith("/objects")
+        assert url.endswith("/mds/objects")
         mocked_response = MagicMock(requests.Response)
         mocked_response.status_code = 500
         mocked_response.json.return_value = {"error": "blah"}
@@ -66,9 +66,9 @@ def test_delete_object_error(requests_mock, gen3_object):
 def test_delete_object_success(requests_mock, gen3_object, delete_file_locations):
     def _mock_request(url, **kwargs):
         assert (
-            url.endswith("/objects?delete_file_locations")
+            url.endswith("/mds/objects?delete_file_locations")
             if delete_file_locations
-            else url.endswith("/objects")
+            else url.endswith("/mds/objects")
         )
 
         mocked_response = MagicMock(requests.Response)
