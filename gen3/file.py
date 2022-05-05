@@ -90,7 +90,7 @@ class Gen3File:
 
         Args:
             file_name (str): file_name to use for upload
-            authz (str): authorization scope for the file, optional.
+            authz (list): authorization scope for the file as list of paths, optional.
             protocol (str): Storage protocol to use for upload: "s3", "az".
                 If this isn't set, the default will be "s3"
             expires_in (int): Amount in seconds that the signed url will expire from datetime.utcnow().
