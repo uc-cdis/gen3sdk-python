@@ -55,11 +55,12 @@ using the credentials.json downloaded from the commons profile page.</p>
 </div>
 <dl class="py method">
 <dt id="gen3.object.Gen3Object.delete_object">
-<code class="sig-name descname"><span class="pre">delete_object</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">delete_file_locations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/object.html#Gen3Object.delete_object"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.object.Gen3Object.delete_object" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">delete_object</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delete_file_locations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/object.html#Gen3Object.delete_object"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.object.Gen3Object.delete_object" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete the object from indexd, metadata service and optionally all storage locations</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
+<li><p><strong>-- GUID of the object to delete</strong> (<em>guid</em>) – </p></li>
 <li><p><strong>-- if True</strong> (<em>delete_file_locations</em>) – </p></li>
 <li><p><strong>the object from existing bucket location</strong> (<em>removes</em>) – </p></li>
 </ul>
