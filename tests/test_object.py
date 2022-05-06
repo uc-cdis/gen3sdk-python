@@ -45,8 +45,10 @@ def test_create_object_success(requests_mock, gen3_object):
 
 @patch("gen3.object.requests.delete")
 def test_delete_object_error(requests_mock, gen3_object):
+    mock_guid = "1234"
+
     def _mock_request(url, **kwargs):
-        assert url.endswith("/mds/objects")
+        assert url.endswith(f"/mds/objects/{mock_guid}")
         mocked_response = MagicMock(requests.Response)
         mocked_response.status_code = 500
         mocked_response.json.return_value = {"error": "blah"}
@@ -55,7 +57,7 @@ def test_delete_object_error(requests_mock, gen3_object):
 
     requests_mock.side_effect = _mock_request
     with pytest.raises(HTTPError):
-        gen3_object.delete_object()
+        gen3_object.delete_object(mock_guid)
 
 
 @pytest.mark.parametrize(
@@ -64,11 +66,14 @@ def test_delete_object_error(requests_mock, gen3_object):
 )
 @patch("gen3.object.requests.delete")
 def test_delete_object_success(requests_mock, gen3_object, delete_file_locations):
+    mock_guid = "1234"
+
     def _mock_request(url, **kwargs):
+        mock_url = f"/mds/objects/{mock_guid}"
         assert (
-            url.endswith("/mds/objects?delete_file_locations")
+            url.endswith(f"{mock_url}?delete_file_locations")
             if delete_file_locations
-            else url.endswith("/mds/objects")
+            else url.endswith(mock_url)
         )
 
         mocked_response = MagicMock(requests.Response)
@@ -77,5 +82,5 @@ def test_delete_object_success(requests_mock, gen3_object, delete_file_locations
         return mocked_response
 
     requests_mock.side_effect = _mock_request
-    gen3_object.delete_object(delete_file_locations)
+    gen3_object.delete_object(mock_guid, delete_file_locations)
     assert requests_mock.called
