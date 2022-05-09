@@ -78,11 +78,12 @@
         <span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;guid&quot;</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;upload_url&quot;</span><span class="p">]</span>
 
-<div class="viewcode-block" id="Gen3Object.delete_object"><a class="viewcode-back" href="../../object.html#gen3.object.Gen3Object.delete_object">[docs]</a>    <span class="k">def</span> <span class="nf">delete_object</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delete_file_locations</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="Gen3Object.delete_object"><a class="viewcode-back" href="../../object.html#gen3.object.Gen3Object.delete_object">[docs]</a>    <span class="k">def</span> <span class="nf">delete_object</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">delete_file_locations</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Delete the object from indexd, metadata service and optionally all storage locations</span>
 
 <span class="sd">        Args:</span>
+<span class="sd">            `guid`  -- GUID of the object to delete</span>
 <span class="sd">            `delete_file_locations` -- if True, removes the object from existing bucket location(s) through fence</span>
 <span class="sd">        Returns:</span>
 <span class="sd">            Nothing</span>
@@ -91,7 +92,8 @@
         <span class="n">url</span> <span class="o">=</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">endpoint</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
             <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">service_endpoint</span>
-            <span class="o">+</span> <span class="s2">&quot;/objects&quot;</span>
+            <span class="o">+</span> <span class="s2">&quot;/objects/&quot;</span>
+            <span class="o">+</span> <span class="n">guid</span>
             <span class="o">+</span> <span class="n">delete_param</span>
         <span class="p">)</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>

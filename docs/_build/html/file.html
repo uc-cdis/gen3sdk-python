@@ -115,7 +115,7 @@ Delete all locations of a stored data file and remove its record from indexd</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>file_name</strong> (<em>str</em>) – file_name to use for upload</p></li>
-<li><p><strong>authz</strong> (<em>str</em>) – authorization scope for the file, optional.</p></li>
+<li><p><strong>authz</strong> (<em>list</em>) – authorization scope for the file as list of paths, optional.</p></li>
 <li><p><strong>protocol</strong> (<em>str</em>) – Storage protocol to use for upload: “s3”, “az”.
 If this isn’t set, the default will be “s3”</p></li>
 <li><p><strong>expires_in</strong> (<em>int</em>) – Amount in seconds that the signed url will expire from datetime.utcnow().
