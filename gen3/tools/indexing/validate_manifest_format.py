@@ -4,7 +4,7 @@ Module to implement is_valid_manifest_format
 import warnings
 import csv
 
-from gen3.tools.indexing.manifest_columns import (
+from gen3.tools.utils import (
     Columns,
     MD5Validator,
     URLValidator,

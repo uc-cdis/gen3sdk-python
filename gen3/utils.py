@@ -206,6 +206,21 @@ def get_urls(raw_urls_string):
     ]
 
 
+def yield_chunks(input_list, n):
+    """
+    Yield successive n-sized chunks from input_list.
+
+    Args:
+        input_list (list[]): arbitrary input list
+        n (int): size of chunks requested
+
+    Yields:
+        list[]: chunked list
+    """
+    for i in range(0, len(input_list), n):
+        yield input_list[i : i + n]
+
+
 # Default settings to control usage of backoff library.
 DEFAULT_BACKOFF_SETTINGS = {
     "on_backoff": log_backoff_retry,

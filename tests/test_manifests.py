@@ -10,8 +10,8 @@ from gen3.tools.indexing import download_manifest
 from gen3.tools.indexing import async_download_object_manifest
 from gen3.tools.indexing.index_manifest import (
     index_object_manifest,
-    get_and_verify_fileinfos_from_tsv_manifest,
 )
+from gen3.tools.utils import get_and_verify_fileinfos_from_tsv_manifest
 
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
