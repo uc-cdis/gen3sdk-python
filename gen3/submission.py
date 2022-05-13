@@ -1,7 +1,6 @@
 import itertools
 import json
 import requests
-import pandas as pd
 import os
 from cdislogging import get_logger
 
@@ -519,6 +518,8 @@ class Gen3Submission:
             >>> Gen3Submission.submit_file("DCF-CCLE","data_spreadsheet.tsv")
 
         """
+        import pandas as pd
+
         # Read the file in as a pandas DataFrame
         f = os.path.basename(filename)
         if f.lower().endswith(".csv"):
