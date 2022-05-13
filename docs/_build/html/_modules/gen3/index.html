@@ -235,6 +235,34 @@
 
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;records&quot;</span><span class="p">)</span></div>
 
+<div class="viewcode-block" id="Gen3Index.async_get_records_from_checksum"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.async_get_records_from_checksum">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">async_get_records_from_checksum</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">checksum</span><span class="p">,</span> <span class="n">checksum_type</span><span class="o">=</span><span class="s2">&quot;md5&quot;</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Asynchronous function to request records from indexd matching checksum.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            checksum (str): indexd checksum to request</span>
+<span class="sd">            checksum_type (str): type of checksum, defaults to md5</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[dict]: List of indexd records</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">all_records</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">params</span><span class="p">[</span><span class="s2">&quot;hash&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">checksum_type</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">checksum</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="n">query</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlencode</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+        <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">url</span><span class="si">}</span><span class="s2">/index&quot;</span> <span class="o">+</span> <span class="s2">&quot;?&quot;</span> <span class="o">+</span> <span class="n">query</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span><span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;records&quot;</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="Gen3Index.get"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.get">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">dist_resolution</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>

@@ -102,6 +102,26 @@ eg <code class="docutils literal notranslate"><span class="pre">hashes={'md5':</
 </dd></dl>
 
 <dl class="py method">
+<dt id="gen3.index.Gen3Index.async_get_records_from_checksum">
+<em class="property"><span class="pre">async</span> </em><code class="sig-name descname"><span class="pre">async_get_records_from_checksum</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">checksum</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">checksum_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'md5'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.async_get_records_from_checksum"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.async_get_records_from_checksum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Asynchronous function to request records from indexd matching checksum.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>checksum</strong> (<em>str</em>) – indexd checksum to request</p></li>
+<li><p><strong>checksum_type</strong> (<em>str</em>) – type of checksum, defaults to md5</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>List of indexd records</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>List[dict]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt id="gen3.index.Gen3Index.async_get_records_on_page">
 <em class="property"><span class="pre">async</span> </em><code class="sig-name descname"><span class="pre">async_get_records_on_page</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">page</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.async_get_records_on_page"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.async_get_records_on_page" title="Permalink to this definition">¶</a></dt>
 <dd><p>Asynchronous function to request a page from indexd.</p>
