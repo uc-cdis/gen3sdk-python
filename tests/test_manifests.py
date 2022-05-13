@@ -242,6 +242,201 @@ def test_download_manifest(monkeypatch, gen3_index):
     ).get("file_name")
 
 
+def test_download_manifest_with_input_manifest(monkeypatch, gen3_index):
+    """
+    Test that dowload manifest generates a file with expected content when
+    provided an initial input manifest.
+    """
+    with open("input.csv", "w+") as file:
+        file.writelines(
+            [
+                "guid,urls,authz,acl,md5,file_size,file_name\n",
+                ",gs://foo/bar,programs/foo/projects/bar,,a1234567891234567890123456789012,42,\n",
+                ",gs://foo/bar,programs/foo/projects/bar,,51234567891234567890123456789012,42,\n",
+                ",gs://foo/bar,programs/foo/projects/bar,,f1234567891234567890123456789012,234,\n",
+            ]
+        )
+
+    rec1 = gen3_index.create_record(
+        did="dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b",
+        hashes={"md5": "a1234567891234567890123456789012"},
+        size=123,
+        acl=["DEV", "test"],
+        authz=["/programs/DEV/projects/test"],
+        urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
+    )
+    rec2 = gen3_index.create_record(
+        did="dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2",
+        hashes={"md5": "b1234567891234567890123456789012"},
+        size=234,
+        acl=["DEV", "test2"],
+        authz=["/programs/DEV/projects/test2", "/programs/DEV/projects/test2bak"],
+        urls=["gs://test/test.txt"],
+        file_name="test.txt",
+    )
+    rec3 = gen3_index.create_record(
+        did="dg.TEST/ed8f4658-6acd-4f96-9dd8-3709890c959e",
+        hashes={"md5": "e1234567891234567890123456789012"},
+        size=345,
+        acl=["DEV", "test3"],
+        authz=["/programs/DEV/projects/test3", "/programs/DEV/projects/test3bak"],
+        urls=["gs://test/test3.txt"],
+    )
+    # record with space
+    rec4 = gen3_index.create_record(
+        did="dg.TEST/a802e27d-4a5b-42e3-92b0-ba19e81b9dce",
+        hashes={"md5": "f1234567891234567890123456789012"},
+        size=345,
+        acl=["DEV", "test4"],
+        authz=["/programs/DEV/projects/test4", "/programs/DEV/projects/test4bak"],
+        urls=["gs://test/test4 space.txt", "s3://test/test4 space.txt"],
+    )
+
+    monkeypatch.setattr(download_manifest, "INDEXD_RECORD_PAGE_SIZE", 2)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(
+        async_download_object_manifest(
+            "http://localhost:8001",
+            output_filename="object-manifest.csv",
+            num_processes=1,
+            input_manifest="input.csv",
+        )
+    )
+
+    records = {}
+    try:
+        with open("object-manifest.csv") as file:
+            # skip header
+            next(file)
+            for line in file:
+                guid, urls, authz, acl, md5, file_size, file_name = line.split(",")
+                guid = guid.strip("\n")
+                urls = urls.split(" ")
+                authz = authz.split(" ")
+                acl = acl.split(" ")
+                file_size = file_size.strip("\n")
+                file_name = file_name.strip("\n")
+
+                records[guid] = {
+                    "urls": urls,
+                    "authz": authz,
+                    "acl": acl,
+                    "md5": md5,
+                    "file_size": file_size,
+                    "file_name": file_name,
+                }
+    except Exception:
+        # unexpected file format, fail test
+        assert False
+
+    # ensure downloaded manifest populates expected info for a record
+    assert "gs://test/test.txt" in records.get(
+        "dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}
+    ).get("urls", [])
+    assert "s3://testaws/aws/test.txt" in records.get(
+        "dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}
+    ).get("urls", [])
+    assert "/programs/DEV/projects/test" in records.get(
+        "dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}
+    ).get("authz", [])
+    assert "DEV" in records.get("dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}).get(
+        "acl", []
+    )
+    assert "test" in records.get(
+        "dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}
+    ).get("acl", [])
+    assert "123" in records.get("dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}).get(
+        "file_size"
+    )
+    assert "a1234567891234567890123456789012" in records.get(
+        "dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}
+    ).get("md5")
+    assert not records.get("dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}).get(
+        "file_name"
+    )
+
+    assert "gs://test/test4%20space.txt" in records.get(
+        "dg.TEST/a802e27d-4a5b-42e3-92b0-ba19e81b9dce", {}
+    ).get("urls", [])
+    assert "s3://test/test4%20space.txt" in records.get(
+        "dg.TEST/a802e27d-4a5b-42e3-92b0-ba19e81b9dce", {}
+    ).get("urls", [])
+
+    # should have only matched 2 records in the input manifest
+    assert len(records) == 2
+
+
+def test_download_manifest_with_invalid_input_manifest(monkeypatch, gen3_index):
+    """
+    Test that dowload manifest errors when
+    provided an initial input manifest with an invalid format
+    """
+    with open("input.csv", "w+") as file:
+        file.writelines(
+            [
+                "guid,urls,authz,acl,md5,file_size,file_name\n",
+                ",gs://foo/bar,programs/foo/projects/bar,,a1234567891234567890123456789012,42,\n",
+                ",gs://foo/bar,programs/foo/projects/bar,,x1234567891234567890123456789012,42,\n",
+                ",gs://foo/bar,programs/foo/projects/bar,,f1234567891234567890123456789012,234,\n",
+            ]
+        )
+
+    rec1 = gen3_index.create_record(
+        did="dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b",
+        hashes={"md5": "a1234567891234567890123456789012"},
+        size=123,
+        acl=["DEV", "test"],
+        authz=["/programs/DEV/projects/test"],
+        urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
+    )
+    rec2 = gen3_index.create_record(
+        did="dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2",
+        hashes={"md5": "b1234567891234567890123456789012"},
+        size=234,
+        acl=["DEV", "test2"],
+        authz=["/programs/DEV/projects/test2", "/programs/DEV/projects/test2bak"],
+        urls=["gs://test/test.txt"],
+        file_name="test.txt",
+    )
+    rec3 = gen3_index.create_record(
+        did="dg.TEST/ed8f4658-6acd-4f96-9dd8-3709890c959e",
+        hashes={"md5": "e1234567891234567890123456789012"},
+        size=345,
+        acl=["DEV", "test3"],
+        authz=["/programs/DEV/projects/test3", "/programs/DEV/projects/test3bak"],
+        urls=["gs://test/test3.txt"],
+    )
+    # record with space
+    rec4 = gen3_index.create_record(
+        did="dg.TEST/a802e27d-4a5b-42e3-92b0-ba19e81b9dce",
+        hashes={"md5": "f1234567891234567890123456789012"},
+        size=345,
+        acl=["DEV", "test4"],
+        authz=["/programs/DEV/projects/test4", "/programs/DEV/projects/test4bak"],
+        urls=["gs://test/test4 space.txt", "s3://test/test4 space.txt"],
+    )
+
+    monkeypatch.setattr(download_manifest, "INDEXD_RECORD_PAGE_SIZE", 2)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    # ensure error is raised
+    try:
+        loop.run_until_complete(
+            async_download_object_manifest(
+                "http://localhost:8001",
+                output_filename="object-manifest.csv",
+                num_processes=1,
+                input_manifest="input.csv",
+            )
+        )
+        assert False
+    except AttributeError:
+        assert True
+
+
 def _mock_get_guid(guid, **kwargs):
     if guid == "dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b":
         return {

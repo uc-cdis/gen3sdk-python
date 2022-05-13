@@ -50,6 +50,7 @@ async def async_download_object_manifest(
     output_filename="object-manifest.csv",
     num_processes=4,
     max_concurrent_requests=MAX_CONCURRENT_REQUESTS,
+    input_manifest=None,
 ):
     """
     Download all file object records into a manifest csv
@@ -62,6 +63,9 @@ async def async_download_object_manifest(
         max_concurrent_requests (int): the maximum number of concurrent requests allowed
             NOTE: This is the TOTAL number, not just for this process. Used to help
             determine how many requests a process should be making at one time
+        input_manifest (str): Input file. Read available object data from objects in this
+            file instead of reading everything in indexd. This will attempt to query
+            indexd for only the records identified in this manifest.
     """
     start_time = time.perf_counter()
     logging.info(f"start time: {start_time}")
@@ -74,7 +78,11 @@ async def async_download_object_manifest(
             os.unlink(file_path)
 
     result = await _write_all_index_records_to_file(
-        commons_url, output_filename, num_processes, max_concurrent_requests
+        commons_url,
+        output_filename,
+        num_processes,
+        max_concurrent_requests,
+        input_manifest,
     )
 
     end_time = time.perf_counter()
@@ -83,7 +91,7 @@ async def async_download_object_manifest(
 
 
 async def _write_all_index_records_to_file(
-    commons_url, output_filename, num_processes, max_concurrent_requests
+    commons_url, output_filename, num_processes, max_concurrent_requests, input_manifest
 ):
     """
     Spins up number of processes provided to parse indexd records and eventually
@@ -97,38 +105,72 @@ async def _write_all_index_records_to_file(
         max_concurrent_requests (int): the maximum number of concurrent requests allowed
             NOTE: This is the TOTAL number, not just for this process. Used to help
             determine how many requests a process should be making at one time
+        input_manifest (str): Input file. Read available object data from objects in this
+            file instead of reading everything in indexd. This will attempt to query
+            indexd for only the records identified in this manifest.
     """
-    index = Gen3Index(commons_url)
-    logging.debug(f"requesting indexd stats...")
-    num_files = int(index.get_stats().get("fileCount"))
-    logging.debug(f"number files: {num_files}")
-    # paging is 0-based, so subtract 1 from ceiling
-    # note: float() is necessary to force Python 3 to not floor the result
-    max_page = int(math.ceil(float(num_files) / INDEXD_RECORD_PAGE_SIZE)) - 1
-    logging.debug(f"max page: {max_page}")
-    logging.debug(f"num processes: {num_processes}")
+    # used when requesting all records
+    page_chunks = []
 
-    pages = [x for x in range(max_page + 1)]
+    # used when an input manifest is provided, this will only read record info for
+    # the records referenced in the manifest based on their checksums
+    record_chunks = []
 
-    # batch pages into subprocesses
-    chunk_size = int(math.ceil(float(len(pages)) / num_processes))
-    logging.debug(f"page chunk size: {chunk_size}")
+    if input_manifest:
+        # create chunks of checksums
+        logging.debug(f"parsing input file {input_manifest}")
+        input_records, headers = get_and_verify_fileinfos_from_manifest(input_manifest)
+        num_input_records = len(input_records)
 
-    if not chunk_size:
-        page_chunks = []
+        if not num_input_records:
+            raise AttributeError(
+                f"No checksums found in provided input file: {input_manifest}. "
+                "Please check previous logs."
+            )
+
+        logging.debug(f"number input_records: {num_input_records}")
+        logging.debug(f"num processes: {num_processes}")
+
+        input_record_md5s = [record[MD5_STANDARD_KEY] for record in input_records]
+
+        # batch records into subprocesses chunks
+        chunk_size = int(math.ceil(float(num_input_records) / num_processes))
+        logging.debug(f"records chunk size: {chunk_size}")
+
+        record_chunks = list(yield_chunks(input_record_md5s, chunk_size))
     else:
-        page_chunks = [
-            pages[i : i + chunk_size] for i in range(0, len(pages), chunk_size)
-        ]
+        index = Gen3Index(commons_url)
+        logging.debug(f"requesting indexd stats...")
+        num_files = int(index.get_stats().get("fileCount"))
+        logging.debug(f"number files: {num_files}")
+        # paging is 0-based, so subtract 1 from ceiling
+        # note: float() is necessary to force Python 3 to not floor the result
+        max_page = int(math.ceil(float(num_files) / INDEXD_RECORD_PAGE_SIZE)) - 1
+        logging.debug(f"max page: {max_page}")
+        logging.debug(f"num processes: {num_processes}")
+
+        pages = [x for x in range(max_page + 1)]
+
+        # batch pages into subprocesses
+        chunk_size = int(math.ceil(float(len(pages)) / num_processes))
+        logging.debug(f"page chunk size: {chunk_size}")
+
+        if chunk_size:
+            page_chunks = [
+                pages[i : i + chunk_size] for i in range(0, len(pages), chunk_size)
+            ]
 
     processes = []
-    for x in range(len(page_chunks)):
-        pages = ",".join(map(str, page_chunks[x]))
+    for x in range(max(len(page_chunks), len(record_chunks))):
+        pages = ",".join(map(str, page_chunks[x])) if page_chunks else ","
+        record_checksums = (
+            ",".join(map(str, record_chunks[x])) if record_chunks else ","
+        )
 
         # call the cli function below and pass in chunks of pages for each process
         command = (
             f"python {CURRENT_DIR}/download_manifest.py --commons_url "
-            f"{commons_url} --pages {pages} --num_processes {num_processes} "
+            f"{commons_url} --pages {pages} --record-checksums {record_checksums} --num_processes {num_processes} "
             f"--max_concurrent_requests {max_concurrent_requests}"
         )
         logging.info(command)
@@ -175,6 +217,13 @@ async def _write_all_index_records_to_file(
     help='Comma-Separated string of integers representing pages. ex: "2,4,5,6"',
 )
 @click.option(
+    "--record-checksums",
+    help=(
+        "Comma-Separated string of checksume to retrieve."
+        'ex: "333e7594cbe3275a152906392e433e8d,0f8deeb44c4f08d794f63af0e4229c97"'
+    ),
+)
+@click.option(
     "--num_processes",
     type=int,
     help="number of processes you are running so we can make sure we don't open "
@@ -187,16 +236,19 @@ async def _write_all_index_records_to_file(
     'too many http connections. ex: "4"',
 )
 def write_page_records_to_files(
-    commons_url, pages, num_processes, max_concurrent_requests
+    commons_url, pages, record_checksums, num_processes, max_concurrent_requests
 ):
     """
-    Command line interface function for requesting a number of pages of
+    Command line interface function for requesting a number of
     records from indexd and writing to a file in that process. num_processes
     is only used to calculate how many open connections this process should request.
+
+    NOTE: YOU MUST USE EITHER `pages` OR `record-checksums`, YOU CANNOT USE BOTH
 
     Args:
         commons_url (str): root domain for commons where indexd lives
         pages (List[int/str]): List of indexd pages to request
+        record_checksums (List[str]): List of indexd checksums to request
         num_processes (int): number of concurrent processes being requested
             (including this one)
         max_concurrent_requests (int): the maximum number of concurrent requests allowed
@@ -206,22 +258,35 @@ def write_page_records_to_files(
     Raises:
         AttributeError: No pages specified to get records from
     """
-    if not pages:
-        raise AttributeError("No pages specified to get records from.")
+    if not pages and not record_checksums:
+        raise AttributeError(
+            "No info specified to get records with."
+            "Supply either pages or record-checksums"
+        )
 
-    pages = pages.strip().split(",")
+    pages = [item for item in pages.strip().strip(",").split(",") if item]
+    record_checksums = [
+        item for item in record_checksums.strip().strip(",").split(",") if item
+    ]
+
+    if pages and record_checksums:
+        raise AttributeError(
+            "YOU MUST USE EITHER `pages` OR `record-checksums`, YOU CANNOT USE BOTH."
+            f"You provided pages={pages} and record-checksums={record_checksums}"
+        )
+
     loop = get_or_create_event_loop_for_thread()
 
     result = loop.run_until_complete(
         _get_records_and_write_to_file(
-            commons_url, pages, num_processes, max_concurrent_requests
+            commons_url, pages, record_checksums, num_processes, max_concurrent_requests
         )
     )
     return result
 
 
 async def _get_records_and_write_to_file(
-    commons_url, pages, num_processes, max_concurrent_requests
+    commons_url, pages, record_checksums, num_processes, max_concurrent_requests
 ):
     """
     Getting indexd records and writing to a file. This function
@@ -236,6 +301,7 @@ async def _get_records_and_write_to_file(
     Args:
         commons_url (str): root domain for commons where indexd lives
         pages (List[int/str]): List of indexd pages to request
+        record_checksums (List[str]): List of indexd checksums to request
         num_processes (int): number of concurrent processes being requested
             (including this one)
     """
@@ -244,14 +310,49 @@ async def _get_records_and_write_to_file(
     lock = asyncio.Semaphore(max_requests)
     queue = asyncio.Queue()
     write_to_file_task = asyncio.ensure_future(_parse_from_queue(queue))
-    await asyncio.gather(
-        *(
-            _put_records_from_page_in_queue(page, commons_url, lock, queue)
-            for page in pages
+
+    if pages:
+        await asyncio.gather(
+            *(
+                _put_records_from_page_in_queue(page, commons_url, lock, queue)
+                for page in pages
+            )
         )
-    )
+    else:
+        await asyncio.gather(
+            *(
+                _put_records_from_checksum_in_queue(checksum, commons_url, lock, queue)
+                for checksum in record_checksums
+            )
+        )
+
     await queue.put("DONE")
     await write_to_file_task
+
+
+async def _put_records_from_checksum_in_queue(checksum, commons_url, lock, queue):
+    """
+    Gets a semaphore then requests records for the given checksum and
+    puts them in a queue.
+
+    Args:
+        commons_url (str): root domain for commons where indexd lives
+        checksum (int/str): indexd checksum to request
+        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
+            connections
+        queue (asyncio.Queue): queue to put indexd records in
+    """
+    index = Gen3Index(commons_url)
+    async with lock:
+        # default ssl handling unless it's explicitly http://
+        ssl = None
+        if "https" not in commons_url:
+            ssl = False
+
+        records = await index.async_get_records_from_checksum(
+            checksum=checksum, _ssl=ssl
+        )
+        await queue.put(records)
 
 
 async def _put_records_from_page_in_queue(page, commons_url, lock, queue):
