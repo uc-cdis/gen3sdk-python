@@ -30,14 +30,14 @@ jobs:
         poetry install -vv
         # install sphinx from PyPI (as of 03/16/21 python3-sphinx is broken)
         # sudo apt-get install python3-sphinx
-        pip install 'sphinx<4.0.0'
+        pip install sphinx
         pip uninstall -y asyncio
         cd
     - name: Build docs
       run: |
         sphinx-build --version
         source $HOME/.poetry/env
-        export PYTHONPATH="${PYTHONPATH}:${{ env.pythonLocation }}/lib/python3.8/site-packages"
+        export PYTHONPATH="${PYTHONPATH}:${{ env.pythonLocation }}/lib/python3.9/site-packages"
         cd docs
         poetry run make html
         cd ..
