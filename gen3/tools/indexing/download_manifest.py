@@ -70,10 +70,22 @@ async def async_download_object_manifest(
     start_time = time.perf_counter()
     logging.info(f"start time: {start_time}")
 
-    # ensure tmp directory exists and is empty
+    # ensure tmp directories exists and are empty
     os.makedirs(TMP_FOLDER, exist_ok=True)
+    os.makedirs(TMP_FOLDER + "input", exist_ok=True)
+    os.makedirs(TMP_FOLDER + "output", exist_ok=True)
     for file in os.listdir(TMP_FOLDER):
         file_path = os.path.join(TMP_FOLDER, file)
+        if os.path.isfile(file_path):
+            os.unlink(file_path)
+
+    for file in os.listdir(TMP_FOLDER + "input"):
+        file_path = os.path.join(TMP_FOLDER + "input", file)
+        if os.path.isfile(file_path):
+            os.unlink(file_path)
+
+    for file in os.listdir(TMP_FOLDER + "output"):
+        file_path = os.path.join(TMP_FOLDER + "output", file)
         if os.path.isfile(file_path):
             os.unlink(file_path)
 
@@ -167,11 +179,20 @@ async def _write_all_index_records_to_file(
             ",".join(map(str, record_chunks[x])) if record_chunks else ","
         )
 
+        # write record_checksum chunks to temporary files since the size can overload
+        # command line arguments
+        checksums_chunk_filename = TMP_FOLDER + f"input/checksums_chunk_{x}.txt"
+        logging.info(
+            f"writing record_checksums chunk {x} into {checksums_chunk_filename}"
+        )
+        with open(checksums_chunk_filename, "wb") as outfile:
+            outfile.write(record_checksums.encode("utf8"))
+
         # call the cli function below and pass in chunks of pages for each process
         command = (
             f"python {CURRENT_DIR}/download_manifest.py --commons_url "
-            f"{commons_url} --pages {pages} --record-checksums {record_checksums} --num_processes {num_processes} "
-            f"--max_concurrent_requests {max_concurrent_requests}"
+            f"{commons_url} --pages {pages} --record-checksums-file {checksums_chunk_filename} "
+            f"--num_processes {num_processes} --max_concurrent_requests {max_concurrent_requests}"
         )
         logging.info(command)
 
@@ -197,7 +218,7 @@ async def _write_all_index_records_to_file(
 
     with open(output_filename, "wb") as outfile:
         outfile.write("guid,urls,authz,acl,md5,file_size,file_name\n".encode("utf8"))
-        for filename in glob.glob(TMP_FOLDER + "*"):
+        for filename in glob.glob(TMP_FOLDER + "output/*"):
             if output_filename == filename:
                 # don't want to copy the output into the output
                 continue
@@ -217,10 +238,11 @@ async def _write_all_index_records_to_file(
     help='Comma-Separated string of integers representing pages. ex: "2,4,5,6"',
 )
 @click.option(
-    "--record-checksums",
+    "--record-checksums-file",
     help=(
-        "Comma-Separated string of checksume to retrieve."
-        'ex: "333e7594cbe3275a152906392e433e8d,0f8deeb44c4f08d794f63af0e4229c97"'
+        "File containing comma-Separated string of checksume to retrieve."
+        "ex: /foo/bar.txt"
+        'ex file contents: "333e7594cbe3275a152906392e433e8d,0f8deeb44c4f08d794f63af0e4229c97"'
     ),
 )
 @click.option(
@@ -236,19 +258,19 @@ async def _write_all_index_records_to_file(
     'too many http connections. ex: "4"',
 )
 def write_page_records_to_files(
-    commons_url, pages, record_checksums, num_processes, max_concurrent_requests
+    commons_url, pages, record_checksums_file, num_processes, max_concurrent_requests
 ):
     """
     Command line interface function for requesting a number of
     records from indexd and writing to a file in that process. num_processes
     is only used to calculate how many open connections this process should request.
 
-    NOTE: YOU MUST USE EITHER `pages` OR `record-checksums`, YOU CANNOT USE BOTH
+    NOTE: YOU MUST USE EITHER `pages` OR `record-checksums-file`, YOU CANNOT USE BOTH
 
     Args:
         commons_url (str): root domain for commons where indexd lives
         pages (List[int/str]): List of indexd pages to request
-        record_checksums (List[str]): List of indexd checksums to request
+        record_checksums_file (str): File with indexd checksums to request
         num_processes (int): number of concurrent processes being requested
             (including this one)
         max_concurrent_requests (int): the maximum number of concurrent requests allowed
@@ -258,21 +280,34 @@ def write_page_records_to_files(
     Raises:
         AttributeError: No pages specified to get records from
     """
-    if not pages and not record_checksums:
+    if not pages and not record_checksums_file:
         raise AttributeError(
-            "No info specified to get records with."
-            "Supply either pages or record-checksums"
+            "No info specified to get records with. "
+            "Supply either pages or record-checksums-file"
         )
 
     pages = [item for item in pages.strip().strip(",").split(",") if item]
-    record_checksums = [
-        item for item in record_checksums.strip().strip(",").split(",") if item
-    ]
+    record_checksums = []
+
+    if record_checksums_file:
+        with open(record_checksums_file, "r", encoding="utf8") as file:
+            record_checksums_from_file = ",".join(file.readlines())
+            record_checksums = [
+                item
+                for item in record_checksums_from_file.strip().strip(",").split(",")
+                if item
+            ]
+
+    if not pages and not record_checksums:
+        raise AttributeError(
+            "No info specified to get records with. "
+            "Supply either pages or record-checksums-file with checksums in the file. "
+        )
 
     if pages and record_checksums:
         raise AttributeError(
-            "YOU MUST USE EITHER `pages` OR `record-checksums`, YOU CANNOT USE BOTH."
-            f"You provided pages={pages} and record-checksums={record_checksums}"
+            "YOU MUST USE EITHER `pages` OR `record-checksums-file`, YOU CANNOT USE BOTH. "
+            f"You provided pages={pages} and record-checksums-file={record_checksums_file}."
         )
 
     loop = get_or_create_event_loop_for_thread()
@@ -312,6 +347,7 @@ async def _get_records_and_write_to_file(
     write_to_file_task = asyncio.ensure_future(_parse_from_queue(queue))
 
     if pages:
+        logging.debug("putting records from page into queue")
         await asyncio.gather(
             *(
                 _put_records_from_page_in_queue(page, commons_url, lock, queue)
@@ -319,6 +355,7 @@ async def _get_records_and_write_to_file(
             )
         )
     else:
+        logging.debug("putting records from checksum into queue")
         await asyncio.gather(
             *(
                 _put_records_from_checksum_in_queue(checksum, commons_url, lock, queue)
@@ -389,9 +426,9 @@ async def _parse_from_queue(queue):
     """
     loop = get_or_create_event_loop_for_thread()
 
-    file_name = TMP_FOLDER + f"{os.getpid()}.csv"
+    file_name = TMP_FOLDER + f"output/{os.getpid()}.csv"
     async with aiofiles.open(file_name, "w+", encoding="utf8") as file:
-        logging.info(f"Write to {file_name}")
+        logging.info(f"Writing to {file_name}")
         csv_writer = csv.writer(file)
 
         records = await queue.get()
