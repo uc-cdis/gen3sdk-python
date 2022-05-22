@@ -103,10 +103,22 @@
     <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
     <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;start time: </span><span class="si">{</span><span class="n">start_time</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-    <span class="c1"># ensure tmp directory exists and is empty</span>
+    <span class="c1"># ensure tmp directories exists and are empty</span>
     <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">TMP_FOLDER</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">TMP_FOLDER</span> <span class="o">+</span> <span class="s2">&quot;input&quot;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">TMP_FOLDER</span> <span class="o">+</span> <span class="s2">&quot;output&quot;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">TMP_FOLDER</span><span class="p">):</span>
         <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">TMP_FOLDER</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">file_path</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">TMP_FOLDER</span> <span class="o">+</span> <span class="s2">&quot;input&quot;</span><span class="p">):</span>
+        <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">TMP_FOLDER</span> <span class="o">+</span> <span class="s2">&quot;input&quot;</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">file_path</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">TMP_FOLDER</span> <span class="o">+</span> <span class="s2">&quot;output&quot;</span><span class="p">):</span>
+        <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">TMP_FOLDER</span> <span class="o">+</span> <span class="s2">&quot;output&quot;</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">file_path</span><span class="p">):</span>
             <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
 
@@ -200,11 +212,20 @@
             <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">record_chunks</span><span class="p">[</span><span class="n">x</span><span class="p">]))</span> <span class="k">if</span> <span class="n">record_chunks</span> <span class="k">else</span> <span class="s2">&quot;,&quot;</span>
         <span class="p">)</span>
 
+        <span class="c1"># write record_checksum chunks to temporary files since the size can overload</span>
+        <span class="c1"># command line arguments</span>
+        <span class="n">checksums_chunk_filename</span> <span class="o">=</span> <span class="n">TMP_FOLDER</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;input/checksums_chunk_</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s2">.txt&quot;</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;writing record_checksums chunk </span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s2"> into </span><span class="si">{</span><span class="n">checksums_chunk_filename</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">checksums_chunk_filename</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
+            <span class="n">outfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">record_checksums</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf8&quot;</span><span class="p">))</span>
+
         <span class="c1"># call the cli function below and pass in chunks of pages for each process</span>
         <span class="n">command</span> <span class="o">=</span> <span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;python </span><span class="si">{</span><span class="n">CURRENT_DIR</span><span class="si">}</span><span class="s2">/download_manifest.py --commons_url &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">commons_url</span><span class="si">}</span><span class="s2"> --pages </span><span class="si">{</span><span class="n">pages</span><span class="si">}</span><span class="s2"> --record-checksums </span><span class="si">{</span><span class="n">record_checksums</span><span class="si">}</span><span class="s2"> --num_processes </span><span class="si">{</span><span class="n">num_processes</span><span class="si">}</span><span class="s2"> &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;--max_concurrent_requests </span><span class="si">{</span><span class="n">max_concurrent_requests</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">commons_url</span><span class="si">}</span><span class="s2"> --pages </span><span class="si">{</span><span class="n">pages</span><span class="si">}</span><span class="s2"> --record-checksums-file </span><span class="si">{</span><span class="n">checksums_chunk_filename</span><span class="si">}</span><span class="s2"> &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;--num_processes </span><span class="si">{</span><span class="n">num_processes</span><span class="si">}</span><span class="s2"> --max_concurrent_requests </span><span class="si">{</span><span class="n">max_concurrent_requests</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="p">)</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">command</span><span class="p">)</span>
 
@@ -230,7 +251,7 @@
 
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_filename</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
         <span class="n">outfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;guid,urls,authz,acl,md5,file_size,file_name</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf8&quot;</span><span class="p">))</span>
-        <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">TMP_FOLDER</span> <span class="o">+</span> <span class="s2">&quot;*&quot;</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">TMP_FOLDER</span> <span class="o">+</span> <span class="s2">&quot;output/*&quot;</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">output_filename</span> <span class="o">==</span> <span class="n">filename</span><span class="p">:</span>
                 <span class="c1"># don&#39;t want to copy the output into the output</span>
                 <span class="k">continue</span>
@@ -250,10 +271,11 @@
     <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Comma-Separated string of integers representing pages. ex: &quot;2,4,5,6&quot;&#39;</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
-    <span class="s2">&quot;--record-checksums&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;--record-checksums-file&quot;</span><span class="p">,</span>
     <span class="n">help</span><span class="o">=</span><span class="p">(</span>
-        <span class="s2">&quot;Comma-Separated string of checksume to retrieve.&quot;</span>
-        <span class="s1">&#39;ex: &quot;333e7594cbe3275a152906392e433e8d,0f8deeb44c4f08d794f63af0e4229c97&quot;&#39;</span>
+        <span class="s2">&quot;File containing comma-Separated string of checksume to retrieve.&quot;</span>
+        <span class="s2">&quot;ex: /foo/bar.txt&quot;</span>
+        <span class="s1">&#39;ex file contents: &quot;333e7594cbe3275a152906392e433e8d,0f8deeb44c4f08d794f63af0e4229c97&quot;&#39;</span>
     <span class="p">),</span>
 <span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
@@ -269,19 +291,19 @@
     <span class="s1">&#39;too many http connections. ex: &quot;4&quot;&#39;</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="k">def</span> <span class="nf">write_page_records_to_files</span><span class="p">(</span>
-    <span class="n">commons_url</span><span class="p">,</span> <span class="n">pages</span><span class="p">,</span> <span class="n">record_checksums</span><span class="p">,</span> <span class="n">num_processes</span><span class="p">,</span> <span class="n">max_concurrent_requests</span>
+    <span class="n">commons_url</span><span class="p">,</span> <span class="n">pages</span><span class="p">,</span> <span class="n">record_checksums_file</span><span class="p">,</span> <span class="n">num_processes</span><span class="p">,</span> <span class="n">max_concurrent_requests</span>
 <span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Command line interface function for requesting a number of</span>
 <span class="sd">    records from indexd and writing to a file in that process. num_processes</span>
 <span class="sd">    is only used to calculate how many open connections this process should request.</span>
 
-<span class="sd">    NOTE: YOU MUST USE EITHER `pages` OR `record-checksums`, YOU CANNOT USE BOTH</span>
+<span class="sd">    NOTE: YOU MUST USE EITHER `pages` OR `record-checksums-file`, YOU CANNOT USE BOTH</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        commons_url (str): root domain for commons where indexd lives</span>
 <span class="sd">        pages (List[int/str]): List of indexd pages to request</span>
-<span class="sd">        record_checksums (List[str]): List of indexd checksums to request</span>
+<span class="sd">        record_checksums_file (str): File with indexd checksums to request</span>
 <span class="sd">        num_processes (int): number of concurrent processes being requested</span>
 <span class="sd">            (including this one)</span>
 <span class="sd">        max_concurrent_requests (int): the maximum number of concurrent requests allowed</span>
@@ -291,21 +313,34 @@
 <span class="sd">    Raises:</span>
 <span class="sd">        AttributeError: No pages specified to get records from</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">pages</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">record_checksums</span><span class="p">:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pages</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">record_checksums_file</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span>
-            <span class="s2">&quot;No info specified to get records with.&quot;</span>
-            <span class="s2">&quot;Supply either pages or record-checksums&quot;</span>
+            <span class="s2">&quot;No info specified to get records with. &quot;</span>
+            <span class="s2">&quot;Supply either pages or record-checksums-file&quot;</span>
         <span class="p">)</span>
 
     <span class="n">pages</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">pages</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">item</span><span class="p">]</span>
-    <span class="n">record_checksums</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="n">item</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">record_checksums</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">item</span>
-    <span class="p">]</span>
+    <span class="n">record_checksums</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">if</span> <span class="n">record_checksums_file</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">record_checksums_file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">record_checksums_from_file</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">readlines</span><span class="p">())</span>
+            <span class="n">record_checksums</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">item</span>
+                <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">record_checksums_from_file</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">item</span>
+            <span class="p">]</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pages</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">record_checksums</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span>
+            <span class="s2">&quot;No info specified to get records with. &quot;</span>
+            <span class="s2">&quot;Supply either pages or record-checksums-file with checksums in the file. &quot;</span>
+        <span class="p">)</span>
 
     <span class="k">if</span> <span class="n">pages</span> <span class="ow">and</span> <span class="n">record_checksums</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span>
-            <span class="s2">&quot;YOU MUST USE EITHER `pages` OR `record-checksums`, YOU CANNOT USE BOTH.&quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;You provided pages=</span><span class="si">{</span><span class="n">pages</span><span class="si">}</span><span class="s2"> and record-checksums=</span><span class="si">{</span><span class="n">record_checksums</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;YOU MUST USE EITHER `pages` OR `record-checksums-file`, YOU CANNOT USE BOTH. &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;You provided pages=</span><span class="si">{</span><span class="n">pages</span><span class="si">}</span><span class="s2"> and record-checksums-file=</span><span class="si">{</span><span class="n">record_checksums_file</span><span class="si">}</span><span class="s2">.&quot;</span>
         <span class="p">)</span>
 
     <span class="n">loop</span> <span class="o">=</span> <span class="n">get_or_create_event_loop_for_thread</span><span class="p">()</span>
@@ -345,6 +380,7 @@
     <span class="n">write_to_file_task</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">ensure_future</span><span class="p">(</span><span class="n">_parse_from_queue</span><span class="p">(</span><span class="n">queue</span><span class="p">))</span>
 
     <span class="k">if</span> <span class="n">pages</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;putting records from page into queue&quot;</span><span class="p">)</span>
         <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span>
             <span class="o">*</span><span class="p">(</span>
                 <span class="n">_put_records_from_page_in_queue</span><span class="p">(</span><span class="n">page</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">lock</span><span class="p">,</span> <span class="n">queue</span><span class="p">)</span>
@@ -352,6 +388,7 @@
             <span class="p">)</span>
         <span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;putting records from checksum into queue&quot;</span><span class="p">)</span>
         <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span>
             <span class="o">*</span><span class="p">(</span>
                 <span class="n">_put_records_from_checksum_in_queue</span><span class="p">(</span><span class="n">checksum</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">lock</span><span class="p">,</span> <span class="n">queue</span><span class="p">)</span>
@@ -422,9 +459,9 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">loop</span> <span class="o">=</span> <span class="n">get_or_create_event_loop_for_thread</span><span class="p">()</span>
 
-    <span class="n">file_name</span> <span class="o">=</span> <span class="n">TMP_FOLDER</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span><span class="si">}</span><span class="s2">.csv&quot;</span>
+    <span class="n">file_name</span> <span class="o">=</span> <span class="n">TMP_FOLDER</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;output/</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span><span class="si">}</span><span class="s2">.csv&quot;</span>
     <span class="k">async</span> <span class="k">with</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="s2">&quot;w+&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
-        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Write to </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Writing to </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">csv_writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
 
         <span class="n">records</span> <span class="o">=</span> <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
