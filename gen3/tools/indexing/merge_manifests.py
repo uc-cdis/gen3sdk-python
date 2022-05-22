@@ -83,7 +83,8 @@ def merge_bucket_manifests(
             existing GUIDs with the same md5 but still want to merge manifests
             together, this can be used.
         columns_with_arrays(list[str]): list of column names where their values should
-            be treated like arrays (so that when merging we know to combine)
+            be treated like arrays (so that when merging we know to combine). Defaults
+            to include URLs column, ACL column, and AuthZ column.
         expected_duplicate_md5s(list[str]): list of md5sums that we EXPECT to be duplicated in the
             input manifests; skip merging for these records
 
@@ -317,7 +318,7 @@ def _error_if_invalid_size_or_guid(
 
             if not allow_mult_guids_per_hash:
                 logging.error(warning_msg)
-                raise csv.Error(error_msg)
+                raise csv.Error(warning_msg)
 
             info_msg = (
                 f"Allowing multiple GUIDs per hash. {new_guid} has same "
