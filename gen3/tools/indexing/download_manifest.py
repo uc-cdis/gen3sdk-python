@@ -24,6 +24,7 @@ import asyncio
 import aiofiles
 import click
 import time
+import json
 import csv
 import glob
 from cdislogging import get_logger
@@ -136,7 +137,7 @@ async def _write_all_index_records_to_file(
 
         if not num_input_records:
             raise AttributeError(
-                f"No checksums found in provided input file: {input_manifest}. "
+                f"No valid records found in provided input file: {input_manifest}. "
                 "Please check previous logs."
             )
 
@@ -149,7 +150,6 @@ async def _write_all_index_records_to_file(
         chunk_size = int(math.ceil(float(num_input_records) / num_processes))
         logging.debug(f"records chunk size: {chunk_size}")
 
-        # TODO leave as full records not just md5s
         record_chunks = list(yield_chunks(input_records, chunk_size))
     else:
         index = Gen3Index(commons_url)
@@ -177,8 +177,9 @@ async def _write_all_index_records_to_file(
     for x in range(max(len(page_chunks), len(record_chunks))):
         pages = ",".join(map(str, page_chunks[x])) if page_chunks else ","
         input_record_chunks = (
-            "|||".join(map(str, record_chunks[x])) if record_chunks else "|||"
+            "|||".join([json.dumps(record) for record in record_chunks[x] if record_chunks[x] and record_chunks])
         )
+        print(input_record_chunks)
 
         # write record_checksum chunks to temporary files since the size can overload
         # command line arguments
@@ -241,7 +242,7 @@ async def _write_all_index_records_to_file(
 @click.option(
     "--input-record-chunks-file",
     help=(
-        "File containing comma-Separated string of records to retrieve."
+        "File containing delimited string of records to retrieve."
         "ex: /foo/bar.txt"
     ),
 )
@@ -291,10 +292,9 @@ def write_page_records_to_files(
 
     if input_record_chunks_file:
         with open(input_record_chunks_file, "r", encoding="utf8") as file:
-            input_record_chunks_from_file = "|||".join(file.readlines())
             input_record_chunks = [
-                item
-                for item in input_record_chunks_from_file.strip().strip(",").split(",")
+                json.loads(item.strip())
+                for item in file.read().split("|||")
                 if item
             ]
 
@@ -303,7 +303,7 @@ def write_page_records_to_files(
     if not pages and not input_record_chunks:
         raise AttributeError(
             "No info specified to get records with. "
-            "Supply either pages or input-record-chunks-file with checksums in the file. "
+            "Supply either pages or input-record-chunks-file with records in the file. "
         )
 
     if pages and input_record_chunks:
@@ -342,7 +342,7 @@ async def _get_records_and_write_to_file(
     Args:
         commons_url (str): root domain for commons where indexd lives
         pages (List[int/str]): List of indexd pages to request
-        input_record_chunks (List[str]): List of indexd checksums to request
+        input_record_chunks (List[dict]): List of indexd records to request
         num_processes (int): number of concurrent processes being requested
             (including this one)
     """
@@ -361,11 +361,11 @@ async def _get_records_and_write_to_file(
             )
         )
     else:
-        logging.debug("putting records from checksum into queue")
+        logging.debug("putting records from input manifest into queue")
         await asyncio.gather(
             *(
-                _put_records_from_checksum_in_queue(checksum, commons_url, lock, queue)
-                for checksum in input_record_chunks
+                _put_records_from_input_manifest_in_queue(record, commons_url, lock, queue)
+                for record in input_record_chunks
             )
         )
 
@@ -373,14 +373,14 @@ async def _get_records_and_write_to_file(
     await write_to_file_task
 
 
-async def _put_records_from_checksum_in_queue(checksum, commons_url, lock, queue):
+async def _put_records_from_input_manifest_in_queue(record, commons_url, lock, queue):
     """
-    Gets a semaphore then requests records for the given checksum and
+    Gets a semaphore then requests records for the given record and
     puts them in a queue.
 
     Args:
         commons_url (str): root domain for commons where indexd lives
-        checksum (int/str): indexd checksum to request
+        record (dict): indexd record to request
         lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
             connections
         queue (asyncio.Queue): queue to put indexd records in
@@ -392,9 +392,16 @@ async def _put_records_from_checksum_in_queue(checksum, commons_url, lock, queue
         if "https" not in commons_url:
             ssl = False
 
-        records = await index.async_get_records_from_checksum(
-            checksum=checksum, _ssl=ssl
-        )
+        checksum = record.get(MD5_STANDARD_KEY)
+
+        if checksum:
+            records = await index.async_get_records_from_checksum(
+                checksum=checksum, _ssl=ssl
+            )
+        else:
+            # keep original input from manifest if full record not found
+            records = [record]
+
         await queue.put(records)
 
 
