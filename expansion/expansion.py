@@ -1013,6 +1013,7 @@ class Gen3Expansion:
         return submission_order
 
     def delete_project(self, project_id, root_node="project", chunk_size=200):
+        prog, proj = project_id.split("-", 1)
         submission_order = self.get_submission_order(root_node=root_node)
         delete_order = sorted(submission_order, key=lambda x: x[1], reverse=True)
         nodes = [i[0] for i in delete_order]
@@ -1022,10 +1023,10 @@ class Gen3Expansion:
             print("No 'project' node in list of nodes.")
         for node in nodes:
             print("\nDeleting node '{}' from project '{}'.".format(node, project_id))
-            data = self.delete_node(
-                node=node, project_id=project_id, chunk_size=chunk_size
-            )
-        prog, proj = project_id.split("-", 1)
+            # data = self.delete_node(
+            #     node=node, project_id=project_id, chunk_size=chunk_size
+            # )
+            self.sub.delete_node(program=prog,project=proj,node_name=node)
         try:
             data = self.sub.delete_project(program=prog, project=proj)
         except Exception as e:
