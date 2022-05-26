@@ -173,7 +173,7 @@ async def publish_discovery_metadata(
             if guid_field is None:
                 guid = discovery_metadata.pop("guid")
             else:
-                guid = discovery_metadata.pop(guid_field)
+                guid = discovery_metadata[guid_field]
 
             # when publising unregistered metadata, skip those who are already registered
             if is_unregistered_metadata and guid in registered_metadata_guids:
