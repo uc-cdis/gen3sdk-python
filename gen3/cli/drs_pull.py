@@ -1,5 +1,5 @@
 import click
-from cdiserrors import get_logger
+from cdislogging import get_logger
 
 from gen3.tools.download.drs_download import (
     list_files_in_drs_manifest,
