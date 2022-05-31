@@ -623,11 +623,6 @@ def test_index_manifest_packages(gen3_index, gen3_auth):
             "size": 35,
         },
     ]
-    assert mds_records[guid]["_buckets"] == ["s3://my-data-bucket"]
-    assert mds_records[guid]["_filename"] == "package.zip"
-    assert mds_records[guid]["_file_extension"] == ".zip"
-    assert mds_records[guid]["_upload_status"] == "uploaded"
-    assert mds_records[guid]["_resource_paths"] == ["/open/packages"]
 
     # package with no "package_contents" provided
     # GS URL
@@ -639,7 +634,6 @@ def test_index_manifest_packages(gen3_index, gen3_auth):
     assert guid in mds_records
     assert mds_records[guid]["type"] == "package"
     assert mds_records[guid]["package"]["contents"] == None
-    assert mds_records[guid]["_buckets"] == ["gs://my-google-data-bucket"]
 
     # package with no "file_name" provided
     # and 2 URLs with different file names.
@@ -656,14 +650,10 @@ def test_index_manifest_packages(gen3_index, gen3_auth):
         ]
     )
     assert guid in mds_records
-    assert sorted(mds_records[guid]["_buckets"]) == sorted(
-        ["s3://my-data-bucket", "gs://my-google-data-bucket"]
-    )
     assert mds_records[guid]["package"]["file_name"] in [
         "package.zip",
         "other_file_name.zip",
     ]
-    assert mds_records[guid]["_filename"] in ["package.zip", "other_file_name.zip"]
 
     # package with no "guid" provided
     new_guids = [

@@ -497,7 +497,6 @@ class Gen3Metadata:
                 indexd_doc.file_name,
                 indexd_doc.size,
                 indexd_doc.hashes,
-                indexd_doc.authz,
                 indexd_doc.urls,
                 package_contents,
             )
@@ -514,7 +513,7 @@ class Gen3Metadata:
         return to_submit
 
     def _get_package_metadata(
-        self, submitted_metadata, file_name, file_size, hashes, authz, urls, contents
+        self, submitted_metadata, file_name, file_size, hashes, urls, contents
     ):
         """
         The MDS /objects API currently expects files that have not been
@@ -524,9 +523,8 @@ class Gen3Metadata:
         relevant data is provided.
         """
 
-        def _get_buckets_and_filename_from_urls(submitted_metadata, urls):
+        def _get_filename_from_urls(submitted_metadata, urls):
             file_name = ""
-            bucket_urls = []
             if not urls:
                 logging.warning(f"No URLs provided for: {submitted_metadata}")
             for url in urls:
@@ -538,19 +536,12 @@ class Gen3Metadata:
                         logging.warning(
                             f"Received multiple URLs with different file names; will use the first URL (file name '{file_name}'): {submitted_metadata}"
                         )
-                parsed = urlparse(url)
-                _bucket_url = f"{parsed.scheme}://{parsed.netloc}"
-                bucket_urls.append(_bucket_url)
-            return file_name, bucket_urls
+            return file_name
 
-        file_name_from_url, bucket_urls = _get_buckets_and_filename_from_urls(
-            submitted_metadata, urls
-        )
+        file_name_from_url = _get_filename_from_urls(submitted_metadata, urls)
         if not file_name:
             file_name = file_name_from_url
 
-        _, file_ext = os.path.splitext(file_name)
-        uploader = self._auth_provider._token_info.get("sub")
         now = str(datetime.utcnow())
         metadata = {
             "type": "package",
@@ -563,11 +554,6 @@ class Gen3Metadata:
                 "hashes": hashes,
                 "contents": contents or None,
             },
-            "_resource_paths": authz,
-            "_uploader_id": uploader,
-            "_buckets": bucket_urls,
-            "_filename": file_name,
-            "_file_extension": file_ext,
             "_upload_status": "uploaded",
         }
         return metadata
