@@ -530,7 +530,6 @@
                 <span class="n">indexd_doc</span><span class="o">.</span><span class="n">file_name</span><span class="p">,</span>
                 <span class="n">indexd_doc</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>
                 <span class="n">indexd_doc</span><span class="o">.</span><span class="n">hashes</span><span class="p">,</span>
-                <span class="n">indexd_doc</span><span class="o">.</span><span class="n">authz</span><span class="p">,</span>
                 <span class="n">indexd_doc</span><span class="o">.</span><span class="n">urls</span><span class="p">,</span>
                 <span class="n">package_contents</span><span class="p">,</span>
             <span class="p">)</span>
@@ -547,7 +546,7 @@
         <span class="k">return</span> <span class="n">to_submit</span>
 
     <span class="k">def</span> <span class="nf">_get_package_metadata</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">submitted_metadata</span><span class="p">,</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">file_size</span><span class="p">,</span> <span class="n">hashes</span><span class="p">,</span> <span class="n">authz</span><span class="p">,</span> <span class="n">urls</span><span class="p">,</span> <span class="n">contents</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">submitted_metadata</span><span class="p">,</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">file_size</span><span class="p">,</span> <span class="n">hashes</span><span class="p">,</span> <span class="n">urls</span><span class="p">,</span> <span class="n">contents</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        The MDS /objects API currently expects files that have not been</span>
@@ -557,9 +556,8 @@
 <span class="sd">        relevant data is provided.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="k">def</span> <span class="nf">_get_buckets_and_filename_from_urls</span><span class="p">(</span><span class="n">submitted_metadata</span><span class="p">,</span> <span class="n">urls</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">_get_filename_from_urls</span><span class="p">(</span><span class="n">submitted_metadata</span><span class="p">,</span> <span class="n">urls</span><span class="p">):</span>
             <span class="n">file_name</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-            <span class="n">bucket_urls</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">urls</span><span class="p">:</span>
                 <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No URLs provided for: </span><span class="si">{</span><span class="n">submitted_metadata</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">urls</span><span class="p">:</span>
@@ -571,19 +569,12 @@
                         <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
                             <span class="sa">f</span><span class="s2">&quot;Received multiple URLs with different file names; will use the first URL (file name &#39;</span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">&#39;): </span><span class="si">{</span><span class="n">submitted_metadata</span><span class="si">}</span><span class="s2">&quot;</span>
                         <span class="p">)</span>
-                <span class="n">parsed</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
-                <span class="n">_bucket_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">parsed</span><span class="o">.</span><span class="n">scheme</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">parsed</span><span class="o">.</span><span class="n">netloc</span><span class="si">}</span><span class="s2">&quot;</span>
-                <span class="n">bucket_urls</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_bucket_url</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">bucket_urls</span>
+            <span class="k">return</span> <span class="n">file_name</span>
 
-        <span class="n">file_name_from_url</span><span class="p">,</span> <span class="n">bucket_urls</span> <span class="o">=</span> <span class="n">_get_buckets_and_filename_from_urls</span><span class="p">(</span>
-            <span class="n">submitted_metadata</span><span class="p">,</span> <span class="n">urls</span>
-        <span class="p">)</span>
+        <span class="n">file_name_from_url</span> <span class="o">=</span> <span class="n">_get_filename_from_urls</span><span class="p">(</span><span class="n">submitted_metadata</span><span class="p">,</span> <span class="n">urls</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">file_name</span><span class="p">:</span>
             <span class="n">file_name</span> <span class="o">=</span> <span class="n">file_name_from_url</span>
 
-        <span class="n">_</span><span class="p">,</span> <span class="n">file_ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span>
-        <span class="n">uploader</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">_token_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;sub&quot;</span><span class="p">)</span>
         <span class="n">now</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">())</span>
         <span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;package&quot;</span><span class="p">,</span>
@@ -596,11 +587,6 @@
                 <span class="s2">&quot;hashes&quot;</span><span class="p">:</span> <span class="n">hashes</span><span class="p">,</span>
                 <span class="s2">&quot;contents&quot;</span><span class="p">:</span> <span class="n">contents</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span>
             <span class="p">},</span>
-            <span class="s2">&quot;_resource_paths&quot;</span><span class="p">:</span> <span class="n">authz</span><span class="p">,</span>
-            <span class="s2">&quot;_uploader_id&quot;</span><span class="p">:</span> <span class="n">uploader</span><span class="p">,</span>
-            <span class="s2">&quot;_buckets&quot;</span><span class="p">:</span> <span class="n">bucket_urls</span><span class="p">,</span>
-            <span class="s2">&quot;_filename&quot;</span><span class="p">:</span> <span class="n">file_name</span><span class="p">,</span>
-            <span class="s2">&quot;_file_extension&quot;</span><span class="p">:</span> <span class="n">file_ext</span><span class="p">,</span>
             <span class="s2">&quot;_upload_status&quot;</span><span class="p">:</span> <span class="s2">&quot;uploaded&quot;</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="k">return</span> <span class="n">metadata</span></div>
