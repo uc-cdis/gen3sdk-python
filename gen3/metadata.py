@@ -516,7 +516,7 @@ class Gen3Metadata:
         self, submitted_metadata, file_name, file_size, hashes, urls, contents
     ):
         """
-        The MDS /objects API currently expects files that have not been
+        The MDS Objects API currently expects files that have not been
         uploaded yet. For files we only needs to index, not upload, create
         object records manually by generating the expected object fields.
         TODO: update the MDS objects API to not create upload URLs if the
