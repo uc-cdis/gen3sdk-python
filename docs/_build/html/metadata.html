@@ -1,10 +1,10 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
     <title>Gen3 Metadata Class &#8212; Gen3 SDK  documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
@@ -12,6 +12,7 @@
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -34,7 +35,7 @@
           <div class="body" role="main">
             
   <section id="gen3-metadata-class">
-<h1>Gen3 Metadata Class<a class="headerlink" href="#gen3-metadata-class" title="Permalink to this headline">¶</a></h1>
+<h1>Gen3 Metadata Class<a class="headerlink" href="#gen3-metadata-class" title="Permalink to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.metadata.</span></span><span class="sig-name descname"><span class="pre">Gen3Metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">endpoint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth_provider</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service_location</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mds'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">admin_endpoint_suffix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'-admin'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata" title="Permalink to this definition">¶</a></dt>
@@ -52,7 +53,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <span class="sig-name descname"><span class="pre">endpoint</span></span><a class="headerlink" href="#gen3.metadata.Gen3Metadata.endpoint" title="Permalink to this definition">¶</a></dt>
 <dd><p>public endpoint for reading/querying metadata - only necessary if auth_provider not provided</p>
 <dl class="field-list simple">
-<dt class="field-odd">Type</dt>
+<dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>str</p>
 </dd>
 </dl>
@@ -63,7 +64,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <span class="sig-name descname"><span class="pre">auth_provider</span></span><a class="headerlink" href="#gen3.metadata.Gen3Metadata.auth_provider" title="Permalink to this definition">¶</a></dt>
 <dd><p>auth manager</p>
 <dl class="field-list simple">
-<dt class="field-odd">Type</dt>
+<dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth">Gen3Auth</a></p>
 </dd>
 </dl>
@@ -74,7 +75,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">async_create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.async_create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.async_create" title="Permalink to this definition">¶</a></dt>
 <dd><p>Asynchronous function to create metadata</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>guid</strong> (<em>str</em>) – guid to use</p></li>
 <li><p><strong>metadata</strong> (<em>Dict</em>) – dictionary representing what will end up a JSON blob
@@ -91,16 +92,16 @@ attached to the provided GUID as metadata</p></li>
 <em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">async_get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.async_get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.async_get" title="Permalink to this definition">¶</a></dt>
 <dd><p>Asynchronous function to get metadata</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>guid</strong> (<em>str</em>) – guid to use</p></li>
 <li><p><strong>_ssl</strong> (<em>None</em><em>, </em><em>optional</em>) – whether or not to use ssl</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>metadata for given guid</p>
 </dd>
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Dict</p>
 </dd>
 </dl>
@@ -111,7 +112,7 @@ attached to the provided GUID as metadata</p></li>
 <em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">async_update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.async_update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.async_update" title="Permalink to this definition">¶</a></dt>
 <dd><p>Asynchronous function to update metadata</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>guid</strong> (<em>str</em>) – guid to use</p></li>
 <li><p><strong>metadata</strong> (<em>Dict</em>) – dictionary representing what will end up a JSON blob
@@ -127,7 +128,7 @@ attached to the provided GUID as metadata</p></li>
 <span class="sig-name descname"><span class="pre">batch_create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">metadata_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.batch_create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.batch_create" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create the list of metadata associated with the list of guids</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>(</strong><strong>List</strong><strong>[</strong><strong>Dict{&quot;guid&quot;</strong> (<em>metadata_list</em>) – “”, “data”: {}}]): list of metadata
 objects in a specific format. Expects a dict with “guid” and “data”
@@ -143,7 +144,7 @@ fields where “data” is another JSON blob to add to the mds</p></li>
 <span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.create" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create the metadata associated with the guid</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>guid</strong> (<em>str</em>) – guid to use</p></li>
 <li><p><strong>metadata</strong> (<em>Dict</em>) – dictionary representing what will end up a JSON blob
@@ -159,7 +160,7 @@ attached to the provided GUID as metadata</p></li>
 <span class="sig-name descname"><span class="pre">create_index_key_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.create_index_key_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.create_index_key_path" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a metadata key path indexed in the database.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – metadata key path</p>
 </dd>
 </dl>
@@ -170,7 +171,7 @@ attached to the provided GUID as metadata</p></li>
 <span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.delete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.delete" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete the metadata associated with the guid</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>guid</strong> (<em>str</em>) – guid to use</p>
 </dd>
 </dl>
@@ -181,7 +182,7 @@ attached to the provided GUID as metadata</p></li>
 <span class="sig-name descname"><span class="pre">delete_index_key_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.delete_index_key_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.delete_index_key_path" title="Permalink to this definition">¶</a></dt>
 <dd><p>List all the metadata key paths indexed in the database.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – metadata key path</p>
 </dd>
 </dl>
@@ -192,13 +193,13 @@ attached to the provided GUID as metadata</p></li>
 <span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.get" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the metadata associated with the guid</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>guid</strong> (<em>str</em>) – guid to use</p>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>metadata for given guid</p>
 </dd>
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Dict</p>
 </dd>
 </dl>
@@ -209,10 +210,10 @@ attached to the provided GUID as metadata</p></li>
 <span class="sig-name descname"><span class="pre">get_index_key_paths</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.get_index_key_paths"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.get_index_key_paths" title="Permalink to this definition">¶</a></dt>
 <dd><p>List all the metadata key paths indexed in the database.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list of metadata key paths</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>List</p>
 </dd>
 </dl>
@@ -223,10 +224,10 @@ attached to the provided GUID as metadata</p></li>
 <span class="sig-name descname"><span class="pre">get_version</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.get_version"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.get_version" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return the version</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>the version</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>str</p>
 </dd>
 </dl>
@@ -237,10 +238,10 @@ attached to the provided GUID as metadata</p></li>
 <span class="sig-name descname"><span class="pre">is_healthy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.is_healthy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.is_healthy" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return if is healthy or not</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>True if healthy</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>bool</p>
 </dd>
 </dl>
@@ -275,7 +276,7 @@ But won’t match these:</p>
 </dd>
 </dl>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>query</strong> (<em>str</em>) – mds query as defined by the metadata api</p></li>
 <li><p><strong>return_full_metadata</strong> (<em>bool</em><em>, </em><em>optional</em>) – if False will just return a list of guids</p></li>
@@ -283,7 +284,7 @@ But won’t match these:</p>
 <li><p><strong>offset</strong> (<em>int</em><em>, </em><em>optional</em>) – offset for output</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><dl class="simple">
 <dt>list of guids matching query</dt><dd><p>OR if return_full_metadata=True</p>
 </dd>
@@ -292,7 +293,7 @@ But won’t match these:</p>
 </dl>
 </p>
 </dd>
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>List</p>
 </dd>
 </dl>
@@ -303,7 +304,7 @@ But won’t match these:</p>
 <span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.update" title="Permalink to this definition">¶</a></dt>
 <dd><p>Update the metadata associated with the guid</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>guid</strong> (<em>str</em>) – guid to use</p></li>
 <li><p><strong>metadata</strong> (<em>Dict</em>) – dictionary representing what will end up a JSON blob
@@ -372,7 +373,7 @@ attached to the provided GUID as metadata</p></li>
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
 
 
 

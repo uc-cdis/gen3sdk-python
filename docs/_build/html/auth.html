@@ -1,10 +1,10 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
     <title>Gen3 Auth Helper &#8212; Gen3 SDK  documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
@@ -12,6 +12,7 @@
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -34,17 +35,17 @@
           <div class="body" role="main">
             
   <section id="gen3-auth-helper">
-<h1>Gen3 Auth Helper<a class="headerlink" href="#gen3-auth-helper" title="Permalink to this headline">¶</a></h1>
+<h1>Gen3 Auth Helper<a class="headerlink" href="#gen3-auth-helper" title="Permalink to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="gen3.auth.Gen3Auth">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.auth.</span></span><span class="sig-name descname"><span class="pre">Gen3Auth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">endpoint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">refresh_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">refresh_token</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/auth.html#Gen3Auth"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.auth.Gen3Auth" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">requests.auth.AuthBase</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">AuthBase</span></code></p>
 <p>Gen3 auth helper class for use with requests auth.</p>
 <p>Implements requests.auth.AuthBase in order to support JWT authentication.
 Generates access tokens from the provided refresh token file or string.
 Automatically refreshes access tokens when they expire.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>refresh_file</strong> (<em>str</em><em>, </em><em>opt</em>) – The file containing the downloaded JSON web token. Optional if working in a Gen3 Workspace.
 Defaults to (env[“GEN3_API_KEY”] || “credentials”) if refresh_token and idp not set.
@@ -84,7 +85,7 @@ constructor.</p>
 <span class="sig-name descname"><span class="pre">curl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/auth.html#Gen3Auth.curl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.auth.Gen3Auth.curl" title="Permalink to this definition">¶</a></dt>
 <dd><p>Curl the given endpoint - ex: gen3 curl /user/user.  Return requests.Response</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>path</strong> (<em>str</em>) – path under the commons to curl (/user/user, /index/index, /authz/mapping, …)</p></li>
 <li><p><strong>request</strong> (<em>str in GET</em><em>|</em><em>POST</em><em>|</em><em>PUT</em><em>|</em><em>DELETE</em>) – default to GET if data is not set, else default to POST</p></li>
@@ -165,7 +166,7 @@ constructor.</p>
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
 
 
 
