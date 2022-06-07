@@ -300,6 +300,7 @@ def write_page_records_to_files(
     input_record_chunks = []
     if input_record_chunks_file:
         with open(input_record_chunks_file, "r", encoding="utf8") as file:
+            input_record_chunks_from_file = "|||".join(file.readlines())
             input_record_chunks = [
                 json.loads(item)
                 for item in input_record_chunks_from_file.strip().split("|||")

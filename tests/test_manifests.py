@@ -331,6 +331,10 @@ def test_download_manifest_with_input_manifest(monkeypatch, gen3_index):
         # unexpected file format, fail test
         assert False
 
+    # should have 3 records in the output manifest but only 2 have guids (b/c they
+    # were the only ones with matches in indexd)
+    assert len(records) == 3
+
     # ensure downloaded manifest populates expected info for a record
     assert "gs://test/test.txt" in records.get(
         "dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}
@@ -364,8 +368,16 @@ def test_download_manifest_with_input_manifest(monkeypatch, gen3_index):
         "dg.TEST/a802e27d-4a5b-42e3-92b0-ba19e81b9dce", {}
     ).get("urls", [])
 
-    # should have only matched 2 records in the input manifest
-    assert len(records) == 2
+    # ensure downloaded manifest populates expected info for input with a missing record
+    for key, record in records.items():
+        if not key:
+            assert "gs://foo/bar" in record.get("urls", [])
+            assert "programs/foo/projects/bar" in record.get("authz", [])
+            assert (
+                record["md5"]
+                == "51234567891234567890123456789012"  # pragma: allowlist secret
+            )
+            assert "42" == record.get("file_size")
 
 
 def test_download_manifest_with_invalid_input_manifest(monkeypatch, gen3_index):
