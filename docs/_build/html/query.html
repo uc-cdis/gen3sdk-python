@@ -1,10 +1,10 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
     <title>Gen3 Query Class &#8212; Gen3 SDK  documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
@@ -12,6 +12,7 @@
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -34,14 +35,14 @@
           <div class="body" role="main">
             
   <section id="gen3-query-class">
-<h1>Gen3 Query Class<a class="headerlink" href="#gen3-query-class" title="Permalink to this headline">¶</a></h1>
+<h1>Gen3 Query Class<a class="headerlink" href="#gen3-query-class" title="Permalink to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="gen3.query.Gen3Query">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.query.</span></span><span class="sig-name descname"><span class="pre">Gen3Query</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">auth_provider</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/query.html#Gen3Query"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.query.Gen3Query" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Query ElasticSearch data from a Gen3 system.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>auth_provider</strong> (<a class="reference internal" href="auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><em>Gen3Auth</em></a>) – A Gen3Auth class instance.</p>
 </dd>
 </dl>
@@ -57,16 +58,16 @@ using the credentials.json downloaded from the commons profile page.</p>
 <span class="sig-name descname"><span class="pre">graphql_query</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query_string</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/query.html#Gen3Query.graphql_query"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.query.Gen3Query.graphql_query" title="Permalink to this definition">¶</a></dt>
 <dd><p>Execute a GraphQL query against a Data Commons.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>query_txt</strong> (<em>str</em>) – GraphQL query as text. For syntax details, see <a class="reference external" href="https://github.com/uc-cdis/guppy/blob/master/doc/queries.md">https://github.com/uc-cdis/guppy/blob/master/doc/queries.md</a>.</p></li>
 <li><p><strong>variables</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">object</span></code>, optional) – Dictionary of variables to pass with the query.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>{“data”: {&lt;data_type&gt;: [&lt;record&gt;, &lt;record&gt;, …]}}</p>
 </dd>
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Object</p>
 </dd>
 </dl>
@@ -82,7 +83,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <span class="sig-name descname"><span class="pre">query</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fields</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_object</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort_object</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">accessibility</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/query.html#Gen3Query.query"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.query.Gen3Query.query" title="Permalink to this definition">¶</a></dt>
 <dd><p>Execute a query against a Data Commons.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data_type</strong> (<em>str</em>) – Data type to query.</p></li>
 <li><p><strong>fields</strong> (<em>list</em>) – List of fields to return.</p></li>
@@ -94,10 +95,10 @@ using the credentials.json downloaded from the commons profile page.</p>
 <li><p><strong>accessibility</strong> (<em>list</em><em>, </em><em>optional</em>) – One of [“accessible” (default), “unaccessible”, “all”]. Only valid when querying a data type in “regular” tier access mode.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>{“data”: {&lt;data_type&gt;: [&lt;record&gt;, &lt;record&gt;, …]}}</p>
 </dd>
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Object</p>
 </dd>
 </dl>
@@ -121,7 +122,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <span class="sig-name descname"><span class="pre">raw_data_download</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fields</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_object</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort_fields</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">accessibility</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/query.html#Gen3Query.raw_data_download"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.query.Gen3Query.raw_data_download" title="Permalink to this definition">¶</a></dt>
 <dd><p>Execute a raw data download against a Data Commons.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data_type</strong> (<em>str</em>) – Data type to download from.</p></li>
 <li><p><strong>fields</strong> (<em>list</em>) – List of fields to return.</p></li>
@@ -132,10 +133,10 @@ using the credentials.json downloaded from the commons profile page.</p>
 <li><p><strong>offset</strong> (<em>int</em><em>, </em><em>optional</em>) – Starting position (default: 0).</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>[&lt;record&gt;, &lt;record&gt;, …]</p>
 </dd>
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>List</p>
 </dd>
 </dl>
@@ -214,7 +215,7 @@ using the credentials.json downloaded from the commons profile page.</p>
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
 
 
 

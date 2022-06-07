@@ -1,10 +1,10 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
     <title>Gen3 Submission Class &#8212; Gen3 SDK  documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
@@ -12,6 +12,7 @@
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -34,7 +35,7 @@
           <div class="body" role="main">
             
   <section id="gen3-submission-class">
-<h1>Gen3 Submission Class<a class="headerlink" href="#gen3-submission-class" title="Permalink to this headline">¶</a></h1>
+<h1>Gen3 Submission Class<a class="headerlink" href="#gen3-submission-class" title="Permalink to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="gen3.submission.Gen3Submission">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.submission.</span></span><span class="sig-name descname"><span class="pre">Gen3Submission</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">endpoint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth_provider</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.submission.Gen3Submission" title="Permalink to this definition">¶</a></dt>
@@ -44,7 +45,7 @@
 Supports submitting and exporting from Sheepdog.
 Supports GraphQL queries through Peregrine.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>auth_provider</strong> (<a class="reference internal" href="auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><em>Gen3Auth</em></a>) – A Gen3Auth class instance.</p>
 </dd>
 </dl>
@@ -88,7 +89,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <span class="sig-name descname"><span class="pre">delete_node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">program</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.delete_node"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.delete_node" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete all records for a node from a project.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>program</strong> (<em>str</em>) – The program to delete from.</p></li>
 <li><p><strong>project</strong> (<em>str</em>) – The project to delete from.</p></li>
@@ -114,7 +115,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <span class="sig-name descname"><span class="pre">delete_nodes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">program</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ordered_node_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.delete_nodes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.delete_nodes" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete all records for a list of nodes from a project.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>program</strong> (<em>str</em>) – The program to delete from.</p></li>
 <li><p><strong>project</strong> (<em>str</em>) – The project to delete from.</p></li>
@@ -141,7 +142,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <dd><p>Delete a program.</p>
 <p>This deletes an empty program from the commons.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>program</strong> (<em>str</em>) – The program to delete.</p>
 </dd>
 </dl>
@@ -158,7 +159,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <dd><p>Delete a project.</p>
 <p>This deletes an empty project from the commons.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>program</strong> (<em>str</em>) – The program containing the project to delete.</p></li>
 <li><p><strong>project</strong> (<em>str</em>) – The project to delete.</p></li>
@@ -177,7 +178,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <span class="sig-name descname"><span class="pre">delete_record</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">program</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uuid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.delete_record"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.delete_record" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete a record from a project.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>program</strong> (<em>str</em>) – The program to delete from.</p></li>
 <li><p><strong>project</strong> (<em>str</em>) – The project to delete from.</p></li>
@@ -197,7 +198,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <span class="sig-name descname"><span class="pre">delete_records</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">program</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uuids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.delete_records"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.delete_records" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete a list of records from a project.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>program</strong> (<em>str</em>) – The program to delete from.</p></li>
 <li><p><strong>project</strong> (<em>str</em>) – The project to delete from.</p></li>
@@ -220,7 +221,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <span class="sig-name descname"><span class="pre">export_node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">program</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fileformat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.export_node"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.export_node" title="Permalink to this definition">¶</a></dt>
 <dd><p>Export all records in a single node type of a project.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>program</strong> (<em>str</em>) – The program to which records belong.</p></li>
 <li><p><strong>project</strong> (<em>str</em>) – The project to which records belong.</p></li>
@@ -242,7 +243,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <span class="sig-name descname"><span class="pre">export_record</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">program</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uuid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fileformat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.export_record"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.export_record" title="Permalink to this definition">¶</a></dt>
 <dd><p>Export a single record into json.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>program</strong> (<em>str</em>) – The program the record is under.</p></li>
 <li><p><strong>project</strong> (<em>str</em>) – The project the record is under.</p></li>
@@ -277,7 +278,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <dd><p>Returns the dictionary schema for a specific node.</p>
 <p>This gets the current json dictionary schema for a specific node type in a commons.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>node_type</strong> (<em>str</em>) – The node_type (or name of the node) to retrieve.</p>
 </dd>
 </dl>
@@ -311,7 +312,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <span class="sig-name descname"><span class="pre">get_project_dictionary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">program</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.get_project_dictionary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.get_project_dictionary" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get dictionary schema for a given project</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>program</strong> – the name of the program the project is from</p></li>
 <li><p><strong>project</strong> – the name of the project you want the dictionary schema from</p></li>
@@ -329,7 +330,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <span class="sig-name descname"><span class="pre">get_project_manifest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">program</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.get_project_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.get_project_manifest" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get a projects file manifest</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>program</strong> – the name of the program the project is from</p></li>
 <li><p><strong>project</strong> – the name of the project you want the manifest from</p></li>
@@ -347,7 +348,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <span class="sig-name descname"><span class="pre">get_projects</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">program</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.get_projects"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.get_projects" title="Permalink to this definition">¶</a></dt>
 <dd><p>List registered projects for a given program</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>program</strong> – the name of the program you want the projects from</p>
 </dd>
 </dl>
@@ -363,7 +364,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <span class="sig-name descname"><span class="pre">open_project</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">program</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.open_project"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.open_project" title="Permalink to this definition">¶</a></dt>
 <dd><p>Mark a project <code class="docutils literal notranslate"><span class="pre">open</span></code>. Opening a project means uploads, deletions, etc. are allowed.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>program</strong> – the name of the program the project is from</p></li>
 <li><p><strong>project</strong> – the name of the project you want to ‘open’</p></li>
@@ -381,7 +382,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <span class="sig-name descname"><span class="pre">query</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query_txt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.query"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.query" title="Permalink to this definition">¶</a></dt>
 <dd><p>Execute a GraphQL query against a Data Commons.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>query_txt</strong> (<em>str</em>) – Query text.</p></li>
 <li><p><strong>variables</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">object</span></code>, optional) – Dictionary of variables to pass with the query.</p></li>
@@ -403,7 +404,7 @@ in the Data Commons.</p>
 <span class="sig-name descname"><span class="pre">submit_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.submit_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.submit_file" title="Permalink to this definition">¶</a></dt>
 <dd><p>Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>project_id</strong> (<em>str</em>) – The project_id to submit to.</p></li>
 <li><p><strong>filename</strong> (<em>str</em>) – The file containing data to submit. The format can be TSV, CSV or XLSX (first worksheet only for now).</p></li>
@@ -424,7 +425,7 @@ in the Data Commons.</p>
 <span class="sig-name descname"><span class="pre">submit_record</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">program</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">json</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/submission.html#Gen3Submission.submit_record"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.submission.Gen3Submission.submit_record" title="Permalink to this definition">¶</a></dt>
 <dd><p>Submit record(s) to a project as json.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>program</strong> (<em>str</em>) – The program to submit to.</p></li>
 <li><p><strong>project</strong> (<em>str</em>) – The project to submit to.</p></li>
@@ -498,7 +499,7 @@ in the Data Commons.</p>
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
 
 
 
