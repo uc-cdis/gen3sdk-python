@@ -1,7 +1,7 @@
 from typing import List, Optional
 import requests
 import json
-from cdiserrors import get_logger
+from cdislogging import get_logger
 import os
 import inspect
 from datetime import datetime, timezone, timedelta
