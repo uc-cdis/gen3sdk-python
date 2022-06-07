@@ -126,17 +126,26 @@ def get_and_verify_fileinfos_from_tsv_manifest(
             output_row = {}
             for current_column_name in row.keys():
                 output_column_name = None
-                if current_column_name.lower() in GUID_COLUMN_NAMES:
+                if (
+                    current_column_name
+                    and current_column_name.lower() in GUID_COLUMN_NAMES
+                ):
                     fieldnames[
                         fieldnames.index(current_column_name)
                     ] = GUID_STANDARD_KEY
                     output_column_name = GUID_STANDARD_KEY
-                elif current_column_name.lower() in FILENAME_COLUMN_NAMES:
+                elif (
+                    current_column_name
+                    and current_column_name.lower() in FILENAME_COLUMN_NAMES
+                ):
                     fieldnames[
                         fieldnames.index(current_column_name)
                     ] = FILENAME_STANDARD_KEY
                     output_column_name = FILENAME_STANDARD_KEY
-                elif current_column_name.lower() in MD5_COLUMN_NAMES:
+                elif (
+                    current_column_name
+                    and current_column_name.lower() in MD5_COLUMN_NAMES
+                ):
                     fieldnames[fieldnames.index(current_column_name)] = MD5_STANDARD_KEY
                     output_column_name = MD5_STANDARD_KEY
                     if not _verify_format(row[current_column_name], MD5_FORMAT):
@@ -144,7 +153,10 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                             f"ERROR: {row[current_column_name]} is not in md5 format"
                         )
                         is_row_valid = False
-                elif current_column_name.lower() in ACLS_COLUMN_NAMES:
+                elif (
+                    current_column_name
+                    and current_column_name.lower() in ACLS_COLUMN_NAMES
+                ):
                     fieldnames[fieldnames.index(current_column_name)] = ACL_STANDARD_KEY
                     output_column_name = ACL_STANDARD_KEY
                     if not _verify_format(row[current_column_name], ACL_FORMAT):
@@ -152,7 +164,10 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                             f"ERROR: {row[current_column_name]} is not in acl format"
                         )
                         is_row_valid = False
-                elif current_column_name.lower() in URLS_COLUMN_NAMES:
+                elif (
+                    current_column_name
+                    and current_column_name.lower() in URLS_COLUMN_NAMES
+                ):
                     fieldnames[
                         fieldnames.index(current_column_name)
                     ] = URLS_STANDARD_KEY
@@ -162,7 +177,10 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                             f"ERROR: {row[current_column_name]} is not in urls format"
                         )
                         is_row_valid = False
-                elif current_column_name.lower() in AUTHZ_COLUMN_NAMES:
+                elif (
+                    current_column_name
+                    and current_column_name.lower() in AUTHZ_COLUMN_NAMES
+                ):
                     fieldnames[
                         fieldnames.index(current_column_name)
                     ] = AUTHZ_STANDARD_KEY
@@ -172,7 +190,10 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                             f"ERROR: {row[current_column_name]} is not in authz format"
                         )
                         is_row_valid = False
-                elif current_column_name.lower() in SIZE_COLUMN_NAMES:
+                elif (
+                    current_column_name
+                    and current_column_name.lower() in SIZE_COLUMN_NAMES
+                ):
                     fieldnames[
                         fieldnames.index(current_column_name)
                     ] = SIZE_STANDARD_KEY
@@ -182,7 +203,10 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                             f"ERROR: {row[current_column_name]} is not in int format"
                         )
                         is_row_valid = False
-                elif current_column_name.lower() in PREV_GUID_COLUMN_NAMES:
+                elif (
+                    current_column_name
+                    and current_column_name.lower() in PREV_GUID_COLUMN_NAMES
+                ):
                     fieldnames[
                         fieldnames.index(current_column_name)
                     ] = PREV_GUID_STANDARD_KEY
@@ -195,7 +219,10 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                             f"ERROR: {row[current_column_name]} is not in UUID_FORMAT format"
                         )
                         is_row_valid = False
-                elif current_column_name.lower() == RECORD_TYPE_STANDARD_KEY:
+                elif (
+                    current_column_name
+                    and current_column_name.lower() == RECORD_TYPE_STANDARD_KEY
+                ):
                     output_column_name = RECORD_TYPE_STANDARD_KEY
                     if row[current_column_name] not in RECORD_TYPE_ALLOWED_VALUES:
                         logging.error(

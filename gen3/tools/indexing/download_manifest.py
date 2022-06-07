@@ -23,6 +23,7 @@ Attributes:
 import asyncio
 import aiofiles
 import click
+import json
 import time
 import csv
 import glob
@@ -33,7 +34,18 @@ import sys
 import shutil
 import math
 
-from gen3.tools.utils import get_and_verify_fileinfos_from_manifest, MD5_STANDARD_KEY
+from gen3.tools.utils import (
+    get_and_verify_fileinfos_from_manifest,
+    GUID_STANDARD_KEY,
+    FILENAME_STANDARD_KEY,
+    SIZE_STANDARD_KEY,
+    MD5_STANDARD_KEY,
+    ACL_STANDARD_KEY,
+    URLS_STANDARD_KEY,
+    AUTHZ_STANDARD_KEY,
+    PREV_GUID_STANDARD_KEY,
+)
+
 from gen3.utils import get_or_create_event_loop_for_thread, yield_chunks
 from gen3.index import Gen3Index
 
@@ -143,13 +155,10 @@ async def _write_all_index_records_to_file(
         logging.debug(f"number input_records: {num_input_records}")
         logging.debug(f"num processes: {num_processes}")
 
-        # input_record_md5s = [record[MD5_STANDARD_KEY] for record in input_records]
-
         # batch records into subprocesses chunks
         chunk_size = int(math.ceil(float(num_input_records) / num_processes))
         logging.debug(f"records chunk size: {chunk_size}")
 
-        # TODO leave as full records not just md5s
         record_chunks = list(yield_chunks(input_records, chunk_size))
     else:
         index = Gen3Index(commons_url)
@@ -177,7 +186,7 @@ async def _write_all_index_records_to_file(
     for x in range(max(len(page_chunks), len(record_chunks))):
         pages = ",".join(map(str, page_chunks[x])) if page_chunks else ","
         input_record_chunks = (
-            "|||".join(map(str, record_chunks[x])) if record_chunks else "|||"
+            "|||".join(map(json.dumps, record_chunks[x])) if record_chunks else "|||"
         )
 
         # write record_checksum chunks to temporary files since the size can overload
@@ -270,7 +279,7 @@ def write_page_records_to_files(
     Args:
         commons_url (str): root domain for commons where indexd lives
         pages (List[int/str]): List of indexd pages to request
-        input_record_chunks_file (str): File with indexd checksums to request
+        input_record_chunks_file (str): File with indexd records to request
         num_processes (int): number of concurrent processes being requested
             (including this one)
         max_concurrent_requests (int): the maximum number of concurrent requests allowed
@@ -288,17 +297,14 @@ def write_page_records_to_files(
 
     pages = [item for item in pages.strip().strip(",").split(",") if item]
     input_record_chunks = []
-
     if input_record_chunks_file:
         with open(input_record_chunks_file, "r", encoding="utf8") as file:
             input_record_chunks_from_file = "|||".join(file.readlines())
             input_record_chunks = [
-                item
-                for item in input_record_chunks_from_file.strip().strip(",").split(",")
+                json.loads(item)
+                for item in input_record_chunks_from_file.strip().split("|||")
                 if item
             ]
-
-    # TODO check records_checksums?>
 
     if not pages and not input_record_chunks:
         raise AttributeError(
@@ -342,7 +348,7 @@ async def _get_records_and_write_to_file(
     Args:
         commons_url (str): root domain for commons where indexd lives
         pages (List[int/str]): List of indexd pages to request
-        input_record_chunks (List[str]): List of indexd checksums to request
+        input_record_chunks (List[str]): List of indexd records to request
         num_processes (int): number of concurrent processes being requested
             (including this one)
     """
@@ -361,11 +367,13 @@ async def _get_records_and_write_to_file(
             )
         )
     else:
-        logging.debug("putting records from checksum into queue")
+        logging.debug("putting records from input manifest into queue")
         await asyncio.gather(
             *(
-                _put_records_from_checksum_in_queue(checksum, commons_url, lock, queue)
-                for checksum in input_record_chunks
+                _put_records_from_input_manifest_in_queue(
+                    input_record, commons_url, lock, queue
+                )
+                for input_record in input_record_chunks
             )
         )
 
@@ -373,18 +381,22 @@ async def _get_records_and_write_to_file(
     await write_to_file_task
 
 
-async def _put_records_from_checksum_in_queue(checksum, commons_url, lock, queue):
+async def _put_records_from_input_manifest_in_queue(
+    input_record, commons_url, lock, queue
+):
     """
-    Gets a semaphore then requests records for the given checksum and
+    Gets a semaphore then requests records for the given input_record and
     puts them in a queue.
 
     Args:
         commons_url (str): root domain for commons where indexd lives
-        checksum (int/str): indexd checksum to request
+        input_record (int/str): indexd record to request (must contain checksum)
         lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
             connections
         queue (asyncio.Queue): queue to put indexd records in
     """
+    checksum = input_record.get(MD5_STANDARD_KEY)
+
     index = Gen3Index(commons_url)
     async with lock:
         # default ssl handling unless it's explicitly http://
@@ -395,6 +407,11 @@ async def _put_records_from_checksum_in_queue(checksum, commons_url, lock, queue
         records = await index.async_get_records_from_checksum(
             checksum=checksum, _ssl=ssl
         )
+
+        # if nothing was found, we still want to output the input record
+        if not records:
+            records.append(input_record)
+
         await queue.put(records)
 
 
@@ -441,28 +458,53 @@ async def _parse_from_queue(queue):
         while records != "DONE":
             if records:
                 for record in list(records):
-                    manifest_row = [
-                        record.get("did"),
-                        " ".join(
-                            sorted(
-                                [url.replace(" ", "%20") for url in record.get("urls")]
-                            )
-                        ),
-                        " ".join(
+                    # we want to represent records that are found correctly
+                    # (e.g. ones with did's), but records that are directly from an input
+                    # manifest (e.g. no did) we do NOT want to modify, so
+                    # treat these cases separately
+                    if record.get("did"):
+                        urls = " ".join(
                             sorted(
                                 [
-                                    auth.replace(" ", "%20")
-                                    for auth in record.get("authz")
+                                    url.replace(" ", "%20")
+                                    for url in record.get("urls")
+                                    if url
                                 ]
                             )
-                        ),
-                        " ".join(
-                            sorted([a.replace(" ", "%20") for a in record.get("acl")])
-                        ),
-                        record.get("hashes", {}).get("md5"),
-                        record.get("size"),
-                        record.get("file_name"),
-                    ]
+                        )
+                        authz = " ".join(
+                            sorted(
+                                [
+                                    authz_resource.replace(" ", "%20")
+                                    for authz_resource in record.get("authz")
+                                    if authz_resource
+                                ]
+                            )
+                        )
+                        acl = " ".join(
+                            sorted(
+                                [a.replace(" ", "%20") for a in record.get("acl") if a]
+                            )
+                        )
+                        manifest_row = [
+                            record.get("did", ""),
+                            urls,
+                            authz,
+                            acl,
+                            record.get("hashes", {}).get("md5", ""),
+                            record.get("size", ""),
+                            record.get("file_name", ""),
+                        ]
+                    else:
+                        manifest_row = [
+                            record.get(GUID_STANDARD_KEY, ""),
+                            record.get(URLS_STANDARD_KEY, ""),
+                            record.get(AUTHZ_STANDARD_KEY, ""),
+                            record.get(ACL_STANDARD_KEY, ""),
+                            record.get(MD5_STANDARD_KEY, ""),
+                            record.get(SIZE_STANDARD_KEY, ""),
+                            record.get(FILENAME_STANDARD_KEY, ""),
+                        ]
                     await csv_writer.writerow(manifest_row)
 
             records = await queue.get()
