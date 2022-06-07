@@ -25,6 +25,7 @@ import aiofiles
 import click
 import json
 import time
+import json
 import csv
 import glob
 from cdislogging import get_logger
@@ -148,7 +149,7 @@ async def _write_all_index_records_to_file(
 
         if not num_input_records:
             raise AttributeError(
-                f"No checksums found in provided input file: {input_manifest}. "
+                f"No valid records found in provided input file: {input_manifest}. "
                 "Please check previous logs."
             )
 
@@ -188,6 +189,7 @@ async def _write_all_index_records_to_file(
         input_record_chunks = (
             "|||".join(map(json.dumps, record_chunks[x])) if record_chunks else "|||"
         )
+        print(input_record_chunks)
 
         # write record_checksum chunks to temporary files since the size can overload
         # command line arguments
@@ -250,8 +252,7 @@ async def _write_all_index_records_to_file(
 @click.option(
     "--input-record-chunks-file",
     help=(
-        "File containing comma-Separated string of records to retrieve."
-        "ex: /foo/bar.txt"
+        "File containing delimited string of records to retrieve." "ex: /foo/bar.txt"
     ),
 )
 @click.option(
@@ -299,7 +300,6 @@ def write_page_records_to_files(
     input_record_chunks = []
     if input_record_chunks_file:
         with open(input_record_chunks_file, "r", encoding="utf8") as file:
-            input_record_chunks_from_file = "|||".join(file.readlines())
             input_record_chunks = [
                 json.loads(item)
                 for item in input_record_chunks_from_file.strip().split("|||")
@@ -309,7 +309,7 @@ def write_page_records_to_files(
     if not pages and not input_record_chunks:
         raise AttributeError(
             "No info specified to get records with. "
-            "Supply either pages or input-record-chunks-file with checksums in the file. "
+            "Supply either pages or input-record-chunks-file with records in the file. "
         )
 
     if pages and input_record_chunks:
@@ -348,7 +348,7 @@ async def _get_records_and_write_to_file(
     Args:
         commons_url (str): root domain for commons where indexd lives
         pages (List[int/str]): List of indexd pages to request
-        input_record_chunks (List[str]): List of indexd records to request
+        input_record_chunks (List[dict]): List of indexd records to request
         num_processes (int): number of concurrent processes being requested
             (including this one)
     """
