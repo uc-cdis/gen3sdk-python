@@ -18,14 +18,13 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.6,<3.11"
+python = ">=3.9,<3.10"
 requests = "*"
 indexclient = ">=1.6.2"
-drsclient = "<1.0.0"
+drsclient = "^0.2.1"
 aiohttp = "*"
 backoff = "*"
 click = "*"
-pandas = "*"
 jsonschema = "*"
 dataclasses-json = "*"
 pypfb = "<1.0.0"
@@ -34,16 +33,14 @@ tqdm = ">=4.61.2"
 humanfriendly ="*"
 python-dateutil = "*"
 aiofiles = "^0.8.0"
+pandas = "^1.4.2"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=6.0.0"
 pytest-cov = "*"
 requests-mock = "*"
 cdisutilstest = { git = "https://github.com/uc-cdis/cdisutils-test.git", tag = "1.0.0" }
-doiclient = { git = "https://github.com/uc-cdis/doiclient.git", tag = "1.0.0" }
-dosclient = { git = "https://github.com/uc-cdis/dosclient.git", tag = "1.0.0" }
-hsclient = { git = "https://github.com/uc-cdis/hsclient.git", tag = "1.0.0" }
-indexd = { git = "https://github.com/uc-cdis/indexd.git", tag = "2.14.1" }
+indexd = { git = "https://github.com/uc-cdis/indexd.git", tag = "3.4.0" }
 
 [tool.poetry.scripts]
 gen3 = 'gen3.cli.__main__:main'
