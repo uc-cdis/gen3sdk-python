@@ -33,7 +33,7 @@ deploy:
   skip_cleanup: true
   script: poetry publish -n -vv -r testpypi || true
   on:
-    python: 3.8
+    python: 3.9
     repo: uc-cdis/gen3sdk-python
     tags: false
     all_branches: true
@@ -43,7 +43,7 @@ deploy:
   skip_cleanup: true
   script: poetry publish -n -vv
   on:
-    python: 3.8
+    python: 3.9
     repo: uc-cdis/gen3sdk-python
     tags: true
 env:
