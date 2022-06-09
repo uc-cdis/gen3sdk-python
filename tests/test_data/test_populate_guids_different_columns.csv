@@ -1,0 +1,4 @@
+file_size,md5,urls,foobar
+123,a1234567891234567890123456789012,gs://test/test.txt s3://testaws/aws/test.txt,foobar1
+235,c1234567891234567890123456789012,gs://test/test.txt,foobar2
+334,b1334567891334567890133456789013,gs://test/test.txt,foobar3

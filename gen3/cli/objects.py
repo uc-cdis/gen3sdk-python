@@ -11,6 +11,7 @@ from gen3.tools.indexing.validate_manifest_format import is_valid_manifest_forma
 from gen3.tools.indexing.index_manifest import (
     index_object_manifest,
     delete_all_guids,
+    populate_object_manifest_with_valid_guids,
 )
 from gen3.tools.indexing.verify_manifest import manifest_row_parsers
 from gen3.utils import get_or_create_event_loop_for_thread
@@ -101,7 +102,7 @@ def objects_manifest_verify(ctx, file, max_concurrent_requests):
     loop = get_or_create_event_loop_for_thread()
 
     if not file:
-        file = click.prompt("Enter Discovery metadata file path to publish")
+        file = click.prompt("Enter file path to verify")
 
     click.echo(f"Verifying {file}...\n    Against: {auth.endpoint}")
 
@@ -205,7 +206,7 @@ def objects_manifest_validate_format(
     line_limit,
 ):
     if not file:
-        file = click.prompt("Enter Discovery metadata file path to validate format for")
+        file = click.prompt("Enter file path to validate format for")
 
     is_valid = is_valid_manifest_format(
         manifest_path=file,
@@ -270,7 +271,7 @@ def objects_manifest_publish(
     loop = get_or_create_event_loop_for_thread()
 
     if not file:
-        file = click.prompt("Enter Discovery metadata file path to publish")
+        file = click.prompt("Enter file path to publish")
 
     click.echo(
         f"Publishing/writing object data from {file}...\n    to: {auth.endpoint}"
@@ -285,6 +286,37 @@ def objects_manifest_publish(
         manifest_file_delimiter=manifest_file_delimiter,
         output_filename=out_manifest_file,
         submit_additional_metadata_columns=True,
+    )
+
+
+@click.command(
+    help="Populates specified object manifest with valid GUIDs WITHOUT publishing."
+)
+@click.argument("file", required=False)
+@click.option(
+    "--out-manifest-file",
+    "out_manifest_file",
+    help="The path to output manifest",
+    required=False,
+)
+@click.pass_context
+def objects_manifest_populate_guids(
+    ctx,
+    file,
+    out_manifest_file,
+):
+    auth = ctx.obj["auth_factory"].get()
+    loop = get_or_create_event_loop_for_thread()
+
+    if not file:
+        file = click.prompt("Enter file path to populate GUIDs for")
+
+    click.echo(f"Populating GUIDs missing from {file}...")
+
+    populate_object_manifest_with_valid_guids(
+        commons_url=auth.endpoint,
+        manifest_file=file,
+        output_filename=out_manifest_file,
     )
 
 
@@ -315,4 +347,5 @@ manifest.add_command(objects_manifest_read, name="read")
 manifest.add_command(objects_manifest_verify, name="verify")
 manifest.add_command(objects_manifest_validate_format, name="validate-manifest-format")
 manifest.add_command(objects_manifest_publish, name="publish")
+manifest.add_command(objects_manifest_populate_guids, name="populate-guids")
 manifest.add_command(objects_manifest_delete_all_guids, name="delete-all-guids")
