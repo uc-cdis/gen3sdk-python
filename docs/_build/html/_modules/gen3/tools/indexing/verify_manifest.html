@@ -73,6 +73,7 @@
 <span class="sd">    MAX_CONCURRENT_REQUESTS (int): maximum number of desired concurrent requests across</span>
 <span class="sd">        processes/threads</span>
 <span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">aiohttp</span>
 <span class="kn">import</span> <span class="nn">asyncio</span>
 <span class="kn">import</span> <span class="nn">csv</span>
 <span class="kn">from</span> <span class="nn">cdislogging</span> <span class="kn">import</span> <span class="n">get_logger</span>
@@ -455,7 +456,15 @@
         <span class="k">if</span> <span class="s2">&quot;https&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">commons_url</span><span class="p">:</span>
             <span class="n">ssl</span> <span class="o">=</span> <span class="kc">False</span>
 
-        <span class="k">return</span> <span class="k">await</span> <span class="n">index</span><span class="o">.</span><span class="n">async_get_record</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="n">ssl</span><span class="p">)</span>
+        <span class="n">record</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="k">await</span> <span class="n">index</span><span class="o">.</span><span class="n">async_get_record</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="n">ssl</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">client_exceptions</span><span class="o">.</span><span class="n">ClientResponseError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;couldn&#39;t get record. error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">record</span>
 </pre></div>
 
           </div>
