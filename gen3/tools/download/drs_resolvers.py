@@ -1,7 +1,7 @@
 from typing import List, Optional
 import requests
 import json
-from cdiserrors import get_logger
+from cdislogging import get_logger
 import os
 import inspect
 from datetime import datetime, timezone, timedelta
@@ -339,6 +339,7 @@ REGISTERED_DRS_RESOLVERS = {
     "commons_mds": resolve_drs_using_commons_mds,
     "dataguids_dist": resolve_compact_drs_using_indexd_dist,
     "dataguids": resolve_compact_drs_using_official_resolver,
+    # TODO "identifiers.org"
 }
 
 

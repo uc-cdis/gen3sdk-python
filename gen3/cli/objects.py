@@ -55,8 +55,19 @@ def manifest():
     type=int,
     show_default=True,
 )
+@click.option(
+    "--input-manifest",
+    "input_manifest",
+    help="Input file. Read available object data only for records referenced in this file. "
+    "Currently requires at a minimum an `m5d` column with checksum.",
+    default=None,
+    type=click.Path(writable=True),
+    show_default=True,
+)
 @click.pass_context
-def objects_manifest_read(ctx, output_file, num_processes, max_concurrent_requests):
+def objects_manifest_read(
+    ctx, output_file, num_processes, max_concurrent_requests, input_manifest
+):
     auth = ctx.obj["auth_factory"].get()
     loop = get_or_create_event_loop_for_thread()
     click.echo(f"Getting minimal object metadata from {auth.endpoint}")
@@ -66,6 +77,7 @@ def objects_manifest_read(ctx, output_file, num_processes, max_concurrent_reques
             output_filename=output_file,
             num_processes=num_processes,
             max_concurrent_requests=max_concurrent_requests,
+            input_manifest=input_manifest,
         )
     )
     click.echo(output_file)
