@@ -245,7 +245,7 @@ occurred. md5, size, url, and authz values can be validated.
 
 `is_valid_manifest_format` can validate md5, size, url and authz values by
 making use of the `MD5Validator`, `SizeValidator`, `URLValidator`, and
-`AuthzValidator` classes defined in `gen3.tools.indexing.manifest_columns`,
+`AuthzValidator` classes defined in `gen3.tools.utils`,
 respectively. See documentation in these `Validator` subclasses for more details
 on how specific values are validated.
 
@@ -308,7 +308,7 @@ import sys
 import logging
 
 from gen3.tools.indexing import is_valid_manifest_format
-from gen3.tools.indexing.manifest_columns import Columns
+from gen3.tools.utils import Columns
 
 logging.basicConfig(filename="output.log", level=logging.DEBUG)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))

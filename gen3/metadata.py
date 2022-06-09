@@ -16,7 +16,7 @@ from gen3.utils import (
     _verify_schema,
 )
 from gen3.auth import Gen3Auth
-from gen3.tools.indexing.manifest_columns import (
+from gen3.tools.utils import (
     RECORD_TYPE_STANDARD_KEY,
     GUID_COLUMN_NAMES,
     FILENAME_COLUMN_NAMES,
