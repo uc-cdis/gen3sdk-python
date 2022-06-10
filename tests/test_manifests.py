@@ -10,19 +10,10 @@ from gen3.tools.indexing import download_manifest
 from gen3.tools.indexing import async_download_object_manifest
 from gen3.tools.indexing.index_manifest import (
     index_object_manifest,
-    populate_object_manifest_with_valid_guids,
 )
-from gen3.tools.utils import (
-    get_and_verify_fileinfos_from_tsv_manifest,
-    GUID_STANDARD_KEY,
-    FILENAME_STANDARD_KEY,
-    SIZE_STANDARD_KEY,
-    MD5_STANDARD_KEY,
-    ACL_STANDARD_KEY,
-    URLS_STANDARD_KEY,
-    AUTHZ_STANDARD_KEY,
-    PREV_GUID_STANDARD_KEY,
-)
+from gen3.tools.utils import get_and_verify_fileinfos_from_tsv_manifest
+
+from gen3.utils import get_or_create_event_loop_for_thread
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -76,9 +67,8 @@ def test_verify_manifest(mock_index):
     NOTE: records in indexd are mocked
     """
     mock_index.return_value.async_get_record.side_effect = _async_mock_get_guid
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
 
+    loop = get_or_create_event_loop_for_thread()
     loop.run_until_complete(
         async_verify_object_manifest(
             "http://localhost",
@@ -175,9 +165,8 @@ def test_download_manifest(monkeypatch, gen3_index):
     # mock_index.return_value.get_stats.return_value = gen3_index.get("/_stats")
 
     monkeypatch.setattr(download_manifest, "INDEXD_RECORD_PAGE_SIZE", 2)
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
 
+    loop = get_or_create_event_loop_for_thread()
     loop.run_until_complete(
         async_download_object_manifest(
             "http://localhost:8001",
@@ -303,9 +292,8 @@ def test_download_manifest_with_input_manifest(monkeypatch, gen3_index):
     )
 
     monkeypatch.setattr(download_manifest, "INDEXD_RECORD_PAGE_SIZE", 2)
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
 
+    loop = get_or_create_event_loop_for_thread()
     loop.run_until_complete(
         async_download_object_manifest(
             "http://localhost:8001",
@@ -441,9 +429,8 @@ def test_download_manifest_with_invalid_input_manifest(monkeypatch, gen3_index):
     )
 
     monkeypatch.setattr(download_manifest, "INDEXD_RECORD_PAGE_SIZE", 2)
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
 
+    loop = get_or_create_event_loop_for_thread()
     # ensure error is raised
     try:
         loop.run_until_complete(
@@ -932,87 +919,3 @@ def test_index_manifest_packages_failure(data, gen3_index, gen3_auth, logfile):
 
     for error in data["expected_error_msgs"]:
         assert error in logfile.read()
-
-
-@pytest.mark.parametrize(
-    "data",
-    [
-        {"manifest": "test_populate_guids.csv"},
-        {"manifest": "test_populate_guids_different_columns.csv"},
-    ],
-)
-def test_objects_manifest_populate_guids(data, gen3_index, gen3_auth, logfile):
-    """
-    Test that the output of the populate GUIDs functionality is as expected
-
-    guid,md5
-    dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b,a1234567891234567890123456789012
-    dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2,c1234567891234567890123456789012
-    dg.TEST/9c205cd7-c399-4503-9f49-5647188bde66,b1334567891334567890133456789013
-    """
-    input_filename = f"{CURRENT_DIR}/test_data/{data['manifest']}"
-    output_filename = (
-        f"{CURRENT_DIR}/test_data/{data['manifest'].rstrip('.csv')}_output.csv"
-    )
-
-    input_files, input_headers = get_and_verify_fileinfos_from_tsv_manifest(
-        input_filename
-    )
-
-    existing_guids = []
-    records_from_input = {}
-    for file in input_files:
-        records_from_input[file[MD5_STANDARD_KEY]] = file
-
-        existing_guid = file.get(GUID_STANDARD_KEY)
-        if existing_guid:
-            existing_guids.append(existing_guid)
-
-    # mock with GUIDs
-    mocked_valid_guids = [
-        "dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b",
-        "dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2",
-        "dg.TEST/9c205cd7-c399-4503-9f49-5647188bde66",
-    ]
-
-    with patch(
-        "gen3.tools.indexing.index_manifest.Gen3Index.get_valid_guids", MagicMock()
-    ) as mock_indexd_valid_guids:
-        mock_indexd_valid_guids.return_value = mocked_valid_guids
-        populate_object_manifest_with_valid_guids(
-            commons_url=gen3_index.client.url,
-            manifest_file=f"{CURRENT_DIR}/test_data/{data['manifest']}",
-            output_filename=output_filename,
-        )
-
-    output_files, headers = get_and_verify_fileinfos_from_tsv_manifest(output_filename)
-
-    # cleanup output
-    if os.path.isfile(output_filename):
-        os.unlink(output_filename)
-
-    # ensure output has valid input headers
-    for header in input_headers:
-        if header in [
-            GUID_STANDARD_KEY,
-            SIZE_STANDARD_KEY,
-            MD5_STANDARD_KEY,
-            ACL_STANDARD_KEY,
-            AUTHZ_STANDARD_KEY,
-            URLS_STANDARD_KEY,
-            FILENAME_STANDARD_KEY,
-            PREV_GUID_STANDARD_KEY,
-        ]:
-            assert headers.index() >= 0
-
-    records_from_output = {}
-    for file in output_files:
-        records_from_output[file[MD5_STANDARD_KEY]] = file
-
-    # ensure that for every record in the input manifest:
-    #    the record exists in the output and it now has a valid GUID (whether it be
-    #    one that already existed in the input OR a new GUID from the population logic)
-    valid_guids = existing_guids + mocked_valid_guids
-    for record_md5, record in records_from_input.items():
-        assert record_md5 in records_from_output
-        assert records_from_output[record_md5].get(GUID_STANDARD_KEY) in valid_guids

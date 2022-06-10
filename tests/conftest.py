@@ -154,7 +154,6 @@ def indexd_server():
     yield MockServer(port=port)
 
     indexd.terminate()
-    wait_for_indexd_not_alive(port)
 
 
 @pytest.fixture
