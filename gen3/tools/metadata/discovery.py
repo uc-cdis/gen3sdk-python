@@ -133,6 +133,7 @@ async def publish_discovery_metadata(
     guid_type="discovery_metadata",
     guid_field=None,
     is_unregistered_metadata=False,
+    reset_unregistered_metadata=False,
     add_internal_id=False,
 ):
     """
@@ -175,8 +176,12 @@ async def publish_discovery_metadata(
             else:
                 guid = discovery_metadata[guid_field]
 
-            # when publising unregistered metadata, skip those who are already registered
-            if is_unregistered_metadata and guid in registered_metadata_guids:
+            # when publishing unregistered metadata, skip those who are already registered if reset_unregistered_metadata is set to false
+            if (
+                not reset_unregistered_metadata
+                and is_unregistered_metadata
+                and guid in registered_metadata_guids
+            ):
                 continue
 
             if len(tag_columns):
