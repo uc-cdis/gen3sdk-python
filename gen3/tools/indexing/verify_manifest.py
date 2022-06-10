@@ -226,7 +226,7 @@ async def async_verify_object_manifest(
         manifest_file,
         manifest_file_delimiter,
         max_concurrent_requests,
-        output_filename.split("/")[-1],
+        output_filename,
     )
 
     end_time = time.perf_counter()
