@@ -18,6 +18,7 @@ import asyncio
 
 from gen3.tools import indexing
 from gen3.tools.indexing.verify_manifest import manifest_row_parsers
+from gen3.utils import get_or_create_event_loop_for_thread
 
 logging.basicConfig(filename="output.log", level=logging.DEBUG)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
@@ -25,8 +26,8 @@ logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 COMMONS = "https://{{insert-commons-here}}/"
 
 def main():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    loop = get_or_create_event_loop_for_thread()
+
 
     loop.run_until_complete(
         indexing.async_download_object_manifest(
@@ -83,8 +84,8 @@ def main():
     # override default parsers
     manifest_row_parsers["file_size"] = _get_file_size
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    loop = get_or_create_event_loop_for_thread()
+
 
     loop.run_until_complete(
         indexing.async_verify_object_manifest(

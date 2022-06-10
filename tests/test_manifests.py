@@ -13,6 +13,7 @@ from gen3.tools.indexing.index_manifest import (
 )
 from gen3.tools.utils import get_and_verify_fileinfos_from_tsv_manifest
 
+from gen3.utils import get_or_create_event_loop_for_thread
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -66,9 +67,8 @@ def test_verify_manifest(mock_index):
     NOTE: records in indexd are mocked
     """
     mock_index.return_value.async_get_record.side_effect = _async_mock_get_guid
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
 
+    loop = get_or_create_event_loop_for_thread()
     loop.run_until_complete(
         async_verify_object_manifest(
             "http://localhost",
@@ -165,9 +165,8 @@ def test_download_manifest(monkeypatch, gen3_index):
     # mock_index.return_value.get_stats.return_value = gen3_index.get("/_stats")
 
     monkeypatch.setattr(download_manifest, "INDEXD_RECORD_PAGE_SIZE", 2)
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
 
+    loop = get_or_create_event_loop_for_thread()
     loop.run_until_complete(
         async_download_object_manifest(
             "http://localhost:8001",
@@ -293,9 +292,8 @@ def test_download_manifest_with_input_manifest(monkeypatch, gen3_index):
     )
 
     monkeypatch.setattr(download_manifest, "INDEXD_RECORD_PAGE_SIZE", 2)
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
 
+    loop = get_or_create_event_loop_for_thread()
     loop.run_until_complete(
         async_download_object_manifest(
             "http://localhost:8001",
@@ -431,9 +429,8 @@ def test_download_manifest_with_invalid_input_manifest(monkeypatch, gen3_index):
     )
 
     monkeypatch.setattr(download_manifest, "INDEXD_RECORD_PAGE_SIZE", 2)
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
 
+    loop = get_or_create_event_loop_for_thread()
     # ensure error is raised
     try:
         loop.run_until_complete(

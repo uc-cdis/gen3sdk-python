@@ -28,12 +28,12 @@ click = "*"
 jsonschema = "*"
 dataclasses-json = "*"
 pypfb = "<1.0.0"
-fastavro = "^1.4.7"
 tqdm = ">=4.61.2"
 humanfriendly ="*"
 python-dateutil = "*"
 aiofiles = "^0.8.0"
 pandas = "^1.4.2"
+httpx = "*"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=6.0.0"

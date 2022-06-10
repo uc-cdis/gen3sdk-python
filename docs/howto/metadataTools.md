@@ -30,6 +30,7 @@ import asyncio
 from gen3.auth import Gen3Auth
 from gen3.tools import metadata
 from gen3.tools.metadata.ingest_manifest import manifest_row_parsers
+from gen3.utils import get_or_create_event_loop_for_thread
 
 logging.basicConfig(filename="output.log", level=logging.DEBUG)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
@@ -39,8 +40,8 @@ logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 MANIFEST = "dbgap_extract_guid.tsv"
 
 def main():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    loop = get_or_create_event_loop_for_thread()
+
 
     auth = Gen3Auth(refresh_file="credentials.json")
 
@@ -256,8 +257,8 @@ MANIFEST = "dbgap_extract.tsv"
 
 
 def main():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    loop = get_or_create_event_loop_for_thread()
+
 
     auth = Gen3Auth(refresh_file="credentials.json")
 
@@ -565,8 +566,8 @@ def get_dbgap_merged_metadata_manifest():
         "partial_match_or_exact_match": "partial_match",
     }
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    loop = get_or_create_event_loop_for_thread()
+
 
     job_output = loop.run_until_complete(
         jobs.async_run_job_and_wait(job_name=DBGAP_METADATA_JOB, job_input=job_input)
@@ -591,8 +592,8 @@ def metadata_ingest():
         "metadata_source": "dbgap",
     }
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    loop = get_or_create_event_loop_for_thread()
+
 
     job_output = loop.run_until_complete(
         jobs.async_run_job_and_wait(job_name=INGEST_METADATA_JOB, job_input=job_input)
@@ -633,8 +634,8 @@ COMMONS = "https://{{insert-commons-here}}/"
 
 
 def main():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    loop = get_or_create_event_loop_for_thread()
+
 
     loop.run_until_complete(
         metadata.async_verify_metadata_manifest(
