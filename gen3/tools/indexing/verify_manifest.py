@@ -39,6 +39,7 @@ Attributes:
     MAX_CONCURRENT_REQUESTS (int): maximum number of desired concurrent requests across
         processes/threads
 """
+import aiohttp
 import asyncio
 import csv
 from cdislogging import get_logger
@@ -421,4 +422,12 @@ async def _get_record_from_indexd(guid, commons_url, lock):
         if "https" not in commons_url:
             ssl = False
 
-        return await index.async_get_record(guid, _ssl=ssl)
+        record = None
+
+        try:
+            return await index.async_get_record(guid, _ssl=ssl)
+
+        except aiohttp.client_exceptions.ClientResponseError as exc:
+            logging.warning(f"couldn't get record. error: {exc}")
+
+        return record

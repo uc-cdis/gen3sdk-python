@@ -7,7 +7,9 @@ python:
 - 3.10
 jobs:
   allow_failures:
-  - python: 3.9
+  - python: 3.6
+  - python: 3.7
+  - python: 3.8
   - python: 3.10
 before_install:
 - pip install --upgrade pip
@@ -31,7 +33,7 @@ deploy:
   skip_cleanup: true
   script: poetry publish -n -vv -r testpypi || true
   on:
-    python: 3.8
+    python: 3.9
     repo: uc-cdis/gen3sdk-python
     tags: false
     all_branches: true
@@ -41,7 +43,7 @@ deploy:
   skip_cleanup: true
   script: poetry publish -n -vv
   on:
-    python: 3.8
+    python: 3.9
     repo: uc-cdis/gen3sdk-python
     tags: true
 env:

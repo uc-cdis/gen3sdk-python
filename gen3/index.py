@@ -203,6 +203,34 @@ class Gen3Index:
         return response.get("records")
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    async def async_get_records_from_checksum(
+        self, checksum, checksum_type="md5", _ssl=None
+    ):
+        """
+        Asynchronous function to request records from indexd matching checksum.
+
+        Args:
+            checksum (str): indexd checksum to request
+            checksum_type (str): type of checksum, defaults to md5
+
+        Returns:
+            List[dict]: List of indexd records
+        """
+        all_records = []
+        params = {}
+
+        params["hash"] = f"{checksum_type}:{checksum}"
+
+        query = urllib.parse.urlencode(params)
+
+        url = f"{self.client.url}/index" + "?" + query
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, ssl=_ssl) as response:
+                response = await response.json()
+
+        return response.get("records")
+
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def get(self, guid, dist_resolution=True):
         """
 

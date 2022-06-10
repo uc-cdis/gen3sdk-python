@@ -1,9 +1,9 @@
 import itertools
 import json
 import requests
-import pandas as pd
 import os
 from cdislogging import get_logger
+import pandas as pd
 
 from gen3.utils import raise_for_status
 

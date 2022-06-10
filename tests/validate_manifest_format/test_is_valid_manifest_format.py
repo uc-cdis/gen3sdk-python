@@ -4,7 +4,7 @@ import logging as default_logging
 from gen3 import logging, LOG_FORMAT
 
 from gen3.tools.indexing import is_valid_manifest_format
-from gen3.tools.indexing.manifest_columns import Columns
+from gen3.tools.utils import Columns
 
 
 @pytest.fixture(autouse=True)

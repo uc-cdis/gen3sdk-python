@@ -339,6 +339,7 @@ REGISTERED_DRS_RESOLVERS = {
     "commons_mds": resolve_drs_using_commons_mds,
     "dataguids_dist": resolve_compact_drs_using_indexd_dist,
     "dataguids": resolve_compact_drs_using_official_resolver,
+    # TODO "identifiers.org"
 }
 
 
