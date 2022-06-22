@@ -347,11 +347,12 @@ class Gen3Expansion:
         elif isinstance(projects, str):
             projects = [projects]
 
-        now = datetime.datetime.now()
-        date = "{}-{}-{}-{}.{}.{}".format(now.year, now.month, now.day, now.hour, now.minute, now.second)
+        # now = datetime.datetime.now()
+        # date = "{}-{}-{}-{}.{}.{}".format(now.year, now.month, now.day, now.hour, now.minute, now.second)
 
         for project_id in projects:
-            mydir = "{}_{}/{}_tsvs".format(outdir, date, project_id)  # create the directory to store TSVs
+            #mydir = "{}_{}/{}_tsvs".format(outdir, date, project_id)  # create the directory to store TSVs
+            mydir = "{}/{}_tsvs".format(outdir, project_id)  # create the directory to store TSVs
 
             if not os.path.exists(mydir):
                 os.makedirs(mydir)
@@ -3532,6 +3533,26 @@ class Gen3Expansion:
             df = pd.json_normalize(d)
             return df
 
+    def guppy_query_simple(self, query_txt, format='JSON'):
+
+        guppy_url = "{}/guppy/graphql".format(self._endpoint)
+        query_json = {"query": query_txt}
+        print("Requesting '{}': {}".format(guppy_url, query_json))
+        response = requests.post(guppy_url, json=query_json, auth=self._auth_provider)
+        try:
+            res = json.loads(response.text)
+        except:
+            print("Error querying Guppy")
+            return response.text
+        if 'data' in response:
+            d = res['data']['_aggregation'][node][prop]['histogram']
+            if format == "JSON":
+                return d
+            elif format == "TSV":
+                df = pd.json_normalize(d)
+                return df
+        else:
+            print(response.text)
 
     # Guppy funcs
     def guppy_download(self, node, props):
