@@ -764,6 +764,79 @@ def test_index_manifest_additional_metadata(gen3_index, gen3_auth):
     assert mds_records[guid] == {"fancy_column": "fancy_data"}
 
 
+@pytest.mark.parametrize("force_metadata_columns_even_if_empty", [True, False])
+def test_index_manifest_additional_metadata_force(
+    gen3_index, gen3_auth, force_metadata_columns_even_if_empty
+):
+    """
+    When `submit_additional_metadata_columns` is set
+    the additional `force_metadata_columns_even_if_empty` results in
+    expected behavior.
+    """
+    with patch(
+        "gen3.tools.indexing.index_manifest.Gen3Metadata.create", MagicMock()
+    ) as mock_mds_create:
+        index_object_manifest(
+            manifest_file=CURRENT_DIR
+            + "/test_data/manifest_additional_metadata_mult_guids.tsv",
+            auth=gen3_auth,
+            commons_url=gen3_index.client.url,
+            thread_num=1,
+            replace_urls=False,
+            submit_additional_metadata_columns=True,
+            force_metadata_columns_even_if_empty=force_metadata_columns_even_if_empty,
+        )
+        mds_records = {
+            kwargs["guid"]: kwargs["metadata"]
+            for (_, kwargs) in mock_mds_create.call_args_list
+        }
+        assert len(mds_records) == 2
+
+    # ensure that all the records got created
+
+    indexd_records = {r["did"]: r for r in gen3_index.get_all_records()}
+    assert len(indexd_records) == 2
+
+    guid = "111e396f-f1f8-11e9-9a07-0a80fada0900"
+    assert indexd_records[guid]["file_name"] == "file.txt"
+    assert indexd_records[guid]["size"] == 111
+    assert indexd_records[guid]["hashes"] == {"md5": "111d83400bc1bc9dc635e334faddf33c"}
+    assert indexd_records[guid]["authz"] == ["/open"]
+    assert indexd_records[guid]["urls"] == ["s3://my-data-bucket/dg.111/path/file.txt"]
+    assert guid in mds_records
+
+    guid = "222e396f-f1f8-11e9-9a07-0a80fada0900"
+    assert indexd_records[guid]["file_name"] == "file.txt"
+    assert indexd_records[guid]["size"] == 222
+    assert indexd_records[guid]["hashes"] == {"md5": "222d83400bc1bc9dc635e334faddf33c"}
+    assert indexd_records[guid]["authz"] == ["/open"]
+    assert indexd_records[guid]["urls"] == ["s3://my-data-bucket/dg.222/path/file.txt"]
+    assert guid in mds_records
+
+    # ensure the metadata is formatted as expected when forced vs not
+
+    if force_metadata_columns_even_if_empty:
+        assert mds_records["111e396f-f1f8-11e9-9a07-0a80fada0900"] == {
+            "columnA": "dataA",
+            "columnB": "",
+            "columnC": "",
+        }
+
+        assert mds_records["222e396f-f1f8-11e9-9a07-0a80fada0900"] == {
+            "columnA": "",
+            "columnB": "dataB",
+            "columnC": "",
+        }
+    else:
+        assert mds_records["111e396f-f1f8-11e9-9a07-0a80fada0900"] == {
+            "columnA": "dataA",
+        }
+
+        assert mds_records["222e396f-f1f8-11e9-9a07-0a80fada0900"] == {
+            "columnB": "dataB",
+        }
+
+
 def test_index_manifest_packages(gen3_index, gen3_auth):
     """
     When `record_type == package`, packages should be created in the metadata service and any `package_contents` values should be parsed and submitted.
