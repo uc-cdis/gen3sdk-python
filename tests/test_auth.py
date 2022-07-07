@@ -4,10 +4,11 @@ import base64
 import os
 import requests
 import time
-
+import json
 import gen3.auth
 
 test_endpoint = "https://localhost"
+test_external_endpoint = "https://test-commons.org"
 test_key = {
     "api_key": "whatever."
     + base64.urlsafe_b64encode(
@@ -16,6 +17,26 @@ test_key = {
         )
     ).decode("utf-8")
     + ".whatever"
+}
+
+test_access_token = {
+    "access_token": "whatever."
+    + base64.urlsafe_b64encode(
+        ('{"iss": "%s", "exp": %d }' % (test_endpoint, time.time() + 300)).encode(
+            "utf-8"
+        )
+    ).decode("utf-8")
+    + ".whatever"
+}
+
+test_key_wts = {
+    "api_key": "wts."
+    + base64.urlsafe_b64encode(
+        (
+            '{"iss": "%s", "exp": %d }' % (test_external_endpoint, time.time() + 300)
+        ).encode("utf-8")
+    ).decode("utf-8")
+    + ".wts"
 }
 
 
@@ -177,3 +198,73 @@ def test_auth_init_in_workspace(monkeypatch):
         assert auth._use_wts == True
         assert auth.endpoint == test_endpoint
         assert auth._access_token == access_token
+
+
+def test_auth_init_with_both_endpoint_and_idp():
+    """
+    Test that a Gen3Auth instance CANNOT be initialized with both endpoint and idp
+    """
+    try:
+        auth = gen3.auth.Gen3Auth(endpoint="https://caninedc.org", idp="canine-google")
+        # auth object should not be initialized
+        assert not auth
+    except ValueError as e:
+        assert str(e) == "Only one of 'endpoint' and 'idp' can be specified."
+
+
+def test_auth_init_with_external_wts():
+    """
+    Test that a Gen3Auth instance can be initialized with no parameters
+    when working inside a workspace ("NAMESPACE" environment variable),
+    if the workspace-token-service is available.
+    """
+    wts_token = test_key_wts["api_key"]
+
+    def _mock_request(url, **kwargs):
+        mocked_response = MagicMock(requests.Response)
+
+        if url.endswith("?idp=test-google"):
+            mocked_response.status_code = 200
+            mocked_response.json.return_value = {"token": wts_token}
+        elif url.endswith("/external_oidc/"):
+            mocked_response.status_code = 200
+            mocked_response.json.return_value = {
+                "providers": [
+                    {
+                        "base_url": "https://test-commons.org",
+                        "idp": "test-google",
+                        "name": "test Google Login",
+                        "refresh_token_expiration": None,
+                        "urls": [
+                            {
+                                "name": "test Google Login",
+                                "url": "https://test-commons.org/wts/oauth2/authorization_url?idp=test-google",
+                            }
+                        ],
+                    }
+                ]
+            }
+        elif url.endswith("/access_token"):
+            mocked_response.status_code = 200
+            mocked_response.json.return_value = test_access_token
+        else:
+            mocked_response.status_code = 400
+
+        return mocked_response
+
+    with patch("gen3.auth.requests.post") as mock_request_post:
+        with patch("gen3.auth.requests.get") as mock_request_get:
+            mock_request_post.side_effect = _mock_request
+            mock_request_get.side_effect = _mock_request
+            try:
+                with open("testCred.json", "w") as f:
+                    json.dump(test_key, f)
+            except Exception as e:
+                print(e)
+            auth = gen3.auth.Gen3Auth(
+                endpoint=test_external_endpoint, refresh_file="testCred.json"
+            )
+            assert auth._use_wts == True
+            assert auth.endpoint == test_external_endpoint
+            assert auth._access_token == wts_token
+            os.remove("testCred.json")
