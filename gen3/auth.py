@@ -336,7 +336,7 @@ class Gen3Auth(AuthBase):
             if self._use_wts == True:
                 cache_file = get_token_cache_file_name(self._wts_idp)
             else:
-                if self._refresh_file:
+                if self._refresh_token:
                     cache_file = get_token_cache_file_name(
                         self._refresh_token["api_key"]
                     )
