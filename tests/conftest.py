@@ -150,7 +150,7 @@ def indexd_server():
     settings["auth"].arborist = MockArboristClient()
     indexd = Process(target=run_indexd, args=[port])
     # Add this line because OS X multiprocessing default is spawn which will cause pickling errors
-    # unstable and not supported on OS X, forking is only supported on Unix
+    # NOTE: fork is unstable and not technically supported on OS X, forking is only supported on Unix
     # However explicitly setting default behavior to fork to pass unit test, only used for tests
     # https://docs.python.org/3/library/multiprocessing.html
     # https://github.com/pytest-dev/pytest-flask/issues/104
