@@ -340,7 +340,7 @@ class Gen3Auth(AuthBase):
                     cache_file = get_token_cache_file_name(
                         self._refresh_token["api_key"]
                     )
-            if os.path.isfile(cache_file):
+            if cache_file and os.path.isfile(cache_file):
                 try:  # don't freak out on invalid cache
                     with open(cache_file) as f:
                         self._access_token = f.read()
