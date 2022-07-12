@@ -252,25 +252,28 @@ update indexd if the url is not in the record url list or acl has changed</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>commons_url</strong> (<em>str</em>) – common url</p></li>
-<li><p><strong>manifest_file</strong> (<em>Example</em>) – path to the manifest</p></li>
+<li><p><strong>manifest_file</strong> (<em>str</em>) – path to the manifest</p></li>
 <li><p><strong>thread_num</strong> (<em>int</em>) – number of threads for indexing</p></li>
 <li><p><strong>auth</strong> (<a class="reference internal" href="../auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><em>Gen3Auth</em></a>) – Gen3 auth or tuple with basic auth name and password</p></li>
 <li><p><strong>replace_urls</strong> (<em>bool</em>) – flag to indicate if replace urls or not</p></li>
 <li><p><strong>manifest_file_delimiter</strong> (<em>str</em>) – manifest’s delimiter</p></li>
 <li><p><strong>output_filename</strong> (<em>str</em>) – output file name for manifest</p></li>
 <li><p><strong>submit_additional_metadata_columns</strong> (<em>bool</em>) – whether to submit additional metadata to the metadata service</p></li>
-<li><p><strong>force_metadata_columns_even_if_empty</strong> (<em>bool</em>) – force the creation of a metadata column</p></li>
-<li><p><strong>Enabling</strong> (<em>entry for a GUID even if the value is empty.</em>) – </p></li>
-<li><p><strong>column.</strong> (<em>this will force the creation of metadata entries for every</em>) – </p></li>
-<li><p><strong>example</strong> (<em>See below for an illustrative</em>) – </p></li>
-<li><p><strong>manifest_file</strong> – <dl class="simple">
+<li><p><strong>force_metadata_columns_even_if_empty</strong> (<em>bool</em>) – <p>force the creation of a metadata column
+entry for a GUID even if the value is empty. Enabling
+this will force the creation of metadata entries for every column.
+See below for an illustrative example
+Example manifest_file:</p>
+<blockquote>
+<div><dl class="simple">
 <dt>guid, …, columnA, columnB, ColumnC</dt><dd><p>1, …,   dataA,        ,
 2, …,        ,   dataB,</p>
 </dd>
 </dl>
-</p></li>
-<li><p><strong>force_metadata_columns_even_if_empty=True</strong> (<em>Resulting metadata if</em>) – <dl class="simple">
-<dt>“1”: {</dt><dd><p>“columnA”: “dataA”,
+</div></blockquote>
+<dl>
+<dt>Resulting metadata if force_metadata_columns_even_if_empty=True :</dt><dd><dl class="simple">
+<dt>”1”: {</dt><dd><p>“columnA”: “dataA”,
 “columnB”: “”,
 “ColumnC”: “”,</p>
 </dd>
@@ -283,9 +286,9 @@ update indexd if the url is not in the record url list or acl has changed</p>
 “ColumnC”: “”,</p>
 </div></blockquote>
 <p>},</p>
-</p></li>
-<li><p><strong>force_metadata_columns_even_if_empty=False</strong> (<em>Resulting metadata if</em>) – <dl class="simple">
-<dt>“1”: {</dt><dd><p>“columnA”: “dataA”,</p>
+</dd>
+<dt>Resulting metadata if force_metadata_columns_even_if_empty=False :</dt><dd><dl class="simple">
+<dt>”1”: {</dt><dd><p>“columnA”: “dataA”,</p>
 </dd>
 </dl>
 <p>},
@@ -294,6 +297,8 @@ update indexd if the url is not in the record url list or acl has changed</p>
 <div><p>”columnB”: “dataB”,</p>
 </div></blockquote>
 <p>},</p>
+</dd>
+</dl>
 </p></li>
 </ul>
 </dd>
@@ -376,7 +381,7 @@ processes/threads</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="gen3.tools.indexing.verify_manifest.async_verify_object_manifest">
-<em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.verify_manifest.</span></span><span class="sig-name descname"><span class="pre">async_verify_object_manifest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">commons_url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_concurrent_requests=24</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_row_parsers={'acl':</span> <span class="pre">&lt;function</span> <span class="pre">_get_acl_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'authz':</span> <span class="pre">&lt;function</span> <span class="pre">_get_authz_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'file_name':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_name_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'file_size':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_size_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'guid':</span> <span class="pre">&lt;function</span> <span class="pre">_get_guid_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'md5':</span> <span class="pre">&lt;function</span> <span class="pre">_get_md5_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'urls':</span> <span class="pre">&lt;function</span> <span class="pre">_get_urls_from_row&gt;}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_file_delimiter=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filename='verify-manifest-errors-1657656924.4853957.log'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/verify_manifest.html#async_verify_object_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.indexing.verify_manifest.async_verify_object_manifest" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.verify_manifest.</span></span><span class="sig-name descname"><span class="pre">async_verify_object_manifest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">commons_url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_concurrent_requests=24</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_row_parsers={'acl':</span> <span class="pre">&lt;function</span> <span class="pre">_get_acl_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'authz':</span> <span class="pre">&lt;function</span> <span class="pre">_get_authz_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'file_name':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_name_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'file_size':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_size_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'guid':</span> <span class="pre">&lt;function</span> <span class="pre">_get_guid_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'md5':</span> <span class="pre">&lt;function</span> <span class="pre">_get_md5_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'urls':</span> <span class="pre">&lt;function</span> <span class="pre">_get_urls_from_row&gt;}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_file_delimiter=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filename='verify-manifest-errors-1657659550.696085.log'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/verify_manifest.html#async_verify_object_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.indexing.verify_manifest.async_verify_object_manifest" title="Permalink to this definition">¶</a></dt>
 <dd><p>Verify all file object records into a manifest csv</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
