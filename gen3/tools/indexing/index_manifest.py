@@ -378,10 +378,12 @@ def index_object_manifest(
             entry for a GUID even if the value is empty. Enabling
             this will force the creation of metadata entries for every column.
             See below for an illustrative example
+
             Example manifest_file:
                 guid, ..., columnA, columnB, ColumnC
                     1, ...,   dataA,        ,
                     2, ...,        ,   dataB,
+
             Resulting metadata if force_metadata_columns_even_if_empty=True :
                 "1": {
                     "columnA": "dataA",
@@ -393,6 +395,7 @@ def index_object_manifest(
                     "columnB": "dataB",
                     "ColumnC": "",
                 },
+
             Resulting metadata if force_metadata_columns_even_if_empty=False :
                 "1": {
                     "columnA": "dataA",
