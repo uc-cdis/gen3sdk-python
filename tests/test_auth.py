@@ -39,6 +39,8 @@ test_key_wts = {
     + ".wts"
 }
 
+test_cred_file_name = "testCred.json"
+
 
 def test_get_wts_endpoint():
     endpoint = gen3.auth.get_wts_endpoint(namespace="frickjack")
@@ -204,25 +206,20 @@ def test_auth_init_with_both_endpoint_and_idp():
     """
     Test that a Gen3Auth instance CANNOT be initialized with both endpoint and idp
     """
-    try:
+    with pytest.raises(ValueError):
         auth = gen3.auth.Gen3Auth(endpoint="https://caninedc.org", idp="canine-google")
-        # auth object should not initialize successfully
-        assert not auth
-    except ValueError as e:
-        assert str(e) == "Only one of 'endpoint' and 'idp' can be specified."
 
 
 def test_auth_init_with_matching_endpoint_and_refresh_file():
 
-    try:
-        with open("testCred.json", "w") as f:
-            json.dump(test_key, f)
-    except Exception as e:
-        print(e)
-    auth = gen3.auth.Gen3Auth(endpoint=test_endpoint, refresh_file="testCred.json")
+    with open(test_cred_file_name, "w") as f:
+        json.dump(test_key, f)
+
+    auth = gen3.auth.Gen3Auth(endpoint=test_endpoint, refresh_file=test_cred_file_name)
     assert auth._use_wts == False
     assert auth.endpoint == test_endpoint
-    os.remove("testCred.json")
+    if os.path.isfile(test_cred_file_name):
+        os.remove(test_cred_file_name)
 
 
 def test_auth_init_with_endpoint_that_matches_multiple_idp():
@@ -281,24 +278,18 @@ def test_auth_init_with_endpoint_that_matches_multiple_idp():
             mock_request_post.side_effect = _mock_request
             mock_request_get.side_effect = _mock_request
 
-            try:
-                with open("testCred.json", "w") as f:
-                    json.dump(test_key, f)
-            except Exception as e:
-                print(e)
+            with open(test_cred_file_name, "w") as f:
+                json.dump(test_key, f)
 
-            try:
+            with pytest.raises(ValueError):
                 auth = gen3.auth.Gen3Auth(
-                    endpoint=test_external_endpoint, refresh_file="testCred.json"
+                    endpoint=test_external_endpoint, refresh_file=test_cred_file_name
                 )
                 # auth object should not initialize successfully
                 assert not auth
-            except ValueError as e:
-                assert str(e).startswith(
-                    "Multiple idps matched with endpoint value provided."
-                )
 
-            os.remove("testCred.json")
+            if os.path.isfile(test_cred_file_name):
+                os.remove(test_cred_file_name)
 
 
 def test_auth_init_with_endpoint_that_matches_no_idp():
@@ -345,24 +336,19 @@ def test_auth_init_with_endpoint_that_matches_no_idp():
             mock_request_post.side_effect = _mock_request
             mock_request_get.side_effect = _mock_request
 
-            try:
-                with open("testCred.json", "w") as f:
-                    json.dump(test_key, f)
-            except Exception as e:
-                print(e)
+            with open(test_cred_file_name, "w") as f:
+                json.dump(test_key, f)
 
-            try:
+            with pytest.raises(ValueError):
                 auth = gen3.auth.Gen3Auth(
-                    endpoint="https://doesnt_exist.org", refresh_file="testCred.json"
+                    endpoint="https://doesnt_exist.org",
+                    refresh_file=test_cred_file_name,
                 )
                 # auth object should not initialize successfully
                 assert not auth
-            except ValueError as e:
-                assert str(e).startswith(
-                    "No idp matched with endpoint or idp value provided"
-                )
 
-            os.remove("testCred.json")
+            if os.path.isfile(test_cred_file_name):
+                os.remove(test_cred_file_name)
 
 
 def test_auth_init_with_non_existent_idp():
@@ -409,24 +395,18 @@ def test_auth_init_with_non_existent_idp():
             mock_request_post.side_effect = _mock_request
             mock_request_get.side_effect = _mock_request
 
-            try:
-                with open("testCred.json", "w") as f:
-                    json.dump(test_key, f)
-            except Exception as e:
-                print(e)
+            with open(test_cred_file_name, "w") as f:
+                json.dump(test_key, f)
 
-            try:
+            with pytest.raises(ValueError):
                 auth = gen3.auth.Gen3Auth(
-                    idp="doesnt-exist", refresh_file="testCred.json"
+                    idp="doesnt-exist", refresh_file=test_cred_file_name
                 )
                 # auth object should not initialize successfully
                 assert not auth
-            except ValueError as e:
-                assert str(e).startswith(
-                    "No idp matched with endpoint or idp value provided"
-                )
 
-            os.remove("testCred.json")
+            if os.path.isfile(test_cred_file_name):
+                os.remove(test_cred_file_name)
 
 
 def test_auth_init_with_idp_and_external_wts():
@@ -469,16 +449,19 @@ def test_auth_init_with_idp_and_external_wts():
         with patch("gen3.auth.requests.get") as mock_request_get:
             mock_request_post.side_effect = _mock_request
             mock_request_get.side_effect = _mock_request
-            try:
-                with open("testCred.json", "w") as f:
-                    json.dump(test_key, f)
-            except Exception as e:
-                print(e)
-            auth = gen3.auth.Gen3Auth(idp="test-google", refresh_file="testCred.json")
+
+            with open(test_cred_file_name, "w") as f:
+                json.dump(test_key, f)
+
+            auth = gen3.auth.Gen3Auth(
+                idp="test-google", refresh_file=test_cred_file_name
+            )
             assert auth._use_wts == True
             assert auth.endpoint == test_external_endpoint
             assert auth._access_token == wts_token
-            os.remove("testCred.json")
+
+            if os.path.isfile(test_cred_file_name):
+                os.remove(test_cred_file_name)
 
 
 def test_auth_init_with_endpoint_and_external_wts():
@@ -521,15 +504,16 @@ def test_auth_init_with_endpoint_and_external_wts():
         with patch("gen3.auth.requests.get") as mock_request_get:
             mock_request_post.side_effect = _mock_request
             mock_request_get.side_effect = _mock_request
-            try:
-                with open("testCred.json", "w") as f:
-                    json.dump(test_key, f)
-            except Exception as e:
-                print(e)
+
+            with open(test_cred_file_name, "w") as f:
+                json.dump(test_key, f)
+
             auth = gen3.auth.Gen3Auth(
-                endpoint=test_external_endpoint, refresh_file="testCred.json"
+                endpoint=test_external_endpoint, refresh_file=test_cred_file_name
             )
             assert auth._use_wts == True
             assert auth.endpoint == test_external_endpoint
             assert auth._access_token == wts_token
-            os.remove("testCred.json")
+
+            if os.path.isfile(test_cred_file_name):
+                os.remove(test_cred_file_name)

@@ -441,7 +441,9 @@ class Gen3Metadata:
 
         return response.json()
 
-    def _prepare_metadata(self, metadata, indexd_doc):
+    def _prepare_metadata(
+        self, metadata, indexd_doc, force_metadata_columns_even_if_empty
+    ):
         """
         Validate and generate the provided metadata for submission to the metadata
         service.
@@ -451,6 +453,7 @@ class Gen3Metadata:
         Args:
             metadata (dict): metadata provided by the submitter
             indexd_doc (dict): the indexd document created for this data
+            force_metadata_columns_even_if_empty (bool): see description in calling function
 
         Returns:
             dict: metadata ready to be submitted to the metadata service
@@ -509,6 +512,14 @@ class Gen3Metadata:
 
         if not valid:
             raise Exception(f"Metadata is not valid: {metadata}")
+
+        if not force_metadata_columns_even_if_empty:
+            # remove any empty columns if we're not being forced to include them
+            to_submit = {
+                key: value
+                for key, value in to_submit.items()
+                if value is not None and value != ""
+            }
 
         return to_submit
 

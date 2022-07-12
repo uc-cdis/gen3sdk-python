@@ -429,21 +429,21 @@ class Gen3Auth(AuthBase):
         wts_token = get_access_token_with_key(self._refresh_token)
         auth_url = self._external_wts_host + "token/"
 
-        providerList = get_wts_idps(self._wts_namespace, self._external_wts_host)
+        provider_List = get_wts_idps(self._wts_namespace, self._external_wts_host)
 
         # if user already supplied idp, use that
         if self._wts_idp and self._wts_idp != "local":
             matchProviders = list(
                 filter(
                     lambda provider: provider["idp"] == self._wts_idp,
-                    providerList["providers"],
+                    provider_List["providers"],
                 )
             )
         elif endpoint:
             matchProviders = list(
                 filter(
                     lambda provider: provider["base_url"] == endpoint,
-                    providerList["providers"],
+                    provider_List["providers"],
                 )
             )
 
@@ -468,7 +468,7 @@ class Gen3Auth(AuthBase):
                     + "Query /wts/external_oidc/ for more information."
                 )
             else:
-                for idp in providerList["providers"]:
+                for idp in provider_List["providers"]:
                     idp_list = (
                         idp_list
                         + "idp name: "
