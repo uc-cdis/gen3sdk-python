@@ -63,6 +63,7 @@ def test_verify_manifest(mock_index):
     """
     Test that verify manifest function correctly writes out log file
     with expected error information.
+
     NOTE: records in indexd are mocked
     """
     mock_index.return_value.async_get_record.side_effect = _async_mock_get_guid
