@@ -412,10 +412,12 @@
 <span class="sd">            entry for a GUID even if the value is empty. Enabling</span>
 <span class="sd">            this will force the creation of metadata entries for every column.</span>
 <span class="sd">            See below for an illustrative example</span>
+
 <span class="sd">            Example manifest_file:</span>
 <span class="sd">                guid, ..., columnA, columnB, ColumnC</span>
 <span class="sd">                    1, ...,   dataA,        ,</span>
 <span class="sd">                    2, ...,        ,   dataB,</span>
+
 <span class="sd">            Resulting metadata if force_metadata_columns_even_if_empty=True :</span>
 <span class="sd">                &quot;1&quot;: {</span>
 <span class="sd">                    &quot;columnA&quot;: &quot;dataA&quot;,</span>
@@ -427,6 +429,7 @@
 <span class="sd">                    &quot;columnB&quot;: &quot;dataB&quot;,</span>
 <span class="sd">                    &quot;ColumnC&quot;: &quot;&quot;,</span>
 <span class="sd">                },</span>
+
 <span class="sd">            Resulting metadata if force_metadata_columns_even_if_empty=False :</span>
 <span class="sd">                &quot;1&quot;: {</span>
 <span class="sd">                    &quot;columnA&quot;: &quot;dataA&quot;,</span>
