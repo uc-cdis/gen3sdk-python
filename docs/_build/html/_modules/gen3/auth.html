@@ -463,21 +463,21 @@
         <span class="n">wts_token</span> <span class="o">=</span> <span class="n">get_access_token_with_key</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">)</span>
         <span class="n">auth_url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_external_wts_host</span> <span class="o">+</span> <span class="s2">&quot;token/&quot;</span>
 
-        <span class="n">providerList</span> <span class="o">=</span> <span class="n">get_wts_idps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wts_namespace</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_external_wts_host</span><span class="p">)</span>
+        <span class="n">provider_List</span> <span class="o">=</span> <span class="n">get_wts_idps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wts_namespace</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_external_wts_host</span><span class="p">)</span>
 
         <span class="c1"># if user already supplied idp, use that</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span> <span class="o">!=</span> <span class="s2">&quot;local&quot;</span><span class="p">:</span>
             <span class="n">matchProviders</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
                 <span class="nb">filter</span><span class="p">(</span>
                     <span class="k">lambda</span> <span class="n">provider</span><span class="p">:</span> <span class="n">provider</span><span class="p">[</span><span class="s2">&quot;idp&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span><span class="p">,</span>
-                    <span class="n">providerList</span><span class="p">[</span><span class="s2">&quot;providers&quot;</span><span class="p">],</span>
+                    <span class="n">provider_List</span><span class="p">[</span><span class="s2">&quot;providers&quot;</span><span class="p">],</span>
                 <span class="p">)</span>
             <span class="p">)</span>
         <span class="k">elif</span> <span class="n">endpoint</span><span class="p">:</span>
             <span class="n">matchProviders</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
                 <span class="nb">filter</span><span class="p">(</span>
                     <span class="k">lambda</span> <span class="n">provider</span><span class="p">:</span> <span class="n">provider</span><span class="p">[</span><span class="s2">&quot;base_url&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">endpoint</span><span class="p">,</span>
-                    <span class="n">providerList</span><span class="p">[</span><span class="s2">&quot;providers&quot;</span><span class="p">],</span>
+                    <span class="n">provider_List</span><span class="p">[</span><span class="s2">&quot;providers&quot;</span><span class="p">],</span>
                 <span class="p">)</span>
             <span class="p">)</span>
 
@@ -502,7 +502,7 @@
                     <span class="o">+</span> <span class="s2">&quot;Query /wts/external_oidc/ for more information.&quot;</span>
                 <span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">idp</span> <span class="ow">in</span> <span class="n">providerList</span><span class="p">[</span><span class="s2">&quot;providers&quot;</span><span class="p">]:</span>
+                <span class="k">for</span> <span class="n">idp</span> <span class="ow">in</span> <span class="n">provider_List</span><span class="p">[</span><span class="s2">&quot;providers&quot;</span><span class="p">]:</span>
                     <span class="n">idp_list</span> <span class="o">=</span> <span class="p">(</span>
                         <span class="n">idp_list</span>
                         <span class="o">+</span> <span class="s2">&quot;idp name: &quot;</span>
