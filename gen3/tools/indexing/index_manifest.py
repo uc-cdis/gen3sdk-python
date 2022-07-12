@@ -381,8 +381,8 @@ def index_object_manifest(
 
             Example manifest_file:
                 guid, ..., columnA, columnB, ColumnC
-                   1, ...,   dataA,        ,
-                   2, ...,        ,   dataB,
+                    1, ...,   dataA,        ,
+                    2, ...,        ,   dataB,
 
             Resulting metadata if force_metadata_columns_even_if_empty=True :
                 "1": {
