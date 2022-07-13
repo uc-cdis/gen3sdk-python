@@ -480,7 +480,7 @@ class Gen3Auth(AuthBase):
                     "No idp matched with the endpoint or idp value provided.\n"
                     + "Please make sure your endpoint or idp value matches exactly with the output below.\n"
                     + "i.e. check trailing '/' character for the endpoint url\n"
-                    + "Avalable Idps:"
+                    + "Available Idps:"
                     + idp_list
                     + "Query /wts/external_oidc/ for more information."
                 )
