@@ -420,9 +420,8 @@ class Gen3Auth(AuthBase):
             if not self._external_wts_host:
                 raise e
             else:
-                logging.warning(
-                    "Accessing local WTS did not work. Trying network call since external WTS url is available"
-                )
+                # Try to obtain token from external wts
+                pass
 
         # local workspace wts call failed, try using a network call
         # First get access token with WTS host
@@ -473,12 +472,15 @@ class Gen3Auth(AuthBase):
                         idp_list
                         + "idp name: "
                         + idp["idp"]
-                        + " url: "
+                        + "  Endpoint url: "
                         + idp["base_url"]
                         + "\n "
                     )
                 raise ValueError(
-                    "No idp matched with endpoint or idp value provided. Avalable Idps:"
+                    "No idp matched with the endpoint or idp value provided.\n"
+                    + "Please make sure your endpoint or idp value matches exactly with the output below.\n"
+                    + "i.e. check trailing '/' character for the endpoint url\n"
+                    + "Avalable Idps:"
                     + idp_list
                     + "Query /wts/external_oidc/ for more information."
                 )
