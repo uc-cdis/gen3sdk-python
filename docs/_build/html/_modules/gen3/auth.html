@@ -454,9 +454,8 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_external_wts_host</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="n">e</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                    <span class="s2">&quot;Accessing local WTS did not work. Trying network call since external WTS url is available&quot;</span>
-                <span class="p">)</span>
+                <span class="c1"># Try to obtain token from external wts</span>
+                <span class="k">pass</span>
 
         <span class="c1"># local workspace wts call failed, try using a network call</span>
         <span class="c1"># First get access token with WTS host</span>
@@ -507,12 +506,15 @@
                         <span class="n">idp_list</span>
                         <span class="o">+</span> <span class="s2">&quot;idp name: &quot;</span>
                         <span class="o">+</span> <span class="n">idp</span><span class="p">[</span><span class="s2">&quot;idp&quot;</span><span class="p">]</span>
-                        <span class="o">+</span> <span class="s2">&quot; url: &quot;</span>
+                        <span class="o">+</span> <span class="s2">&quot;  Endpoint url: &quot;</span>
                         <span class="o">+</span> <span class="n">idp</span><span class="p">[</span><span class="s2">&quot;base_url&quot;</span><span class="p">]</span>
                         <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2"> &quot;</span>
                     <span class="p">)</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="s2">&quot;No idp matched with endpoint or idp value provided. Avalable Idps:&quot;</span>
+                    <span class="s2">&quot;No idp matched with the endpoint or idp value provided.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="o">+</span> <span class="s2">&quot;Please make sure your endpoint or idp value matches exactly with the output below.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="o">+</span> <span class="s2">&quot;i.e. check trailing &#39;/&#39; character for the endpoint url</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="o">+</span> <span class="s2">&quot;Avalable Idps:&quot;</span>
                     <span class="o">+</span> <span class="n">idp_list</span>
                     <span class="o">+</span> <span class="s2">&quot;Query /wts/external_oidc/ for more information.&quot;</span>
                 <span class="p">)</span>
