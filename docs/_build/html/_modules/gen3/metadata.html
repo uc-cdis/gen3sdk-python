@@ -489,7 +489,9 @@
 
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
-    <span class="k">def</span> <span class="nf">_prepare_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">indexd_doc</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_prepare_metadata</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">indexd_doc</span><span class="p">,</span> <span class="n">force_metadata_columns_even_if_empty</span>
+    <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Validate and generate the provided metadata for submission to the metadata</span>
 <span class="sd">        service.</span>
@@ -499,6 +501,7 @@
 <span class="sd">        Args:</span>
 <span class="sd">            metadata (dict): metadata provided by the submitter</span>
 <span class="sd">            indexd_doc (dict): the indexd document created for this data</span>
+<span class="sd">            force_metadata_columns_even_if_empty (bool): see description in calling function</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            dict: metadata ready to be submitted to the metadata service</span>
@@ -557,6 +560,14 @@
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">valid</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Metadata is not valid: </span><span class="si">{</span><span class="n">metadata</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">force_metadata_columns_even_if_empty</span><span class="p">:</span>
+            <span class="c1"># remove any empty columns if we&#39;re not being forced to include them</span>
+            <span class="n">to_submit</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">key</span><span class="p">:</span> <span class="n">value</span>
+                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">to_submit</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span>
+            <span class="p">}</span>
 
         <span class="k">return</span> <span class="n">to_submit</span>
 
