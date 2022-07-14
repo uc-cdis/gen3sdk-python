@@ -112,7 +112,9 @@ def get_and_verify_fileinfos_from_tsv_manifest(
     csv.field_size_limit(sys.maxsize)  # handle large values such as "package_contents"
     files = []
     with open(manifest_file, "r", encoding="utf-8-sig") as csvfile:
-        csvReader = csv.DictReader(csvfile, delimiter=manifest_file_delimiter)
+        csvReader = csv.DictReader(
+            csvfile, delimiter=manifest_file_delimiter, restval=""
+        )
         fieldnames = csvReader.fieldnames
         if len(fieldnames) < 2:
             logging.warning(
@@ -250,7 +252,7 @@ def get_and_verify_fileinfos_from_tsv_manifest(
             ):
                 logging.error(
                     f"ERROR: '{row[current_column_name]}' (columns names: "
-                    f"{set(output_row.keys())}) does not have required rows: "
+                    f"{set(output_row.keys())}) does not have some required rows: "
                     f"{URLS_STANDARD_KEY}, {MD5_STANDARD_KEY}, {SIZE_STANDARD_KEY}"
                 )
                 is_row_valid = False

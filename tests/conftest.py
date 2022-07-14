@@ -2,6 +2,7 @@
 Conf Test for Gen3 test suite
 """
 from multiprocessing import Process
+import multiprocessing
 from unittest.mock import patch
 import pytest
 import requests
@@ -148,13 +149,18 @@ def indexd_server():
     port = 8001
     settings["auth"].arborist = MockArboristClient()
     indexd = Process(target=run_indexd, args=[port])
+    # Add this line because OS X multiprocessing default is spawn which will cause pickling errors
+    # NOTE: fork is unstable and not technically supported on OS X, forking is only supported on Unix
+    # However explicitly setting default behavior to fork to pass unit test, only used for tests
+    # https://docs.python.org/3/library/multiprocessing.html
+    # https://github.com/pytest-dev/pytest-flask/issues/104
+    multiprocessing.set_start_method("fork")
     indexd.start()
     wait_for_indexd_alive(port)
 
     yield MockServer(port=port)
 
     indexd.terminate()
-    wait_for_indexd_not_alive(port)
 
 
 @pytest.fixture
