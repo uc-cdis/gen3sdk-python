@@ -1021,7 +1021,7 @@ class DownloadManager:
             ext = os.path.splitext(entry.file_name)[-1]
             if unpack_packages and ext in PACKAGE_EXTENSIONS:
                 try:
-                    mds_entry = self.metadata.get(entry.object_id)
+                    mds_entry = self.metadata.get(entry.object_id, no_throw=True)
                 except Exception:
                     mds_entry = {}  # no MDS or object not in MDS
                     logger.debug(

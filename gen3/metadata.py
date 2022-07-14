@@ -272,7 +272,7 @@ class Gen3Metadata:
         return response
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    def get(self, guid, **kwargs):
+    def get(self, guid, no_throw=False, **kwargs):
         """
         Get the metadata associated with the guid
 
@@ -287,7 +287,9 @@ class Gen3Metadata:
         url_with_params = append_query_params(url, **kwargs)
         logging.debug(f"hitting: {url_with_params}")
         response = requests.get(url_with_params, auth=self._auth_provider)
-        raise_for_status(response)
+
+        if not no_throw:
+            raise_for_status(response)
 
         return response.json()
 
