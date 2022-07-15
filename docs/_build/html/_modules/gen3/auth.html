@@ -340,7 +340,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_write_to_file</span><span class="p">(</span><span class="n">cache_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Exceeded number of retries, unable to write to cache file.&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Unable to write access token to cache file. Exceeded number of retries.&quot;</span>
             <span class="p">)</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span></div>
