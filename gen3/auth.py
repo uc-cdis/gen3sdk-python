@@ -306,7 +306,7 @@ class Gen3Auth(AuthBase):
             self._write_to_file(cache_file, self._access_token)
         except Exception as e:
             logging.warning(
-                f"Unable to write access token to cache file. Exceeded number of retries. "
+                f"Unable to write access token to cache file. Exceeded number of retries."
             )
 
         return self._access_token
