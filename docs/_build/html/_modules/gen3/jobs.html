@@ -46,7 +46,11 @@
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">time</span>
 
-<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">append_query_params</span><span class="p">,</span> <span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">,</span> <span class="n">raise_for_status</span>
+<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">append_query_params</span><span class="p">,</span>
+    <span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">,</span>
+    <span class="n">raise_for_status_and_print_error</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="c1"># sower&#39;s &quot;action&quot; mapping to the relevant job</span>
 <span class="n">INGEST_METADATA_JOB</span> <span class="o">=</span> <span class="s2">&quot;ingest-metadata-manifest&quot;</span>
@@ -137,7 +141,7 @@
             <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/_status&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
             <span class="p">)</span>
-            <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+            <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
             <span class="k">return</span> <span class="kc">False</span>
@@ -153,7 +157,7 @@
 <span class="sd">            str: the version</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/_version&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Gen3Jobs.list_jobs"><a class="viewcode-back" href="../../jobs.html#gen3.jobs.Gen3Jobs.list_jobs">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
@@ -162,7 +166,7 @@
 <span class="sd">        List all jobs</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/list&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Gen3Jobs.create_job"><a class="viewcode-back" href="../../jobs.html#gen3.jobs.Gen3Jobs.create_job">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
@@ -181,7 +185,7 @@
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/dispatch&quot;</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
         <span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
@@ -199,7 +203,7 @@
             <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
                 <span class="n">url_with_params</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span>
             <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
-                <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+                <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
                 <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">(</span><span class="n">content_type</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
                 <span class="k">return</span> <span class="n">response</span>
 
@@ -211,7 +215,7 @@
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/status?UID=</span><span class="si">{</span><span class="n">job_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
         <span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
@@ -227,7 +231,7 @@
             <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
                 <span class="n">url_with_params</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span>
             <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
-                <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+                <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
                 <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">(</span><span class="n">content_type</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
                 <span class="k">return</span> <span class="n">response</span>
 
@@ -239,7 +243,7 @@
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/output?UID=</span><span class="si">{</span><span class="n">job_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
         <span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
@@ -255,7 +259,7 @@
             <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
                 <span class="n">url_with_params</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span>
             <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
-                <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+                <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
                 <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">(</span><span class="n">content_type</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
                 <span class="k">return</span> <span class="n">response</span></div>
 </pre></div>
