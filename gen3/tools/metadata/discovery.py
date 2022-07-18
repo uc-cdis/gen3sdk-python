@@ -11,7 +11,7 @@ import requests.exceptions
 
 from gen3.metadata import Gen3Metadata
 from gen3.tools import metadata
-from gen3.utils import raise_for_status
+from gen3.utils import raise_for_status_and_print_error
 
 MAX_GUIDS_PER_REQUEST = 2000
 MAX_CONCURRENT_REQUESTS = 5
