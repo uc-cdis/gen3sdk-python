@@ -180,7 +180,7 @@ async def publish_discovery_metadata(
             if (
                 not reset_unregistered_metadata
                 and is_unregistered_metadata
-                and guid in registered_metadata_guids
+                and str(guid) in registered_metadata_guids
             ):
                 continue
 
