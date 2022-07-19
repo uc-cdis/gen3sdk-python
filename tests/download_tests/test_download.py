@@ -10,6 +10,7 @@ from dataclasses import asdict
 from pathlib import Path
 from unittest import mock
 import gen3
+from unittest.mock import patch, call
 
 DIR = Path(__file__).resolve().parent
 
@@ -887,7 +888,9 @@ def test_list_no_auth(
         ("test.datacommons.io"),
     ],
 )
+@patch("builtins.print")
 def test_unpackage_objects(
+    mocked_print,
     capsys,
     wts_oidc,
     drs_object_info,
@@ -1015,10 +1018,15 @@ def test_unpackage_objects(
                     with open(download_dir.join(item.filename), "rb") as fin:
                         assert fin.read() == download_test_files[id]["content"]
 
-                # test that we don't undpack when entry is not in mds
+                # test that we don't unpack when entry is not in mds
                 results = downloader.download(
                     object_list=[object_list[2]], save_directory=download_dir
                 )
+
+                # entry not in MDS should not print errors since it is only used to determine whether file
+                # is unpacked or not. Errors should be logged using logger
+                assert len(mocked_print.mock_calls) == 0
+
                 for id, item in results.items():
                     assert item.status == "downloaded"
                     dir_list = os.listdir(download_dir)
