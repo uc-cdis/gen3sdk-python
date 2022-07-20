@@ -47,7 +47,7 @@ def get_or_create_event_loop_for_thread():
     return loop
 
 
-def raise_for_status(response):
+def raise_for_status_and_print_error(response):
     try:
         response.raise_for_status()
     except requests.HTTPError as exception:

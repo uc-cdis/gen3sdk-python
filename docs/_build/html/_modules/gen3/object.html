@@ -33,7 +33,7 @@
             
   <h1>Source code for gen3.object</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">requests</span>
-<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">raise_for_status</span>
+<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">raise_for_status_and_print_error</span>
 
 
 <span class="k">class</span> <span class="nc">Gen3ObjectError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
@@ -75,7 +75,7 @@
             <span class="s2">&quot;aliases&quot;</span><span class="p">:</span> <span class="n">aliases</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">body</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;guid&quot;</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;upload_url&quot;</span><span class="p">]</span>
 
@@ -98,7 +98,7 @@
             <span class="o">+</span> <span class="n">delete_param</span>
         <span class="p">)</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span></div></div>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span></div></div>
 </pre></div>
 
           </div>
