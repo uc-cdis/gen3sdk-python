@@ -122,7 +122,7 @@ def log_backoff_giveup(details):
         _print_func_name(details["target"]), args_str, kwargs_str
     )
     logging.error(
-        "backoff2: gave up call {func_call} after {tries} tries; exception: {exc}".format(
+        "backoff: gave up call {func_call} after {tries} tries; exception: {exc}".format(
             func_call=func_call_log, exc=sys.exc_info(), **details
         )
     )
