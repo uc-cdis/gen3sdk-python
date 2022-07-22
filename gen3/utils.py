@@ -228,3 +228,9 @@ DEFAULT_BACKOFF_SETTINGS = {
     "max_tries": os.environ.get("GEN3SDK_MAX_RETRIES", 3),
     "giveup": exception_do_not_retry,
 }
+
+# Metadata.get settings to control usage of backoff library.
+METADATA_BACKOFF_SETTINGS = {
+    "max_tries": os.environ.get("GEN3SDK_MAX_RETRIES", 3),
+    "giveup": exception_do_not_retry,
+}
