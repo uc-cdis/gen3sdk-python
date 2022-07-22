@@ -26,6 +26,7 @@ from enum import Enum
 from json import load as json_load, loads as json_loads, JSONDecodeError
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from urllib.error import HTTPError
 
 import humanfriendly
 import requests
@@ -1022,7 +1023,7 @@ class DownloadManager:
             if unpack_packages and ext in PACKAGE_EXTENSIONS:
                 try:
                     mds_entry = self.metadata.get(entry.object_id)
-                except Exception:
+                except HTTPError:
                     mds_entry = {}  # no MDS or object not in MDS
                     logger.debug(
                         f"{entry.file_name} is not a package and will not be expanded"
@@ -1143,6 +1144,7 @@ def _download_obj(
     Returns:
         List of DownloadStatus objects for the DRS object
     """
+    print(hostname)
     try:
         auth.get_access_token()
     except Gen3AuthError:
