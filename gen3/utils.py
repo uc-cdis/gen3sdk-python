@@ -137,7 +137,7 @@ def log_backoff_giveup_except_on_no_retries(details):
         _print_func_name(details["target"]), args_str, kwargs_str
     )
 
-    if not details["tries"] == "1":
+    if not details["tries"] > 1:
         logging.critical(str(details))
         logging.error(
             "backoff: gave up call {func_call} after {tries} tries; exception: {exc}".format(
