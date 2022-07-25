@@ -380,7 +380,14 @@
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Gen3Metadata.async_create"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.async_create">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
-    <span class="k">async</span> <span class="k">def</span> <span class="nf">async_create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">async_create</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">guid</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="p">,</span>
+        <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Asynchronous function to create metadata</span>
 
@@ -399,6 +406,8 @@
             <span class="c1"># need to manually add JWT auth header</span>
             <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">_get_auth_value</span><span class="p">()}</span>
 
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;hitting: </span><span class="si">{</span><span class="n">url_with_params</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;data: </span><span class="si">{</span><span class="n">metadata</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
                 <span class="n">url_with_params</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span>
             <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
