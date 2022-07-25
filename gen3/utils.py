@@ -137,7 +137,6 @@ def log_backoff_giveup_except_on_no_retries(details):
         _print_func_name(details["target"]), args_str, kwargs_str
     )
 
-    logging.error(details["tries"])
     if details["tries"] > 1:
         logging.error(
             "backoff: gave up call {func_call} after {tries} tries; exception: {exc}".format(
@@ -242,6 +241,8 @@ def yield_chunks(input_list, n):
 
 # Default settings to control usage of backoff library.
 DEFAULT_BACKOFF_SETTINGS = {
+    # Disable backoff lib default logger, only show custom logs
+    "logger": None,
     "on_backoff": log_backoff_retry,
     "on_giveup": log_backoff_giveup,
     "max_tries": os.environ.get("GEN3SDK_MAX_RETRIES", 3),
@@ -250,6 +251,8 @@ DEFAULT_BACKOFF_SETTINGS = {
 
 # Metadata.get settings to control usage of backoff library.
 BACKOFF_NO_LOG_IF_NOT_RETRIED = {
+    # Disable backoff lib default logger, only show custom logs
+    "logger": None,
     "on_backoff": log_backoff_retry,
     "on_giveup": log_backoff_giveup_except_on_no_retries,
     "max_tries": os.environ.get("GEN3SDK_MAX_RETRIES", 3),
