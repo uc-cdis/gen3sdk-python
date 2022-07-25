@@ -11,7 +11,7 @@ from cdislogging import get_logger
 from urllib.parse import urlparse
 import backoff
 
-from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status
+from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status_and_print_error
 
 logging = get_logger("__name__")
 
@@ -85,7 +85,7 @@ def get_wts_idps(namespace=os.getenv("NAMESPACE", "default"), external_wts_host=
         wts_url = external_wts_host
     url = wts_url.rstrip("/") + "/external_oidc/"
     resp = requests.get(url)
-    raise_for_status(resp)
+    raise_for_status_and_print_error(resp)
     return resp.json()
 
 
@@ -306,7 +306,7 @@ class Gen3Auth(AuthBase):
             self._write_to_file(cache_file, self._access_token)
         except Exception as e:
             logging.warning(
-                f"Exceeded number of retries, unable to write to cache file."
+                f"Unable to write access token to cache file. Exceeded number of retries."
             )
 
         return self._access_token

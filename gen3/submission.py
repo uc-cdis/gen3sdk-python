@@ -5,7 +5,7 @@ import os
 from cdislogging import get_logger
 import pandas as pd
 
-from gen3.utils import raise_for_status
+from gen3.utils import raise_for_status_and_print_error
 
 logging = get_logger("__name__")
 
@@ -58,7 +58,7 @@ class Gen3Submission:
         """List registered programs"""
         api_url = f"{self._endpoint}/api/v0/submission/"
         output = requests.get(api_url, auth=self._auth_provider)
-        raise_for_status(output)
+        raise_for_status_and_print_error(output)
         return output.json()
 
     def create_program(self, json):
@@ -73,7 +73,7 @@ class Gen3Submission:
         """
         api_url = "{}/api/v0/submission/".format(self._endpoint)
         output = requests.post(api_url, auth=self._auth_provider, json=json)
-        raise_for_status(output)
+        raise_for_status_and_print_error(output)
         return output.json()
 
     def delete_program(self, program):
@@ -92,7 +92,7 @@ class Gen3Submission:
         """
         api_url = "{}/api/v0/submission/{}".format(self._endpoint, program)
         output = requests.delete(api_url, auth=self._auth_provider)
-        raise_for_status(output)
+        raise_for_status_and_print_error(output)
         return output
 
     ### Project functions
@@ -111,7 +111,7 @@ class Gen3Submission:
         """
         api_url = f"{self._endpoint}/api/v0/submission/{program}"
         output = requests.get(api_url, auth=self._auth_provider)
-        raise_for_status(output)
+        raise_for_status_and_print_error(output)
         return output.json()
 
     def create_project(self, program, json):
@@ -127,7 +127,7 @@ class Gen3Submission:
         """
         api_url = "{}/api/v0/submission/{}".format(self._endpoint, program)
         output = requests.put(api_url, auth=self._auth_provider, json=json)
-        raise_for_status(output)
+        raise_for_status_and_print_error(output)
         return output.json()
 
     def delete_project(self, program, project):
@@ -147,7 +147,7 @@ class Gen3Submission:
         """
         api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
         output = requests.delete(api_url, auth=self._auth_provider)
-        raise_for_status(output)
+        raise_for_status_and_print_error(output)
         return output
 
     def get_project_dictionary(self, program, project):
@@ -164,7 +164,7 @@ class Gen3Submission:
         """
         api_url = f"{self._endpoint}/api/v0/submission/{program}/{project}/_dictionary"
         output = requests.get(api_url, auth=self._auth_provider)
-        raise_for_status(output)
+        raise_for_status_and_print_error(output)
         return output.json()
 
     def open_project(self, program, project):
@@ -181,7 +181,7 @@ class Gen3Submission:
         """
         api_url = f"{self._endpoint}/api/v0/submission/{program}/{project}/open"
         output = requests.put(api_url, auth=self._auth_provider)
-        raise_for_status(output)
+        raise_for_status_and_print_error(output)
         return output.json()
 
     ### Record functions
@@ -250,7 +250,7 @@ class Gen3Submission:
                 auth=self._auth_provider,
             )
             try:
-                raise_for_status(output)
+                raise_for_status_and_print_error(output)
             except requests.exceptions.HTTPError:
                 print(
                     "\n{}\nFailed to delete uuids: {}".format(
