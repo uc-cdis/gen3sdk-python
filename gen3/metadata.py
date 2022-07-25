@@ -323,7 +323,7 @@ class Gen3Metadata:
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    def create(self, guid, metadata, overwrite=False, add_internal_id=False, **kwargs):
+    def create(self, guid, metadata, overwrite=False, **kwargs):
         """
         Create the metadata associated with the guid
 
@@ -335,9 +335,7 @@ class Gen3Metadata:
         """
         url = self.admin_endpoint + f"/metadata/{guid}"
 
-        url_with_params = append_query_params(
-            url, overwrite=overwrite, add_internal_id=add_internal_id, **kwargs
-        )
+        url_with_params = append_query_params(url, overwrite=overwrite, **kwargs)
         logging.debug(f"hitting: {url_with_params}")
         logging.debug(f"data: {metadata}")
         response = requests.post(
@@ -353,7 +351,6 @@ class Gen3Metadata:
         guid,
         metadata,
         overwrite=False,
-        add_internal_id=False,
         _ssl=None,
         **kwargs,
     ):
@@ -369,9 +366,7 @@ class Gen3Metadata:
         """
         async with aiohttp.ClientSession() as session:
             url = self.admin_endpoint + f"/metadata/{guid}"
-            url_with_params = append_query_params(
-                url, overwrite=overwrite, add_internal_id=add_internal_id, **kwargs
-            )
+            url_with_params = append_query_params(url, overwrite=overwrite, **kwargs)
 
             # aiohttp only allows basic auth with their built in auth, so we
             # need to manually add JWT auth header

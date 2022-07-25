@@ -134,7 +134,6 @@ async def publish_discovery_metadata(
     guid_field=None,
     is_unregistered_metadata=False,
     reset_unregistered_metadata=False,
-    add_internal_id=False,
 ):
     """
     Publish discovery metadata from a tsv file
@@ -208,11 +207,7 @@ async def publish_discovery_metadata(
                 "gen3_discovery": discovery_metadata,
             }
 
-            pending_requests += [
-                mds.async_create(
-                    guid, metadata, overwrite=True, add_internal_id=add_internal_id
-                )
-            ]
+            pending_requests += [mds.async_create(guid, metadata, overwrite=True)]
             if len(pending_requests) == MAX_CONCURRENT_REQUESTS:
                 await asyncio.gather(*pending_requests)
                 pending_requests = []
