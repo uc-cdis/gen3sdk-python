@@ -30,6 +30,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import humanfriendly
 import requests
 import zipfile
+import inspect
 from cdislogging import get_logger
 from dataclasses_json import dataclass_json, LetterCase
 from dateutil import parser as date_parser
@@ -1042,8 +1043,19 @@ class DownloadManager:
 
                     if delete_unpacked_packages:
                         filepath.unlink()
-
-            completed[entry.object_id].status = "downloaded" if res else "error"
+            if res:
+                completed[entry.object_id].status = "downloaded"
+                if not mds_entry:
+                    # mds_entry 404 error shown, assure user file has been downloaded
+                    logger.warning(
+                        inspect.cleandoc(
+                            """File has been successfully downloaded. Some files did not 
+                    have associated metadata (see errors in the logs). This did **not** affect the 
+                    download of the actual files and may or may not be of concern."""
+                        )
+                    )
+            else:
+                completed[entry.object_id].status = "error"
             completed[entry.object_id].end_time = datetime.now(timezone.utc)
 
         return completed
