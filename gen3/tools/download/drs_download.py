@@ -1022,7 +1022,6 @@ class DownloadManager:
 
             # check if the file is a package; if so, unpack it in place
             ext = os.path.splitext(entry.file_name)[-1]
-            mds_entry = None
             if unpack_packages and ext in PACKAGE_EXTENSIONS:
                 try:
                     mds_entry = self.metadata.get(entry.object_id)
