@@ -30,7 +30,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import humanfriendly
 import requests
 import zipfile
-import inspect
 from cdislogging import get_logger
 from dataclasses_json import dataclass_json, LetterCase
 from dateutil import parser as date_parser
