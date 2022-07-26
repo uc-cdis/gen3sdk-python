@@ -346,7 +346,14 @@ class Gen3Metadata:
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    async def async_create(self, guid, metadata, overwrite=False, _ssl=None, **kwargs):
+    async def async_create(
+        self,
+        guid,
+        metadata,
+        overwrite=False,
+        _ssl=None,
+        **kwargs,
+    ):
         """
         Asynchronous function to create metadata
 
@@ -365,6 +372,8 @@ class Gen3Metadata:
             # need to manually add JWT auth header
             headers = {"Authorization": self._auth_provider._get_auth_value()}
 
+            logging.debug(f"hitting: {url_with_params}")
+            logging.debug(f"data: {metadata}")
             async with session.post(
                 url_with_params, json=metadata, headers=headers, ssl=_ssl
             ) as response:
