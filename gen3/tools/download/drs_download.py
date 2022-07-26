@@ -809,7 +809,7 @@ class DownloadManager:
         logger.warning("initializing download manager")
         self.hostname = hostname
         self.access_token = auth.get_access_token()
-        logger.warning("access token" + self.access_token)
+        logger.warning("Auth access token:" + self.access_token)
         self.metadata = Gen3Metadata(auth)
         logger.warning("metadata endpoint" + self.metadata.endpoint)
         self.wts_endpoints = wts_external_oidc(hostname)
@@ -996,7 +996,7 @@ class DownloadManager:
 
             drs_hostname = entry.hostname
             access_token = self.get_fresh_token(drs_hostname)
-
+            logger.warning("Access token used for downloading:" + access_token)
             if access_token is None:
                 logger.critical(
                     f"No access token defined for {entry.object_id}. Skipping"
