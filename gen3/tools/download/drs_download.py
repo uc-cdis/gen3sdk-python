@@ -1158,9 +1158,9 @@ def _download_obj(
     logger.warning("hostname passed in/resolved to: " + hostname)
     logger.warning(
         "auth properties:"
-        + auth._refresh_file
+        + str(auth._refresh_file)
         + ","
-        + auth.endpoint
+        + str(auth.endpoint)
         + ","
         + str(auth._use_wts)
     )
