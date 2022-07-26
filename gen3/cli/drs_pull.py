@@ -129,7 +129,6 @@ def download_object(
         gen3 --endpoint mydata.org drs-pull object dg.XXXT/181af989-5d66-4139-91e7-69f4570ccd41
 
     """
-    print(ctx.obj["endpoint"])
     download_drs_object(
         ctx.obj["endpoint"],
         ctx.obj["auth_factory"].get(),

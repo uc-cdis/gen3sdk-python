@@ -806,10 +806,12 @@ class DownloadManager:
             auth (Gen3Auth) : Gen3 authentication
             download_list (List[Downloadable]): list of objects to download
         """
-
+        logger.warning("initializing download manager")
         self.hostname = hostname
         self.access_token = auth.get_access_token()
+        logger.warning("access token" + self.access_token)
         self.metadata = Gen3Metadata(auth)
+        logger.warning("metadata endpoint" + self.metadata.endpoint)
         self.wts_endpoints = wts_external_oidc(hostname)
         self.resolved_compact_drs = {}
         # add COMMONS host as a DRSEndpoint as it does not use the WTS
@@ -843,6 +845,7 @@ class DownloadManager:
         )
         for entry in object_list:
             add_drs_object_info(entry)
+            logger.warning("new entry added to download list:" + str(entry))
             # sugar to allow download objects to self download
             entry._manager = self
             progress_bar.update(1)
@@ -863,12 +866,20 @@ class DownloadManager:
         drs_not_in_wts = object_id_hostnames.difference(
             wts_endpoint_set
         )  # all DRS host not in WTS
+        logger.warning("drs_in_wts:" + str(drs_in_wts))
         for drs_hostname in drs_in_wts:
+            logger.warning("For " + drs_hostname + ":")
             endpoint = KnownDRSEndpoint(
                 hostname=drs_hostname,
                 idp=self.wts_endpoints[drs_hostname]["idp"],
             )
             endpoint.renew_token(self.hostname, self.access_token)
+            logger.warning(
+                "Access token:"
+                + endpoint.access_token
+                + "  use_wts:"
+                + str(endpoint.use_wts)
+            )
             self.known_hosts[drs_hostname] = endpoint
         for drs_hostname in drs_not_in_wts:
             # if we already know the host then we don't need to reset the host
@@ -1144,13 +1155,22 @@ def _download_obj(
     Returns:
         List of DownloadStatus objects for the DRS object
     """
-    print(hostname)
+    logger.warning("hostname passed in/resolved to: " + hostname)
+    logger.warning(
+        "auth properties:"
+        + auth._refresh_file
+        + ","
+        + auth.endpoint
+        + ","
+        + str(auth._use_wts)
+    )
     try:
         auth.get_access_token()
     except Gen3AuthError:
         logger.critical(f"Unable to authenticate your credentials with {hostname}")
         return None
 
+    logger.warning("current access token:" + auth._access_token)
     object_list = [Downloadable(object_id=object_id)]
     downloader = DownloadManager(
         hostname=hostname,
