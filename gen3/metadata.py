@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 from gen3.utils import (
     append_query_params,
     DEFAULT_BACKOFF_SETTINGS,
+    BACKOFF_NO_LOG_IF_NOT_RETRIED,
     raise_for_status_and_print_error,
     _verify_schema,
 )
@@ -271,7 +272,7 @@ class Gen3Metadata:
 
         return response
 
-    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
     def get(self, guid, **kwargs):
         """
         Get the metadata associated with the guid

@@ -522,6 +522,9 @@
         <span class="n">auth_url</span> <span class="o">+=</span> <span class="s2">&quot;?idp=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span><span class="p">)</span>
         <span class="n">header</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="s2">&quot;Bearer &quot;</span> <span class="o">+</span> <span class="n">wts_token</span><span class="p">}</span>
         <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">auth_url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">header</span><span class="p">)</span>
+        <span class="n">err_msg</span> <span class="o">=</span> <span class="s2">&quot;Please make sure the target commons is connected on your profile page and that connection has not expired.&quot;</span>
+        <span class="k">if</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">_handle_access_token_response</span><span class="p">(</span><span class="n">resp</span><span class="p">,</span> <span class="s2">&quot;token&quot;</span><span class="p">)</span></div></div>
 </pre></div>
 

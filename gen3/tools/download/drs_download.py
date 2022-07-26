@@ -170,6 +170,8 @@ class KnownDRSEndpoint:
             access_token=server_access_token,
         )
         token_info = decode_token(token)
+        # TODO: this would break if user is trying to download object from different commons
+        # keep BRH token and wts sparate
         self.access_token = token
         self.expire = datetime.fromtimestamp(token_info["exp"])
 

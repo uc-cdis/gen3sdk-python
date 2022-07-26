@@ -488,4 +488,7 @@ class Gen3Auth(AuthBase):
         auth_url += "?idp={}".format(self._wts_idp)
         header = {"Authorization": "Bearer " + wts_token}
         resp = requests.get(auth_url, headers=header)
+        err_msg = "Please make sure the target commons is connected on your profile page and that connection has not expired."
+        if resp.status_code != 200:
+            logging.warning(err_msg)
         return _handle_access_token_response(resp, "token")
