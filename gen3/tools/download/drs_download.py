@@ -350,6 +350,9 @@ def wts_get_token(hostname: str, idp: str, access_token: str):
             logger.critical(
                 f"HTTP Error ({exc.response.status_code}): getting WTS token: {exc.response.text}"
             )
+            logger.critical(
+                "Please make sure the target commons is connected on your profile page and that connection has not expired."
+            )
             return None
 
         return _handle_access_token_response(response, "token")
