@@ -727,6 +727,9 @@ def get_download_url_using_drs(
         logger.critical(
             f"HTTP Error ({exc.response.status_code}): requesting download url from {access_method}"
         )
+        logger.critical(
+            f"URL: requesting download url from https://{drs_hostname}/ga4gh/drs/v1/objects/{object_id}/access/{access_method}"
+        )
     return None
 
 
@@ -875,7 +878,7 @@ class DownloadManager:
             )
             endpoint.renew_token(self.hostname, self.access_token)
             logger.warning(
-                "Access token:"
+                "WTS Access token obtained:"
                 + endpoint.access_token
                 + "  use_wts:"
                 + str(endpoint.use_wts)
