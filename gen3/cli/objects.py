@@ -6,6 +6,9 @@ import os
 import sys
 from urllib.parse import urlparse
 
+from gen3.auth import Gen3Auth
+from gen3.tools.download.drs_download import Manifest
+from gen3.tools.download.drs_download import DownloadManager
 from gen3.tools import indexing
 from gen3.tools.indexing.validate_manifest_format import is_valid_manifest_format
 from gen3.tools.indexing.index_manifest import (
@@ -21,6 +24,10 @@ def objects():
     """Commands for reading and editing objects"""
     pass
 
+@objects.group()
+def download():
+    """Commands for downloading files from server"""
+    pass
 
 @objects.group()
 def manifest():
@@ -310,9 +317,32 @@ def objects_manifest_delete_all_guids(ctx, file):
 
     delete_all_guids(auth, file)
 
+""" def download_files(auth,file,path):
+    datafiles = Manifest.load(f'{file}')
+    url=f"{auth.endpoint}"
+    hostname=urlparse(url)
+    downloadManager = DownloadManager(hostname.netloc,auth, datafiles)
+    for i in datafiles:
+        print(i)
+    downloadManager.download(datafiles,f"{path}")
+
+@click.command(help="Downloads all files in manifest")
+@click.argument("file", required=True)
+@click.option("--path","path",help="Path where downloaded files will be stored",default=".")
+@click.pass_context
+def objects_manifest_download(ctx, file, path):
+    auth = ctx.obj["auth_factory"].get()
+
+    if not file:
+        file = click.prompt("Enter manifest file path to download from")
+
+    click.echo(f"DOWNLOADING FILES \n  from: {auth.endpoint}\n  to: {path}")
+
+    download_files(auth,file,path) """
 
 manifest.add_command(objects_manifest_read, name="read")
 manifest.add_command(objects_manifest_verify, name="verify")
 manifest.add_command(objects_manifest_validate_format, name="validate-manifest-format")
 manifest.add_command(objects_manifest_publish, name="publish")
 manifest.add_command(objects_manifest_delete_all_guids, name="delete-all-guids")
+#download.add_command(objects_manifest_download,name="download_files")
