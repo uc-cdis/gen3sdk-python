@@ -11,7 +11,11 @@ from cdislogging import get_logger
 from urllib.parse import urlparse
 import backoff
 
-from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status_and_print_error
+from gen3.utils import (
+    DEFAULT_BACKOFF_SETTINGS,
+    raise_for_status_and_print_error,
+    remove_trailing_whitespace_and_slashes_in_url,
+)
 
 logging = get_logger("__name__")
 
@@ -161,6 +165,7 @@ class Gen3Auth(AuthBase):
 
         if endpoint and idp:
             raise ValueError("Only one of 'endpoint' and 'idp' can be specified.")
+
         if not refresh_file and not refresh_token and not idp:
             refresh_file = os.getenv("GEN3_API_KEY", "credentials")
 
@@ -225,7 +230,9 @@ class Gen3Auth(AuthBase):
                             endpoint_from_token(self._refresh_token["api_key"])
                             + "/wts/"
                         )
-                        self.get_access_token(endpoint)
+                        self.get_access_token(
+                            remove_trailing_whitespace_and_slashes_in_url(endpoint)
+                        )
                     except Gen3AuthError as g:
                         logging.warning(
                             "Could not obtain access token from WTS service."

@@ -90,6 +90,13 @@ def split_url_and_query_params(url):
     return url, query_params
 
 
+def remove_trailing_whitespace_and_slashes_in_url(url):
+    """
+    Given a url, remove any whitespace and then slashes at the end and return url
+    """
+    return url.rstrip().rstrip("/")
+
+
 def _print_func_name(function):
     return "{}.{}".format(function.__module__, function.__name__)
 
