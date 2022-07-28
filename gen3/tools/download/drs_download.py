@@ -170,6 +170,8 @@ class KnownDRSEndpoint:
             access_token=server_access_token,
         )
         token_info = decode_token(token)
+        # TODO: this would break if user is trying to download object from different commons
+        # keep BRH token and wts sparate
         self.access_token = token
         self.expire = datetime.fromtimestamp(token_info["exp"])
 
@@ -347,6 +349,9 @@ def wts_get_token(hostname: str, idp: str, access_token: str):
         except requests.exceptions.HTTPError as exc:
             logger.critical(
                 f"HTTP Error ({exc.response.status_code}): getting WTS token: {exc.response.text}"
+            )
+            logger.critical(
+                "Please make sure the target commons is connected on your profile page and that connection has not expired."
             )
             return None
 

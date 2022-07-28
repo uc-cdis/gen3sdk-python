@@ -1,5 +1,5 @@
 import requests
-from gen3.utils import raise_for_status
+from gen3.utils import raise_for_status_and_print_error
 
 
 class Gen3ObjectError(Exception):
@@ -41,7 +41,7 @@ class Gen3Object:
             "aliases": aliases,
         }
         response = requests.post(url, json=body, auth=self._auth_provider)
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
         data = response.json()
         return data["guid"], data["upload_url"]
 
@@ -64,4 +64,4 @@ class Gen3Object:
             + delete_param
         )
         response = requests.delete(url, auth=self._auth_provider)
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)

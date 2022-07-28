@@ -204,6 +204,8 @@
             <span class="n">access_token</span><span class="o">=</span><span class="n">server_access_token</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">token_info</span> <span class="o">=</span> <span class="n">decode_token</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+        <span class="c1"># TODO: this would break if user is trying to download object from different commons</span>
+        <span class="c1"># keep BRH token and wts sparate</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">access_token</span> <span class="o">=</span> <span class="n">token</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">expire</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="n">token_info</span><span class="p">[</span><span class="s2">&quot;exp&quot;</span><span class="p">])</span>
 
@@ -381,6 +383,9 @@
         <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">HTTPError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;HTTP Error (</span><span class="si">{</span><span class="n">exc</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">): getting WTS token: </span><span class="si">{</span><span class="n">exc</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                <span class="s2">&quot;Please make sure the target commons is connected on your profile page and that connection has not expired.&quot;</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="kc">None</span>
 

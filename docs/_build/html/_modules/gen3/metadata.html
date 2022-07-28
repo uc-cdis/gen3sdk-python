@@ -46,7 +46,8 @@
 <span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">append_query_params</span><span class="p">,</span>
     <span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">,</span>
-    <span class="n">raise_for_status</span><span class="p">,</span>
+    <span class="n">BACKOFF_NO_LOG_IF_NOT_RETRIED</span><span class="p">,</span>
+    <span class="n">raise_for_status_and_print_error</span><span class="p">,</span>
     <span class="n">_verify_schema</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">gen3.auth</span> <span class="kn">import</span> <span class="n">Gen3Auth</span>
@@ -153,7 +154,7 @@
             <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/_status&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
             <span class="p">)</span>
-            <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+            <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
             <span class="k">return</span> <span class="kc">False</span>
@@ -169,7 +170,7 @@
 <span class="sd">            str: the version</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">&quot;/version&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span></div>
 
 <div class="viewcode-block" id="Gen3Metadata.get_index_key_paths"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.get_index_key_paths">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
@@ -183,7 +184,7 @@
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="s2">&quot;/metadata_index&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
         <span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Gen3Metadata.create_index_key_path"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.create_index_key_path">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
@@ -197,7 +198,7 @@
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/metadata_index/</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
         <span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Gen3Metadata.delete_index_key_path"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.delete_index_key_path">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
@@ -211,7 +212,7 @@
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/metadata_index/</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
         <span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">response</span></div>
 
 <div class="viewcode-block" id="Gen3Metadata.query"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.query">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
@@ -277,7 +278,7 @@
         <span class="p">)</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;hitting: </span><span class="si">{</span><span class="n">url_with_params</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url_with_params</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
@@ -300,28 +301,26 @@
             <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;hitting: </span><span class="si">{</span><span class="n">url_with_params</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
             <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url_with_params</span><span class="p">,</span> <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span><span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
-                <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+                <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
                 <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
 
         <span class="k">return</span> <span class="n">response</span></div>
 
-<div class="viewcode-block" id="Gen3Metadata.get"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.get">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+<div class="viewcode-block" id="Gen3Metadata.get"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.get">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">BACKOFF_NO_LOG_IF_NOT_RETRIED</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get the metadata associated with the guid</span>
-
 <span class="sd">        Args:</span>
 <span class="sd">            guid (str): guid to use</span>
-
 <span class="sd">        Returns:</span>
 <span class="sd">            Dict: metadata for given guid</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/metadata/</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&quot;</span>
-
         <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;hitting: </span><span class="si">{</span><span class="n">url_with_params</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url_with_params</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
 
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
@@ -354,7 +353,7 @@
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
             <span class="n">url_with_params</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">metadata_list</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
         <span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
@@ -377,12 +376,19 @@
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
             <span class="n">url_with_params</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
         <span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Gen3Metadata.async_create"><a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.async_create">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
-    <span class="k">async</span> <span class="k">def</span> <span class="nf">async_create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">async_create</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">guid</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="p">,</span>
+        <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Asynchronous function to create metadata</span>
 
@@ -401,10 +407,12 @@
             <span class="c1"># need to manually add JWT auth header</span>
             <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">_get_auth_value</span><span class="p">()}</span>
 
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;hitting: </span><span class="si">{</span><span class="n">url_with_params</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;data: </span><span class="si">{</span><span class="n">metadata</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
                 <span class="n">url_with_params</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span>
             <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
-                <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+                <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
                 <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
 
         <span class="k">return</span> <span class="n">response</span></div>
@@ -427,7 +435,7 @@
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">put</span><span class="p">(</span>
             <span class="n">url_with_params</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
         <span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
@@ -453,7 +461,7 @@
             <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">put</span><span class="p">(</span>
                 <span class="n">url_with_params</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span>
             <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
-                <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+                <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
                 <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
 
         <span class="k">return</span> <span class="n">response</span></div>
@@ -471,11 +479,13 @@
         <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;hitting: </span><span class="si">{</span><span class="n">url_with_params</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">url_with_params</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
-    <span class="k">def</span> <span class="nf">_prepare_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">indexd_doc</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_prepare_metadata</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">indexd_doc</span><span class="p">,</span> <span class="n">force_metadata_columns_even_if_empty</span>
+    <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Validate and generate the provided metadata for submission to the metadata</span>
 <span class="sd">        service.</span>
@@ -485,6 +495,7 @@
 <span class="sd">        Args:</span>
 <span class="sd">            metadata (dict): metadata provided by the submitter</span>
 <span class="sd">            indexd_doc (dict): the indexd document created for this data</span>
+<span class="sd">            force_metadata_columns_even_if_empty (bool): see description in calling function</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            dict: metadata ready to be submitted to the metadata service</span>
@@ -543,6 +554,14 @@
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">valid</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Metadata is not valid: </span><span class="si">{</span><span class="n">metadata</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">force_metadata_columns_even_if_empty</span><span class="p">:</span>
+            <span class="c1"># remove any empty columns if we&#39;re not being forced to include them</span>
+            <span class="n">to_submit</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">key</span><span class="p">:</span> <span class="n">value</span>
+                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">to_submit</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span>
+            <span class="p">}</span>
 
         <span class="k">return</span> <span class="n">to_submit</span>
 

@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "gen3"
 homepage = "https://gen3.org/"
-version = "4.10.1"
+version = "4.12.1"
 description = "Gen3 CLI and Python SDK"
 authors = ["Center for Translational Data Science at the University of Chicago <support@datacommons.io>"]
 license = "Apache-2.0"
@@ -21,7 +21,7 @@ classifiers = [
 python = ">=3.9,<3.10"
 requests = "*"
 indexclient = ">=1.6.2"
-drsclient = "^0.2.1"
+drsclient = "^0.2.2"
 aiohttp = "*"
 backoff = "*"
 click = "*"
@@ -40,7 +40,7 @@ pytest = ">=6.0.0"
 pytest-cov = "*"
 requests-mock = "*"
 cdisutilstest = { git = "https://github.com/uc-cdis/cdisutils-test.git", tag = "1.0.0" }
-indexd = { git = "https://github.com/uc-cdis/indexd.git", tag = "3.4.0" }
+indexd = { git = "https://github.com/uc-cdis/indexd.git", tag = "3.5.0" }
 
 [tool.poetry.scripts]
 gen3 = 'gen3.cli.__main__:main'
