@@ -73,7 +73,7 @@
 <span class="kn">from</span> <span class="nn">gen3.auth</span> <span class="kn">import</span> <span class="n">Gen3Auth</span><span class="p">,</span> <span class="n">Gen3AuthError</span><span class="p">,</span> <span class="n">decode_token</span>
 <span class="kn">from</span> <span class="nn">gen3.auth</span> <span class="kn">import</span> <span class="n">_handle_access_token_response</span>
 <span class="kn">from</span> <span class="nn">gen3.tools.download.drs_resolvers</span> <span class="kn">import</span> <span class="n">resolve_drs</span>
-
+<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">remove_trailing_whitespace_and_slashes_in_url</span>
 <span class="kn">from</span> <span class="nn">gen3.metadata</span> <span class="kn">import</span> <span class="n">Gen3Metadata</span>
 
 <span class="n">DEFAULT_EXPIRE</span><span class="p">:</span> <span class="n">timedelta</span> <span class="o">=</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
@@ -125,7 +125,12 @@
         <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">:</span>
             <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                <span class="n">Downloadable</span><span class="p">(</span><span class="n">object_id</span><span class="o">=</span><span class="n">entry</span><span class="o">.</span><span class="n">object_id</span><span class="p">,</span> <span class="n">hostname</span><span class="o">=</span><span class="n">entry</span><span class="o">.</span><span class="n">commons_url</span><span class="p">)</span>
+                <span class="n">Downloadable</span><span class="p">(</span>
+                    <span class="n">object_id</span><span class="o">=</span><span class="n">entry</span><span class="o">.</span><span class="n">object_id</span><span class="p">,</span>
+                    <span class="n">hostname</span><span class="o">=</span><span class="n">remove_trailing_whitespace_and_slashes_in_url</span><span class="p">(</span>
+                        <span class="n">entry</span><span class="o">.</span><span class="n">commons_url</span>
+                    <span class="p">),</span>
+                <span class="p">)</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">results</span></div>
 
