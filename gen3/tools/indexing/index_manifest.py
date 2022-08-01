@@ -120,6 +120,7 @@ def _index_record(
     replace_urls,
     thread_control,
     submit_additional_metadata_columns,
+    force_metadata_columns_even_if_empty,
     fi,
 ):
     """
@@ -131,6 +132,7 @@ def _index_record(
         replace_urls(bool): replace urls or not
         thread_num(int): number of threads for indexing
         submit_additional_metadata_columns(bool): whether to submit additional metadata to the metadata service
+        force_metadata_columns_even_if_empty (bool): see description in calling function
         fi(dict): file info
 
     Returns:
@@ -308,7 +310,11 @@ def _index_record(
                 raise Exception(
                     "Can not submit to the metadata service when using indexd basic auth"
                 )
-            metadata = mds._prepare_metadata(fi, doc)
+            metadata = mds._prepare_metadata(
+                fi,
+                doc,
+                force_metadata_columns_even_if_empty=force_metadata_columns_even_if_empty,
+            )
             if metadata:
                 mds.create(guid=doc.did, metadata=metadata, overwrite=True)
         except Exception as e:
@@ -353,6 +359,7 @@ def index_object_manifest(
     manifest_file_delimiter=None,
     output_filename="indexing-output-manifest.csv",
     submit_additional_metadata_columns=False,
+    force_metadata_columns_even_if_empty=True,
 ):
     """
     Loop through all the files in the manifest, update/create records in indexd
@@ -367,6 +374,35 @@ def index_object_manifest(
         manifest_file_delimiter(str): manifest's delimiter
         output_filename(str): output file name for manifest
         submit_additional_metadata_columns(bool): whether to submit additional metadata to the metadata service
+        force_metadata_columns_even_if_empty(bool): force the creation of a metadata column
+            entry for a GUID even if the value is empty. Enabling
+            this will force the creation of metadata entries for every column.
+            See below for an illustrative example
+
+            Example manifest_file:
+                guid, ..., columnA, columnB, ColumnC
+                    1, ...,   dataA,        ,
+                    2, ...,        ,   dataB,
+
+            Resulting metadata if force_metadata_columns_even_if_empty=True :
+                "1": {
+                    "columnA": "dataA",
+                    "columnB": "",
+                    "ColumnC": "",
+                },
+                "2": {
+                    "columnA": "",
+                    "columnB": "dataB",
+                    "ColumnC": "",
+                },
+
+            Resulting metadata if force_metadata_columns_even_if_empty=False :
+                "1": {
+                    "columnA": "dataA",
+                },
+                "2": {
+                    "columnB": "dataB",
+                },
 
     Returns:
         files(list(dict)): list of file info
@@ -435,6 +471,7 @@ def index_object_manifest(
         replace_urls,
         thread_control,
         submit_additional_metadata_columns,
+        force_metadata_columns_even_if_empty,
     )
 
     try:

@@ -11,7 +11,7 @@ from cdislogging import get_logger
 from urllib.parse import urlparse
 import backoff
 
-from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status
+from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status_and_print_error
 
 logging = get_logger("__name__")
 
@@ -77,26 +77,19 @@ def get_wts_endpoint(namespace=os.getenv("NAMESPACE", "default")):
     return "http://workspace-token-service.{}.svc.cluster.local".format(namespace)
 
 
-def get_wts_idps(namespace=os.getenv("NAMESPACE", "default")):
-    resp = requests.get(get_wts_endpoint(namespace) + "/external_oidc")
-    raise_for_status(resp)
+def get_wts_idps(namespace=os.getenv("NAMESPACE", "default"), external_wts_host=None):
+    wts_url = None
+    if external_wts_host == None:
+        wts_url = get_wts_endpoint(namespace)
+    else:
+        wts_url = external_wts_host
+    url = wts_url.rstrip("/") + "/external_oidc/"
+    resp = requests.get(url)
+    raise_for_status_and_print_error(resp)
     return resp.json()
 
 
-def get_access_token_from_wts(namespace=os.getenv("NAMESPACE", "default"), idp="local"):
-    """
-    Try to fetch an access token for the given idp from the wts
-    in the given namespace.  If idp is not set, then default to "local"
-    """
-    # attempt to get a token from the workspace-token-service
-    auth_url = get_wts_endpoint(namespace) + "/token/"
-    if idp and idp != "local":
-        auth_url += "?idp={}".format(idp)
-    resp = requests.get(auth_url)
-    return _handle_access_token_response(resp, "token")
-
-
-def token_cache_file(key):
+def get_token_cache_file_name(key):
     """Compute the path to the access-token cache file"""
     cache_folder = "{}/.cache/gen3/".format(os.path.expanduser("~"))
     if not os.path.isdir(cache_folder):
@@ -158,12 +151,16 @@ class Gen3Auth(AuthBase):
         self._wts_idp = idp or "local"
         self._wts_namespace = os.environ.get("NAMESPACE", "default")
         self._use_wts = False
+        self._external_wts_host = None
+        self._refresh_file = refresh_file
 
         if refresh_file and refresh_token:
             raise ValueError(
                 "Only one of 'refresh_file' and 'refresh_token' can be specified."
             )
 
+        if endpoint and idp:
+            raise ValueError("Only one of 'endpoint' and 'idp' can be specified.")
         if not refresh_file and not refresh_token and not idp:
             refresh_file = os.getenv("GEN3_API_KEY", "credentials")
 
@@ -205,13 +202,35 @@ class Gen3Auth(AuthBase):
                     with open(refresh_file) as f:
                         file_data = f.read()
                     self._refresh_token = json.loads(file_data)
-                    assert "api_key" in self._refresh_token
                 except Exception as e:
                     raise ValueError(
                         "Couldn't load your refresh token file: {}\n{}".format(
                             refresh_file, str(e)
                         )
                     )
+
+                assert "api_key" in self._refresh_token
+                # if both endpoint and refresh file are provided, compare endpoint with iss in refresh file
+                # May need to use network wts endpoint
+                if idp or (
+                    endpoint
+                    and (
+                        not endpoint
+                        == endpoint_from_token(self._refresh_token["api_key"])
+                    )
+                ):
+                    try:
+                        self._use_wts = True
+                        self._external_wts_host = (
+                            endpoint_from_token(self._refresh_token["api_key"])
+                            + "/wts/"
+                        )
+                        self.get_access_token(endpoint)
+                    except Gen3AuthError as g:
+                        logging.warning(
+                            "Could not obtain access token from WTS service."
+                        )
+                        raise g
         if self._access_token:
             self.endpoint = endpoint_from_token(self._access_token)
         else:
@@ -270,24 +289,24 @@ class Gen3Auth(AuthBase):
 
         return _response
 
-    def refresh_access_token(self):
+    def refresh_access_token(self, endpoint=None):
         """Get a new access token"""
         if self._use_wts:
-            self._access_token = get_access_token_from_wts(
-                self._wts_namespace, self._wts_idp
-            )
+            self._access_token = self.get_access_token_from_wts(endpoint)
         else:
             self._access_token = get_access_token_with_key(self._refresh_token)
         self._access_token_info = decode_token(self._access_token)
-        cache_file = token_cache_file(
-            self._refresh_token and self._refresh_token["api_key"] or self._wts_idp
-        )
+        if self._use_wts:
+            cache_file = get_token_cache_file_name(self._wts_idp)
+        else:
+            if self._refresh_file:
+                cache_file = get_token_cache_file_name(self._refresh_token["api_key"])
 
         try:
             self._write_to_file(cache_file, self._access_token)
         except Exception as e:
             logging.warning(
-                f"Exceeded number of retries, unable to write to cache file."
+                f"Unable to write access token to cache file. Exceeded number of retries."
             )
 
         return self._access_token
@@ -311,13 +330,17 @@ class Gen3Auth(AuthBase):
             logging.warning(str(e))
             raise e
 
-    def get_access_token(self):
+    def get_access_token(self, endpoint=None):
         """Get the access token - auto refresh if within 5 minutes of expiration"""
         if not self._access_token:
-            cache_file = token_cache_file(
-                self._refresh_token and self._refresh_token["api_key"] or self._wts_idp
-            )
-            if os.path.isfile(cache_file):
+            if self._use_wts == True:
+                cache_file = get_token_cache_file_name(self._wts_idp)
+            else:
+                if self._refresh_token:
+                    cache_file = get_token_cache_file_name(
+                        self._refresh_token["api_key"]
+                    )
+            if cache_file and os.path.isfile(cache_file):
                 try:  # don't freak out on invalid cache
                     with open(cache_file) as f:
                         self._access_token = f.read()
@@ -334,7 +357,7 @@ class Gen3Auth(AuthBase):
             or time.time() + 300 > self._access_token_info["exp"]
         )
         if need_new_token:
-            return self.refresh_access_token()
+            return self.refresh_access_token(endpoint)
         # use cache
         return self._access_token
 
@@ -378,3 +401,94 @@ class Gen3Auth(AuthBase):
         else:
             raise Exception("Invalid request type: " + request)
         return output
+
+    def get_access_token_from_wts(self, endpoint=None):
+        """
+        Try to fetch an access token for the given idp from the wts
+        in the given namespace.  If idp is not set, then default to "local"
+        """
+        # attempt to get a token from the workspace-token-service
+        auth_url = get_wts_endpoint(self._wts_namespace) + "/token/"
+        if self._wts_idp and self._wts_idp != "local":
+            auth_url += "?idp={}".format(self._wts_idp)
+
+        try:
+            resp = requests.get(auth_url)
+            if (resp and resp.status_code == 200) or (not self._external_wts_host):
+                return _handle_access_token_response(resp, "token")
+        except Exception as e:
+            if not self._external_wts_host:
+                raise e
+            else:
+                # Try to obtain token from external wts
+                pass
+
+        # local workspace wts call failed, try using a network call
+        # First get access token with WTS host
+        wts_token = get_access_token_with_key(self._refresh_token)
+        auth_url = self._external_wts_host + "token/"
+
+        provider_List = get_wts_idps(self._wts_namespace, self._external_wts_host)
+
+        # if user already supplied idp, use that
+        if self._wts_idp and self._wts_idp != "local":
+            matchProviders = list(
+                filter(
+                    lambda provider: provider["idp"] == self._wts_idp,
+                    provider_List["providers"],
+                )
+            )
+        elif endpoint:
+            matchProviders = list(
+                filter(
+                    lambda provider: provider["base_url"] == endpoint,
+                    provider_List["providers"],
+                )
+            )
+
+        if len(matchProviders) == 1:
+            self._wts_idp = matchProviders[0]["idp"]
+        else:
+            idp_list = "\n "
+
+            if len(matchProviders) > 1:
+                for idp in matchProviders:
+                    idp_list = (
+                        idp_list
+                        + "idp name: "
+                        + idp["idp"]
+                        + " url: "
+                        + idp["base_url"]
+                        + "\n "
+                    )
+                raise ValueError(
+                    "Multiple idps matched with endpoint value provided."
+                    + idp_list
+                    + "Query /wts/external_oidc/ for more information."
+                )
+            else:
+                for idp in provider_List["providers"]:
+                    idp_list = (
+                        idp_list
+                        + "idp name: "
+                        + idp["idp"]
+                        + "  Endpoint url: "
+                        + idp["base_url"]
+                        + "\n "
+                    )
+                raise ValueError(
+                    "No idp matched with the endpoint or idp value provided.\n"
+                    + "Please make sure your endpoint or idp value matches exactly with the output below.\n"
+                    + "i.e. check trailing '/' character for the endpoint url\n"
+                    + "Available Idps:"
+                    + idp_list
+                    + "Query /wts/external_oidc/ for more information."
+                )
+
+        auth_url += "?idp={}".format(self._wts_idp)
+        header = {"Authorization": "Bearer " + wts_token}
+        resp = requests.get(auth_url, headers=header)
+        err_msg = "Please make sure the target commons is connected on your profile page and that connection has not expired."
+        if resp.status_code != 200:
+            logging.warning(err_msg)
+        return _handle_access_token_response(resp, "token")

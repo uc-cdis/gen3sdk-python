@@ -258,6 +258,13 @@ def objects_manifest_validate_format(
     default="indexing-output-manifest.csv",
     show_default=True,
 )
+@click.option(
+    "--force-metadata-columns-even-if-empty",
+    "force_metadata_columns_even_if_empty",
+    help="force the creation of a metadata column entry for a GUID even if the value "
+    "is empty. Enabling this will force the creation of metadata entries for every column.",
+    is_flag=True,
+)
 @click.pass_context
 def objects_manifest_publish(
     ctx,
@@ -286,6 +293,7 @@ def objects_manifest_publish(
         manifest_file_delimiter=manifest_file_delimiter,
         output_filename=out_manifest_file,
         submit_additional_metadata_columns=True,
+        force_metadata_columns_even_if_empty=force_metadata_columns_even_if_empty,
     )
 
 

@@ -34,7 +34,7 @@
   <h1>Source code for gen3.query</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">requests</span>
 
-<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">raise_for_status</span>
+<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">raise_for_status_and_print_error</span>
 
 
 <div class="viewcode-block" id="Gen3Query"><a class="viewcode-back" href="../../query.html#gen3.query.Gen3Query">[docs]</a><span class="k">class</span> <span class="nc">Gen3Query</span><span class="p">:</span>
@@ -165,7 +165,7 @@
             <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+            <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;Unable to query.</span><span class="se">\n</span><span class="s2">Query: </span><span class="si">{</span><span class="n">query_string</span><span class="si">}</span><span class="se">\n</span><span class="s2">Variables: </span><span class="si">{</span><span class="n">variables</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span>
@@ -233,7 +233,7 @@
             <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+            <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unable to download.</span><span class="se">\n</span><span class="s2">Body: </span><span class="si">{</span><span class="n">body</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">raise</span>

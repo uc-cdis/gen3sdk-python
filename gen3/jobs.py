@@ -12,7 +12,11 @@ from cdislogging import get_logger
 import sys
 import time
 
-from gen3.utils import append_query_params, DEFAULT_BACKOFF_SETTINGS, raise_for_status
+from gen3.utils import (
+    append_query_params,
+    DEFAULT_BACKOFF_SETTINGS,
+    raise_for_status_and_print_error,
+)
 
 # sower's "action" mapping to the relevant job
 INGEST_METADATA_JOB = "ingest-metadata-manifest"
@@ -103,7 +107,7 @@ class Gen3Jobs:
             response = requests.get(
                 self.endpoint + "/_status", auth=self._auth_provider
             )
-            raise_for_status(response)
+            raise_for_status_and_print_error(response)
         except Exception as exc:
             logging.error(exc)
             return False
@@ -119,7 +123,7 @@ class Gen3Jobs:
             str: the version
         """
         response = requests.get(self.endpoint + "/_version", auth=self._auth_provider)
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
         return response.json().get("version")
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
@@ -128,7 +132,7 @@ class Gen3Jobs:
         List all jobs
         """
         response = requests.get(self.endpoint + "/list", auth=self._auth_provider)
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
@@ -147,7 +151,7 @@ class Gen3Jobs:
         response = requests.post(
             self.endpoint + "/dispatch", json=data, auth=self._auth_provider
         )
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
@@ -165,7 +169,7 @@ class Gen3Jobs:
             async with session.post(
                 url_with_params, data=data, headers=headers, ssl=_ssl
             ) as response:
-                raise_for_status(response)
+                raise_for_status_and_print_error(response)
                 response = await response.json(content_type=None)
                 return response
 
@@ -177,7 +181,7 @@ class Gen3Jobs:
         response = requests.get(
             self.endpoint + f"/status?UID={job_id}", auth=self._auth_provider
         )
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
@@ -193,7 +197,7 @@ class Gen3Jobs:
             async with session.get(
                 url_with_params, headers=headers, ssl=_ssl
             ) as response:
-                raise_for_status(response)
+                raise_for_status_and_print_error(response)
                 response = await response.json(content_type=None)
                 return response
 
@@ -205,7 +209,7 @@ class Gen3Jobs:
         response = requests.get(
             self.endpoint + f"/output?UID={job_id}", auth=self._auth_provider
         )
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
@@ -221,6 +225,6 @@ class Gen3Jobs:
             async with session.get(
                 url_with_params, headers=headers, ssl=_ssl
             ) as response:
-                raise_for_status(response)
+                raise_for_status_and_print_error(response)
                 response = await response.json(content_type=None)
                 return response

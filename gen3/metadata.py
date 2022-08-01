@@ -12,7 +12,8 @@ from urllib.parse import urlparse
 from gen3.utils import (
     append_query_params,
     DEFAULT_BACKOFF_SETTINGS,
-    raise_for_status,
+    BACKOFF_NO_LOG_IF_NOT_RETRIED,
+    raise_for_status_and_print_error,
     _verify_schema,
 )
 from gen3.auth import Gen3Auth
@@ -119,7 +120,7 @@ class Gen3Metadata:
             response = requests.get(
                 self.endpoint + "/_status", auth=self._auth_provider
             )
-            raise_for_status(response)
+            raise_for_status_and_print_error(response)
         except Exception as exc:
             logging.error(exc)
             return False
@@ -135,7 +136,7 @@ class Gen3Metadata:
             str: the version
         """
         response = requests.get(self.endpoint + "/version", auth=self._auth_provider)
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
         return response.text
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
@@ -149,7 +150,7 @@ class Gen3Metadata:
         response = requests.get(
             self.admin_endpoint + "/metadata_index", auth=self._auth_provider
         )
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
@@ -163,7 +164,7 @@ class Gen3Metadata:
         response = requests.post(
             self.admin_endpoint + f"/metadata_index/{path}", auth=self._auth_provider
         )
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
@@ -177,7 +178,7 @@ class Gen3Metadata:
         response = requests.delete(
             self.admin_endpoint + f"/metadata_index/{path}", auth=self._auth_provider
         )
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
         return response
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
@@ -243,7 +244,7 @@ class Gen3Metadata:
         )
         logging.debug(f"hitting: {url_with_params}")
         response = requests.get(url_with_params, auth=self._auth_provider)
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
 
         return response.json()
 
@@ -266,28 +267,26 @@ class Gen3Metadata:
             logging.debug(f"hitting: {url_with_params}")
 
             async with session.get(url_with_params, ssl=_ssl) as response:
-                raise_for_status(response)
+                raise_for_status_and_print_error(response)
                 response = await response.json()
 
         return response
 
-    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
     def get(self, guid, **kwargs):
         """
         Get the metadata associated with the guid
-
         Args:
             guid (str): guid to use
-
         Returns:
             Dict: metadata for given guid
         """
         url = self.endpoint + f"/metadata/{guid}"
-
         url_with_params = append_query_params(url, **kwargs)
         logging.debug(f"hitting: {url_with_params}")
         response = requests.get(url_with_params, auth=self._auth_provider)
-        raise_for_status(response)
+
+        response.raise_for_status()
 
         return response.json()
 
@@ -320,7 +319,7 @@ class Gen3Metadata:
         response = requests.post(
             url_with_params, json=metadata_list, auth=self._auth_provider
         )
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
 
         return response.json()
 
@@ -343,12 +342,19 @@ class Gen3Metadata:
         response = requests.post(
             url_with_params, json=metadata, auth=self._auth_provider
         )
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
 
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    async def async_create(self, guid, metadata, overwrite=False, _ssl=None, **kwargs):
+    async def async_create(
+        self,
+        guid,
+        metadata,
+        overwrite=False,
+        _ssl=None,
+        **kwargs,
+    ):
         """
         Asynchronous function to create metadata
 
@@ -367,10 +373,12 @@ class Gen3Metadata:
             # need to manually add JWT auth header
             headers = {"Authorization": self._auth_provider._get_auth_value()}
 
+            logging.debug(f"hitting: {url_with_params}")
+            logging.debug(f"data: {metadata}")
             async with session.post(
                 url_with_params, json=metadata, headers=headers, ssl=_ssl
             ) as response:
-                raise_for_status(response)
+                raise_for_status_and_print_error(response)
                 response = await response.json()
 
         return response
@@ -393,7 +401,7 @@ class Gen3Metadata:
         response = requests.put(
             url_with_params, json=metadata, auth=self._auth_provider
         )
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
 
         return response.json()
 
@@ -419,7 +427,7 @@ class Gen3Metadata:
             async with session.put(
                 url_with_params, json=metadata, headers=headers, ssl=_ssl
             ) as response:
-                raise_for_status(response)
+                raise_for_status_and_print_error(response)
                 response = await response.json()
 
         return response
@@ -437,11 +445,13 @@ class Gen3Metadata:
         url_with_params = append_query_params(url, **kwargs)
         logging.debug(f"hitting: {url_with_params}")
         response = requests.delete(url_with_params, auth=self._auth_provider)
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
 
         return response.json()
 
-    def _prepare_metadata(self, metadata, indexd_doc):
+    def _prepare_metadata(
+        self, metadata, indexd_doc, force_metadata_columns_even_if_empty
+    ):
         """
         Validate and generate the provided metadata for submission to the metadata
         service.
@@ -451,6 +461,7 @@ class Gen3Metadata:
         Args:
             metadata (dict): metadata provided by the submitter
             indexd_doc (dict): the indexd document created for this data
+            force_metadata_columns_even_if_empty (bool): see description in calling function
 
         Returns:
             dict: metadata ready to be submitted to the metadata service
@@ -509,6 +520,14 @@ class Gen3Metadata:
 
         if not valid:
             raise Exception(f"Metadata is not valid: {metadata}")
+
+        if not force_metadata_columns_even_if_empty:
+            # remove any empty columns if we're not being forced to include them
+            to_submit = {
+                key: value
+                for key, value in to_submit.items()
+                if value is not None and value != ""
+            }
 
         return to_submit
 

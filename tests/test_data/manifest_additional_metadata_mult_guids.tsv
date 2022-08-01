@@ -1,0 +1,3 @@
+guid	authz	columnA	columnB	file_name	md5	size	url	columnC
+111e396f-f1f8-11e9-9a07-0a80fada0900	['/open']	dataA		file.txt	111d83400bc1bc9dc635e334faddf33c	111	s3://my-data-bucket/dg.111/path/file.txt
+222e396f-f1f8-11e9-9a07-0a80fada0900	['/open']		dataB	file.txt	222d83400bc1bc9dc635e334faddf33c	222	s3://my-data-bucket/dg.222/path/file.txt

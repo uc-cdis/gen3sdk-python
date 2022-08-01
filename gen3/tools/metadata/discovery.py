@@ -11,7 +11,7 @@ import requests.exceptions
 
 from gen3.metadata import Gen3Metadata
 from gen3.tools import metadata
-from gen3.utils import raise_for_status
+from gen3.utils import raise_for_status_and_print_error
 
 MAX_GUIDS_PER_REQUEST = 2000
 MAX_CONCURRENT_REQUESTS = 5
@@ -126,7 +126,14 @@ async def output_expanded_discovery_metadata(
 
 
 async def publish_discovery_metadata(
-    auth, metadata_filename, endpoint=None, omit_empty_values=False
+    auth,
+    metadata_filename,
+    endpoint=None,
+    omit_empty_values=False,
+    guid_type="discovery_metadata",
+    guid_field=None,
+    is_unregistered_metadata=False,
+    reset_unregistered_metadata=False,
 ):
     """
     Publish discovery metadata from a tsv file
@@ -142,18 +149,39 @@ async def publish_discovery_metadata(
     delimiter = "," if metadata_filename.endswith(".csv") else "\t"
 
     with open(metadata_filename) as metadata_file:
-        metadata_reader = csv.DictReader(
-            metadata_file, **{**BASE_CSV_PARSER_SETTINGS, "delimiter": delimiter}
-        )
+        csv_parser_setting = {**BASE_CSV_PARSER_SETTINGS, "delimiter": delimiter}
+        if is_unregistered_metadata:
+            csv_parser_setting["quoting"] = csv.QUOTE_MINIMAL
+            csv_parser_setting["quotechar"] = '"'
+        metadata_reader = csv.DictReader(metadata_file, **{**csv_parser_setting})
         tag_columns = [
             column for column in metadata_reader.fieldnames if "_tag_" in column
         ]
         pending_requests = []
 
+        if is_unregistered_metadata:
+            registered_metadata_guids = mds.query(
+                f"_guid_type={guid_type}", limit=2000, offset=0
+            )
+            guid_type = f"unregistered_{guid_type}"
+
         for metadata_line in metadata_reader:
             discovery_metadata = {
                 key: _try_parse(value) for key, value in metadata_line.items()
             }
+
+            if guid_field is None:
+                guid = discovery_metadata.pop("guid")
+            else:
+                guid = discovery_metadata[guid_field]
+
+            # when publishing unregistered metadata, skip those who are already registered if reset_unregistered_metadata is set to false
+            if (
+                not reset_unregistered_metadata
+                and is_unregistered_metadata
+                and str(guid) in registered_metadata_guids
+            ):
+                continue
 
             if len(tag_columns):
                 # all columns _tag_0 -> _tag_n are pushed to a "tags" column
@@ -167,8 +195,6 @@ async def publish_discovery_metadata(
                 ]
                 discovery_metadata["tags"] = coalesced_tags
 
-            guid = discovery_metadata.pop("guid")
-
             if omit_empty_values:
                 discovery_metadata = {
                     key: value
@@ -177,7 +203,7 @@ async def publish_discovery_metadata(
                 }
 
             metadata = {
-                "_guid_type": "discovery_metadata",
+                "_guid_type": guid_type,
                 "gen3_discovery": discovery_metadata,
             }
 

@@ -47,7 +47,7 @@ def get_or_create_event_loop_for_thread():
     return loop
 
 
-def raise_for_status(response):
+def raise_for_status_and_print_error(response):
     try:
         response.raise_for_status()
     except requests.HTTPError as exception:
@@ -128,12 +128,30 @@ def log_backoff_giveup(details):
     )
 
 
+def log_backoff_giveup_except_on_no_retries(details):
+    args_str = ", ".join(map(str, details["args"]))
+    kwargs_str = (
+        (", " + _print_kwargs(details["kwargs"])) if details.get("kwargs") else ""
+    )
+    func_call_log = "{}({}{})".format(
+        _print_func_name(details["target"]), args_str, kwargs_str
+    )
+
+    if details["tries"] > 1:
+        logging.error(
+            "backoff: gave up call {func_call} after {tries} tries; exception: {exc}".format(
+                func_call=func_call_log, exc=sys.exc_info(), **details
+            )
+        )
+
+
 def exception_do_not_retry(error):
     def _is_status(code):
         return (
             str(getattr(error, "code", None)) == code
             or str(getattr(error, "status", None)) == code
             or str(getattr(error, "status_code", None)) == code
+            or str(getattr(getattr(error, "response", {}), "status_code", "")) == code
         )
 
     if _is_status("409") or _is_status("404"):
@@ -223,8 +241,20 @@ def yield_chunks(input_list, n):
 
 # Default settings to control usage of backoff library.
 DEFAULT_BACKOFF_SETTINGS = {
+    # Disable backoff lib default logger, only show custom logs
+    "logger": None,
     "on_backoff": log_backoff_retry,
     "on_giveup": log_backoff_giveup,
+    "max_tries": os.environ.get("GEN3SDK_MAX_RETRIES", 3),
+    "giveup": exception_do_not_retry,
+}
+
+# Metadata.get settings to control usage of backoff library.
+BACKOFF_NO_LOG_IF_NOT_RETRIED = {
+    # Disable backoff lib default logger, only show custom logs
+    "logger": None,
+    "on_backoff": log_backoff_retry,
+    "on_giveup": log_backoff_giveup_except_on_no_retries,
     "max_tries": os.environ.get("GEN3SDK_MAX_RETRIES", 3),
     "giveup": exception_do_not_retry,
 }
