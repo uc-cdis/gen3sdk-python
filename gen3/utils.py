@@ -94,7 +94,10 @@ def remove_trailing_whitespace_and_slashes_in_url(url):
     """
     Given a url, remove any whitespace and then slashes at the end and return url
     """
-    return url.rstrip().rstrip("/")
+    if url:
+        return url.rstrip().rstrip("/")
+
+    return url
 
 
 def _print_func_name(function):
