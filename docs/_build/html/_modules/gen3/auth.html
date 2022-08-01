@@ -45,7 +45,11 @@
 <span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">urlparse</span>
 <span class="kn">import</span> <span class="nn">backoff</span>
 
-<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">,</span> <span class="n">raise_for_status_and_print_error</span>
+<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">,</span>
+    <span class="n">raise_for_status_and_print_error</span><span class="p">,</span>
+    <span class="n">remove_trailing_whitespace_and_slashes_in_url</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="n">logging</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="s2">&quot;__name__&quot;</span><span class="p">)</span>
 
@@ -195,6 +199,7 @@
 
         <span class="k">if</span> <span class="n">endpoint</span> <span class="ow">and</span> <span class="n">idp</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Only one of &#39;endpoint&#39; and &#39;idp&#39; can be specified.&quot;</span><span class="p">)</span>
+
         <span class="k">if</span> <span class="ow">not</span> <span class="n">refresh_file</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">refresh_token</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">idp</span><span class="p">:</span>
             <span class="n">refresh_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;GEN3_API_KEY&quot;</span><span class="p">,</span> <span class="s2">&quot;credentials&quot;</span><span class="p">)</span>
 
@@ -259,7 +264,9 @@
                             <span class="n">endpoint_from_token</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">])</span>
                             <span class="o">+</span> <span class="s2">&quot;/wts/&quot;</span>
                         <span class="p">)</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">get_access_token</span><span class="p">(</span><span class="n">endpoint</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">get_access_token</span><span class="p">(</span>
+                            <span class="n">remove_trailing_whitespace_and_slashes_in_url</span><span class="p">(</span><span class="n">endpoint</span><span class="p">)</span>
+                        <span class="p">)</span>
                     <span class="k">except</span> <span class="n">Gen3AuthError</span> <span class="k">as</span> <span class="n">g</span><span class="p">:</span>
                         <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
                             <span class="s2">&quot;Could not obtain access token from WTS service.&quot;</span>
