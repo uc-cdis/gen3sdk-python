@@ -5,15 +5,16 @@ See the test data in /tests/test_data/crosswalk
 import asyncio
 import os
 from unittest.mock import MagicMock, patch
+
 import pytest
 import requests
 from requests.exceptions import HTTPError
 
 from gen3.metadata import Gen3Metadata
 from gen3.tools.metadata.crosswalk import (
-    publish_crosswalk_metadata,
-    GUID_TYPE,
     CROSSWALK_NAMESPACE,
+    GUID_TYPE,
+    publish_crosswalk_metadata,
 )
 from gen3.utils import get_or_create_event_loop_for_thread
 

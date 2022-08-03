@@ -1,18 +1,18 @@
-import csv
-import json
-import datetime
-from cdislogging import get_logger
-import tempfile
 import asyncio
+import csv
+import datetime
+import json
 import os
+import tempfile
 from urllib.parse import urlparse
 
 import requests.exceptions
+from cdislogging import get_logger
 
-from gen3.metadata import Gen3Metadata
 from gen3.index import Gen3Index
+from gen3.metadata import Gen3Metadata
 from gen3.tools import metadata
-from gen3.utils import raise_for_status_and_print_error, deep_dict_update
+from gen3.utils import deep_dict_update, raise_for_status_and_print_error
 
 MAX_GUIDS_PER_REQUEST = 2000
 MAX_CONCURRENT_REQUESTS = 5
