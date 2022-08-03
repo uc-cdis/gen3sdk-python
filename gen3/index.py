@@ -824,12 +824,12 @@ class Gen3Index:
         Returns:
             List[str]: list of valid indexd GUIDs
         """
-        url = "/mint/guids"
+        url = "/guid/mint"
         if count:
             url += f"?count={count}"
 
         response = self.client._get(url)
-        raise_for_status(response)
+        response.raise_for_status()
         return response.json().get("guids", [])
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
@@ -839,8 +839,8 @@ class Gen3Index:
         Returns:
             str: prefix for this instance
         """
-        response = self.client._get("/mint/prefix")
-        raise_for_status(response)
+        response = self.client._get("/guid/prefix")
+        response.raise_for_status()
         return response.json().get("prefix")
 
 

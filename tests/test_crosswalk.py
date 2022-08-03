@@ -49,8 +49,13 @@ def foooooo_test_create(requests_mock):
 @patch("gen3.metadata.Gen3Metadata.async_update")
 @patch("gen3.index.Gen3Index.get_valid_guids")
 @patch("gen3.metadata.Gen3Metadata.async_get")
+@patch("gen3.metadata.Gen3Metadata.async_create")
 def test_publish(
-    get_metadata_patch, get_valid_guids_patch, update_metadata_patch, gen3_auth
+    create_metadata_patch,
+    get_metadata_patch,
+    get_valid_guids_patch,
+    update_metadata_patch,
+    gen3_auth,
 ):
     """
     Test that publishing the examples from docs/crosswalk.md results in the
@@ -137,11 +142,8 @@ def test_publish(
     update_metadata_patch.side_effect = mock_async_update_metadata
 
     async def mock_async_get_metadata(guid, *_, **__):
-        return {
-            "_guid_type": GUID_TYPE,
-            CROSSWALK_NAMESPACE: expected_crosswalk_data_1,
-            "additional_metadata": "foobar",
-        }
+        # simulate an HTTP 404 error
+        raise Exception()
 
     get_metadata_patch.side_effect = mock_async_get_metadata
 
@@ -155,7 +157,16 @@ def test_publish(
         )
     )
     assert get_valid_guids_patch.called
-    assert update_metadata_patch.called
+    assert create_metadata_patch.called
+
+    async def mock_async_get_metadata(guid, *_, **__):
+        return {
+            "_guid_type": GUID_TYPE,
+            CROSSWALK_NAMESPACE: expected_crosswalk_data_1,
+            "additional_metadata": "foobar",
+        }
+
+    get_metadata_patch.side_effect = mock_async_get_metadata
 
     # patch return of metadata GET to be the existing information to simulate
     # when existing crosswalk info already exists

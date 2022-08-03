@@ -336,14 +336,17 @@ manifest.add_command(objects_manifest_delete_all_guids, name="delete-all-guids")
 @click.command(
     help=(
         """
-    Publishes specified crosswalk to Gen3 instance.
+    Publishes specified crosswalk from local files to Gen3 instance.\n
 
-    FILE is a file path to a CSV containing mapping identifiers. Has a specialized
-         column naming format. Column names MUST be pipe-delimited and contain:
-            commons url | identifier type | identifier name
-         You can have any number of columns for mapping.
+    FILE\n
+    \tA file path to a CSV containing mapping identifiers. Has a specialized
+    \tcolumn naming format. Column names MUST be pipe-delimited and contain:\n
+    \t\tcommons url | identifier type | identifier name\n
 
-    MAPPING_METHODOLOGY is a string description of how the mapping in the provided file was obtained.
+    \tYou can have any number of columns for mapping.\n
+
+    MAPPING_METHODOLOGY\n
+    \tA string description of how the mapping in the provided file was obtained.
     """
     )
 )
@@ -382,4 +385,29 @@ def objects_crosswalk_publish(ctx, file, info_file, mapping_methodology):
     )
 
 
+@click.command(help="Reads crosswalk data from Gen3 instance into local files.")
+@click.pass_context
+def objects_crosswalk_read(ctx):
+    raise NotImplementedError("`gen3 objects crosswalk read` is not implemented yet.")
+
+
+@click.command(
+    help="Verifies specified crosswalk data in local files exists in Gen3 instance."
+)
+@click.pass_context
+def objects_crosswalk_verify(ctx):
+    raise NotImplementedError("`gen3 objects crosswalk verify` is not implemented yet.")
+
+
+@click.command(
+    help="Deletes specified crosswalk data in local files from Gen3 instance."
+)
+@click.pass_context
+def objects_crosswalk_delete(ctx):
+    raise NotImplementedError("`gen3 objects crosswalk delete` is not implemented yet.")
+
+
 crosswalk.add_command(objects_crosswalk_publish, name="publish")
+crosswalk.add_command(objects_crosswalk_read, name="read")
+crosswalk.add_command(objects_crosswalk_verify, name="verify")
+crosswalk.add_command(objects_crosswalk_delete, name="delete")

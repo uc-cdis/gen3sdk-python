@@ -207,14 +207,6 @@ async def publish_crosswalk_metadata(
 
         logging.debug(f"Attempting to get valid GUIDs...")
         guids_available_for_use = index.get_valid_guids(count=1000)
-        # guids_available_for_use = [
-        #     "161ca998-11c4-11ed-861d-0242ac120002",
-        #     "261cab82-11c4-11ed-861d-0242ac120002",
-        #     "361cacae-11c4-11ed-861d-0242ac120002",
-        #     "461cae16-11c4-11ed-861d-0242ac120002",
-        #     "561caf7e-11c4-11ed-861d-0242ac120002",
-        #     "661cb08c-11c4-11ed-861d-0242ac120002",
-        # ]
         logging.debug(f"Got {len(guids_available_for_use)} valid GUIDs for use.")
 
         for metadata_line in metadata_reader:
@@ -310,11 +302,17 @@ async def publish_crosswalk_metadata(
 
             # call update with merge to ensure this doesn't wipe out any
             # non-crosswalk namespaced blocks of
-            pending_requests += [
-                mds.async_update(
-                    guid, final_metadata, aliases=metadata_aliases, merge=True
-                )
-            ]
+            if mds_record:
+                pending_requests += [
+                    mds.async_update(
+                        guid, final_metadata, aliases=metadata_aliases, merge=True
+                    )
+                ]
+            else:
+                pending_requests += [
+                    mds.async_create(guid, final_metadata, aliases=metadata_aliases)
+                ]
+
             if len(pending_requests) == MAX_CONCURRENT_REQUESTS:
                 await asyncio.gather(*pending_requests)
                 pending_requests = []
