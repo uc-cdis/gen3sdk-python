@@ -15,42 +15,79 @@ from gen3.tools.metadata.crosswalk import (
     CROSSWALK_NAMESPACE,
     GUID_TYPE,
     publish_crosswalk_metadata,
+    read_crosswalk_metadata,
 )
 from gen3.utils import get_or_create_event_loop_for_thread
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
-@patch("gen3.metadata.requests.post")
-def foooooo_test_create(requests_mock):
-    """"""
-    metadata = Gen3Metadata("https://example.com")
-    guid = "95a41871-244c-48ae-8004-63f4ed1f0291"
-    data = {"foo": "bar", "fizz": "buzz", "nested_details": {"key1": "value1"}}
-    expected_response = data
+EXPECTED_CROSSWALK_DATA_1 = {
+    "subject": {
+        "https://gen3.biodatacatalyst.nhlbi.nih.gov": {
+            "Subject.submitter_id": {
+                "value": "phs002363.v1_RC-1358",
+                "type": "gen3_node_property",
+                "description": "These identifiers are constructed as part of the data ingestion process in BDCat and concatenate the study and version with the study-provided subject ID (with a _ delimiting).",
+            }
+        },
+        "https://data.midrc.org": {
+            "Case.submitter_id": {
+                "value": "A01-00888",
+                "type": "gen3_node_property",
+                "description": "The uniquely assigned case identifier in MIDRC.",
+            },
+        },
+        "mapping_methodologies": sorted(
+            [
+                "NHLBI provided a file of subject IDs for the PETAL study that directly associate a PETAL ID with a BDCat Subject Identifier."
+            ]
+        ),
+    }
+}
 
-    def _mock_request(url, **kwargs):
-        assert f"/metadata/{guid}" in url
-
-        mocked_response = MagicMock(requests.Response)
-        mocked_response.status_code = 200
-        mocked_response.json.return_value = expected_response
-        mocked_response.raise_for_status.side_effect = lambda *args: None
-
-        return mocked_response
-
-    requests_mock.side_effect = _mock_request
-
-    response = metadata.create(guid=guid, metadata=data)
-
-    assert response == expected_response
+# the second ingestion should maintain the above information as well
+EXPECTED_CROSSWALK_DATA_2 = {
+    "subject": {
+        "https://gen3.biodatacatalyst.nhlbi.nih.gov": {
+            "Subject.submitter_id": {
+                "value": "phs002363.v1_RC-1358",
+                "type": "gen3_node_property",
+                "description": "These identifiers are constructed as part of the data ingestion process in BDCat and concatenate the study and version with the study-provided subject ID (with a _ delimiting).",
+            }
+        },
+        "https://data.midrc.org": {
+            "Case.submitter_id": {
+                "value": "A01-00888",
+                "type": "gen3_node_property",
+                "description": "The uniquely assigned case identifier in MIDRC.",
+            },
+            "Case.data_submission_guid": {
+                "value": "foobar",
+                "type": "gen3_node_property",
+                "description": "The identifier for this subject as provided by the site’s submission of Datavant tokens to MIDRC.",
+            },
+            "Masked N3C ID": {
+                "value": "123dfj4ia5oi*@a",
+                "type": "masked_n3c_id",
+                "description": "Masked National COVID Consortium ID provided by a Linkage Honest Broker to the MIDRC system.",
+            },
+        },
+        "mapping_methodologies": sorted(
+            [
+                "NHLBI provided a file of subject IDs for the PETAL study that directly associate a PETAL ID with a BDCat Subject Identifier.",
+                "A Linkage Honest Broker provided MIDRC with what Masked N3C IDs match MIDRC cases via a system-to-system handoff.",
+            ]
+        ),
+    }
+}
 
 
 @patch("gen3.metadata.Gen3Metadata.async_update")
 @patch("gen3.index.Gen3Index.get_valid_guids")
 @patch("gen3.metadata.Gen3Metadata.async_get")
 @patch("gen3.metadata.Gen3Metadata.async_create")
-def test_publish(
+def test_publish_multiple_crosswalks(
     create_metadata_patch,
     get_metadata_patch,
     get_valid_guids_patch,
@@ -67,66 +104,6 @@ def test_publish(
     guid_3 = "33333333-aac4-11ed-861d-0242ac120002"
     guid_4 = "44444444-aac4-11ed-861d-0242ac120002"
 
-    expected_crosswalk_data_1 = {
-        "subject": {
-            "https://gen3.biodatacatalyst.nhlbi.nih.gov": {
-                "Subject.submitter_id": {
-                    "value": "phs002363.v1_RC-1358",
-                    "type": "gen3_node_property",
-                    "description": "These identifiers are constructed as part of the data ingestion process in BDCat and concatenate the study and version with the study-provided subject ID (with a _ delimiting).",
-                }
-            },
-            "https://data.midrc.org": {
-                "Case.submitter_id": {
-                    "value": "A01-00888",
-                    "type": "gen3_node_property",
-                    "description": "The uniquely assigned case identifier in MIDRC.",
-                },
-            },
-            "mapping_methodologies": sorted(
-                [
-                    "NHLBI provided a file of subject IDs for the PETAL study that directly associate a PETAL ID with a BDCat Subject Identifier."
-                ]
-            ),
-        }
-    }
-
-    # the second ingestion should maintain the above information as well
-    expected_crosswalk_data_2 = {
-        "subject": {
-            "https://gen3.biodatacatalyst.nhlbi.nih.gov": {
-                "Subject.submitter_id": {
-                    "value": "phs002363.v1_RC-1358",
-                    "type": "gen3_node_property",
-                    "description": "These identifiers are constructed as part of the data ingestion process in BDCat and concatenate the study and version with the study-provided subject ID (with a _ delimiting).",
-                }
-            },
-            "https://data.midrc.org": {
-                "Case.submitter_id": {
-                    "value": "A01-00888",
-                    "type": "gen3_node_property",
-                    "description": "The uniquely assigned case identifier in MIDRC.",
-                },
-                "Case.data_submission_guid": {
-                    "value": "foobar",
-                    "type": "gen3_node_property",
-                    "description": "The identifier for this subject as provided by the site’s submission of Datavant tokens to MIDRC.",
-                },
-                "Masked N3C ID": {
-                    "value": "123dfj4ia5oi*@a",
-                    "type": "masked_n3c_id",
-                    "description": "Masked National COVID Consortium ID provided by a Linkage Honest Broker to the MIDRC system.",
-                },
-            },
-            "mapping_methodologies": sorted(
-                [
-                    "NHLBI provided a file of subject IDs for the PETAL study that directly associate a PETAL ID with a BDCat Subject Identifier.",
-                    "A Linkage Honest Broker provided MIDRC with what Masked N3C IDs match MIDRC cases via a system-to-system handoff.",
-                ]
-            ),
-        }
-    }
-
     async def mock_async_update_metadata(guid, metadata, *_, **__):
         assert metadata["_guid_type"] == GUID_TYPE
         crosswalk_metadata = metadata[CROSSWALK_NAMESPACE]
@@ -134,9 +111,9 @@ def test_publish(
         assert guid in [guid_1, guid_2, guid_3, guid_4]
 
         if guid == guid_1:
-            assert crosswalk_metadata == expected_crosswalk_data_1
+            assert crosswalk_metadata == EXPECTED_CROSSWALK_DATA_1
         elif guid in [guid_2, guid_3, guid_4]:
-            assert crosswalk_metadata == expected_crosswalk_data_2
+            assert crosswalk_metadata == EXPECTED_CROSSWALK_DATA_2
 
     get_valid_guids_patch.return_value = [guid_1]
     update_metadata_patch.side_effect = mock_async_update_metadata
@@ -153,7 +130,10 @@ def test_publish(
             gen3_auth,
             file="tests/test_data/crosswalk/crosswalk_1.csv",
             info_file="tests/test_data/crosswalk/crosswalk_optional_info_1.csv",
-            mapping_methodology="NHLBI provided a file of subject IDs for the PETAL study that directly associate a PETAL ID with a BDCat Subject Identifier.",
+            mapping_methodologies=[
+                "NHLBI provided a file of subject IDs for the PETAL "
+                "study that directly associate a PETAL ID with a BDCat Subject Identifier."
+            ],
         )
     )
     assert get_valid_guids_patch.called
@@ -162,7 +142,7 @@ def test_publish(
     async def mock_async_get_metadata(guid, *_, **__):
         return {
             "_guid_type": GUID_TYPE,
-            CROSSWALK_NAMESPACE: expected_crosswalk_data_1,
+            CROSSWALK_NAMESPACE: EXPECTED_CROSSWALK_DATA_1,
             "additional_metadata": "foobar",
         }
 
@@ -178,11 +158,67 @@ def test_publish(
             gen3_auth,
             file="tests/test_data/crosswalk/crosswalk_2.csv",
             info_file="tests/test_data/crosswalk/crosswalk_optional_info_2.csv",
-            mapping_methodology="A Linkage Honest Broker provided MIDRC with what Masked N3C IDs match MIDRC cases via a system-to-system handoff.",
+            mapping_methodologies=[
+                "A Linkage Honest Broker provided MIDRC with what "
+                "Masked N3C IDs match MIDRC cases via a system-to-system handoff."
+            ],
         )
     )
     assert get_valid_guids_patch.called
     assert update_metadata_patch.called
+
+
+@patch("gen3.metadata.Gen3Metadata.async_update")
+@patch("gen3.index.Gen3Index.get_valid_guids")
+@patch("gen3.metadata.Gen3Metadata.async_get")
+@patch("gen3.metadata.Gen3Metadata.async_create")
+def test_publish_single_crosswalk(
+    create_metadata_patch,
+    get_metadata_patch,
+    get_valid_guids_patch,
+    update_metadata_patch,
+    gen3_auth,
+):
+    """
+    Test that publishing the examples from docs/crosswalk.md results in the
+    expected calls to the MDS. Ensure that merging of existing crosswalk data with new
+    data results in the expected outcome.
+    """
+    guid_1 = "11111111-aac4-11ed-861d-0242ac120002"
+
+    async def mock_async_update_metadata(guid, metadata, *_, **__):
+        assert metadata["_guid_type"] == GUID_TYPE
+        crosswalk_metadata = metadata[CROSSWALK_NAMESPACE]
+        assert guid in [guid_1]
+        assert crosswalk_metadata == EXPECTED_CROSSWALK_DATA_2
+
+    get_valid_guids_patch.return_value = [guid_1]
+    update_metadata_patch.side_effect = mock_async_update_metadata
+
+    async def mock_async_get_metadata(guid, *_, **__):
+        # simulate an HTTP 404 error
+        raise Exception()
+
+    get_metadata_patch.side_effect = mock_async_get_metadata
+
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(
+        publish_crosswalk_metadata(
+            gen3_auth,
+            file="tests/test_data/crosswalk/full_crosswalk.csv",
+            info_file="tests/test_data/crosswalk/full_crosswalk_optional_info.csv",
+            mapping_methodologies=sorted(
+                [
+                    "NHLBI provided a file of subject IDs for the PETAL study that "
+                    "directly associate a PETAL ID with a BDCat Subject Identifier.",
+                    "A Linkage Honest Broker provided MIDRC with what Masked N3C IDs "
+                    "match MIDRC cases via a system-to-system handoff.",
+                ]
+            ),
+        )
+    )
+    assert get_valid_guids_patch.called
+    assert create_metadata_patch.called
 
 
 @pytest.mark.parametrize(
@@ -256,7 +292,7 @@ def test_publish_invalid_files(
                 gen3_auth,
                 file=file,
                 info_file=info,
-                mapping_methodology="",
+                mapping_methodologies=[""],
             )
         )
         assert not update_metadata_patch.called
@@ -311,7 +347,55 @@ def test_publish_no_op(
             gen3_auth,
             file=file,
             info_file=info,
-            mapping_methodology="",
+            mapping_methodologies=[""],
         )
     )
     assert not update_metadata_patch.called
+
+
+@patch("gen3.metadata.Gen3Metadata.async_update")
+@patch("gen3.index.Gen3Index.get_valid_guids")
+@patch("gen3.metadata.Gen3Metadata.query")
+def test_crosswalk_read(
+    query_metadata_patch,
+    get_valid_guids_patch,
+    update_metadata_patch,
+    gen3_auth,
+):
+    output_filename = "tmp_output_file.csv"
+    output_info_filename = "tmp_output_file_info.csv"
+
+    async def mock_async_update_metadata(guid, metadata, *_, **__):
+        # should never get called
+        assert False
+
+    get_valid_guids_patch.return_value = []
+    update_metadata_patch.side_effect = mock_async_update_metadata
+
+    def mock_query_metadata(guid, *_, **__):
+        return {"foobar": {"crosswalk": EXPECTED_CROSSWALK_DATA_2}}
+
+    query_metadata_patch.side_effect = mock_query_metadata
+
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(
+        read_crosswalk_metadata(
+            gen3_auth,
+            output_filename=output_filename,
+        )
+    )
+    assert not update_metadata_patch.called
+    assert not get_valid_guids_patch.called
+    assert query_metadata_patch.called
+
+    assert sorted([row for row in open(output_filename)]) == sorted(
+        [row for row in open("tests/test_data/crosswalk/full_crosswalk.csv")]
+    )
+    assert sorted([row for row in open(output_info_filename)]) == sorted(
+        [
+            row
+            for row in open(
+                "tests/test_data/crosswalk/full_crosswalk_optional_info.csv"
+            )
+        ]
+    )

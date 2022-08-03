@@ -14,7 +14,10 @@ from gen3.tools.indexing.index_manifest import (
 )
 from gen3.tools.indexing.verify_manifest import manifest_row_parsers
 from gen3.utils import get_or_create_event_loop_for_thread
-from gen3.tools.metadata.crosswalk import publish_crosswalk_metadata
+from gen3.tools.metadata.crosswalk import (
+    publish_crosswalk_metadata,
+    read_crosswalk_metadata,
+)
 
 
 @click.group()
@@ -344,9 +347,6 @@ manifest.add_command(objects_manifest_delete_all_guids, name="delete-all-guids")
     \t\tcommons url | identifier type | identifier name\n
 
     \tYou can have any number of columns for mapping.\n
-
-    MAPPING_METHODOLOGY\n
-    \tA string description of how the mapping in the provided file was obtained.
     """
     )
 )
@@ -355,9 +355,13 @@ manifest.add_command(objects_manifest_delete_all_guids, name="delete-all-guids")
     type=click.Path(writable=True),
     required=True,
 )
-@click.argument(
-    "mapping_methodology",
+@click.option(
+    "-m",
+    "--mapping_methodology",
+    "mapping_methodologies",
     required=True,
+    multiple=True,
+    help="A string description of how the mapping in the provided file was obtained.",
 )
 @click.option(
     "--info",
@@ -371,7 +375,7 @@ manifest.add_command(objects_manifest_delete_all_guids, name="delete-all-guids")
     ),
 )
 @click.pass_context
-def objects_crosswalk_publish(ctx, file, info_file, mapping_methodology):
+def objects_crosswalk_publish(ctx, file, info_file, mapping_methodologies):
     auth = ctx.obj["auth_factory"].get()
 
     loop = get_or_create_event_loop_for_thread()
@@ -380,15 +384,28 @@ def objects_crosswalk_publish(ctx, file, info_file, mapping_methodology):
             auth=auth,
             file=file,
             info_file=info_file,
-            mapping_methodology=mapping_methodology,
+            mapping_methodologies=mapping_methodologies,
         )
     )
 
 
 @click.command(help="Reads crosswalk data from Gen3 instance into local files.")
+@click.option(
+    "--output-file",
+    "output_file",
+    default="crosswalk.csv",
+    help="filename for output",
+    type=click.Path(writable=True),
+    show_default=True,
+)
 @click.pass_context
-def objects_crosswalk_read(ctx):
-    raise NotImplementedError("`gen3 objects crosswalk read` is not implemented yet.")
+def objects_crosswalk_read(ctx, output_file):
+    auth = ctx.obj["auth_factory"].get()
+
+    loop = get_or_create_event_loop_for_thread()
+    loop.run_until_complete(
+        read_crosswalk_metadata(auth=auth, output_filename=output_file)
+    )
 
 
 @click.command(

@@ -12,12 +12,12 @@ from cdislogging import get_logger
 from gen3.index import Gen3Index
 from gen3.metadata import Gen3Metadata
 from gen3.tools import metadata
-from gen3.utils import deep_dict_update, raise_for_status_and_print_error
+from gen3.utils import deep_dict_update
 
 MAX_GUIDS_PER_REQUEST = 2000
 MAX_CONCURRENT_REQUESTS = 5
 BASE_CSV_PARSER_SETTINGS = {
-    "delimiter": "\t",
+    "delimiter": ",",
     "quotechar": "",
     "quoting": csv.QUOTE_NONE,
     "escapechar": "\\",
@@ -29,28 +29,22 @@ CROSSWALK_NAMESPACE = "crosswalk"
 logging = get_logger("__name__", log_level="debug")
 
 
-async def output_expanded_crosswalk_metadata(
-    auth, endpoint=None, limit=500, use_agg_mds=False
+async def read_crosswalk_metadata(
+    auth, output_filename="crosswalk_metadata.csv", limit=500
 ):
     """
-    fetch crosswalk metadata from a commons and output to {commons}-crosswalk-metadata.tsv
+    fetch crosswalk metadata from a commons and output to crosswalk-metadata.tsv
     """
-    if endpoint:
-        mds = Gen3Metadata(
-            auth_provider=auth,
-            endpoint=endpoint,
-            service_location="mds/aggregate" if use_agg_mds else "mds",
-        )
-    else:
-        mds = Gen3Metadata(
-            auth_provider=auth,
-            service_location="mds/aggregate" if use_agg_mds else "mds",
-        )
+    mds = Gen3Metadata(auth_provider=auth)
 
     count = 0
     with tempfile.TemporaryDirectory() as metadata_cache_dir:
         all_fields = set()
-        num_tags = 0
+
+        crosswalk_columns = set()
+
+        # dictionary of { "commons url | identifier name": description }
+        crosswalk_info = {}
 
         for offset in range(0, limit, MAX_GUIDS_PER_REQUEST):
             partial_metadata = mds.query(
@@ -58,75 +52,109 @@ async def output_expanded_crosswalk_metadata(
                 return_full_metadata=True,
                 limit=min(limit, MAX_GUIDS_PER_REQUEST),
                 offset=offset,
-                use_agg_mds=use_agg_mds,
             )
 
-            # if agg MDS we will flatten the results as they are in "common" : dict format
-            # However this can result in duplicates as the aggregate mds is namespaced to
-            # handle this, therefore prefix the commons in front of the guid
-            if use_agg_mds:
-                partial_metadata = {
-                    f"{c}__{i}": d
-                    for c, y in partial_metadata.items()
-                    for x in y
-                    for i, d in x.items()
-                }
-
-            if len(partial_metadata):
-                for guid, guid_metadata in partial_metadata.items():
-                    with open(
-                        f"{metadata_cache_dir}/{guid.replace('/', '_')}", "w+"
-                    ) as cached_guid_file:
-                        guid_crosswalk_metadata = guid_metadata[CROSSWALK_NAMESPACE]
-                        json.dump(guid_crosswalk_metadata, cached_guid_file)
-                        all_fields |= set(guid_crosswalk_metadata.keys())
-                        num_tags = max(
-                            num_tags, len(guid_crosswalk_metadata.get("tags", []))
-                        )
-            else:
+            if not len(partial_metadata):
                 break
 
-        output_columns = (
-            ["guid"]
-            # "tags" is flattened to _tag_0 through _tag_n
-            + sorted(list(all_fields - set(["tags"])))
-            + [f"_tag_{n}" for n in range(num_tags)]
-        )
-        base_schema = {column: "" for column in output_columns}
+            for guid, guid_metadata in partial_metadata.items():
+                with open(
+                    f"{metadata_cache_dir}/{guid.replace('/', '_')}", "w+"
+                ) as cached_guid_file:
+                    guid_crosswalk_metadata = guid_metadata[CROSSWALK_NAMESPACE]
 
-        output_filename = _metadata_file_from_auth(auth)
+                    for commons_url, commons_crosswalk in guid_crosswalk_metadata.get(
+                        GUID_TYPE
+                    ).items():
+                        # don't interpret mapping info as a column in the crosswalk file
+                        if commons_url == "mapping_methodologies":
+                            continue
+
+                        for (
+                            identifier_name,
+                            indentifer_info,
+                        ) in commons_crosswalk.items():
+                            column_name = "|".join(
+                                [
+                                    commons_url,
+                                    indentifer_info.get("type"),
+                                    identifier_name,
+                                ]
+                            )
+                            crosswalk_columns.add(column_name)
+
+                            crosswalk_info[
+                                commons_url + "|" + identifier_name
+                            ] = indentifer_info.get("description")
+
+                    json.dump(guid_crosswalk_metadata, cached_guid_file)
+                    all_fields |= set(guid_crosswalk_metadata.keys())
+
+        crosswalk_columns = sorted(list(crosswalk_columns))
+
+        logging.debug(f"got columns: {crosswalk_columns}")
+        logging.debug(f"got crosswalk_info: {crosswalk_info}")
+
+        base_schema = {column: "" for column in crosswalk_columns}
+
+        output_info_filename = "".join(output_filename.split(".")[:-1]) + "_info.csv"
+        logging.debug(f"writing crosswalk to: {output_filename}...")
         with open(
             output_filename,
             "w+",
         ) as output_file:
             writer = csv.DictWriter(
                 output_file,
-                **{**BASE_CSV_PARSER_SETTINGS, "fieldnames": output_columns},
+                **{**BASE_CSV_PARSER_SETTINGS, "fieldnames": crosswalk_columns},
             )
             writer.writeheader()
 
             for guid in sorted(os.listdir(metadata_cache_dir)):
                 with open(f"{metadata_cache_dir}/{guid}") as f:
                     fetched_metadata = json.load(f)
-                    flattened_tags = {
-                        f"_tag_{tag_num}": f"{tag['category']}: {tag['name']}"
-                        for tag_num, tag in enumerate(fetched_metadata.pop("tags", []))
-                    }
 
-                    true_guid = guid
-                    if use_agg_mds:
-                        true_guid = guid.split("__")[1]
-                    output_metadata = _sanitize_tsv_row(
-                        {
-                            **base_schema,
-                            **fetched_metadata,
-                            **flattened_tags,
-                            "guid": true_guid,
-                        }
-                    )
+                    output_metadata = {}
+                    for column in crosswalk_columns:
+                        (
+                            commons_url,
+                            identifier_type,
+                            identifier_name,
+                        ) = _get_crosswalk_columns_parts(column)
+                        output_metadata[column] = (
+                            fetched_metadata.get(GUID_TYPE)
+                            .get(commons_url, {})
+                            .get(identifier_name, {})
+                            .get("value", "")
+                        )
+
                     writer.writerow(output_metadata)
 
-        return output_filename
+        logging.info(f"done writing crosswalk to: {output_filename}")
+        logging.debug(f"writing crosswalk info to: {output_info_filename}...")
+
+        with open(
+            output_info_filename,
+            "w+",
+        ) as output_info_file:
+            info_columns = ["commons_url", "identifier_name", "description"]
+            writer = csv.DictWriter(
+                output_info_file,
+                **{**BASE_CSV_PARSER_SETTINGS, "fieldnames": info_columns},
+            )
+            writer.writeheader()
+
+            for commons_url_and_identifier_name, description in crosswalk_info.items():
+                output_metadata = {}
+                commons_url, identifier_name = commons_url_and_identifier_name.split(
+                    "|"
+                )
+                output_metadata["commons_url"] = commons_url
+                output_metadata["identifier_name"] = identifier_name
+                output_metadata["description"] = description or ""
+
+                writer.writerow(output_metadata)
+
+        logging.info(f"done writing crosswalk info to: {output_info_filename}")
 
 
 async def publish_crosswalk_metadata(
@@ -134,17 +162,19 @@ async def publish_crosswalk_metadata(
     file,
     info_file=None,
     guid_type=GUID_TYPE,
-    mapping_methodology="",
+    mapping_methodologies=None,
 ):
     """
     Publish crosswalk metadata from a tsv file
     """
+    mapping_methodologies = mapping_methodologies or []
+
     mds = Gen3Metadata(auth_provider=auth)
     index = Gen3Index(auth_provider=auth)
 
     delimiter = "," if file.endswith(".csv") else "\t"
 
-    # dictionary of { "commons url + identifier name": description }
+    # dictionary of { "commons url | identifier name": description }
     crosswalk_info = {}
     if info_file:
         with open(info_file, "rt", encoding="utf-8-sig") as csvfile:
@@ -170,6 +200,7 @@ async def publish_crosswalk_metadata(
                 # unique key of 2 first columns, value is the description (last column)
                 crosswalk_info[
                     metadata_line["commons_url"].strip()
+                    + "|"
                     + metadata_line["identifier_name"].strip()
                 ] = metadata_line["description"].strip()
 
@@ -231,7 +262,9 @@ async def publish_crosswalk_metadata(
                     "value": value,
                     "type": identifier_type,
                 }
-                description = crosswalk_info.get(commons_url + identifier_name, "")
+                description = crosswalk_info.get(
+                    commons_url + "|" + identifier_name, ""
+                )
                 # only override the potentially existing description if a new one is
                 # provided by the new crosswalk
                 if description:
@@ -268,12 +301,13 @@ async def publish_crosswalk_metadata(
                     .get(GUID_TYPE, {})
                     .get("mapping_methodologies", set())
                 )
-                mds_record_mapping_methodologies.add(mapping_methodology)
+                for item in mapping_methodologies:
+                    mds_record_mapping_methodologies.add(item)
             else:
                 logging.debug(f"no existing metadata record found.")
                 mds_record_guid_type = GUID_TYPE
                 mds_record_crosswalk_for_guid = {}
-                mds_record_mapping_methodologies = set([mapping_methodology])
+                mds_record_mapping_methodologies = set(mapping_methodologies)
 
             # combine with new metadata using a deep update (e.g. merging nested dicts)
             deep_dict_update(mds_record_crosswalk_for_guid, metadata)
@@ -351,10 +385,4 @@ def _get_crosswalk_columns_parts(column):
         commons_url.strip(),
         identifier_type.strip(),
         identifier_name.strip(),
-    )
-
-
-def _metadata_file_from_auth(auth):
-    return (
-        "-".join(urlparse(auth.endpoint).netloc.split(".")) + "-crosswalk_metadata.tsv"
     )
