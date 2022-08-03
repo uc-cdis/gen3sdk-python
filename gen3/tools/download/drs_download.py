@@ -39,7 +39,7 @@ from urllib.parse import urlparse
 from gen3.auth import Gen3Auth, Gen3AuthError, decode_token
 from gen3.auth import _handle_access_token_response
 from gen3.tools.download.drs_resolvers import resolve_drs
-
+from gen3.utils import remove_trailing_whitespace_and_slashes_in_url
 from gen3.metadata import Gen3Metadata
 
 DEFAULT_EXPIRE: timedelta = timedelta(hours=1)
@@ -91,7 +91,12 @@ class Manifest:
         results = []
         for entry in manifest:
             results.append(
-                Downloadable(object_id=entry.object_id, hostname=entry.commons_url)
+                Downloadable(
+                    object_id=entry.object_id,
+                    hostname=remove_trailing_whitespace_and_slashes_in_url(
+                        entry.commons_url
+                    ),
+                )
             )
         return results
 
