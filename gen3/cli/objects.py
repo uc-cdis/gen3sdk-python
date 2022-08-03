@@ -14,6 +14,7 @@ from gen3.tools.indexing.index_manifest import (
 )
 from gen3.tools.indexing.verify_manifest import manifest_row_parsers
 from gen3.utils import get_or_create_event_loop_for_thread
+from gen3.tools.metadata.crosswalk import publish_crosswalk_metadata
 
 
 @click.group()
@@ -25,6 +26,12 @@ def objects():
 @objects.group()
 def manifest():
     """For working with minimal object metadata manifests"""
+    pass
+
+
+@objects.group()
+def crosswalk():
+    """For working with cross-commons subject crosswalk data"""
     pass
 
 
@@ -324,3 +331,55 @@ manifest.add_command(objects_manifest_verify, name="verify")
 manifest.add_command(objects_manifest_validate_format, name="validate-manifest-format")
 manifest.add_command(objects_manifest_publish, name="publish")
 manifest.add_command(objects_manifest_delete_all_guids, name="delete-all-guids")
+
+
+@click.command(
+    help=(
+        """
+    Publishes specified crosswalk to Gen3 instance.
+
+    FILE is a file path to a CSV containing mapping identifiers. Has a specialized
+         column naming format. Column names MUST be pipe-delimited and contain:
+            commons url | identifier type | identifier name
+         You can have any number of columns for mapping.
+
+    MAPPING_METHODOLOGY is a string description of how the mapping in the provided file was obtained.
+    """
+    )
+)
+@click.argument(
+    "file",
+    type=click.Path(writable=True),
+    required=True,
+)
+@click.argument(
+    "mapping_methodology",
+    required=True,
+)
+@click.option(
+    "--info",
+    "info_file",
+    type=click.Path(writable=True),
+    required=False,
+    help=(
+        "File with an additional description about the identifiers in the crosswalk file. "
+        "The format is a CSV with columns: commons url,identifier name,description. Be sure "
+        "to use the same commons url and identifier name used in the crosswalk file."
+    ),
+)
+@click.pass_context
+def objects_crosswalk_publish(ctx, file, info_file, mapping_methodology):
+    auth = ctx.obj["auth_factory"].get()
+
+    loop = get_or_create_event_loop_for_thread()
+    loop.run_until_complete(
+        publish_crosswalk_metadata(
+            auth=auth,
+            file=file,
+            info_file=info_file,
+            mapping_methodology=mapping_methodology,
+        )
+    )
+
+
+crosswalk.add_command(objects_crosswalk_publish, name="publish")

@@ -406,7 +406,9 @@ class Gen3Metadata:
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    async def async_update(self, guid, metadata, _ssl=None, **kwargs):
+    async def async_update(
+        self, guid, metadata, aliases=None, merge=False, _ssl=None, **kwargs
+    ):
         """
         Asynchronous function to update metadata
 
@@ -416,8 +418,11 @@ class Gen3Metadata:
                 attached to the provided GUID as metadata
             _ssl (None, optional): whether or not to use ssl
         """
+        # TODO handle aliases
         async with aiohttp.ClientSession() as session:
             url = self.admin_endpoint + f"/metadata/{guid}"
+            if merge:
+                url += "?merge=True"
             url_with_params = append_query_params(url, **kwargs)
 
             # aiohttp only allows basic auth with their built in auth, so we

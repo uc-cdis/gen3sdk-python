@@ -1,4 +1,5 @@
 import asyncio
+import collections.abc
 from jsonschema import Draft4Validator
 import sys
 import re
@@ -13,7 +14,6 @@ from urllib.parse import parse_qs
 from cdislogging import get_logger
 
 logging = get_logger("__name__")
-
 
 UUID_FORMAT = (
     r"^.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
@@ -237,6 +237,20 @@ def yield_chunks(input_list, n):
     """
     for i in range(0, len(input_list), n):
         yield input_list[i : i + n]
+
+
+def deep_dict_update(a, b):
+    """
+    a is updated in place to include items in b
+
+    This recursively handles nested dictionary updates
+    """
+    for key, value in b.items():
+        if isinstance(value, collections.abc.Mapping):
+            a[key] = deep_dict_update(a.get(key, {}), value)
+        else:
+            a[key] = value
+    return a
 
 
 # Default settings to control usage of backoff library.
