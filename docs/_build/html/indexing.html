@@ -313,6 +313,14 @@ distributed identifier</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="gen3.index.Gen3Index.get_guids_prefix">
+<span class="sig-name descname"><span class="pre">get_guids_prefix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_guids_prefix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_guids_prefix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the prefix for GUIDs if there is one
+:returns: prefix for this instance
+:rtype: str</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="gen3.index.Gen3Index.get_latest_version">
 <span class="sig-name descname"><span class="pre">get_latest_version</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">has_version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_latest_version"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_latest_version" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the metadata of the latest index record version associated
@@ -385,6 +393,22 @@ with the given id</p>
 <li><p><strong>guids</strong> – list
 - list of ids</p></li>
 </ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gen3.index.Gen3Index.get_valid_guids">
+<span class="sig-name descname"><span class="pre">get_valid_guids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_valid_guids"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_valid_guids" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a list of valid GUIDs without indexing
+:param count: number of GUIDs to request
+:type count: int</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list of valid indexd GUIDs</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>List[str]</p>
 </dd>
 </dl>
 </dd></dl>
