@@ -113,7 +113,7 @@ https://gen3.biodatacatalyst.nhlbi.nih.gov, Subject.submitter_id, These identifi
 Gen3 SDK Command
 
 ```
-gen3 objects crosswalk publish ./tests/test_data/crosswalk/crosswalk_1.csv "NHLBI provided a file of subject IDs for the PETAL study that directly associate a PETAL ID with a BDCat Subject Identifier." --info ./tests/test_data/crosswalk/crosswalk_optional_info_1.csv
+gen3 objects crosswalk publish ./tests/test_data/crosswalk/crosswalk_1.csv -m "NHLBI provided a file of subject IDs for the PETAL study that directly associate a PETAL ID with a BDCat Subject Identifier." --info ./tests/test_data/crosswalk/crosswalk_optional_info_1.csv
 ```
 
 ### Example 2
@@ -140,7 +140,7 @@ https://data.midrc.org,Masked N3C ID,Masked National COVID Consortium ID provide
 Gen3 SDK Command
 
 ```
-gen3 objects crosswalk publish crosswalk_2.csv “A Linkage Honest Broker provided MIDRC with what Masked N3C IDs match MIDRC cases via a system-to-system handoff.” --info crosswalk_optional_info_2.csv
+gen3 objects crosswalk publish crosswalk_2.csv -m "A Linkage Honest Broker provided MIDRC with what Masked N3C IDs match MIDRC cases via a system-to-system handoff." --info crosswalk_optional_info_2.csv
 ```
 
 ## Gen3 SDK handling crosswalk.csv submission to MDS
