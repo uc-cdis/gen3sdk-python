@@ -6,9 +6,6 @@ import os
 import sys
 from urllib.parse import urlparse
 
-from gen3.auth import Gen3Auth
-from gen3.tools.download.drs_download import Manifest
-from gen3.tools.download.drs_download import DownloadManager
 from gen3.tools import indexing
 from gen3.tools.indexing.validate_manifest_format import is_valid_manifest_format
 from gen3.tools.indexing.index_manifest import (
