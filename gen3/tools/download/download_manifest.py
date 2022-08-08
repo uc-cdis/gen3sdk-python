@@ -96,7 +96,7 @@ class manifest_downloader:
             Sem.release()
             return False
 
-async def async_download(manifest_file,download_path,cred):
+async def async_download(auth,manifest_file,download_path,cred):
     s=time.perf_counter()
     logging.info(f"Start time: {s}")
     timeout=httpx.Timeout(600.0)
