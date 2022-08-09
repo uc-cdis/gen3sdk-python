@@ -33,7 +33,7 @@ async def read_crosswalk_metadata(
     auth, output_filename="crosswalk_metadata.csv", limit=500
 ):
     """
-    fetch crosswalk metadata from a commons and output to crosswalk-metadata.tsv
+    fetch crosswalk metadata from a commons and output to crosswalk-metadata.csv
     """
     mds = Gen3Metadata(auth_provider=auth)
 
