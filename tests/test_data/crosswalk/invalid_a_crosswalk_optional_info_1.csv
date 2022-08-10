@@ -1,0 +1,2 @@
+https://data.midrc.org, Case.submitter_id
+https://gen3.biodatacatalyst.nhlbi.nih.gov Subject.submitter_id, These identifiers are constructed as part of the data ingestion process in BDCat and concatenate the study and version with the study-provided subject ID (with a _ delimiting).

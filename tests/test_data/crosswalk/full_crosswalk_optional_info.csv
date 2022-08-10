@@ -1,0 +1,5 @@
+commons_url,identifier_name,description
+https://data.midrc.org,Case.submitter_id,The uniquely assigned case identifier in MIDRC.
+https://gen3.biodatacatalyst.nhlbi.nih.gov,Subject.submitter_id,These identifiers are constructed as part of the data ingestion process in BDCat and concatenate the study and version with the study-provided subject ID (with a _ delimiting).
+https://data.midrc.org,Masked N3C ID,Masked National COVID Consortium ID provided by a Linkage Honest Broker to the MIDRC system.
+https://data.midrc.org,Case.data_submission_guid,The identifier for this subject as provided by the site’s submission of Datavant tokens to MIDRC.

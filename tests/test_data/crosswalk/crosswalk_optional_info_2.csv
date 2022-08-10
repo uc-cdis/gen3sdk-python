@@ -1,0 +1,3 @@
+commons_url,identifier_name,description
+https://data.midrc.org, Case.data_submission_guid, The identifier for this subject as provided by the site’s submission of Datavant tokens to MIDRC.
+https://data.midrc.org,Masked N3C ID,Masked National COVID Consortium ID provided by a Linkage Honest Broker to the MIDRC system.
