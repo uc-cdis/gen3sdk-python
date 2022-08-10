@@ -339,7 +339,8 @@ manifest.add_command(objects_manifest_delete_all_guids, name="delete-all-guids")
 @click.command(
     help=(
         """
-    Publishes specified crosswalk from local files to Gen3 instance.\n
+    Publishes specified crosswalk from local files to Gen3 instance and merges
+    with existing crosswalk data already in Gen3.\n
 
     FILE\n
     \tA file path to a CSV containing mapping identifiers. Has a specialized

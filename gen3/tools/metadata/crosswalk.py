@@ -34,13 +34,43 @@ async def read_crosswalk_metadata(
 ):
     """
     fetch crosswalk metadata from a commons and output to crosswalk-metadata.tsv
+
+    Data in the commons is in this format:
+
+        "GUID": {
+          "crosswalk": {
+            "subject": {
+              "{{commons_url}}": {
+                "{{field_name}}": {
+                  "value": "",
+                  "type": "",
+                  "description": ""
+                }
+                // ... more field entries here
+              },
+              // ... more commons entries here
+              "mapping_methodologies": [
+                ""
+              ]
+            }
+          }
+        }
+
+    Output format of crosswalk data in csv:
+
+    commons_url|identifier_type|identifier_name,commons_url|identifier_type|identifier_name
+    A01-00888, phs002363.v1_RC-1358
+    ...
+
+    Output format of additional info in csv (including descriptions):
+        {{commons_url}}, {{identifier_name}}, {{description}}
+
+    See docs/howto/crosswalk.md for more detailed information.
     """
     mds = Gen3Metadata(auth_provider=auth)
 
     count = 0
     with tempfile.TemporaryDirectory() as metadata_cache_dir:
-        all_fields = set()
-
         crosswalk_columns = set()
 
         # dictionary of { "commons url | identifier name": description }
@@ -57,6 +87,9 @@ async def read_crosswalk_metadata(
             if not len(partial_metadata):
                 break
 
+            # dump crosswalk metadata into temporary files so we don't have to
+            # hold everything in memory for output. Do keep track of the
+            # columns and field descriptions for output (that should be small)
             for guid, guid_metadata in partial_metadata.items():
                 with open(
                     f"{metadata_cache_dir}/{guid.replace('/', '_')}", "w+"
@@ -66,6 +99,23 @@ async def read_crosswalk_metadata(
                     for commons_url, commons_crosswalk in guid_crosswalk_metadata.get(
                         GUID_TYPE
                     ).items():
+                        # guid_crosswalk_metadata.get(GUID_TYPE) is something like this:
+                        #
+                        # {
+                        #   "{{commons_url}}": {
+                        #     "{{field_name}}": {
+                        #       "value": "",
+                        #       "type": "",
+                        #       "description": ""
+                        #     }
+                        #     // ... more field entries here
+                        #   },
+                        #   // ... more commons entries here
+                        #   "mapping_methodologies": [
+                        #     ""
+                        #   ]
+                        # }
+
                         # don't interpret mapping info as a column in the crosswalk file
                         if commons_url == "mapping_methodologies":
                             continue
@@ -74,6 +124,13 @@ async def read_crosswalk_metadata(
                             identifier_name,
                             indentifer_info,
                         ) in commons_crosswalk.items():
+                            # identifier_name, indentifer_info is something like:
+                            #
+                            #     "{{field_name}}", {
+                            #       "value": "",
+                            #       "type": "",
+                            #       "description": ""
+                            #     }
                             column_name = "|".join(
                                 [
                                     commons_url,
@@ -88,14 +145,11 @@ async def read_crosswalk_metadata(
                             ] = indentifer_info.get("description")
 
                     json.dump(guid_crosswalk_metadata, cached_guid_file)
-                    all_fields |= set(guid_crosswalk_metadata.keys())
 
         crosswalk_columns = sorted(list(crosswalk_columns))
 
         logging.debug(f"got columns: {crosswalk_columns}")
         logging.debug(f"got crosswalk_info: {crosswalk_info}")
-
-        base_schema = {column: "" for column in crosswalk_columns}
 
         output_info_filename = "".join(output_filename.split(".")[:-1]) + "_info.csv"
         logging.debug(f"writing crosswalk to: {output_filename}...")
@@ -109,6 +163,7 @@ async def read_crosswalk_metadata(
             )
             writer.writeheader()
 
+            # read from the temporary cached crosswalk metadata to get the values
             for guid in sorted(os.listdir(metadata_cache_dir)):
                 with open(f"{metadata_cache_dir}/{guid}") as f:
                     fetched_metadata = json.load(f)
@@ -127,6 +182,11 @@ async def read_crosswalk_metadata(
                             .get("value", "")
                         )
 
+                    # output_metadata looks something like this:
+                    # {
+                    #   "commons_url_a|identifier_type_a|identifier_name_a": "A01-00888",
+                    #   "commons_url_b|identifier_type_b|identifier_name_b": "phs002363.v1_RC-1358",
+                    # }
                     writer.writerow(output_metadata)
 
         logging.info(f"done writing crosswalk to: {output_filename}")
@@ -136,6 +196,8 @@ async def read_crosswalk_metadata(
             output_info_filename,
             "w+",
         ) as output_info_file:
+            # Output format of additional info in csv (including descriptions):
+            #     {{commons_url}}, {{identifier_name}}, {{description}}
             info_columns = ["commons_url", "identifier_name", "description"]
             writer = csv.DictWriter(
                 output_info_file,
@@ -335,7 +397,7 @@ async def publish_crosswalk_metadata(
             logging.info(f"crosswalk metadata for {guid}: {final_metadata}")
 
             # call update with merge to ensure this doesn't wipe out any
-            # non-crosswalk namespaced blocks of
+            # non-crosswalk namespaced blocks of metadata
             if mds_record:
                 pending_requests += [
                     mds.async_update(
@@ -357,6 +419,8 @@ async def publish_crosswalk_metadata(
 def try_delete_crosswalk_guid(auth, guid):
     """
     Deletes all crosswalk metadata under [guid] if it exists
+
+    # TODO needs tests and CLI command
     """
     mds = Gen3Metadata(auth_provider=auth)
     try:
@@ -367,16 +431,6 @@ def try_delete_crosswalk_guid(auth, guid):
             logging.warning(f"{guid} is not crosswalk metadata. Skipping.")
     except requests.exceptions.HTTPError as e:
         logging.warning(e)
-
-
-def _sanitize_tsv_row(tsv_row):
-    sanitized = {}
-    for k, v in tsv_row.items():
-        if type(v) in [list, dict]:
-            sanitized[k] = json.dumps(v)
-        elif type(v) == str:
-            sanitized[k] = v.replace("\n", "\\n")
-    return sanitized
 
 
 def _get_crosswalk_columns_parts(column):

@@ -116,6 +116,8 @@ Gen3 SDK Command
 gen3 objects crosswalk publish ./tests/test_data/crosswalk/crosswalk_1.csv -m "NHLBI provided a file of subject IDs for the PETAL study that directly associate a PETAL ID with a BDCat Subject Identifier." --info ./tests/test_data/crosswalk/crosswalk_optional_info_1.csv
 ```
 
+> `publish` merges any new crosswalk data with existing data
+
 ### Example 2
 
 `crosswalk_2.csv`
@@ -143,12 +145,16 @@ Gen3 SDK Command
 gen3 objects crosswalk publish crosswalk_2.csv -m "A Linkage Honest Broker provided MIDRC with what Masked N3C IDs match MIDRC cases via a system-to-system handoff." --info crosswalk_optional_info_2.csv
 ```
 
+> `publish` merges any new crosswalk data with existing data
+
 ## Gen3 SDK handling crosswalk.csv submission to MDS
 
 ```
-gen3 objects crosswalk read/publish/verify/delete
+gen3 objects crosswalk --help
 ```
 
-- Parse provided `crosswalk.csv` file(s)
-- Validate format (especially column names)
-- Convert information from crosswalk.csv into a payload to push to the MDS based on "Centralized Mapping Information Format" above
+General flow for `publish` is:
+
+- Parse provided `crosswalk.csv` and optionally `crosswalk_optional_info.csv` file(s)
+- Validate format(s) (especially column names)
+- Convert information from `crosswalk.csv` into a payload to push to the MDS based on "Centralized Mapping Information Format" above
