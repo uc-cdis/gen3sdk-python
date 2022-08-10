@@ -315,15 +315,9 @@ distributed identifier</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.index.Gen3Index.get_guids_prefix">
 <span class="sig-name descname"><span class="pre">get_guids_prefix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_guids_prefix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_guids_prefix" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get the prefix for GUIDs if there is one</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>prefix for this instance</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>str</p>
-</dd>
-</dl>
+<dd><p>Get the prefix for GUIDs if there is one
+:returns: prefix for this instance
+:rtype: str</p>
 </dd></dl>
 
 <dl class="py method">
@@ -406,16 +400,15 @@ with the given id</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.index.Gen3Index.get_valid_guids">
 <span class="sig-name descname"><span class="pre">get_valid_guids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/index.html#Gen3Index.get_valid_guids"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.index.Gen3Index.get_valid_guids" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get a list of valid GUIDs without indexing</p>
+<dd><p>Get a list of valid GUIDs without indexing
+:param count: number of GUIDs to request
+:type count: int</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>count</strong> (<em>int</em>) – number of GUIDs to request</p>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list of valid indexd GUIDs</p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>list of valid indexd GUIDs</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>List[str]</p>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>List[str]</p>
 </dd>
 </dl>
 </dd></dl>

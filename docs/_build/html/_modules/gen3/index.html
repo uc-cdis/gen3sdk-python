@@ -853,31 +853,28 @@
     <span class="k">def</span> <span class="nf">get_valid_guids</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get a list of valid GUIDs without indexing</span>
-
 <span class="sd">        Args:</span>
 <span class="sd">            count (int): number of GUIDs to request</span>
-
 <span class="sd">        Returns:</span>
 <span class="sd">            List[str]: list of valid indexd GUIDs</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;/mint/guids&quot;</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;/guid/mint&quot;</span>
         <span class="k">if</span> <span class="n">count</span><span class="p">:</span>
             <span class="n">url</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;?count=</span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s2">&quot;</span>
 
         <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;guids&quot;</span><span class="p">,</span> <span class="p">[])</span></div>
 
 <div class="viewcode-block" id="Gen3Index.get_guids_prefix"><a class="viewcode-back" href="../../indexing.html#gen3.index.Gen3Index.get_guids_prefix">[docs]</a>    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">get_guids_prefix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get the prefix for GUIDs if there is one</span>
-
 <span class="sd">        Returns:</span>
 <span class="sd">            str: prefix for this instance</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;/mint/prefix&quot;</span><span class="p">)</span>
-        <span class="n">raise_for_status</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;/guid/prefix&quot;</span><span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;prefix&quot;</span><span class="p">)</span></div></div>
 
 
