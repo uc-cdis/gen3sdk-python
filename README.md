@@ -5,7 +5,6 @@ The Gen3 Software Development Kit (SDK) for Python provides classes and function
 The API for a commons can be overwhelming, so this SDK/CLI aims
 to simplify communication with various microservices.
 
-This [blog](https://documentation.divio.com/introduction/) introduces the different types of documentation (explanation, how-to, tutorial, reference).
 The docs here contain general descriptions of the different pieces of the SDK and example scripts. For detailed API documentation, see the link below:
 
 * [Detailed API Documentation](https://uc-cdis.github.io/gen3sdk-python/_build/html/index.html)
@@ -20,9 +19,10 @@ The docs here contain general descriptions of the different pieces of the SDK an
   - [Available Classes](docs/reference/sdkClasses.md)
   - [Indexing Tools](docs/howto/diirmIndexing.md)
   - [Metadata Tools](docs/howto/metadataTools.md)
+  - [Metadata Crosswalk Tools](docs/howto/crosswalk.md)
   - [Bundle Tools](docs/howto/bundleTools.md)
   - [Development](docs/howto/devTest.md)
-  
+
 ---
 
 ## Installation

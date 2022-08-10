@@ -819,31 +819,28 @@ class Gen3Index:
     def get_valid_guids(self, count=None):
         """
         Get a list of valid GUIDs without indexing
-
         Args:
             count (int): number of GUIDs to request
-
         Returns:
             List[str]: list of valid indexd GUIDs
         """
-        url = "/mint/guids"
+        url = "/guid/mint"
         if count:
             url += f"?count={count}"
 
         response = self.client._get(url)
-        raise_for_status(response)
+        response.raise_for_status()
         return response.json().get("guids", [])
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def get_guids_prefix(self):
         """
         Get the prefix for GUIDs if there is one
-
         Returns:
             str: prefix for this instance
         """
-        response = self.client._get("/mint/prefix")
-        raise_for_status(response)
+        response = self.client._get("/guid/prefix")
+        response.raise_for_status()
         return response.json().get("prefix")
 
 
