@@ -18,17 +18,18 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.10"
+python = "^3.9"
 requests = "*"
-indexclient = ">=1.6.2"
+indexclient = "*"
 drsclient = "^0.2.2"
 aiohttp = "*"
 backoff = "*"
+cdislogging = "^1.1.0"
 click = "*"
 jsonschema = "*"
 dataclasses-json = "*"
 pypfb = "<1.0.0"
-tqdm = ">=4.61.2"
+tqdm = "^4.61.2"
 humanfriendly ="*"
 python-dateutil = "*"
 aiofiles = "^0.8.0"
@@ -36,7 +37,7 @@ pandas = "^1.4.2"
 httpx = "*"
 
 [tool.poetry.dev-dependencies]
-pytest = ">=6.0.0"
+pytest = "^6.0.0"
 pytest-cov = "*"
 requests-mock = "*"
 cdisutilstest = { git = "https://github.com/uc-cdis/cdisutils-test.git", tag = "1.0.0" }
