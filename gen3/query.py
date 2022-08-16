@@ -1,5 +1,7 @@
 import requests
 
+from gen3.utils import raise_for_status_and_print_error
+
 
 class Gen3Query:
     """
@@ -87,7 +89,7 @@ class Gen3Query:
                 first=first,
                 offset=offset,
             )
-            return {"data": {"subject": data}}
+            return {"data": {data_type: data}}
 
         # convert sort_object to graphql: [ { field_name: "sort_method" } ]
         sorts = [f'{{{field}: "{val}"}}' for field, val in sort_object.items()]
@@ -129,7 +131,7 @@ class Gen3Query:
             auth=self._auth_provider,
         )
         try:
-            response.raise_for_status()
+            raise_for_status_and_print_error(response)
         except Exception:
             print(
                 f"Unable to query.\nQuery: {query_string}\nVariables: {variables}\n{response.text}"
@@ -137,7 +139,7 @@ class Gen3Query:
             raise
         try:
             return response.json()
-        except:
+        except Exception:
             print(f"Did not receive JSON: {response.text}")
             raise
 
@@ -197,13 +199,13 @@ class Gen3Query:
             auth=self._auth_provider,
         )
         try:
-            response.raise_for_status()
+            raise_for_status_and_print_error(response)
         except Exception:
             print(f"Unable to download.\nBody: {body}\n{response.text}")
             raise
         try:
             data = response.json()
-        except:
+        except Exception:
             print(f"Did not receive JSON: {response.text}")
             raise
 

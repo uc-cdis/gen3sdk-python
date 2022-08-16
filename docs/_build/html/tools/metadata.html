@@ -1,26 +1,19 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html lang="en">
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
     <title>Metadata Tools &#8212; Gen3 SDK  documentation</title>
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Gen3 Workspace Storage" href="../wss.html" />
@@ -28,136 +21,186 @@
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
+  
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
+          
+
           <div class="body" role="main">
             
-  <div class="section" id="metadata-tools">
-<h1>Metadata Tools<a class="headerlink" href="#metadata-tools" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="module-gen3.tools.metadata.ingest_manifest">
-<span id="ingest"></span><h2>Ingest<a class="headerlink" href="#module-gen3.tools.metadata.ingest_manifest" title="Permalink to this headline">¶</a></h2>
+  <section id="metadata-tools">
+<h1>Metadata Tools<a class="headerlink" href="#metadata-tools" title="Permalink to this heading">¶</a></h1>
+<section id="module-gen3.tools.metadata.ingest_manifest">
+<span id="ingest"></span><h2>Ingest<a class="headerlink" href="#module-gen3.tools.metadata.ingest_manifest" title="Permalink to this heading">¶</a></h2>
 <p>Tools for ingesting a CSV/TSV metadata manifest into the Metdata Service.</p>
-<dl class="attribute">
-<dt id="gen3.tools.metadata.ingest_manifest.COLUMN_TO_USE_AS_GUID">
-<code class="descclassname">gen3.tools.metadata.ingest_manifest.</code><code class="descname">COLUMN_TO_USE_AS_GUID</code><a class="headerlink" href="#gen3.tools.metadata.ingest_manifest.COLUMN_TO_USE_AS_GUID" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>str</em> – file column containing guid to use</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gen3.tools.metadata.ingest_manifest.COLUMN_TO_USE_AS_GUID">
+<span class="sig-prename descclassname"><span class="pre">gen3.tools.metadata.ingest_manifest.</span></span><span class="sig-name descname"><span class="pre">COLUMN_TO_USE_AS_GUID</span></span><a class="headerlink" href="#gen3.tools.metadata.ingest_manifest.COLUMN_TO_USE_AS_GUID" title="Permalink to this definition">¶</a></dt>
+<dd><p>file column containing guid to use</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="attribute">
-<dt id="gen3.tools.metadata.ingest_manifest.GUID_TYPE_FOR_INDEXED_FILE_OBJECT">
-<code class="descclassname">gen3.tools.metadata.ingest_manifest.</code><code class="descname">GUID_TYPE_FOR_INDEXED_FILE_OBJECT</code><a class="headerlink" href="#gen3.tools.metadata.ingest_manifest.GUID_TYPE_FOR_INDEXED_FILE_OBJECT" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>str</em> – type to populate in mds when guid exists
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gen3.tools.metadata.ingest_manifest.GUID_TYPE_FOR_INDEXED_FILE_OBJECT">
+<span class="sig-prename descclassname"><span class="pre">gen3.tools.metadata.ingest_manifest.</span></span><span class="sig-name descname"><span class="pre">GUID_TYPE_FOR_INDEXED_FILE_OBJECT</span></span><a class="headerlink" href="#gen3.tools.metadata.ingest_manifest.GUID_TYPE_FOR_INDEXED_FILE_OBJECT" title="Permalink to this definition">¶</a></dt>
+<dd><p>type to populate in mds when guid exists
 in indexd</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="attribute">
-<dt id="gen3.tools.metadata.ingest_manifest.GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT">
-<code class="descclassname">gen3.tools.metadata.ingest_manifest.</code><code class="descname">GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT</code><a class="headerlink" href="#gen3.tools.metadata.ingest_manifest.GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>str</em> – type to populate in mds when guid does
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gen3.tools.metadata.ingest_manifest.GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT">
+<span class="sig-prename descclassname"><span class="pre">gen3.tools.metadata.ingest_manifest.</span></span><span class="sig-name descname"><span class="pre">GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT</span></span><a class="headerlink" href="#gen3.tools.metadata.ingest_manifest.GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT" title="Permalink to this definition">¶</a></dt>
+<dd><p>type to populate in mds when guid does
 NOT exist in indexd</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="attribute">
-<dt>
-<code class="descname">manifest_row_parsers (Dict{str</code></dt>
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">manifest_row_parsers</span> <span class="pre">(Dict{str</span></span></dt>
 <dd><p>function}): functions for parsing, users can override
 manifest_row_parsers = {</p>
 <blockquote>
-<div>“guid_from_file”: _get_guid_for_row,
-“indexed_file_object_guid”: _query_for_associated_indexd_record_guid,</div></blockquote>
+<div><p>“guid_from_file”: _get_guid_for_row,
+“indexed_file_object_guid”: _query_for_associated_indexd_record_guid,</p>
+</div></blockquote>
 <p>}</p>
 <p>“guid_for_row” is the function to retrieve the guid from the given file
 “indexed_file_object_guid” is the function to retrieve the guid from elsewhere,</p>
 <blockquote>
-<div>like indexd (by querying)</div></blockquote>
+<div><p>like indexd (by querying)</p>
+</div></blockquote>
 </dd></dl>
 
-<dl class="attribute">
-<dt id="gen3.tools.metadata.ingest_manifest.MAX_CONCURRENT_REQUESTS">
-<code class="descclassname">gen3.tools.metadata.ingest_manifest.</code><code class="descname">MAX_CONCURRENT_REQUESTS</code><a class="headerlink" href="#gen3.tools.metadata.ingest_manifest.MAX_CONCURRENT_REQUESTS" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>int</em> – Maximum concurrent requests to mds for ingestion</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gen3.tools.metadata.ingest_manifest.MAX_CONCURRENT_REQUESTS">
+<span class="sig-prename descclassname"><span class="pre">gen3.tools.metadata.ingest_manifest.</span></span><span class="sig-name descname"><span class="pre">MAX_CONCURRENT_REQUESTS</span></span><a class="headerlink" href="#gen3.tools.metadata.ingest_manifest.MAX_CONCURRENT_REQUESTS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Maximum concurrent requests to mds for ingestion</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="gen3.tools.metadata.ingest_manifest.async_ingest_metadata_manifest">
-<code class="descclassname">gen3.tools.metadata.ingest_manifest.</code><code class="descname">async_ingest_metadata_manifest</code><span class="sig-paren">(</span><em>commons_url</em>, <em>manifest_file</em>, <em>metadata_source</em>, <em>auth=None</em>, <em>max_concurrent_requests=24</em>, <em>manifest_row_parsers={'guid_for_row': &lt;function _get_guid_for_row at 0x7fab3635d158&gt;</em>, <em>'indexed_file_object_guid': &lt;function _query_for_associated_indexd_record_guid at 0x7fab3635d1e0&gt;}</em>, <em>manifest_file_delimiter=None</em>, <em>output_filename='ingest-metadata-manifest-errors-1613681191.0384614.log'</em>, <em>get_guid_from_file=True</em>, <em>metadata_type=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/metadata/ingest_manifest.html#async_ingest_metadata_manifest"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.tools.metadata.ingest_manifest.async_ingest_metadata_manifest" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="gen3.tools.metadata.ingest_manifest.async_ingest_metadata_manifest">
+<em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.tools.metadata.ingest_manifest.</span></span><span class="sig-name descname"><span class="pre">async_ingest_metadata_manifest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">commons_url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata_source</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_concurrent_requests=24</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_row_parsers={'guid_for_row':</span> <span class="pre">&lt;function</span> <span class="pre">_get_guid_for_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'indexed_file_object_guid':</span> <span class="pre">&lt;function</span> <span class="pre">_query_for_associated_indexd_record_guid&gt;}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_file_delimiter=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filename='ingest-metadata-manifest-errors-1660251057.9685695.log'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">get_guid_from_file=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata_type=None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/metadata/ingest_manifest.html#async_ingest_metadata_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.metadata.ingest_manifest.async_ingest_metadata_manifest" title="Permalink to this definition">¶</a></dt>
 <dd><p>Ingest all metadata records into a manifest csv</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>commons_url</strong> (<em>str</em>) – root domain for commons where mds lives</li>
-<li><strong>manifest_file</strong> (<em>str</em>) – the file to ingest against</li>
-<li><strong>metadata_source</strong> (<em>str</em>) – the name of the source of metadata (used to namespace
-in the metadata service) ex: dbgap</li>
-<li><strong>auth</strong> (<a class="reference internal" href="../auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><em>Gen3Auth</em></a>) – Gen3 auth or tuple with basic auth name and password</li>
-<li><strong>max_concurrent_requests</strong> (<em>int</em>) – the maximum number of concurrent requests allowed</li>
-<li><strong>(</strong><strong>Dict{indexd_field</strong> (<em>manifest_row_parsers</em>) – func_to_parse_row}): Row parsers</li>
-<li><strong>manifest_file_delimiter</strong> (<em>str</em>) – delimeter in manifest_file</li>
-<li><strong>output_filename</strong> (<em>str</em>) – filename for output logs</li>
-<li><strong>get_guid_from_file</strong> (<em>bool</em>) – <p>whether or not to get the guid for metadata from file
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>commons_url</strong> (<em>str</em>) – root domain for commons where mds lives</p></li>
+<li><p><strong>manifest_file</strong> (<em>str</em>) – the file to ingest against</p></li>
+<li><p><strong>metadata_source</strong> (<em>str</em>) – the name of the source of metadata (used to namespace
+in the metadata service) ex: dbgap</p></li>
+<li><p><strong>auth</strong> (<a class="reference internal" href="../auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><em>Gen3Auth</em></a>) – Gen3 auth or tuple with basic auth name and password</p></li>
+<li><p><strong>max_concurrent_requests</strong> (<em>int</em>) – the maximum number of concurrent requests allowed</p></li>
+<li><p><strong>(</strong><strong>Dict{indexd_field</strong> (<em>manifest_row_parsers</em>) – func_to_parse_row}): Row parsers</p></li>
+<li><p><strong>manifest_file_delimiter</strong> (<em>str</em>) – delimeter in manifest_file</p></li>
+<li><p><strong>output_filename</strong> (<em>str</em>) – filename for output logs</p></li>
+<li><p><strong>get_guid_from_file</strong> (<em>bool</em>) – <p>whether or not to get the guid for metadata from file
 NOTE: When this is True, will use the function in</p>
 <blockquote>
-<div>manifest_row_parsers[“guid_for_row”] to determine the GUID
-(usually just a specific column in the file row like “guid”)</div></blockquote>
-</li>
-<li><strong>metadata_type</strong> (<em>str</em>) – <p>the type of metadata to be filled into the _guid_type field.
+<div><p>manifest_row_parsers[“guid_for_row”] to determine the GUID
+(usually just a specific column in the file row like “guid”)</p>
+</div></blockquote>
+</p></li>
+<li><p><strong>metadata_type</strong> (<em>str</em>) – <p>the type of metadata to be filled into the _guid_type field.
 If provided, will override the default logic per GUID: (GUID_TYPE_FOR_INDEXED_FILE_OBJECT</p>
 <blockquote>
-<div>if is_indexed_file_object
-else GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT)</div></blockquote>
-</li>
+<div><p>if is_indexed_file_object
+else GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT)</p>
+</div></blockquote>
+</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="gen3.tools.metadata.ingest_manifest.async_query_urls_from_indexd">
-<code class="descclassname">gen3.tools.metadata.ingest_manifest.</code><code class="descname">async_query_urls_from_indexd</code><span class="sig-paren">(</span><em>pattern</em>, <em>commons_url</em>, <em>lock</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/metadata/ingest_manifest.html#async_query_urls_from_indexd"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gen3.tools.metadata.ingest_manifest.async_query_urls_from_indexd" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="gen3.tools.metadata.ingest_manifest.async_query_urls_from_indexd">
+<em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.tools.metadata.ingest_manifest.</span></span><span class="sig-name descname"><span class="pre">async_query_urls_from_indexd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pattern</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">commons_url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lock</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/metadata/ingest_manifest.html#async_query_urls_from_indexd"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.metadata.ingest_manifest.async_query_urls_from_indexd" title="Permalink to this definition">¶</a></dt>
 <dd><p>Gets a semaphore then requests a record for the given pattern</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>pattern</strong> (<em>str</em>) – url pattern to match</li>
-<li><strong>commons_url</strong> (<em>str</em>) – root domain for commons where mds lives</li>
-<li><strong>lock</strong> (<em>asyncio.Semaphore</em>) – semaphones used to limit ammount of concurrent http
-connections</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pattern</strong> (<em>str</em>) – url pattern to match</p></li>
+<li><p><strong>commons_url</strong> (<em>str</em>) – root domain for commons where mds lives</p></li>
+<li><p><strong>lock</strong> (<em>asyncio.Semaphore</em>) – semaphones used to limit ammount of concurrent http
+connections</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 </dd></dl>
 
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
+          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
-  <ul>
-<li><a class="reference internal" href="#">Metadata Tools</a><ul>
-<li><a class="reference internal" href="#module-gen3.tools.metadata.ingest_manifest">Ingest</a></li>
+<h1 class="logo"><a href="../index.html">Gen3 SDK</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=uc-cdis&repo=gen3sdk-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../auth.html">Gen3 Auth Helper</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../file.html">Gen3 File Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../indexing.html">Gen3 Index Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../jobs.html">Gen3 Jobs Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Gen3 Metadata Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../object.html">Gen3 Object Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../query.html">Gen3 Query Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../submission.html">Gen3 Submission Class</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../tools.html">Gen3 Tools</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="drs_pull.html">DRS Download Tools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="indexing.html">Indexing Tools</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Metadata Tools</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#module-gen3.tools.metadata.ingest_manifest">Ingest</a></li>
 </ul>
 </li>
 </ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../wss.html">Gen3 Workspace Storage</a></li>
+</ul>
+
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
@@ -169,29 +212,30 @@ connections</li>
   </ul></li>
 </ul>
 </div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/tools/metadata.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
         </div>
       </div>
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2020, Center for Translational Data Science.
+      &copy;2021, Center for Translational Data Science.
       
       |
       <a href="../_sources/tools/metadata.rst.txt"

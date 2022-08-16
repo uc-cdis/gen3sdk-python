@@ -1,0 +1,13 @@
+{
+  "info": {
+    "created": "10/22/1921 21:29:11:+0000"
+  },
+  "cache": {
+    "dg.XXTS": {
+      "host": "test1.testcommons1.org",
+      "name": "DataSTAGE",
+      "type": "indexd",
+      "created": "10/22/1921 21:29:11:+0000"
+    }
+  }
+}

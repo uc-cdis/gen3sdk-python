@@ -39,16 +39,21 @@ Attributes:
     MAX_CONCURRENT_REQUESTS (int): maximum number of desired concurrent requests across
         processes/threads
 """
+import aiohttp
 import asyncio
 import csv
-import logging
+from cdislogging import get_logger
+
 import os
 import time
 
 from gen3.index import Gen3Index
+from gen3.utils import get_or_create_event_loop_for_thread
 
 MAX_CONCURRENT_REQUESTS = 24
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+
+logging = get_logger("__name__")
 
 
 def _get_guid_from_row(row):
@@ -205,7 +210,7 @@ async def async_verify_object_manifest(
     start_time = time.perf_counter()
     logging.info(f"start time: {start_time}")
 
-    # if delimter not specified, try to get based on file ext
+    # if delimiter not specified, try to get based on file ext
     if not manifest_file_delimiter:
         file_ext = os.path.splitext(manifest_file)
         if file_ext[-1].lower() == ".tsv":
@@ -214,12 +219,14 @@ async def async_verify_object_manifest(
             # default, assume CSV
             manifest_file_delimiter = ","
 
+    logging.debug(f"detected {manifest_file_delimiter} as delimiter between columns")
+
     await _verify_all_index_records_in_file(
         commons_url,
         manifest_file,
         manifest_file_delimiter,
         max_concurrent_requests,
-        output_filename.split("/")[-1],
+        output_filename,
     )
 
     end_time = time.perf_counter()
@@ -259,10 +266,14 @@ async def _verify_all_index_records_in_file(
 
     with open(manifest_file, encoding="utf-8-sig") as manifest:
         reader = csv.DictReader(manifest, delimiter=manifest_file_delimiter)
+
         for row in reader:
             new_row = {}
             for key, value in row.items():
-                new_row[key.strip()] = value.strip()
+                if value:
+                    value = value.strip()
+
+                new_row[key.strip()] = value
             await queue.put(new_row)
 
     for _ in range(0, int(max_concurrent_requests + (max_concurrent_requests / 4))):
@@ -314,7 +325,7 @@ async def _parse_from_queue(queue, lock, commons_url, output_queue):
         commons_url (str): root domain for commons where indexd lives
         output_queue (asyncio.Queue): queue for output
     """
-    loop = asyncio.get_event_loop()
+    loop = get_or_create_event_loop_for_thread()
 
     row = await queue.get()
 
@@ -411,4 +422,12 @@ async def _get_record_from_indexd(guid, commons_url, lock):
         if "https" not in commons_url:
             ssl = False
 
-        return await index.async_get_record(guid, _ssl=ssl)
+        record = None
+
+        try:
+            return await index.async_get_record(guid, _ssl=ssl)
+
+        except aiohttp.client_exceptions.ClientResponseError as exc:
+            logging.warning(f"couldn't get record. error: {exc}")
+
+        return record

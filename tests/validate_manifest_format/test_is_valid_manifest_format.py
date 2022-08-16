@@ -1,20 +1,53 @@
+import os
 import pytest
-import logging
+import logging as default_logging
+from gen3 import logging, LOG_FORMAT
 
 from gen3.tools.indexing import is_valid_manifest_format
-from gen3.tools.indexing.manifest_columns import Columns
+from gen3.tools.utils import Columns
 
 
 @pytest.fixture(autouse=True)
-def set_log_level_to_error():
+def set_log_level_to_warning():
     """
-    By default, only log errors
+    By default, only log errors and setup a log output file to read from later
     """
-    logging.getLogger().setLevel(logging.ERROR)
+    logging.setLevel(default_logging.WARNING)
+
+    if os.path.exists("gen3tests.logs"):
+        os.remove("gen3tests.logs")
+    logfile_handler = default_logging.FileHandler("gen3tests.logs")
+    logfile_handler.setFormatter(default_logging.Formatter(LOG_FORMAT))
+    logging.addHandler(logfile_handler)
     yield
 
 
-def test_is_valid_manifest_format_with_no_errors(caplog):
+@pytest.fixture()
+def logfile():
+    """
+    Read from log output file
+    """
+
+    class Logfile(object):
+        def __init__(self, filename, *args, **kwargs):
+            super(Logfile, self).__init__(*args, **kwargs)
+            self.filename = filename
+            self.logs = ""
+
+        def read(self):
+            with open(self.filename) as file:
+                for line in file:
+                    self.logs += line
+            return self.logs
+
+    yield Logfile(filename="gen3tests.logs")
+
+    # cleanup after each use
+    if os.path.exists("gen3tests.logs"):
+        os.remove("gen3tests.logs")
+
+
+def test_is_valid_manifest_format_with_no_errors(logfile):
     """
     Test that no errors occur for manifest without errors
     """
@@ -24,15 +57,19 @@ def test_is_valid_manifest_format_with_no_errors(caplog):
         )
         == True
     )
-    assert caplog.text == ""
+    assert logfile.read() == ""
 
 
-def test_is_valid_manifest_format_with_csv(caplog):
+def test_is_valid_manifest_format_with_csv(logfile):
     """
     Test that alternative delimiter can be automatically detected
     """
-    assert is_valid_manifest_format("tests/test_manifest.csv") == True
-    assert caplog.text == ""
+    logging.setLevel(default_logging.ERROR)
+
+    assert is_valid_manifest_format("tests/test_data/test_manifest.csv") == True
+    assert logfile.read() == ""
+
+    logging.setLevel(default_logging.WARNING)
 
 
 def manifest_with_many_types_of_errors_helper(error_log):
@@ -48,7 +85,7 @@ def manifest_with_many_types_of_errors_helper(error_log):
     assert '"invalid_url"' in error_log
 
 
-def test_is_valid_manifest_format_with_many_types_of_errors(caplog):
+def test_is_valid_manifest_format_with_many_types_of_errors(logfile):
     """
     Test that errors with md5, file size, url, and authz all get detected and
     error logged
@@ -56,12 +93,12 @@ def test_is_valid_manifest_format_with_many_types_of_errors(caplog):
     result = is_valid_manifest_format(
         "tests/validate_manifest_format/manifests/manifest_with_many_types_of_errors.tsv",
     )
-    error_log = caplog.text
+    error_log = logfile.read()
     manifest_with_many_types_of_errors_helper(error_log)
     assert result == False
 
 
-def test_is_valid_manifest_format_using_column_names_to_enums(caplog):
+def test_is_valid_manifest_format_using_column_names_to_enums(logfile):
     """
     Test that custom manifest column names can be used
     """
@@ -75,7 +112,7 @@ def test_is_valid_manifest_format_using_column_names_to_enums(caplog):
         "tests/validate_manifest_format/manifests/manifest_with_custom_column_names.tsv",
         column_names_to_enums=column_names_to_enums,
     )
-    error_log = caplog.text
+    error_log = logfile.read()
     manifest_with_many_types_of_errors_helper(error_log)
     assert result == False
 
@@ -101,7 +138,7 @@ def manifest_with_invalid_md5_values_helper(error_log):
     assert short_base64_encoded_md5 in error_log
 
 
-def test_is_valid_manifest_format_with_invalid_md5_values(caplog):
+def test_is_valid_manifest_format_with_invalid_md5_values(logfile):
     """
     Test that invalid md5 errors are detected and error logged
     """
@@ -109,14 +146,14 @@ def test_is_valid_manifest_format_with_invalid_md5_values(caplog):
         "tests/validate_manifest_format/manifests/manifest_with_invalid_md5_values.tsv"
     )
 
-    error_log = caplog.text
+    error_log = logfile.read()
     manifest_with_invalid_md5_values_helper(error_log)
     base64_encoded_md5 = '"jd2L5LF5pSmvpfL/rkuYWA=="'
     assert base64_encoded_md5 in error_log
     assert result == False
 
 
-def test_is_valid_manifest_format_allowing_base64_encoded_md5(caplog):
+def test_is_valid_manifest_format_allowing_base64_encoded_md5(logfile):
     """
     Test that valid Base64 encoded md5 does not get reported in error log when
     allow_base64_encoded_md5 is used
@@ -126,21 +163,21 @@ def test_is_valid_manifest_format_allowing_base64_encoded_md5(caplog):
         allow_base64_encoded_md5=True,
     )
 
-    error_log = caplog.text
+    error_log = logfile.read()
     manifest_with_invalid_md5_values_helper(error_log)
     base64_encoded_md5 = '"jd2L5LF5pSmvpfL/rkuYWA=="'
     assert base64_encoded_md5 not in error_log
     assert result == False
 
 
-def test_is_valid_manifest_format_with_invalid_sizes(caplog):
+def test_is_valid_manifest_format_with_invalid_sizes(logfile):
     """
     Test that invalid sizes are detected and error logged
     """
     result = is_valid_manifest_format(
         "tests/validate_manifest_format/manifests/manifest_with_invalid_sizes.tsv"
     )
-    error_log = caplog.text
+    error_log = logfile.read()
     assert "-1" in error_log
     assert "not_an_int" in error_log
     assert "3.34" in error_log
@@ -148,7 +185,7 @@ def test_is_valid_manifest_format_with_invalid_sizes(caplog):
     assert result == False
 
 
-def test_is_valid_manifest_format_with_invalid_urls(caplog):
+def test_is_valid_manifest_format_with_invalid_urls(logfile):
     """
     Test that invalid urls are detected and error logged
     Test that empty arrays and empty quote pairs are detected and error logged
@@ -156,7 +193,7 @@ def test_is_valid_manifest_format_with_invalid_urls(caplog):
     result = is_valid_manifest_format(
         "tests/validate_manifest_format/manifests/manifest_with_invalid_urls.tsv"
     )
-    error_log = caplog.text
+    error_log = logfile.read()
     assert '"wrong_protocol://test_bucket/test.txt"' in error_log
     assert '"test/test.txt"' in error_log
     assert '"testaws/aws/test.txt"' in error_log
@@ -173,17 +210,20 @@ def test_is_valid_manifest_format_with_invalid_urls(caplog):
     assert '"https://www.uchicago.edu"' in error_log
     assert '"https://www.uchicago.edu/about"' in error_log
     assert '"google.com/path"' in error_log
-    assert '""""' in error_log
-    assert "\"''\"" in error_log
-    assert '"[]"' in error_log
-    assert "\"['']\"" in error_log
-    assert '"[""]"' in error_log
-    assert '"["", ""]"' in error_log
-    assert '"["", \'\']"' in error_log
+
+    # if the url resolves to nothing after replacing characters, the log may just say
+    # "is empty" and not list the original value
+    assert '""""' in error_log or "is empty" in error_log
+    assert "\"''\"" in error_log or "is empty" in error_log
+    assert '"[]"' in error_log or "is empty" in error_log
+    assert "\"['']\"" in error_log or "is empty" in error_log
+    assert '"[""]"' in error_log or "is empty" in error_log
+    assert '"["" ""]"' in error_log or "is empty" in error_log
+    assert '"["" \'\']"' in error_log or "is empty" in error_log
     assert result == False
 
 
-def test_is_valid_manifest_format_using_allowed_protocols(caplog):
+def test_is_valid_manifest_format_using_allowed_protocols(logfile):
     """
     Test that user defined protocols can be used
     """
@@ -191,7 +231,7 @@ def test_is_valid_manifest_format_using_allowed_protocols(caplog):
         "tests/validate_manifest_format/manifests/manifest_with_custom_url_protocols.tsv",
         allowed_protocols=["s3", "gs", "http", "https"],
     )
-    error_log = caplog.text
+    error_log = logfile.read()
     assert "gs://test/test.txt" not in error_log
     assert "s3://testaws/aws/test.txt" not in error_log
     assert "https://www.uchicago.edu/about" not in error_log
@@ -202,14 +242,14 @@ def test_is_valid_manifest_format_using_allowed_protocols(caplog):
     assert result == False
 
 
-def test_is_valid_manifest_format_with_invalid_authz_resources(caplog):
+def test_is_valid_manifest_format_with_invalid_authz_resources(logfile):
     """
     Test that invalid authz resources are detected and reported in error log
     """
     result = is_valid_manifest_format(
         "tests/validate_manifest_format/manifests/manifest_with_invalid_authz_resources.tsv",
     )
-    error_log = caplog.text
+    error_log = logfile.read()
     assert '"invalid_authz"' in error_log
     assert '"/"' in error_log
     assert '"//"' in error_log
@@ -218,7 +258,7 @@ def test_is_valid_manifest_format_with_invalid_authz_resources(caplog):
     assert result == False
 
 
-def test_is_valid_manifest_format_using_line_limit(caplog):
+def test_is_valid_manifest_format_using_line_limit(logfile):
     """
     Test that only first few lines of manifest can be validated
     """
@@ -226,7 +266,7 @@ def test_is_valid_manifest_format_using_line_limit(caplog):
         "tests/validate_manifest_format/manifests/manifest_with_invalid_sizes.tsv",
         line_limit=3,
     )
-    error_log = caplog.text
+    error_log = logfile.read()
     assert "line 2" in error_log
     assert "line 3" in error_log
     assert "line 4" not in error_log
@@ -234,18 +274,22 @@ def test_is_valid_manifest_format_using_line_limit(caplog):
     assert result == False
 
 
-def test_is_valid_manifest_format_with_empty_url(caplog):
+def test_is_valid_manifest_format_with_empty_url(logfile):
     """
     Test that by default, completely empty url values are allowed
     """
+    logging.setLevel(default_logging.ERROR)
+
     result = is_valid_manifest_format(
         "tests/validate_manifest_format/manifests/manifest_with_empty_url.tsv",
     )
-    assert caplog.text == ""
+    assert logfile.read() == ""
     assert result == True
 
+    logging.setLevel(default_logging.WARNING)
 
-def test_is_valid_manifest_format_using_error_on_empty_url(caplog):
+
+def test_is_valid_manifest_format_using_error_on_empty_url(logfile):
     """
     Test that completely empty urls are detected and reported in error log when
     using error_on_empty_url
@@ -254,24 +298,23 @@ def test_is_valid_manifest_format_using_error_on_empty_url(caplog):
         "tests/validate_manifest_format/manifests/manifest_with_empty_url.tsv",
         error_on_empty_url=True,
     )
-    assert '""' in caplog.text
+    assert '""' in logfile.read()
     assert result == False
 
 
-def test_is_valid_manifest_with_wide_row(caplog):
+def test_is_valid_manifest_with_wide_row(logfile):
     """
     Test that warning is generated for a wide row with an extra value
     """
-    logging.getLogger().setLevel(logging.WARNING)
     result = is_valid_manifest_format(
         "tests/validate_manifest_format/manifests/manifest_with_wide_row.tsv",
     )
     wide_warning = f"line 3, number of fields (6) in row is unequal to number of column names in manifest (5)"
-    assert wide_warning in caplog.text
+    assert wide_warning in logfile.read()
     assert result == True
 
 
-def test_is_valid_manifest_with_missing_md5_column(caplog):
+def test_is_valid_manifest_with_missing_md5_column(logfile):
     """
     Test that completely missing md5 column is detected and reported in error
     log
@@ -282,11 +325,11 @@ def test_is_valid_manifest_with_missing_md5_column(caplog):
     missing_md5_message = (
         'could not find a column name corresponding to required "Columns.MD5"'
     )
-    assert missing_md5_message in caplog.text
+    assert missing_md5_message in logfile.read()
     assert result == False
 
 
-def test_is_valid_manifest_with_missing_size_column(caplog):
+def test_is_valid_manifest_with_missing_size_column(logfile):
     """
     Test that completely missing size column is detected and reported in error
     log
@@ -297,27 +340,26 @@ def test_is_valid_manifest_with_missing_size_column(caplog):
     missing_size_message = (
         'could not find a column name corresponding to required "Columns.SIZE"'
     )
-    assert missing_size_message in caplog.text
+    assert missing_size_message in logfile.read()
     assert result == False
 
 
-def test_is_valid_manifest_with_missing_url_column(caplog):
+def test_is_valid_manifest_with_missing_url_column(logfile):
     """
     Test that a warning is generated for completely missing url column by
     default
     """
-    logging.getLogger().setLevel(logging.WARNING)
     result = is_valid_manifest_format(
         "tests/validate_manifest_format/manifests/manifest_with_missing_url_column.tsv",
     )
     missing_size_message = (
         'could not find a column name corresponding to required "Columns.URL"'
     )
-    assert missing_size_message in caplog.text
+    assert missing_size_message in logfile.read()
     assert result == True
 
 
-def test_is_valid_manifest_with_missing_url_column_and_error_on_empty_url(caplog):
+def test_is_valid_manifest_with_missing_url_column_and_error_on_empty_url(logfile):
     """
     Test that an error is generated for completely missing url column when using
     error_on_empty_url
@@ -329,5 +371,5 @@ def test_is_valid_manifest_with_missing_url_column_and_error_on_empty_url(caplog
     missing_size_message = (
         'could not find a column name corresponding to required "Columns.URL"'
     )
-    assert missing_size_message in caplog.text
+    assert missing_size_message in logfile.read()
     assert result == False

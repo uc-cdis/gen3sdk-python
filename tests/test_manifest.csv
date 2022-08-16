@@ -1,4 +1,0 @@
-guid,authz,acl,file_size,md5,urls
-dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b,/programs/DEV/projects/test,DEV  test,123,a1234567891234567890123456789012,gs://test/test.txt s3://testaws/aws/test.txt
-dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2,/programs/DEV/projects/test2,DEV,235,c1234567891234567890123456789012,gs://test/test3.txt
-dg.TEST/9c205cd7-c399-4503-9f49-5647188bde66,/programs/DEV/projects/test3 /programs/DEV/projects/test3bak,DEV test3,334,b1334567891334567890133456789013,gs://test/test.txt

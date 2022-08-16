@@ -1,11 +1,18 @@
 import backoff
 import requests
 import urllib.parse
-import logging
+from cdislogging import get_logger
+
 import sys
 from urllib.parse import urlparse
 
-from gen3.utils import append_query_params, DEFAULT_BACKOFF_SETTINGS
+from gen3.utils import (
+    append_query_params,
+    DEFAULT_BACKOFF_SETTINGS,
+    raise_for_status_and_print_error,
+)
+
+logging = get_logger("__name__")
 
 
 def wsurl_to_tokens(ws_urlstr):
@@ -23,7 +30,7 @@ def wsurl_to_tokens(ws_urlstr):
 def get_url(urlstr, dest_path):
     """Simple url fetch to dest_path with backoff"""
     res = requests.get(urlstr)
-    res.raise_for_status()
+    raise_for_status_and_print_error(res)
     if dest_path == "-":
         sys.stdout.write(res.text)
     else:
@@ -36,7 +43,7 @@ def put_url(urlstr, src_path):
     """Simple put src_path to url with backoff"""
     with open(src_path, "rb") as f:
         res = requests.put(urlstr, data=f)
-    res.raise_for_status()
+    raise_for_status_and_print_error(res)
 
 
 class Gen3WsStorage:
@@ -71,7 +78,7 @@ class Gen3WsStorage:
         """
         wskey = wskey.lstrip("/")
         res = self._auth_provider.curl("/ws-storage/upload/{}/{}".format(ws, wskey))
-        res.raise_for_status()
+        raise_for_status_and_print_error(res)
         return res.json()
 
     @backoff.on_exception(backoff.expo, requests.HTTPError, **DEFAULT_BACKOFF_SETTINGS)
@@ -93,7 +100,7 @@ class Gen3WsStorage:
         """
         wskey = wskey.lstrip("/")
         res = self._auth_provider.curl("/ws-storage/download/{}/{}".format(ws, wskey))
-        res.raise_for_status()
+        raise_for_status_and_print_error(res)
         return res.json()
 
     def download(self, src_ws, src_wskey, dest_path):
@@ -136,7 +143,7 @@ class Gen3WsStorage:
         """
         wskey = wskey.lstrip("/")
         res = self._auth_provider.curl("/ws-storage/list/{}/{}".format(ws, wskey))
-        res.raise_for_status()
+        raise_for_status_and_print_error(res)
         return res.json()
 
     def ls_path(self, ws_urlstr):
@@ -164,7 +171,7 @@ class Gen3WsStorage:
         res = self._auth_provider.curl(
             "/ws-storage/list/{}/{}".format(ws, wskey), request="DELETE"
         )
-        res.raise_for_status()
+        raise_for_status_and_print_error(res)
         return res.json()
 
     def rm_path(self, ws_urlstr):
