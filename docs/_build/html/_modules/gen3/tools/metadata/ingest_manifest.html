@@ -1,16 +1,17 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>gen3.tools.metadata.ingest_manifest &#8212; Gen3 SDK  documentation</title>
-    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
-    <script id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/alabaster.css" />
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
     <script src="../../../../_static/jquery.js"></script>
     <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../../../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../../../../genindex.html" />
     <link rel="search" title="Search" href="../../../../search.html" />
@@ -56,7 +57,8 @@
 <span class="kn">import</span> <span class="nn">asyncio</span>
 <span class="kn">import</span> <span class="nn">csv</span>
 <span class="kn">import</span> <span class="nn">json</span>
-<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">cdislogging</span> <span class="kn">import</span> <span class="n">get_logger</span>
+
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">import</span> <span class="nn">urllib.parse</span>
@@ -71,6 +73,8 @@
 <span class="n">COLUMN_TO_USE_AS_GUID</span> <span class="o">=</span> <span class="s2">&quot;guid&quot;</span>
 <span class="n">GUID_TYPE_FOR_INDEXED_FILE_OBJECT</span> <span class="o">=</span> <span class="s2">&quot;indexed_file_object&quot;</span>
 <span class="n">GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT</span> <span class="o">=</span> <span class="s2">&quot;metadata_object&quot;</span>
+
+<span class="n">logging</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="s2">&quot;__name__&quot;</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_get_guid_for_row</span><span class="p">(</span><span class="n">commons_url</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">lock</span><span class="p">):</span>
@@ -206,7 +210,7 @@
 <span class="sd">                if is_indexed_file_object</span>
 <span class="sd">                else GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># if delimter not specified, try to get based on file ext</span>
+    <span class="c1"># if delimiter not specified, try to get based on file ext</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">manifest_file_delimiter</span><span class="p">:</span>
         <span class="n">file_ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">file_ext</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.tsv&quot;</span><span class="p">:</span>
@@ -593,6 +597,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../../indexing.html">Gen3 Index Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../jobs.html">Gen3 Jobs Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../metadata.html">Gen3 Metadata Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../object.html">Gen3 Object Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../query.html">Gen3 Query Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../submission.html">Gen3 Submission Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../tools.html">Gen3 Tools</a></li>
@@ -612,12 +617,12 @@
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../../../../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
 
 
 
@@ -631,7 +636,7 @@
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2020, Center for Translational Data Science.
+      &copy;2021, Center for Translational Data Science.
       
     </div>
 

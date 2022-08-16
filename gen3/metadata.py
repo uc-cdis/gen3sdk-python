@@ -3,13 +3,56 @@ Contains class for interacting with Gen3's Metadata Service.
 """
 import aiohttp
 import backoff
+from datetime import datetime
 import requests
-import urllib.parse
-import logging
-import sys
+import json
+import os
+from urllib.parse import urlparse
 
-from gen3.utils import append_query_params, DEFAULT_BACKOFF_SETTINGS, raise_for_status
+from gen3.utils import (
+    append_query_params,
+    DEFAULT_BACKOFF_SETTINGS,
+    BACKOFF_NO_LOG_IF_NOT_RETRIED,
+    _verify_schema,
+)
 from gen3.auth import Gen3Auth
+from gen3.tools.utils import (
+    RECORD_TYPE_STANDARD_KEY,
+    GUID_COLUMN_NAMES,
+    FILENAME_COLUMN_NAMES,
+    SIZE_COLUMN_NAMES,
+    MD5_COLUMN_NAMES,
+    ACLS_COLUMN_NAMES,
+    URLS_COLUMN_NAMES,
+    AUTHZ_COLUMN_NAMES,
+    PREV_GUID_COLUMN_NAMES,
+)
+
+from cdislogging import get_logger
+
+logging = get_logger("__name__")
+
+
+PACKAGE_CONTENTS_STANDARD_KEY = "package_contents"
+PACKAGE_CONTENTS_SCHEMA = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "file_name": {
+                "type": "string",
+            },
+            "size": {
+                "type": "integer",
+            },
+            "hashes": {
+                "type": "object",
+            },
+        },
+        "required": ["file_name"],
+        "additionalProperties": True,
+    },
+}
 
 
 class Gen3Metadata:
@@ -76,7 +119,7 @@ class Gen3Metadata:
             response = requests.get(
                 self.endpoint + "/_status", auth=self._auth_provider
             )
-            raise_for_status(response)
+            response.raise_for_status()
         except Exception as exc:
             logging.error(exc)
             return False
@@ -92,7 +135,7 @@ class Gen3Metadata:
             str: the version
         """
         response = requests.get(self.endpoint + "/version", auth=self._auth_provider)
-        raise_for_status(response)
+        response.raise_for_status()
         return response.text
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
@@ -106,7 +149,7 @@ class Gen3Metadata:
         response = requests.get(
             self.admin_endpoint + "/metadata_index", auth=self._auth_provider
         )
-        raise_for_status(response)
+        response.raise_for_status()
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
@@ -120,7 +163,7 @@ class Gen3Metadata:
         response = requests.post(
             self.admin_endpoint + f"/metadata_index/{path}", auth=self._auth_provider
         )
-        raise_for_status(response)
+        response.raise_for_status()
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
@@ -134,11 +177,19 @@ class Gen3Metadata:
         response = requests.delete(
             self.admin_endpoint + f"/metadata_index/{path}", auth=self._auth_provider
         )
-        raise_for_status(response)
+        response.raise_for_status()
         return response
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    def query(self, query, return_full_metadata=False, limit=10, offset=0, **kwargs):
+    def query(
+        self,
+        query,
+        return_full_metadata=False,
+        limit=10,
+        offset=0,
+        use_agg_mds=False,
+        **kwargs,
+    ):
         """
         Query the metadata given a query.
 
@@ -184,6 +235,7 @@ class Gen3Metadata:
             Dict{guid: {metadata}}: Dictionary with GUIDs as keys and associated
                 metadata JSON blobs as values
         """
+
         url = self.endpoint + f"/metadata?{query}"
 
         url_with_params = append_query_params(
@@ -191,11 +243,11 @@ class Gen3Metadata:
         )
         logging.debug(f"hitting: {url_with_params}")
         response = requests.get(url_with_params, auth=self._auth_provider)
-        raise_for_status(response)
+        response.raise_for_status()
 
         return response.json()
 
-    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
     async def async_get(self, guid, _ssl=None, **kwargs):
         """
         Asynchronous function to get metadata
@@ -214,28 +266,26 @@ class Gen3Metadata:
             logging.debug(f"hitting: {url_with_params}")
 
             async with session.get(url_with_params, ssl=_ssl) as response:
-                raise_for_status(response)
+                response.raise_for_status()
                 response = await response.json()
 
         return response
 
-    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
     def get(self, guid, **kwargs):
         """
         Get the metadata associated with the guid
-
         Args:
             guid (str): guid to use
-
         Returns:
             Dict: metadata for given guid
         """
         url = self.endpoint + f"/metadata/{guid}"
-
         url_with_params = append_query_params(url, **kwargs)
         logging.debug(f"hitting: {url_with_params}")
         response = requests.get(url_with_params, auth=self._auth_provider)
-        raise_for_status(response)
+
+        response.raise_for_status()
 
         return response.json()
 
@@ -268,7 +318,7 @@ class Gen3Metadata:
         response = requests.post(
             url_with_params, json=metadata_list, auth=self._auth_provider
         )
-        raise_for_status(response)
+        response.raise_for_status()
 
         return response.json()
 
@@ -291,12 +341,20 @@ class Gen3Metadata:
         response = requests.post(
             url_with_params, json=metadata, auth=self._auth_provider
         )
-        raise_for_status(response)
+        response.raise_for_status()
 
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    async def async_create(self, guid, metadata, overwrite=False, _ssl=None, **kwargs):
+    async def async_create(
+        self,
+        guid,
+        metadata,
+        aliases=None,
+        overwrite=False,
+        _ssl=None,
+        **kwargs,
+    ):
         """
         Asynchronous function to create metadata
 
@@ -307,6 +365,8 @@ class Gen3Metadata:
             overwrite (bool, optional): whether or not to overwrite existing data
             _ssl (None, optional): whether or not to use ssl
         """
+        aliases = aliases or []
+        # todo handle aliases
         async with aiohttp.ClientSession() as session:
             url = self.admin_endpoint + f"/metadata/{guid}"
             url_with_params = append_query_params(url, overwrite=overwrite, **kwargs)
@@ -315,10 +375,12 @@ class Gen3Metadata:
             # need to manually add JWT auth header
             headers = {"Authorization": self._auth_provider._get_auth_value()}
 
+            logging.debug(f"hitting: {url_with_params}")
+            logging.debug(f"data: {metadata}")
             async with session.post(
                 url_with_params, json=metadata, headers=headers, ssl=_ssl
             ) as response:
-                raise_for_status(response)
+                response.raise_for_status()
                 response = await response.json()
 
         return response
@@ -341,12 +403,14 @@ class Gen3Metadata:
         response = requests.put(
             url_with_params, json=metadata, auth=self._auth_provider
         )
-        raise_for_status(response)
+        response.raise_for_status()
 
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    async def async_update(self, guid, metadata, _ssl=None, **kwargs):
+    async def async_update(
+        self, guid, metadata, aliases=None, merge=False, _ssl=None, **kwargs
+    ):
         """
         Asynchronous function to update metadata
 
@@ -356,8 +420,11 @@ class Gen3Metadata:
                 attached to the provided GUID as metadata
             _ssl (None, optional): whether or not to use ssl
         """
+        # TODO handle aliases
         async with aiohttp.ClientSession() as session:
             url = self.admin_endpoint + f"/metadata/{guid}"
+            if merge:
+                url += "?merge=True"
             url_with_params = append_query_params(url, **kwargs)
 
             # aiohttp only allows basic auth with their built in auth, so we
@@ -367,7 +434,7 @@ class Gen3Metadata:
             async with session.put(
                 url_with_params, json=metadata, headers=headers, ssl=_ssl
             ) as response:
-                raise_for_status(response)
+                response.raise_for_status()
                 response = await response.json()
 
         return response
@@ -385,6 +452,134 @@ class Gen3Metadata:
         url_with_params = append_query_params(url, **kwargs)
         logging.debug(f"hitting: {url_with_params}")
         response = requests.delete(url_with_params, auth=self._auth_provider)
-        raise_for_status(response)
+        response.raise_for_status()
 
         return response.json()
+
+    def _prepare_metadata(
+        self, metadata, indexd_doc, force_metadata_columns_even_if_empty
+    ):
+        """
+        Validate and generate the provided metadata for submission to the metadata
+        service.
+
+        If the record is of type "package", also prepare package metadata.
+
+        Args:
+            metadata (dict): metadata provided by the submitter
+            indexd_doc (dict): the indexd document created for this data
+            force_metadata_columns_even_if_empty (bool): see description in calling function
+
+        Returns:
+            dict: metadata ready to be submitted to the metadata service
+        """
+
+        def _extract_non_indexd_metadata(metadata):
+            """
+            Get the "additional metadata": metadata that was provided but is
+            not stored in indexd, so should be stored in the metadata service.
+            """
+            return {
+                k: v
+                for k, v in metadata.items()
+                if k.lower()
+                not in GUID_COLUMN_NAMES
+                + FILENAME_COLUMN_NAMES
+                + SIZE_COLUMN_NAMES
+                + MD5_COLUMN_NAMES
+                + ACLS_COLUMN_NAMES
+                + URLS_COLUMN_NAMES
+                + AUTHZ_COLUMN_NAMES
+                + PREV_GUID_COLUMN_NAMES
+            }
+
+        to_submit = _extract_non_indexd_metadata(metadata)
+
+        # some additional metadata columns must be validated
+        valid = True
+
+        # validate package columns
+        record_type = to_submit.pop(RECORD_TYPE_STANDARD_KEY, "").strip().lower()
+        package_contents = to_submit.pop(PACKAGE_CONTENTS_STANDARD_KEY, None)
+        if record_type == "package":
+            if package_contents:
+                package_contents = json.loads(package_contents)
+                if not _verify_schema(package_contents, PACKAGE_CONTENTS_SCHEMA):
+                    logging.error(
+                        f"ERROR: {package_contents} is not in package contents format"
+                    )
+                    valid = False
+            # generate package metadata
+            package_metadata = self._get_package_metadata(
+                metadata,
+                indexd_doc.file_name,
+                indexd_doc.size,
+                indexd_doc.hashes,
+                indexd_doc.urls,
+                package_contents,
+            )
+            to_submit.update(package_metadata)
+        elif package_contents:
+            logging.error(
+                f"ERROR: tried to set '{PACKAGE_CONTENTS_STANDARD_KEY}' for a non-package row. Ignoring '{PACKAGE_CONTENTS_STANDARD_KEY}'. Set '{RECORD_TYPE_STANDARD_KEY}' to 'package' to create packages."
+            )
+            valid = False
+
+        if not valid:
+            raise Exception(f"Metadata is not valid: {metadata}")
+
+        if not force_metadata_columns_even_if_empty:
+            # remove any empty columns if we're not being forced to include them
+            to_submit = {
+                key: value
+                for key, value in to_submit.items()
+                if value is not None and value != ""
+            }
+
+        return to_submit
+
+    def _get_package_metadata(
+        self, submitted_metadata, file_name, file_size, hashes, urls, contents
+    ):
+        """
+        The MDS Objects API currently expects files that have not been
+        uploaded yet. For files we only needs to index, not upload, create
+        object records manually by generating the expected object fields.
+        TODO: update the MDS objects API to not create upload URLs if the
+        relevant data is provided.
+        """
+
+        def _get_filename_from_urls(submitted_metadata, urls):
+            file_name = ""
+            if not urls:
+                logging.warning(f"No URLs provided for: {submitted_metadata}")
+            for url in urls:
+                _file_name = os.path.basename(url)
+                if not file_name:
+                    file_name = _file_name
+                else:
+                    if file_name != _file_name:
+                        logging.warning(
+                            f"Received multiple URLs with different file names; will use the first URL (file name '{file_name}'): {submitted_metadata}"
+                        )
+            return file_name
+
+        file_name_from_url = _get_filename_from_urls(submitted_metadata, urls)
+        if not file_name:
+            file_name = file_name_from_url
+
+        now = str(datetime.utcnow())
+        metadata = {
+            "type": "package",
+            "package": {
+                "version": "0.1",
+                "file_name": file_name,
+                "created_time": now,
+                "updated_time": now,
+                "size": file_size,
+                "hashes": hashes,
+                "contents": contents or None,
+            },
+            "_upload_status": "uploaded",
+        }
+        return metadata

@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath(".."))
 # -- Project information -----------------------------------------------------
 
 project = "Gen3 SDK"
-copyright = "2020, Center for Translational Data Science"
+copyright = "2021, Center for Translational Data Science"
 author = "Center for Translational Data Science"
 
 master_doc = "index"

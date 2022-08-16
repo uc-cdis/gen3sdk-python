@@ -1,6 +1,6 @@
 import csv
 import json
-import logging
+from cdislogging import get_logger
 import os
 import time
 import sys
@@ -10,7 +10,7 @@ import re
 from drsclient.client import DrsClient
 from gen3.auth import Gen3Auth
 from gen3.utils import UUID_FORMAT, SIZE_FORMAT, _verify_format, _standardize_str
-from gen3.tools.indexing.manifest_columns import (
+from gen3.tools.utils import (
     GUID_COLUMN_NAMES,
     SIZE_COLUMN_NAMES,
     BUNDLENAME_COLUMN_NAME,
@@ -20,6 +20,8 @@ from gen3.tools.indexing.manifest_columns import (
     TYPE_COLUMN_NAME,
     ALIASES_COLUMN_NAME,
 )
+
+logging = get_logger("__name__")
 
 """
 NOTES:

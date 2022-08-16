@@ -24,13 +24,14 @@ into one.
 
 """
 import os
-import logging
+from cdislogging import get_logger
+
 import csv
 import copy
 
 from collections import OrderedDict
-from gen3.tools.indexing.index_manifest import get_and_verify_fileinfos_from_manifest
-from gen3.tools.indexing.manifest_columns import (
+from gen3.tools.utils import get_and_verify_fileinfos_from_manifest
+from gen3.tools.utils import (
     GUID_STANDARD_KEY,
     SIZE_STANDARD_KEY,
     MD5_STANDARD_KEY,
@@ -38,6 +39,8 @@ from gen3.tools.indexing.manifest_columns import (
     URLS_STANDARD_KEY,
     AUTHZ_STANDARD_KEY,
 )
+
+logging = get_logger("__name__")
 
 
 def merge_bucket_manifests(
@@ -48,6 +51,7 @@ def merge_bucket_manifests(
     continue_after_error=False,
     allow_mult_guids_per_hash=False,
     columns_with_arrays=None,
+    expected_duplicate_md5s=list(),
     **kwargs,
 ):
     """
@@ -79,7 +83,10 @@ def merge_bucket_manifests(
             existing GUIDs with the same md5 but still want to merge manifests
             together, this can be used.
         columns_with_arrays(list[str]): list of column names where their values should
-            be treated like arrays (so that when merging we know to combine)
+            be treated like arrays (so that when merging we know to combine). Defaults
+            to include URLs column, ACL column, and AuthZ column.
+        expected_duplicate_md5s(list[str]): list of md5sums that we EXPECT to be duplicated in the
+            input manifests; skip merging for these records
 
     Returns:
         None
@@ -121,14 +128,20 @@ def merge_bucket_manifests(
                     records_with_no_guid.append(record)
                     continue
 
-                updated_records = _get_updated_records(
-                    record=record,
-                    existing_records=all_rows[record[MD5_STANDARD_KEY]],
-                    continue_after_error=continue_after_error,
-                    allow_mult_guids_per_hash=allow_mult_guids_per_hash,
-                    columns_with_arrays=columns_with_arrays,
-                )
-                all_rows[record[MD5_STANDARD_KEY]] = updated_records.values()
+                # If this record is one of the records which are expected duplicates
+                # then don't attempt to merge this record
+                # with any records that share its md5sum: just add it to the list
+                if record[MD5_STANDARD_KEY] in expected_duplicate_md5s:
+                    all_rows[record[MD5_STANDARD_KEY]].append(record)
+                else:
+                    updated_records = _get_updated_records(
+                        record=record,
+                        existing_records=all_rows[record[MD5_STANDARD_KEY]],
+                        continue_after_error=continue_after_error,
+                        allow_mult_guids_per_hash=allow_mult_guids_per_hash,
+                        columns_with_arrays=columns_with_arrays,
+                    )
+                    all_rows[record[MD5_STANDARD_KEY]] = updated_records.values()
 
         # for the entries where there was no GUID specified, we will add that metadata
         # to all previous records
@@ -305,7 +318,7 @@ def _error_if_invalid_size_or_guid(
 
             if not allow_mult_guids_per_hash:
                 logging.error(warning_msg)
-                raise csv.Error(error_msg)
+                raise csv.Error(warning_msg)
 
             info_msg = (
                 f"Allowing multiple GUIDs per hash. {new_guid} has same "

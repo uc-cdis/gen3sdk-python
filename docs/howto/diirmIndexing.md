@@ -18,6 +18,7 @@ import asyncio
 
 from gen3.tools import indexing
 from gen3.tools.indexing.verify_manifest import manifest_row_parsers
+from gen3.utils import get_or_create_event_loop_for_thread
 
 logging.basicConfig(filename="output.log", level=logging.DEBUG)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
@@ -25,8 +26,8 @@ logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 COMMONS = "https://{{insert-commons-here}}/"
 
 def main():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    loop = get_or_create_event_loop_for_thread()
+
 
     loop.run_until_complete(
         indexing.async_download_object_manifest(
@@ -83,8 +84,8 @@ def main():
     # override default parsers
     manifest_row_parsers["file_size"] = _get_file_size
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    loop = get_or_create_event_loop_for_thread()
+
 
     loop.run_until_complete(
         indexing.async_verify_object_manifest(
@@ -178,7 +179,7 @@ import sys
 import logging
 
 from gen3.auth import Gen3Auth
-from gen3.tools.indexing import index_object_manifest
+from gen3.tools.indexing.index_manifest import index_object_manifest
 
 logging.basicConfig(filename="output.log", level=logging.DEBUG)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
@@ -198,7 +199,8 @@ def main():
         thread_num=8,
         auth=auth,
         replace_urls=False,
-        manifest_file_delimiter="\t" # put "," if the manifest is csv file
+        manifest_file_delimiter="\t", # put "," if the manifest is csv file
+        submit_additional_metadata_columns=False, # set to True to submit additional metadata to the metadata service
     )
 
 if __name__ == "__main__":
@@ -213,7 +215,7 @@ To merge bucket manifests contained in `/input_manifests` into one output manife
 import sys
 import logging
 
-from gen3.tools.indexing import merge_bucket_manifests
+from gen3.tools.indexing.merge_manifests import merge_bucket_manifests
 
 logging.basicConfig(filename="output.log", level=logging.DEBUG)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
@@ -244,7 +246,7 @@ occurred. md5, size, url, and authz values can be validated.
 
 `is_valid_manifest_format` can validate md5, size, url and authz values by
 making use of the `MD5Validator`, `SizeValidator`, `URLValidator`, and
-`AuthzValidator` classes defined in `gen3.tools.indexing.manifest_columns`,
+`AuthzValidator` classes defined in `gen3.tools.utils`,
 respectively. See documentation in these `Validator` subclasses for more details
 on how specific values are validated.
 
@@ -307,7 +309,7 @@ import sys
 import logging
 
 from gen3.tools.indexing import is_valid_manifest_format
-from gen3.tools.indexing.manifest_columns import Columns
+from gen3.tools.utils import Columns
 
 logging.basicConfig(filename="output.log", level=logging.DEBUG)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))

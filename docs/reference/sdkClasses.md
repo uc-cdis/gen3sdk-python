@@ -17,7 +17,7 @@ This contains an auth wrapper for supporting JWT based authentication with `requ
 By default - the `Gen3Auth` constructor looks for an api key
 in `~/.gen3/credentials.json`.  You may override that path
 via the `GEN3_API_KEY` environment varialbe, or by passing a
-`refresh_file` parameter. 
+`refresh_file` parameter.
 
 When working in a Gen3 Workspace, all parameters are optional and the `Gen3Auth` instance should be initialized as follows:
 
@@ -52,6 +52,7 @@ import asyncio
 from gen3.index import Gen3Index
 from gen3.auth import Gen3Auth
 from gen3.jobs import Gen3Jobs, DBGAP_METADATA_JOB, INGEST_METADATA_JOB
+from gen3.utils import get_or_create_event_loop_for_thread
 
 # An API Key downloaded from the above commons' "Profile" page
 API_KEY_FILEPATH = "credentials.json"
@@ -69,8 +70,7 @@ def metadata_ingest():
         "metadata_source": "dbgaptest",
     }
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    loop = get_or_create_event_loop_for_thread()
 
     job_output = loop.run_until_complete(
         jobs.async_run_job_and_wait(job_name=INGEST_METADATA_JOB, job_input=job_input)
@@ -93,8 +93,7 @@ def main():
         "partial_match_or_exact_match": "partial_match",
     }
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    loop = get_or_create_event_loop_for_thread()
 
     job_output = loop.run_until_complete(
         jobs.async_run_job_and_wait(job_name=DBGAP_METADATA_JOB, job_input=job_input)
@@ -138,8 +137,7 @@ def example_async_run_job():
     auth = Gen3Auth(refresh_file=API_KEY_FILEPATH)
     jobs = Gen3Jobs(auth_provider=auth)
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    loop = get_or_create_event_loop_for_thread()
 
     job_output = loop.run_until_complete(
         jobs.async_run_job_and_wait(job_name=DBGAP_METADATA_JOB, job_input=JOB_INPUT)

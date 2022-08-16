@@ -1,14 +1,19 @@
-import logging
-import os
+import asyncio
+import collections.abc
+from jsonschema import Draft4Validator
 import sys
 import re
 import requests
+import os
 
 from urllib.parse import urlunsplit
 from urllib.parse import urlencode
 from urllib.parse import urlsplit
 from urllib.parse import parse_qs
 
+from cdislogging import get_logger
+
+logging = get_logger("__name__")
 
 UUID_FORMAT = (
     r"^.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
@@ -20,7 +25,29 @@ URL_FORMAT = r"^.*$"
 AUTHZ_FORMAT = r"^.*$"
 
 
-def raise_for_status(response):
+def get_or_create_event_loop_for_thread():
+    """
+    Asyncio helper function to attempt to get a currently running loop and
+    if there isn't one in the thread, create one and set it so future calls
+    get the same event loop.
+    """
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # no loop for this thread, so create one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    except AttributeError:
+        # handle older versions of asyncio for previous versions of Python,
+        # specifically this allows Python 3.6 asyncio to get a loop
+        loop = asyncio._get_running_loop()
+        if not loop:
+            loop = asyncio.get_event_loop()
+
+    return loop
+
+
+def raise_for_status_and_print_error(response):
     try:
         response.raise_for_status()
     except requests.HTTPError as exception:
@@ -63,6 +90,16 @@ def split_url_and_query_params(url):
     return url, query_params
 
 
+def remove_trailing_whitespace_and_slashes_in_url(url):
+    """
+    Given a url, remove any whitespace and then slashes at the end and return url
+    """
+    if url:
+        return url.rstrip().rstrip("/")
+
+    return url
+
+
 def _print_func_name(function):
     return "{}.{}".format(function.__module__, function.__name__)
 
@@ -101,12 +138,30 @@ def log_backoff_giveup(details):
     )
 
 
+def log_backoff_giveup_except_on_no_retries(details):
+    args_str = ", ".join(map(str, details["args"]))
+    kwargs_str = (
+        (", " + _print_kwargs(details["kwargs"])) if details.get("kwargs") else ""
+    )
+    func_call_log = "{}({}{})".format(
+        _print_func_name(details["target"]), args_str, kwargs_str
+    )
+
+    if details["tries"] > 1:
+        logging.error(
+            "backoff: gave up call {func_call} after {tries} tries; exception: {exc}".format(
+                func_call=func_call_log, exc=sys.exc_info(), **details
+            )
+        )
+
+
 def exception_do_not_retry(error):
     def _is_status(code):
         return (
             str(getattr(error, "code", None)) == code
             or str(getattr(error, "status", None)) == code
             or str(getattr(error, "status_code", None)) == code
+            or str(getattr(getattr(error, "response", {}), "status_code", "")) == code
         )
 
     if _is_status("409") or _is_status("404"):
@@ -123,6 +178,18 @@ def _verify_format(s, format):
     if r.match(s) is not None:
         return True
     return False
+
+
+def _verify_schema(data, schema):
+    validator = Draft4Validator(schema)
+    validator.iter_errors(data)
+    errors = [e.message for e in validator.iter_errors(data)]
+    if errors:
+        logging.error(
+            f"Error validating package contents {data} against schema {schema}. Details: {errors}"
+        )
+        return False
+    return True
 
 
 def _standardize_str(s):
@@ -167,10 +234,51 @@ def get_urls(raw_urls_string):
     ]
 
 
+def yield_chunks(input_list, n):
+    """
+    Yield successive n-sized chunks from input_list.
+
+    Args:
+        input_list (list[]): arbitrary input list
+        n (int): size of chunks requested
+
+    Yields:
+        list[]: chunked list
+    """
+    for i in range(0, len(input_list), n):
+        yield input_list[i : i + n]
+
+
+def deep_dict_update(a, b):
+    """
+    a is updated in place to include items in b
+
+    This recursively handles nested dictionary updates
+    """
+    for key, value in b.items():
+        if isinstance(value, collections.abc.Mapping):
+            a[key] = deep_dict_update(a.get(key, {}), value)
+        else:
+            a[key] = value
+    return a
+
+
 # Default settings to control usage of backoff library.
 DEFAULT_BACKOFF_SETTINGS = {
+    # Disable backoff lib default logger, only show custom logs
+    "logger": None,
     "on_backoff": log_backoff_retry,
     "on_giveup": log_backoff_giveup,
+    "max_tries": os.environ.get("GEN3SDK_MAX_RETRIES", 3),
+    "giveup": exception_do_not_retry,
+}
+
+# Metadata.get settings to control usage of backoff library.
+BACKOFF_NO_LOG_IF_NOT_RETRIED = {
+    # Disable backoff lib default logger, only show custom logs
+    "logger": None,
+    "on_backoff": log_backoff_retry,
+    "on_giveup": log_backoff_giveup_except_on_no_retries,
     "max_tries": os.environ.get("GEN3SDK_MAX_RETRIES", 3),
     "giveup": exception_do_not_retry,
 }

@@ -2,13 +2,16 @@ import aiohttp
 import backoff
 import requests
 import urllib.parse
-import logging
+from cdislogging import get_logger
+
 import sys
 
 import indexclient.client as client
 
-from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status
+from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status_and_print_error
 from gen3.auth import Gen3Auth
+
+logging = get_logger("__name__")
 
 
 class Gen3Index:
@@ -69,7 +72,7 @@ class Gen3Index:
 
         """
         response = self.client._get("_version")
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
@@ -80,7 +83,7 @@ class Gen3Index:
 
         """
         response = self.client._get("_stats")
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
@@ -97,7 +100,7 @@ class Gen3Index:
             url += f"?limit={limit}"
 
         response = self.client._get(url)
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
 
         records = response.json().get("records")
         all_records.extend(records)
@@ -118,7 +121,7 @@ class Gen3Index:
 
                 url = urllib.parse.urlunparse(url_parts)
                 response = self.client._get(url)
-                raise_for_status(response)
+                raise_for_status_and_print_error(response)
 
                 records = response.json().get("records")
                 all_records.extend(records)
@@ -147,7 +150,7 @@ class Gen3Index:
         query = urllib.parse.urlencode(params)
 
         response = self.client._get(url + "?" + query)
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
 
         return response.json().get("records")
 
@@ -165,7 +168,7 @@ class Gen3Index:
         url = f"{self.client.url}/index/{guid}"
         async with aiohttp.ClientSession() as session:
             async with session.get(url, ssl=_ssl) as response:
-                raise_for_status(response)
+                raise_for_status_and_print_error(response)
                 response = await response.json()
 
         return response
@@ -200,6 +203,34 @@ class Gen3Index:
         return response.get("records")
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    async def async_get_records_from_checksum(
+        self, checksum, checksum_type="md5", _ssl=None
+    ):
+        """
+        Asynchronous function to request records from indexd matching checksum.
+
+        Args:
+            checksum (str): indexd checksum to request
+            checksum_type (str): type of checksum, defaults to md5
+
+        Returns:
+            List[dict]: List of indexd records
+        """
+        all_records = []
+        params = {}
+
+        params["hash"] = f"{checksum_type}:{checksum}"
+
+        query = urllib.parse.urlencode(params)
+
+        url = f"{self.client.url}/index" + "?" + query
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, ssl=_ssl) as response:
+                response = await response.json()
+
+        return response.get("records")
+
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def get(self, guid, dist_resolution=True):
         """
 
@@ -207,10 +238,10 @@ class Gen3Index:
         distributed identifier
 
         Args:
-             guid: string
-                 - record id
-             dist_resolution: boolean
-                - *optional* Specify if we want distributed dist_resolution or not
+            guid: string
+                - record id
+            dist_resolution: boolean
+            - *optional* Specify if we want distributed dist_resolution or not
 
         """
         rec = self.client.global_get(guid, dist_resolution)
@@ -343,7 +374,7 @@ class Gen3Index:
 
         """
         response = self.client._get(f"/index/{guid}/versions")
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
         versions = response.json()
 
         return [r for _, r in versions.items()]
@@ -465,7 +496,7 @@ class Gen3Index:
                 ssl=_ssl,
                 auth=self.client.auth,
             ) as response:
-                raise_for_status(response)
+                raise_for_status_and_print_error(response)
                 response = await response.json()
 
         return response
@@ -491,7 +522,7 @@ class Gen3Index:
             auth=self.client.auth,
             data=client.json_dumps(json),
         )
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
         rec = response.json()
 
         return self.get_record(rec["did"])
@@ -564,7 +595,7 @@ class Gen3Index:
             data=client.json_dumps(json),
             auth=self.client.auth,
         )
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
         rec = response.json()
 
         if rec and "did" in rec:
@@ -628,7 +659,7 @@ class Gen3Index:
             auth=self.client.auth,
             data=client.json_dumps(json),
         )
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
         rec = response.json()
 
         return self.get_record(rec["did"])
@@ -719,7 +750,7 @@ class Gen3Index:
                 ssl=_ssl,
                 auth=self.client.auth,
             ) as response:
-                raise_for_status(response)
+                raise_for_status_and_print_error(response)
                 response = await response.json()
 
         return response
@@ -734,13 +765,14 @@ class Gen3Index:
 
         Args:
             guid: string
-                 - record id
+                - record id
 
         Returns: Nothing
 
         """
         rec = self.client.get(guid)
-        rec.delete()
+        if rec:
+            rec.delete()
         return rec
 
     ### Query Requests
@@ -758,7 +790,7 @@ class Gen3Index:
             List[records]: indexd records with urls matching pattern
         """
         response = self.client._get(f"/_query/urls/q?include={pattern}")
-        raise_for_status(response)
+        raise_for_status_and_print_error(response)
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
@@ -776,10 +808,40 @@ class Gen3Index:
         async with aiohttp.ClientSession() as session:
             logging.debug(f"request: {url}")
             async with session.get(url, ssl=_ssl) as response:
-                raise_for_status(response)
+                raise_for_status_and_print_error(response)
                 response = await response.json()
 
         return response
+
+    ## Mint GUID Requests
+
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    def get_valid_guids(self, count=None):
+        """
+        Get a list of valid GUIDs without indexing
+        Args:
+            count (int): number of GUIDs to request
+        Returns:
+            List[str]: list of valid indexd GUIDs
+        """
+        url = "/guid/mint"
+        if count:
+            url += f"?count={count}"
+
+        response = self.client._get(url)
+        response.raise_for_status()
+        return response.json().get("guids", [])
+
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    def get_guids_prefix(self):
+        """
+        Get the prefix for GUIDs if there is one
+        Returns:
+            str: prefix for this instance
+        """
+        response = self.client._get("/guid/prefix")
+        response.raise_for_status()
+        return response.json().get("prefix")
 
 
 def _print_func_name(function):

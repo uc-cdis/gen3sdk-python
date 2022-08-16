@@ -1,15 +1,31 @@
-"""
-Classes to be used in the identification and validation of manifest columns
-"""
-import warnings
 from abc import ABC
-from enum import Enum, unique
-
-import string
-from urllib.parse import urlparse
 from base64 import b64encode, b64decode
 
+import csv
+from enum import Enum, unique
+import os
+import string
+import sys
+from urllib.parse import urlparse
+import warnings
+
+from gen3.utils import (
+    UUID_FORMAT,
+    MD5_FORMAT,
+    ACL_FORMAT,
+    URL_FORMAT,
+    AUTHZ_FORMAT,
+    SIZE_FORMAT,
+    _verify_format,
+)
+from cdislogging import get_logger
+
+logging = get_logger("__name__")
+
 # Pre-defined supported column names
+RECORD_TYPE_STANDARD_KEY = "record_type"
+RECORD_TYPE_ALLOWED_VALUES = ["object", "package"]
+
 GUID_COLUMN_NAMES = ["guid", "GUID"]
 GUID_STANDARD_KEY = "guid"
 
@@ -45,6 +61,223 @@ CHECKSUMS_COLUMN_NAME = ["checksums", "checksum"]
 TYPE_COLUMN_NAME = ["type", "types"]
 
 ALIASES_COLUMN_NAME = ["alias", "aliases"]
+
+
+def get_and_verify_fileinfos_from_manifest(
+    manifest_file, manifest_file_delimiter=None, include_additional_columns=False
+):
+    """
+    Wrapper for above function to determine the delimiter based on file extention
+    """
+    # if delimiter not specified, try to get based on file ext
+    if not manifest_file_delimiter:
+        manifest_file_ext = os.path.splitext(manifest_file)
+        if manifest_file_ext[-1].lower() == ".tsv":
+            manifest_file_delimiter = "\t"
+        else:
+            # default, assume CSV
+            manifest_file_delimiter = ","
+
+    return get_and_verify_fileinfos_from_tsv_manifest(
+        manifest_file=manifest_file,
+        manifest_file_delimiter=manifest_file_delimiter,
+        include_additional_columns=include_additional_columns,
+    )
+
+
+def get_and_verify_fileinfos_from_tsv_manifest(
+    manifest_file, manifest_file_delimiter="\t", include_additional_columns=False
+):
+    """
+    get and verify file infos from tsv manifest
+
+    Args:
+        manifest_file(str): the path to the input manifest
+        manifest_file_delimiter(str): delimiter
+
+    Returns:
+        list(dict): list of file info
+        [
+            {
+                "guid": "guid_example",
+                "filename": "example",
+                "size": 100,
+                "acl": "['open']",
+                "md5": "md5_hash",
+            },
+        ]
+        headers(list(str)): field names
+
+    """
+    csv.field_size_limit(sys.maxsize)  # handle large values such as "package_contents"
+    files = []
+    with open(manifest_file, "r", encoding="utf-8-sig") as csvfile:
+        csvReader = csv.DictReader(
+            csvfile, delimiter=manifest_file_delimiter, restval=""
+        )
+        fieldnames = csvReader.fieldnames
+        if len(fieldnames) < 2:
+            logging.warning(
+                f"The manifest delimiter ({manifest_file_delimiter}) does not seem to match the provided file"
+            )
+
+        logging.debug(f"got fieldnames from {manifest_file}: {fieldnames}")
+        pass_verification = True
+        is_row_valid = True
+        for row_number, row in enumerate(csvReader, 1):
+            output_row = {}
+            for current_column_name in row.keys():
+                output_column_name = None
+                if (
+                    current_column_name
+                    and current_column_name.lower() in GUID_COLUMN_NAMES
+                ):
+                    fieldnames[
+                        fieldnames.index(current_column_name)
+                    ] = GUID_STANDARD_KEY
+                    output_column_name = GUID_STANDARD_KEY
+                elif (
+                    current_column_name
+                    and current_column_name.lower() in FILENAME_COLUMN_NAMES
+                ):
+                    fieldnames[
+                        fieldnames.index(current_column_name)
+                    ] = FILENAME_STANDARD_KEY
+                    output_column_name = FILENAME_STANDARD_KEY
+                elif (
+                    current_column_name
+                    and current_column_name.lower() in MD5_COLUMN_NAMES
+                ):
+                    fieldnames[fieldnames.index(current_column_name)] = MD5_STANDARD_KEY
+                    output_column_name = MD5_STANDARD_KEY
+                    if not _verify_format(row[current_column_name], MD5_FORMAT):
+                        logging.error(
+                            f"ERROR: {row[current_column_name]} is not in md5 format"
+                        )
+                        is_row_valid = False
+                elif (
+                    current_column_name
+                    and current_column_name.lower() in ACLS_COLUMN_NAMES
+                ):
+                    fieldnames[fieldnames.index(current_column_name)] = ACL_STANDARD_KEY
+                    output_column_name = ACL_STANDARD_KEY
+                    if not _verify_format(row[current_column_name], ACL_FORMAT):
+                        logging.error(
+                            f"ERROR: {row[current_column_name]} is not in acl format"
+                        )
+                        is_row_valid = False
+                elif (
+                    current_column_name
+                    and current_column_name.lower() in URLS_COLUMN_NAMES
+                ):
+                    fieldnames[
+                        fieldnames.index(current_column_name)
+                    ] = URLS_STANDARD_KEY
+                    output_column_name = URLS_STANDARD_KEY
+                    if not _verify_format(row[current_column_name], URL_FORMAT):
+                        logging.error(
+                            f"ERROR: {row[current_column_name]} is not in urls format"
+                        )
+                        is_row_valid = False
+                elif (
+                    current_column_name
+                    and current_column_name.lower() in AUTHZ_COLUMN_NAMES
+                ):
+                    fieldnames[
+                        fieldnames.index(current_column_name)
+                    ] = AUTHZ_STANDARD_KEY
+                    output_column_name = AUTHZ_STANDARD_KEY
+                    if not _verify_format(row[current_column_name], AUTHZ_FORMAT):
+                        logging.error(
+                            f"ERROR: {row[current_column_name]} is not in authz format"
+                        )
+                        is_row_valid = False
+                elif (
+                    current_column_name
+                    and current_column_name.lower() in SIZE_COLUMN_NAMES
+                ):
+                    fieldnames[
+                        fieldnames.index(current_column_name)
+                    ] = SIZE_STANDARD_KEY
+                    output_column_name = SIZE_STANDARD_KEY
+                    if not _verify_format(row[current_column_name], SIZE_FORMAT):
+                        logging.error(
+                            f"ERROR: {row[current_column_name]} is not in int format"
+                        )
+                        is_row_valid = False
+                elif (
+                    current_column_name
+                    and current_column_name.lower() in PREV_GUID_COLUMN_NAMES
+                ):
+                    fieldnames[
+                        fieldnames.index(current_column_name)
+                    ] = PREV_GUID_STANDARD_KEY
+                    output_column_name = PREV_GUID_STANDARD_KEY
+                    # only validate format if value is provided (since this is optional)
+                    if row[current_column_name] and not _verify_format(
+                        row[current_column_name], UUID_FORMAT
+                    ):
+                        logging.error(
+                            f"ERROR: {row[current_column_name]} is not in UUID_FORMAT format"
+                        )
+                        is_row_valid = False
+                elif (
+                    current_column_name
+                    and current_column_name.lower() == RECORD_TYPE_STANDARD_KEY
+                ):
+                    output_column_name = RECORD_TYPE_STANDARD_KEY
+                    if row[current_column_name] not in RECORD_TYPE_ALLOWED_VALUES:
+                        logging.error(
+                            f"ERROR: '{row[current_column_name]}' is not one of the valid record types: {RECORD_TYPE_ALLOWED_VALUES}"
+                        )
+                        is_row_valid = False
+                elif include_additional_columns:
+                    output_column_name = current_column_name
+
+                if output_column_name:
+                    try:
+                        output_row[output_column_name] = (
+                            int(row[current_column_name])
+                            if output_column_name == SIZE_STANDARD_KEY
+                            else row[current_column_name].strip()
+                            if type(row[current_column_name]) == str
+                            else row[current_column_name]
+                        )
+                    except ValueError:
+                        # don't break
+                        pass
+
+            if not {URLS_STANDARD_KEY, MD5_STANDARD_KEY, SIZE_STANDARD_KEY}.issubset(
+                set(output_row.keys())
+            ):
+                logging.error(
+                    f"ERROR: '{row[current_column_name]}' (columns names: "
+                    f"{set(output_row.keys())}) does not have some required rows: "
+                    f"{URLS_STANDARD_KEY}, {MD5_STANDARD_KEY}, {SIZE_STANDARD_KEY}"
+                )
+                is_row_valid = False
+
+            if not is_row_valid:
+                logging.error(
+                    f"row {row_number} with values {row} does not pass the validation"
+                )
+
+                # overall verification fails, but reset row validity
+                pass_verification = False
+                is_row_valid = True
+
+            files.append(output_row)
+
+    if not pass_verification:
+        logging.error("The manifest is not in the correct format!!!")
+        return [], []
+
+    return files, fieldnames
+
+
+"""
+Classes to be used in the identification and validation of manifest columns
+"""
 
 
 @unique
@@ -243,7 +476,7 @@ class MD5Validator(Validator):
             if len(base64_decoded_md5) * 8 != 128:
                 base64_error_message = f'{base64_error_message}. Base64 decoded value for "{md5_hash}" contains {len(base64_decoded_md5)*8} bits, expecting 128 bits'
                 raise Exception
-        except:
+        except Exception:
             raise ValueError(base64_error_message)
 
 
@@ -279,7 +512,7 @@ class SizeValidator(Validator):
         """
         try:
             x = int(size)
-        except:
+        except Exception:
             raise ValueError(f'"{size}" is not an integer')
         if x < 0:
             raise ValueError(f'"{size}" is negative, expecting non-negative integer')
@@ -356,7 +589,7 @@ class URLValidator(Validator):
                 or result.path == "/"
             ):
                 raise Exception()
-        except:
+        except Exception:
             return False
         return True
 
