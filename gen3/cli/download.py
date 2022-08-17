@@ -7,7 +7,7 @@ import sys
 from urllib.parse import urlparse
 
 from gen3.tools import download
-from gen3.tools.download.download_manifest import async_download
+from gen3.tools.download.download_manifest import manifest_downloader
 from gen3.utils import get_or_create_event_loop_for_thread
 
 @click.group()
@@ -25,7 +25,7 @@ def manifest_async_download(ctx, file, path, cred):
     auth = ctx.obj["auth_factory"].get()
     loop = get_or_create_event_loop_for_thread()
     loop.run_until_complete(
-        download.async_download(
+        download.manifest_downloader.async_download(
             auth,
             manifest_file=file,
             download_path=path,

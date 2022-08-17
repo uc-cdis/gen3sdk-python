@@ -1,1 +1,1 @@
-from gen3.tools.download.download_manifest import async_download
+from gen3.tools.download.download_manifest import manifest_downloader
