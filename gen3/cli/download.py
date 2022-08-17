@@ -16,21 +16,21 @@ def download_files():
     pass
 
 
-@click.command(help="Downloads all files from manifest asynchronously")
-@click.argument("file",required=True)
-@click.option("--path","path",help="Path to store downloaded files in",default=".")
-@click.option("--cred","cred",help="Path to credentials", required=True)
+@click.command(help = "Downloads all files from manifest asynchronously")
+@click.argument("file", required = True)
+@click.option("--path", "path", help = "Path to store downloaded files in", default = ".")
+@click.option("--cred", "cred", help = "Path to credentials",  required = True)
 @click.pass_context
-def manifest_async_download(ctx, file, path, cred):
-    auth = ctx.obj["auth_factory"].get()
-    loop = get_or_create_event_loop_for_thread()
+def manifest_async_download(ctx,  file,  path,  cred):
+    auth  =  ctx.obj["auth_factory"].get()
+    loop  =  get_or_create_event_loop_for_thread()
     loop.run_until_complete(
         download.manifest_downloader.async_download(
-            auth,
-            manifest_file=file,
-            download_path=path,
-            cred=cred,
+            auth, 
+            manifest_file = file, 
+            download_path = path, 
+            cred = cred, 
         )
     )
 
-download_files.add_command(manifest_async_download,name="manifest")
+download_files.add_command(manifest_async_download, name = "manifest")
