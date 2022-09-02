@@ -9,16 +9,17 @@ from gen3.file import Gen3File
 from tqdm import tqdm
 from types import SimpleNamespace as Namespace
 from cdislogging import get_logger
+import os
 
 logging = get_logger("__name__")
 unsuccessful = []
 
 class manifest_downloader:
 
-    def __init__(self, manifest_file,cred):
+    def __init__(self, manifest_file, auth_provider):
         self.manifest_file = manifest_file
-        auth = Gen3Auth(refresh_file = f'{cred}') #obtaining authorisation from credentials 
-        self.file = Gen3File(auth)
+        self._auth_provider = auth_provider
+        self.file = Gen3File(self._auth_provider)
 
     def load_manifest(self):
         """
@@ -26,13 +27,14 @@ class manifest_downloader:
         """
         try:
             with open(self.manifest_file, "rt") as f:
-                data = json.load(f, object_hook=lambda d:Namespace(**d)) 
+                data = json.load(f, object_hook=lambda d:Namespace(**d))
+                #print(data) 
                 return data
         except Exception as e:
             logging.critical(f"Error in load manifest: {e}")
 
 
-    async def download_using_url(self, Sem, entry, client, path, pbar):
+    async def download_using_url(self, Sem, entry, client, path, pbar): #pbar
         """
         Function to use object id of file to obtain its download url and use that download url 
         to download required file 
@@ -40,6 +42,7 @@ class manifest_downloader:
         try:
             await Sem.acquire()
             url = self.file.get_presigned_url(entry.object_id)
+            print(url['url'])
             #retry-url
             if not url:
                 logging.critical("No url on retrial, try again later")
@@ -59,8 +62,8 @@ class manifest_downloader:
                 total_size_in_bytes = int(response.headers.get("content-length", 0))
                 total_downloaded = 0
                 filename = (entry.file_name if entry.file_name else entry.object_id)  
-                async with aiofiles.open(f'{path}/{filename}', "wb") as f:
-                    with tqdm(desc=f"File {entry.file_name}",total=total_size_in_bytes,position=1, unit_scale=True, unit_divisor=1024, unit="B",ncols=90) as progress:
+                async with aiofiles.open(os.path.join(path, filename), "wb") as f:
+                    with tqdm(desc = f"File {entry.file_name}", total = total_size_in_bytes, position = 1, unit_scale = True, unit_divisor = 1024, unit = "B", ncols = 90) as progress:
                         async for data in response.content.iter_chunked(4096):
                             progress.update(len(data))
                             total_downloaded += len(data)
@@ -83,7 +86,8 @@ class manifest_downloader:
     async def async_download(auth, manifest_file, download_path, cred):
         s=time.perf_counter()
         logging.info(f"Start time: {s}")
-        manifest = manifest_downloader(manifest_file,cred)
+        auth = Gen3Auth(refresh_file = f'{cred}')  #obtaining authorisation from credentials 
+        manifest = manifest_downloader(manifest_file, auth)
         manifest_list = manifest.load_manifest()
         logging.info("Done with manifest")
         tasks = []
@@ -94,9 +98,12 @@ class manifest_downloader:
             with tqdm(desc = "Manifest progress", total = len(manifest_list), unit_scale = True, position = 0, unit_divisor = 1024, unit = "B", ncols = 90) as pbar:
                 for entry in manifest_list:
                 #creating tasks for each entry 
-                    tasks.append(loop.create_task(manifest.download_using_url(Sem, entry, client, download_path, pbar)))
+                    tasks.append(loop.create_task(manifest.download_using_url(Sem, entry, client, download_path, pbar)))#pbar
                 await asyncio.gather(*tasks)
         
+        manifest.download_single(manifest_list[0], download_path, pbar)
         duration = time.perf_counter()-s
         logging.info(f"\nDuration = {duration}\n")
         logging.info(f"Unsuccessful downloads - {unsuccessful}\n")
+
+    

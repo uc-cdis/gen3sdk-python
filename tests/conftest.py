@@ -22,6 +22,7 @@ from gen3.submission import Gen3Submission
 from gen3.query import Gen3Query
 from gen3.auth import Gen3Auth
 from gen3.object import Gen3Object
+from gen3.tools.download.download_manifest import manifest_downloader
 
 
 class MockAuth:
@@ -228,3 +229,8 @@ def drsclient(drs_client):
     Mock drsclient
     """
     return drs_client
+
+@pytest.fixture
+def gen3_download(mock_gen3_auth):
+    manifest_file = 'tests/download_tests/resources/manifest_test_1.json' 
+    return manifest_downloader(manifest_file, mock_gen3_auth)

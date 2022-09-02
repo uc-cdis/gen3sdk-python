@@ -1,0 +1,17 @@
+[2022-08-17 20:04:05,478][  ERROR] dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2|authz|expected ['/programs/DEV/projects/test2']|actual ['/programs/DEV/projects/test2', '/programs/DEV/projects/test2bak']
+
+[2022-08-17 20:04:05,478][  ERROR] dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2|acl|expected ['DEV']|actual ['DEV', 'test2']
+
+[2022-08-17 20:04:05,479][  ERROR] dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2|file_size|expected 235|actual 234
+
+[2022-08-17 20:04:05,479][  ERROR] dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2|md5|expected c1234567891234567890123456789012|actual b1234567891234567890123456789012
+
+[2022-08-17 20:04:05,479][  ERROR] dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2|urls|expected ['gs://test/test 3.txt', 's3://testaws/file space.txt', 's3://testaws/aws/file,with,comma.txt']|actual ['gs://test/test.txt']
+
+[2022-08-17 20:04:05,479][  ERROR] dg.TEST/9c205cd7-c399-4503-9f49-5647188bde66|no_record|expected {'guid': 'dg.TEST/9c205cd7-c399-4503-9f49-5647188bde66', 'authz': '/programs/DEV/projects/test3 /programs/DEV/projects/test3bak', 'acl': 'DEV test3', 'file_size': '334', 'md5': 'b1334567891334567890133456789013', 'urls': 'gs://test/test.txt'}|actual None
+
+[2022-08-17 20:04:05,877][  ERROR] uh oh
+[2022-08-17 20:04:07,414][  ERROR] backoff: gave up call gen3.metadata.get_index_key_paths(<gen3.metadata.Gen3Metadata object at 0x000002E3FFBFAC10>) after 3 tries; exception: (<class 'requests.exceptions.HTTPError'>, HTTPError('uh oh'), <traceback object at 0x000002E3FFBF7900>)
+[2022-08-17 20:04:08,624][  ERROR] backoff: gave up call gen3.metadata.create_index_key_path(<gen3.metadata.Gen3Metadata object at 0x000002E3FF987670>, /blah) after 3 tries; exception: (<class 'requests.exceptions.HTTPError'>, HTTPError('uh oh'), <traceback object at 0x000002E3FF960280>)
+[2022-08-17 20:04:09,513][  ERROR] backoff: gave up call gen3.metadata.delete_index_key_path(<gen3.metadata.Gen3Metadata object at 0x000002E3FF93DC40>, /blah) after 3 tries; exception: (<class 'requests.exceptions.HTTPError'>, HTTPError('uh oh'), <traceback object at 0x000002E3FF942640>)
+[2022-08-17 20:04:11,810][  ERROR] backoff: gave up call gen3.metadata.get(<gen3.metadata.Gen3Metadata object at 0x000002E3FFBE5A90>, dg.xxTS/4bc4e600-1eda-4f81-aa2b-7c33dad78bee) after 3 tries; exception: (<class 'requests.exceptions.JSONDecodeError'>, JSONDecodeError('Expecting value: line 1 column 1 (char 0)'), <traceback object at 0x000002E3FFCD0540>)
