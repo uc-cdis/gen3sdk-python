@@ -101,7 +101,6 @@ class manifest_downloader:
                     tasks.append(loop.create_task(manifest.download_using_url(Sem, entry, client, download_path, pbar)))#pbar
                 await asyncio.gather(*tasks)
         
-        manifest.download_single(manifest_list[0], download_path, pbar)
         duration = time.perf_counter()-s
         logging.info(f"\nDuration = {duration}\n")
         logging.info(f"Unsuccessful downloads - {unsuccessful}\n")
