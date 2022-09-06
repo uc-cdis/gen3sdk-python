@@ -322,8 +322,8 @@ class Gen3Metadata:
 
         return response.json()
 
-    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    def create(self, guid, metadata, overwrite=False, **kwargs):
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    def create(self, guid, metadata, aliases=None, overwrite=False, **kwargs):
         """
         Create the metadata associated with the guid
 
@@ -333,6 +333,8 @@ class Gen3Metadata:
                 attached to the provided GUID as metadata
             overwrite (bool, optional): whether or not to overwrite existing data
         """
+        aliases = aliases or []
+
         url = self.admin_endpoint + f"/metadata/{guid}"
 
         url_with_params = append_query_params(url, overwrite=overwrite, **kwargs)
@@ -343,9 +345,20 @@ class Gen3Metadata:
         )
         response.raise_for_status()
 
+        if aliases:
+            try:
+                self.create_aliases(guid=guid, aliases=aliases, merge=overwrite)
+            except Exception:
+                logging.error(
+                    "Error while attempting to create aliases: "
+                    f"'{aliases}' to GUID: '{guid}' with merge={overwrite}. "
+                    "GUID metadata record was created successfully and "
+                    "will NOT be deleted."
+                )
+
         return response.json()
 
-    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
     async def async_create(
         self,
         guid,
@@ -366,7 +379,7 @@ class Gen3Metadata:
             _ssl (None, optional): whether or not to use ssl
         """
         aliases = aliases or []
-        # todo handle aliases
+
         async with aiohttp.ClientSession() as session:
             url = self.admin_endpoint + f"/metadata/{guid}"
             url_with_params = append_query_params(url, overwrite=overwrite, **kwargs)
@@ -383,10 +396,24 @@ class Gen3Metadata:
                 response.raise_for_status()
                 response = await response.json()
 
+            if aliases:
+                logging.info(f"creating aliases: {aliases}")
+                try:
+                    await self.async_create_aliases(
+                        guid=guid, aliases=aliases, _ssl=_ssl
+                    )
+                except Exception:
+                    logging.error(
+                        "Error while attempting to create aliases: "
+                        f"'{aliases}' to GUID: '{guid}'. "
+                        "GUID metadata record was created successfully and "
+                        "will NOT be deleted."
+                    )
+
         return response
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    def update(self, guid, metadata, **kwargs):
+    def update(self, guid, metadata, aliases=None, merge=False, **kwargs):
         """
         Update the metadata associated with the guid
 
@@ -395,6 +422,8 @@ class Gen3Metadata:
             metadata (Dict): dictionary representing what will end up a JSON blob
                 attached to the provided GUID as metadata
         """
+        aliases = aliases or []
+
         url = self.admin_endpoint + f"/metadata/{guid}"
 
         url_with_params = append_query_params(url, **kwargs)
@@ -404,6 +433,17 @@ class Gen3Metadata:
             url_with_params, json=metadata, auth=self._auth_provider
         )
         response.raise_for_status()
+
+        if aliases:
+            try:
+                self.update_aliases(guid=guid, aliases=aliases, merge=merge)
+            except Exception:
+                logging.error(
+                    "Error while attempting to update aliases: "
+                    f"'{aliases}' to GUID: '{guid}'. "
+                    "GUID metadata record was created successfully and "
+                    "will NOT be deleted."
+                )
 
         return response.json()
 
@@ -418,14 +458,17 @@ class Gen3Metadata:
             guid (str): guid to use
             metadata (Dict): dictionary representing what will end up a JSON blob
                 attached to the provided GUID as metadata
+            aliases (list[str], optional): List of aliases to update the GUID with
+            merge (bool, optional): Whether or not to merge metadata AND aliases
+              with existing values
             _ssl (None, optional): whether or not to use ssl
+            **kwargs: Description
         """
-        # TODO handle aliases
+        aliases = aliases or []
+
         async with aiohttp.ClientSession() as session:
             url = self.admin_endpoint + f"/metadata/{guid}"
-            if merge:
-                url += "?merge=True"
-            url_with_params = append_query_params(url, **kwargs)
+            url_with_params = append_query_params(url, merge=merge, **kwargs)
 
             # aiohttp only allows basic auth with their built in auth, so we
             # need to manually add JWT auth header
@@ -436,6 +479,19 @@ class Gen3Metadata:
             ) as response:
                 response.raise_for_status()
                 response = await response.json()
+
+            if aliases:
+                try:
+                    await self.async_update_aliases(
+                        guid=guid, aliases=aliases, merge=merge, _ssl=_ssl
+                    )
+                except Exception:
+                    logging.error(
+                        "Error while attempting to update aliases: "
+                        f"'{aliases}' to GUID: '{guid}' with merge={merge}. "
+                        "GUID metadata record was created successfully and "
+                        "will NOT be deleted."
+                    )
 
         return response
 
@@ -455,6 +511,333 @@ class Gen3Metadata:
         response.raise_for_status()
 
         return response.json()
+
+    #
+    # Alias Support
+    #
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    def get_aliases(self, guid, **kwargs):
+        """
+        Get Aliases for the given guid
+
+        Args:
+            guid (TYPE): Globally unique ID for the metadata blob
+            **kwargs: additional query params
+
+        Returns:
+            requests.Response: response from the request to get aliases
+        """
+        url = self.endpoint + f"/metadata/{guid}/aliases"
+        url_with_params = append_query_params(url, **kwargs)
+
+        logging.debug(f"hitting: {url_with_params}")
+        response = requests.get(url_with_params, auth=self._auth_provider)
+        response.raise_for_status()
+
+        return response.json()
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    async def async_get_aliases(self, guid, _ssl=None, **kwargs):
+        """
+        Asyncronously get Aliases for the given guid
+
+        Args:
+            guid (TYPE): Globally unique ID for the metadata blob
+            _ssl (None, optional): whether or not to use ssl
+            **kwargs: additional query params
+
+        Returns:
+            requests.Response: response from the request to get aliases
+        """
+        async with aiohttp.ClientSession() as session:
+            url = self.endpoint + f"/metadata/{guid}/aliases"
+            url_with_params = append_query_params(url, **kwargs)
+
+            # aiohttp only allows basic auth with their built in auth, so we
+            # need to manually add JWT auth header
+            headers = {"Authorization": self._auth_provider._get_auth_value()}
+
+            logging.debug(f"hitting: {url_with_params}")
+            async with session.get(
+                url_with_params, headers=headers, ssl=_ssl
+            ) as response:
+                response.raise_for_status()
+
+            return await response.json()
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    def delete_alias(self, guid, alias, **kwargs):
+        """
+        Delete single Alias for the given guid
+
+        Args:
+            guid (TYPE): Globally unique ID for the metadata blob
+            **kwargs: additional query params
+
+        Returns:
+            requests.Response: response from the request to delete aliases
+        """
+        url = self.admin_endpoint + f"/metadata/{guid}/aliases/{alias}"
+        url_with_params = append_query_params(url, **kwargs)
+
+        logging.debug(f"hitting: {url_with_params}")
+        response = requests.delete(url_with_params, auth=self._auth_provider)
+        response.raise_for_status()
+
+        return response.json()
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    async def async_delete_alias(self, guid, alias, _ssl=None, **kwargs):
+        """
+        Asyncronously delete single Aliases for the given guid
+
+        Args:
+            guid (TYPE): Globally unique ID for the metadata blob
+            _ssl (None, optional): whether or not to use ssl
+            **kwargs: additional query params
+
+        Returns:
+            requests.Response: response from the request to delete aliases
+        """
+        async with aiohttp.ClientSession() as session:
+            url = self.admin_endpoint + f"/metadata/{guid}/aliases/{alias}"
+            url_with_params = append_query_params(url, **kwargs)
+
+            # aiohttp only allows basic auth with their built in auth, so we
+            # need to manually add JWT auth header
+            headers = {"Authorization": self._auth_provider._get_auth_value()}
+
+            logging.debug(f"hitting: {url_with_params}")
+            async with session.delete(
+                url_with_params, headers=headers, ssl=_ssl
+            ) as response:
+                response.raise_for_status()
+
+            return await response.json()
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    def create_aliases(self, guid, aliases, **kwargs):
+        """
+        Create Aliases for the given guid
+
+        Args:
+            guid (TYPE): Globally unique ID for the metadata blob
+            aliases (list[str]): Aliases to set for the guid
+            **kwargs: additional query params
+
+        Returns:
+            requests.Response: response from the request to create aliases
+        """
+        url = self.admin_endpoint + f"/metadata/{guid}/aliases"
+        url_with_params = append_query_params(url, **kwargs)
+
+        data = {"aliases": aliases}
+
+        logging.debug(f"hitting: {url_with_params}")
+        logging.debug(f"data: {data}")
+        response = requests.post(url_with_params, json=data, auth=self._auth_provider)
+        response.raise_for_status()
+
+        return response.json()
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    async def async_create_aliases(self, guid, aliases, _ssl=None, **kwargs):
+        """
+        Asyncronously create Aliases for the given guid
+
+        Args:
+            guid (TYPE): Globally unique ID for the metadata blob
+            aliases (list[str]): Aliases to set for the guid
+            _ssl (None, optional): whether or not to use ssl
+            **kwargs: additional query params
+
+        Returns:
+            requests.Response: response from the request to create aliases
+        """
+        async with aiohttp.ClientSession() as session:
+            url = self.admin_endpoint + f"/metadata/{guid}/aliases"
+            url_with_params = append_query_params(url, **kwargs)
+
+            # aiohttp only allows basic auth with their built in auth, so we
+            # need to manually add JWT auth header
+            headers = {"Authorization": self._auth_provider._get_auth_value()}
+
+            data = {"aliases": aliases}
+
+            logging.debug(f"hitting: {url_with_params}")
+            logging.debug(f"data: {data}")
+            async with session.post(
+                url_with_params, json=data, headers=headers, ssl=_ssl
+            ) as response:
+                response.raise_for_status()
+                return await response.json()
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    def update_aliases(self, guid, aliases, merge=False, **kwargs):
+        """
+        Update Aliases for the given guid
+
+        Args:
+            guid (TYPE): Globally unique ID for the metadata blob
+            aliases (list[str]): Aliases to set for the guid
+            merge (bool, optional): Whether or not to aliases with existing values
+            **kwargs: additional query params
+
+        Returns:
+            requests.Response: response from the request to update aliases
+        """
+        url = self.admin_endpoint + f"/metadata/{guid}/aliases"
+        url_with_params = append_query_params(url, merge=merge, **kwargs)
+
+        data = {"aliases": aliases}
+
+        logging.debug(f"hitting: {url_with_params}")
+        logging.debug(f"data: {data}")
+        response = requests.put(
+            url_with_params, json=data, merge=merge, auth=self._auth_provider
+        )
+        response.raise_for_status()
+
+        return response.json()
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    async def async_update_aliases(
+        self, guid, aliases, merge=False, _ssl=None, **kwargs
+    ):
+        """
+        Asyncronously update Aliases for the given guid
+
+        Args:
+            guid (TYPE): Globally unique ID for the metadata blob
+            aliases (list[str]): Aliases to set for the guid
+            merge (bool, optional): Whether or not to aliases with existing values
+            _ssl (None, optional): whether or not to use ssl
+            **kwargs: additional query params
+
+        Returns:
+            requests.Response: response from the request to update aliases
+        """
+        async with aiohttp.ClientSession() as session:
+            url = self.admin_endpoint + f"/metadata/{guid}/aliases"
+            url_with_params = append_query_params(url, merge=merge, **kwargs)
+
+            # aiohttp only allows basic auth with their built in auth, so we
+            # need to manually add JWT auth header
+            headers = {"Authorization": self._auth_provider._get_auth_value()}
+
+            data = {"aliases": aliases}
+
+            logging.debug(f"hitting: {url_with_params}")
+            logging.debug(f"data: {data}")
+            async with session.put(
+                url_with_params, json=data, headers=headers, ssl=_ssl
+            ) as response:
+                response.raise_for_status()
+
+                return await response.json()
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    def delete_aliases(self, guid, **kwargs):
+        """
+        Delete all Aliases for the given guid
+
+        Args:
+            guid (TYPE): Globally unique ID for the metadata blob
+            **kwargs: additional query params
+
+        Returns:
+            requests.Response: response from the request to delete aliases
+        """
+        url = self.admin_endpoint + f"/metadata/{guid}/aliases"
+        url_with_params = append_query_params(url, **kwargs)
+
+        logging.debug(f"hitting: {url_with_params}")
+        response = requests.delete(url_with_params, auth=self._auth_provider)
+        response.raise_for_status()
+
+        return response.text
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    async def async_delete_aliases(self, guid, _ssl=None, **kwargs):
+        """
+        Asyncronously delete all Aliases for the given guid
+
+        Args:
+            guid (TYPE): Globally unique ID for the metadata blob
+            _ssl (None, optional): whether or not to use ssl
+            **kwargs: additional query params
+
+        Returns:
+            requests.Response: response from the request to delete aliases
+        """
+        async with aiohttp.ClientSession() as session:
+            url = self.admin_endpoint + f"/metadata/{guid}/aliases"
+            url_with_params = append_query_params(url, **kwargs)
+
+            # aiohttp only allows basic auth with their built in auth, so we
+            # need to manually add JWT auth header
+            headers = {"Authorization": self._auth_provider._get_auth_value()}
+
+            logging.debug(f"hitting: {url_with_params}")
+            async with session.delete(
+                url_with_params, headers=headers, ssl=_ssl
+            ) as response:
+                response.raise_for_status()
+
+                return await response.text
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    def delete_alias(self, guid, alias, **kwargs):
+        """
+        Delete single Alias for the given guid
+
+        Args:
+            guid (TYPE): Globally unique ID for the metadata blob
+            alias (str): alternative identifier (alias) to delete
+            **kwargs: additional query params
+
+        Returns:
+            requests.Response: response from the request to delete aliases
+        """
+        url = self.admin_endpoint + f"/metadata/{guid}/aliases/{alias}"
+        url_with_params = append_query_params(url, **kwargs)
+
+        logging.debug(f"hitting: {url_with_params}")
+        response = requests.delete(url_with_params, auth=self._auth_provider)
+        response.raise_for_status()
+
+        return response.text
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    async def async_delete_alias(self, guid, alias, _ssl=None, **kwargs):
+        """
+        Asyncronously delete single Aliases for the given guid
+
+        Args:
+            guid (str): Globally unique ID for the metadata blob
+            alias (str): alternative identifier (alias) to delete
+            _ssl (None, optional): whether or not to use ssl
+            **kwargs: additional query params
+
+        Returns:
+            requests.Response: response from the request to delete aliases
+        """
+        async with aiohttp.ClientSession() as session:
+            url = self.admin_endpoint + f"/metadata/{guid}/aliases/{alias}"
+            url_with_params = append_query_params(url, **kwargs)
+
+            # aiohttp only allows basic auth with their built in auth, so we
+            # need to manually add JWT auth header
+            headers = {"Authorization": self._auth_provider._get_auth_value()}
+
+            logging.debug(f"hitting: {url_with_params}")
+            async with session.delete(
+                url_with_params, headers=headers, ssl=_ssl
+            ) as response:
+                response.raise_for_status()
+
+                return await response.text
 
     def _prepare_metadata(
         self, metadata, indexd_doc, force_metadata_columns_even_if_empty
