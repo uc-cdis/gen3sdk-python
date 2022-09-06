@@ -43,28 +43,38 @@ class Test_Async_Download:
         f = open(self.manifest_file)    
         data = json.load(f)
         assert len(data) == len(manifest_list)
-    
-    @pytest.mark.asyncio
-    async def test_download_manifest(self, download_dir, gen3_download):
-        with patch("aiohttp.ClientSession") as client:
-            mock_response = AsyncMock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {
-                "file_name": "TestDataSet1.sav",
-                "content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etdolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquipex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum doloreeu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt inculpa qui officia deserunt mollit anim id est laborum."
+
+    def iter_content(chunk_size = 4096, content = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etdolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquipex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum doloreeu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt inculpa qui officia deserunt mollit anim id est laborum."):
+        rest = content
+        while(rest):
+            chunk = rest[:chunk_size]
+            rest = rest[chunk_size:]
+        return chunk.encode('utf-8')
+
+    @patch("gen3.file.requests")
+    @patch('gen3.tools.download.download_manifest.requests')
+    def test_download_manifest(self, mock_get, mock_request, download_dir, gen3_download, download_test_files):
+        sample_url_1 = "http://test.commons.io/user/data/download/dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e"
+        mock_get.get().content = {
+            "file_name": "TestDataSet1.sav",
+            "content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etdolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquipex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum doloreeu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt inculpa qui officia deserunt mollit anim id est laborum."
             }
-            client.get.return_value = mock_response
-            with patch("gen3.file.requests") as mock_request:
-                gen3_download.manifest_file = self.manifest_file
-                manifest_list = gen3_download.load_manifest()
-                Sem = asyncio.Semaphore(value = 1)
-                mock_request.status_code = 200
-                sample_url_1 = "http://test.commons.io/user/data/download/dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e"
-                gen3_download._auth_provider._refresh_token = {"api_key" : "123"}
-                pbar = tqdm(desc = "Manifest progress", total = len(manifest_list), unit_scale = True, position = 0, unit_divisor = 1024, unit = "B", ncols = 90, disable = True)
-                #for entry in manifest_list:
-                mock_request.get().text = json.dumps({"url": sample_url_1})
-                await gen3_download.download_using_url(Sem, manifest_list[0], client, download_dir, pbar)
-                with open(os.path.join(download_dir, manifest_list[0].file_name), "rt") as fin:
-                    assert fin.read() == download_test_files[id]["content"]
-    
+        content = {
+            "file_name": "TestDataSet1.sav",
+            "content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etdolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquipex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum doloreeu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt inculpa qui officia deserunt mollit anim id est laborum."
+            }
+        #mock_get.get().headers.get.return_value = len("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etdolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquipex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum doloreeu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt inculpa qui officia deserunt mollit anim id est laborum.")
+        mock_response = mock_get.get()
+        mock_response.headers = {'content-length': str(len(content))}
+        gen3_download.manifest_file = self.manifest_file
+        mock_response = mock_get.get()
+        mock_response.get().content.iter_content = Test_Async_Download.iter_content
+        manifest_list = gen3_download.load_manifest()
+        mock_request.get().status_code = 200
+        mock_get.get().status_code = 200
+        gen3_download._auth_provider._refresh_token = {"api_key" : "123"}
+        mock_request.get().text = json.dumps({"url": sample_url_1})
+        gen3_download.download_single(manifest_list[0], download_dir)
+        fin = open(os.path.join(download_dir, manifest_list[0].file_name), "rt") 
+        assert fin.read() == download_test_files[id]['content']
+        fin.close()    
