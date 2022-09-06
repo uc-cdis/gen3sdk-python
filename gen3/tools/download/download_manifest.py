@@ -66,7 +66,7 @@ class manifest_downloader:
                 total_downloaded = 0
                 filename = (entry.file_name if entry.file_name else entry.object_id)  
                 async with aiofiles.open(os.path.join(path, filename), "wb") as f:
-                    with tqdm(desc = f"File {entry.file_name}", total = total_size_in_bytes, position = 1, unit_scale = True, unit_divisor = 1024, unit = "B", ncols = 90) as progress:
+                    async with tqdm(desc = f"File {entry.file_name}", total = total_size_in_bytes, position = 1, unit_scale = True, unit_divisor = 1024, unit = "B", ncols = 90) as progress:
                         async for data in response.content.iter_chunked(4096):
                             progress.update(len(data))
                             total_downloaded += len(data)
@@ -83,7 +83,7 @@ class manifest_downloader:
         except Exception as e:
             logging.critical(f"\nError in {entry.file_name}: {e} Type: {e.__class__.__name__}\n")
             unsuccessful.append(entry)
-            await Sem.release()
+            Sem.release()
             return False
 
     async def async_download(auth, manifest_file, download_path, cred):
