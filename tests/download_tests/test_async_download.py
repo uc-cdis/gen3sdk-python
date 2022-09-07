@@ -23,7 +23,7 @@ def download_dir(tmpdir_factory):
 def download_test_files():
     data = {}
     DIR = Path(__file__).resolve().parent
-    with open(Path(DIR, "resources/async_download_test_data.json")) as fin:
+    with open(Path(DIR, "resources/download_test_data.json")) as fin:
         data = json.load(fin)
         for item in data.values():
             item["content_length"] = str(len(item["content"]))
@@ -40,8 +40,8 @@ class Test_Async_Download:
     """
     Class containing all test cases for class manifest_downloader
     """
-
-    manifest_file = 'resources/manifest_test_1.json'
+    DIR = Path(__file__).resolve().parent
+    manifest_file = Path(DIR, "resources/manifest_test_1.json")
 
     def iter_content(
         chunk_size=4096,
@@ -216,7 +216,8 @@ class Test_Async_Download:
             )
         ]
 
-        gen3_download.manifest_file = 'resources/manifest_test_bad_id.json'
+        DIR = Path(__file__).resolve().parent 
+        gen3_download.manifest_file = Path(DIR, "resources/manifest_test_bad_id.json")
 
         manifest_list = gen3_download.load_manifest()
 
@@ -239,7 +240,8 @@ class Test_Async_Download:
         Testing how load_manifest function reacts when it is given a manifest with bad format as input
         Function should not load the manifest and should return an empty manifest_list
         """
-
-        gen3_download.manifest_file = 'resources/bad_format.json'
+        
+        DIR = Path(__file__).resolve().parent
+        gen3_download.manifest_file = Path(DIR, 'resources/bad_format.json')
         manifest_list = gen3_download.load_manifest()
         assert manifest_list == None
