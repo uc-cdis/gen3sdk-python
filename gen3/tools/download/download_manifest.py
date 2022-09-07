@@ -86,10 +86,10 @@ class manifest_downloader:
                         async for data in response.content.iter_chunked(4096):
                             progress.update(len(data))
                             total_downloaded += len(data)
-                            pbar.update()
                             await f.write(data)
 
                 if total_size_in_bytes == total_downloaded:
+                    pbar.update()
                     Sem.release()
                     return True 
 
