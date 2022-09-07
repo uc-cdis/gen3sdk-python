@@ -25,7 +25,6 @@ jobs:
     - name: Install dependencies
       run: |
         pip install poetry
-        source $HOME/.poetry/env
         poetry config virtualenvs.create false
         poetry install -vv
         # install sphinx from PyPI (as of 03/16/21 python3-sphinx is broken)

@@ -14,7 +14,6 @@ jobs:
 before_install:
 - pip install --upgrade pip
 - pip install poetry
-- source $HOME/.poetry/env
 - which poetry
 - poetry --version
 install:
