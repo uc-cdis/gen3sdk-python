@@ -8,7 +8,6 @@ from gen3.auth import Gen3Auth
 from gen3.file import Gen3File
 from tqdm import tqdm
 from types import SimpleNamespace as Namespace
-from cdislogging import get_logger
 import os
 import requests
 
@@ -18,12 +17,17 @@ no_retry = [400, 401, 402, 403, 405, 406, 407, 409, 410, 411, 412, 413, 414, 415
 
 class manifest_downloader:
 
+    """
+    Class containing all functions related to asynchronous download
+    """
+
     def __init__(self, manifest_file, auth_provider):
-        self.manifest_file = manifest_file
+        self.manifest_file = manifest_file 
         self._auth_provider = auth_provider
         self.file = Gen3File(self._auth_provider)
 
     def load_manifest(self):
+
         """
         Function to convert manifest to python objects, stored in a list
         """
@@ -31,22 +35,29 @@ class manifest_downloader:
             with open(self.manifest_file, "rt") as f:
                 data = json.load(f, object_hook=lambda d:Namespace(**d))
                 return data
+
         except Exception as e:
             logging.critical(f"Error in load manifest: {e}")
+            return None
 
 
-    async def download_using_url(self, Sem, entry, client, path, pbar): #pbar
+    async def download_using_url(self, Sem, entry, client, path, pbar): 
+
         """
         Function to use object id of file to obtain its download url and use that download url 
-        to download required file 
+        to download required file asynchronously
         """
+
         try:
             await Sem.acquire()
+
             url = self.file.get_presigned_url(entry.object_id)
-            #retry-url
             if not url:
                 logging.critical("No url on retrial, try again later")
                 unsuccessful.append(entry)
+                Sem.release()
+                return False
+
             async with client.get(url['url'], read_bufsize = 4096) as response:
                 if response.status!= 200:
                     logging.error(f"Response code: {response.status_code}")
@@ -59,27 +70,35 @@ class manifest_downloader:
                         if response.status!= 200:
                             logging.critical("Response status not 200, try again later")
                             unsuccessful.append(entry)
+                            Sem.release()
+                            return False
                     else:
                         unsuccessful.append(entry)
+                        Sem.release()
+                        return False
                 response.raise_for_status()
+
                 total_size_in_bytes = int(response.headers.get("content-length"))
                 total_downloaded = 0
                 filename = (entry.file_name if entry.file_name else entry.object_id)  
                 async with aiofiles.open(os.path.join(path, filename), "wb") as f:
-                    async with tqdm(desc = f"File {entry.file_name}", total = total_size_in_bytes, position = 1, unit_scale = True, unit_divisor = 1024, unit = "B", ncols = 90) as progress:
+                    with tqdm(desc = f"File {entry.file_name}", total = total_size_in_bytes, position = 1, unit_scale = True, unit_divisor = 1024, unit = "B", ncols = 90) as progress:
                         async for data in response.content.iter_chunked(4096):
                             progress.update(len(data))
                             total_downloaded += len(data)
                             pbar.update()
                             await f.write(data)
+
                 if total_size_in_bytes == total_downloaded:
                     Sem.release()
                     return True 
+
                 else:
                     logging.error(f"File {entry.file_name} not downloaded successfully")
                     Sem.release()
                     unsuccessful.append(entry)
                     return False
+
         except Exception as e:
             logging.critical(f"\nError in {entry.file_name}: {e} Type: {e.__class__.__name__}\n")
             unsuccessful.append(entry)
@@ -87,22 +106,33 @@ class manifest_downloader:
             return False
 
     async def async_download(auth, manifest_file, download_path, cred):
+        
+        """
+        Function calling download_using_url function for all entries in the manifest asynchronously as tasks,
+        gathering all the tasks and logging which files were successful and which weren't
+        """
+        
         s=time.perf_counter()
         logging.info(f"Start time: {s}")
+
         auth = Gen3Auth(refresh_file = f'{cred}')  #obtaining authorisation from credentials 
         manifest = manifest_downloader(manifest_file, auth)
         manifest_list = manifest.load_manifest()
         logging.info("Done with manifest")
+
         tasks = []
         Sem = asyncio.Semaphore(value = 10) #semaphores to control number of requests to server at a particular moment
         connector = aiohttp.TCPConnector(force_close = True)
+
         async with aiohttp.ClientSession(timeout = aiohttp.ClientTimeout(600), connector = connector, trust_env = True) as client:
             loop = asyncio.get_running_loop()
             with tqdm(desc = "Manifest progress", total = len(manifest_list), unit_scale = True, position = 0, unit_divisor = 1024, unit = "B", ncols = 90) as pbar:
-                for entry in manifest_list:
-                #creating tasks for each entry 
-                    tasks.append(loop.create_task(manifest.download_using_url(Sem, entry, client, download_path, pbar)))#pbar
-                await asyncio.gather(*tasks)
+            #progress bar to show how many files in the manifest have been downloaded
+                if manifest_list:
+                    for entry in manifest_list:
+                    #creating a task for each entry 
+                        tasks.append(loop.create_task(manifest.download_using_url(Sem, entry, client, download_path, pbar)))
+                    await asyncio.gather(*tasks)
         
         duration = time.perf_counter()-s
         logging.info(f"\nDuration = {duration}\n")
@@ -110,13 +140,19 @@ class manifest_downloader:
 
         
     def download_single(self, entry, path):
+
+        """
+        Function only executing the download functionality of the async code for a single entry 
+        """
+
         unsuccessful = []
         try:
             url = self.file.get_presigned_url(entry.object_id)
-            #retry-url
             if not url:
                 logging.critical("No url on retrial, try again later")
                 unsuccessful.append(entry)
+                return False
+
             response = requests.get(url['url'], stream = True)
             if response.status_code!= 200:
                     logging.error(f"Response code: {response.status_code}")
@@ -129,9 +165,12 @@ class manifest_downloader:
                         if response.status!= 200:
                             logging.critical("Response status not 200, try again later")
                             unsuccessful.append(entry)
+                            return False
                     else:
                         unsuccessful.append(entry)
+                        return False
             response.raise_for_status()
+
             total_size_in_bytes = int(response.headers.get("content-length"))
             total_downloaded = 0
             filename = (entry.file_name if entry.file_name else entry.object_id)  
@@ -142,6 +181,7 @@ class manifest_downloader:
             if total_size_in_bytes == total_downloaded:
                 logging.info(f"File {entry.file_name} downloaded successfully")
                 return True 
+
             else:
                 logging.error(f"File {entry.file_name} not downloaded successfully")
                 unsuccessful.append(entry)
