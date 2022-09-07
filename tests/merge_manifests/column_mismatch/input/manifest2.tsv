@@ -1,0 +1,3 @@
+size	md5	acl	urls	guid	authz
+10486	60cd84362c7ee2b173381aee5a89fce9	X Y	s3://myfile1.txt	dg.123/456	
+15790	c49d4ebfd75b4e763866c3089358137a	X Y	s3://myfile2.txt	dg.456/789	
