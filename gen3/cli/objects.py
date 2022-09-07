@@ -14,10 +14,6 @@ from gen3.tools.indexing.index_manifest import (
 )
 from gen3.tools.indexing.verify_manifest import manifest_row_parsers
 from gen3.utils import get_or_create_event_loop_for_thread
-from gen3.tools.metadata.crosswalk import (
-    publish_crosswalk_metadata,
-    read_crosswalk_metadata,
-)
 
 
 @click.group()
@@ -25,16 +21,14 @@ def objects():
     """Commands for reading and editing objects"""
     pass
 
+@objects.group()
+def download():
+    """Commands for downloading files from server"""
+    pass
 
 @objects.group()
 def manifest():
     """For working with minimal object metadata manifests"""
-    pass
-
-
-@objects.group()
-def crosswalk():
-    """For working with cross-commons subject crosswalk data"""
     pass
 
 
@@ -136,6 +130,7 @@ def objects_manifest_verify(ctx, file, max_concurrent_requests):
     "allowed_protocols",
     help="""
     space-delimited string list of allowed protocols for url validation.
+
     Note that if allowed_protocols is provided, url values will only be
     validated using the provided protocols (e.g. if
     allowed_protocols="http https" an error would be raised when
@@ -149,8 +144,10 @@ def objects_manifest_verify(ctx, file, max_concurrent_requests):
     "allow_base64_encoded_md5",
     help="""
     whether or not Base64 encoded md5 values are allowed.
+
     if False, only hexadecimal encoded 128-bit md5 values are considered valid,
     and Base64 encoded values will be logged as errors.
+
     if arg provided, both hexadecimal and Base64 encoded 128-bit md5 values are considered
     valid
     """,
@@ -162,6 +159,7 @@ def objects_manifest_verify(ctx, file, max_concurrent_requests):
     "error_on_empty_url",
     help="""
     whether to treat completely empty url values as errors
+
     for the following example manifest, if error_on_empty_url is False,
     a warning would be logged for the completely empty url value on
     line 2. if error_on_empty_url is True, an error would be generated
@@ -170,6 +168,7 @@ def objects_manifest_verify(ctx, file, max_concurrent_requests):
     md5,url,size
     1596f493ba9ec53023fca640fb69bd3b,,42
     ```
+
     note that regardless of error_on_empty_url, errors will be
     generated no matter what for arrays or quotes from which urls could
     not be extracted. for example, for the following manifest, errors
@@ -191,6 +190,7 @@ def objects_manifest_verify(ctx, file, max_concurrent_requests):
     help="""
     number of lines in manifest to validate including the header. if
     not provided, every line is validated.
+
     This can be helpful as a way to only attempt validation of a few rows to get
     an idea if there are large format issues without needing to run against every
     row in the manifest.
@@ -241,6 +241,7 @@ def objects_manifest_validate_format(
     help="""
     If supplied, will append urls for existing records. e.g. existing urls will
     still exist and new ones will be added
+
     By default the newly provided urls will REPLACE existing urls
     """,
     is_flag=True,
@@ -327,96 +328,3 @@ manifest.add_command(objects_manifest_verify, name="verify")
 manifest.add_command(objects_manifest_validate_format, name="validate-manifest-format")
 manifest.add_command(objects_manifest_publish, name="publish")
 manifest.add_command(objects_manifest_delete_all_guids, name="delete-all-guids")
-
-
-@click.command(
-    help=(
-        """
-    Publishes specified crosswalk from local files to Gen3 instance and merges
-    with existing crosswalk data already in Gen3.\n
-    FILE\n
-    \tA file path to a CSV containing mapping identifiers. Has a specialized
-    \tcolumn naming format. Column names MUST be pipe-delimited and contain:\n
-    \t\tcommons url | identifier type | identifier name\n
-    \tYou can have any number of columns for mapping.\n
-    """
-    )
-)
-@click.argument(
-    "file",
-    type=click.Path(writable=True),
-    required=True,
-)
-@click.option(
-    "-m",
-    "--mapping_methodology",
-    "mapping_methodologies",
-    required=True,
-    multiple=True,
-    help="A string description of how the mapping in the provided file was obtained.",
-)
-@click.option(
-    "--info",
-    "info_file",
-    type=click.Path(writable=True),
-    required=False,
-    help=(
-        "File with an additional description about the identifiers in the crosswalk file. "
-        "The format is a CSV with columns: commons url,identifier name,description. Be sure "
-        "to use the same commons url and identifier name used in the crosswalk file."
-    ),
-)
-@click.pass_context
-def objects_crosswalk_publish(ctx, file, info_file, mapping_methodologies):
-    auth = ctx.obj["auth_factory"].get()
-
-    loop = get_or_create_event_loop_for_thread()
-    loop.run_until_complete(
-        publish_crosswalk_metadata(
-            auth=auth,
-            file=file,
-            info_file=info_file,
-            mapping_methodologies=mapping_methodologies,
-        )
-    )
-
-
-@click.command(help="Reads crosswalk data from Gen3 instance into local files.")
-@click.option(
-    "--output-file",
-    "output_file",
-    default="crosswalk.csv",
-    help="filename for output",
-    type=click.Path(writable=True),
-    show_default=True,
-)
-@click.pass_context
-def objects_crosswalk_read(ctx, output_file):
-    auth = ctx.obj["auth_factory"].get()
-
-    loop = get_or_create_event_loop_for_thread()
-    loop.run_until_complete(
-        read_crosswalk_metadata(auth=auth, output_filename=output_file)
-    )
-
-
-@click.command(
-    help="Verifies specified crosswalk data in local files exists in Gen3 instance."
-)
-@click.pass_context
-def objects_crosswalk_verify(ctx):
-    raise NotImplementedError("`gen3 objects crosswalk verify` is not implemented yet.")
-
-
-@click.command(
-    help="Deletes specified crosswalk data in local files from Gen3 instance."
-)
-@click.pass_context
-def objects_crosswalk_delete(ctx):
-    raise NotImplementedError("`gen3 objects crosswalk delete` is not implemented yet.")
-
-
-crosswalk.add_command(objects_crosswalk_publish, name="publish")
-crosswalk.add_command(objects_crosswalk_read, name="read")
-crosswalk.add_command(objects_crosswalk_verify, name="verify")
-crosswalk.add_command(objects_crosswalk_delete, name="delete")
