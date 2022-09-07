@@ -14,6 +14,10 @@ from gen3.tools.indexing.index_manifest import (
 )
 from gen3.tools.indexing.verify_manifest import manifest_row_parsers
 from gen3.utils import get_or_create_event_loop_for_thread
+from gen3.tools.metadata.crosswalk import (
+    publish_crosswalk_metadata,
+    read_crosswalk_metadata,
+)
 
 
 @click.group()
@@ -29,6 +33,12 @@ def download():
 @objects.group()
 def manifest():
     """For working with minimal object metadata manifests"""
+    pass
+
+
+@objects.group()
+def crosswalk():
+    """For working with cross-commons subject crosswalk data"""
     pass
 
 
@@ -328,3 +338,98 @@ manifest.add_command(objects_manifest_verify, name="verify")
 manifest.add_command(objects_manifest_validate_format, name="validate-manifest-format")
 manifest.add_command(objects_manifest_publish, name="publish")
 manifest.add_command(objects_manifest_delete_all_guids, name="delete-all-guids")
+
+
+@click.command(
+    help=(
+        """
+    Publishes specified crosswalk from local files to Gen3 instance and merges
+    with existing crosswalk data already in Gen3.\n
+
+    FILE\n
+    \tA file path to a CSV containing mapping identifiers. Has a specialized
+    \tcolumn naming format. Column names MUST be pipe-delimited and contain:\n
+    \t\tcommons url | identifier type | identifier name\n
+
+    \tYou can have any number of columns for mapping.\n
+    """
+    )
+)
+@click.argument(
+    "file",
+    type=click.Path(writable=True),
+    required=True,
+)
+@click.option(
+    "-m",
+    "--mapping_methodology",
+    "mapping_methodologies",
+    required=True,
+    multiple=True,
+    help="A string description of how the mapping in the provided file was obtained.",
+)
+@click.option(
+    "--info",
+    "info_file",
+    type=click.Path(writable=True),
+    required=False,
+    help=(
+        "File with an additional description about the identifiers in the crosswalk file. "
+        "The format is a CSV with columns: commons url,identifier name,description. Be sure "
+        "to use the same commons url and identifier name used in the crosswalk file."
+    ),
+)
+@click.pass_context
+def objects_crosswalk_publish(ctx, file, info_file, mapping_methodologies):
+    auth = ctx.obj["auth_factory"].get()
+
+    loop = get_or_create_event_loop_for_thread()
+    loop.run_until_complete(
+        publish_crosswalk_metadata(
+            auth=auth,
+            file=file,
+            info_file=info_file,
+            mapping_methodologies=mapping_methodologies,
+        )
+    )
+
+
+@click.command(help="Reads crosswalk data from Gen3 instance into local files.")
+@click.option(
+    "--output-file",
+    "output_file",
+    default="crosswalk.csv",
+    help="filename for output",
+    type=click.Path(writable=True),
+    show_default=True,
+)
+@click.pass_context
+def objects_crosswalk_read(ctx, output_file):
+    auth = ctx.obj["auth_factory"].get()
+
+    loop = get_or_create_event_loop_for_thread()
+    loop.run_until_complete(
+        read_crosswalk_metadata(auth=auth, output_filename=output_file)
+    )
+
+
+@click.command(
+    help="Verifies specified crosswalk data in local files exists in Gen3 instance."
+)
+@click.pass_context
+def objects_crosswalk_verify(ctx):
+    raise NotImplementedError("`gen3 objects crosswalk verify` is not implemented yet.")
+
+
+@click.command(
+    help="Deletes specified crosswalk data in local files from Gen3 instance."
+)
+@click.pass_context
+def objects_crosswalk_delete(ctx):
+    raise NotImplementedError("`gen3 objects crosswalk delete` is not implemented yet.")
+
+
+crosswalk.add_command(objects_crosswalk_publish, name="publish")
+crosswalk.add_command(objects_crosswalk_read, name="read")
+crosswalk.add_command(objects_crosswalk_verify, name="verify")
+crosswalk.add_command(objects_crosswalk_delete, name="delete")

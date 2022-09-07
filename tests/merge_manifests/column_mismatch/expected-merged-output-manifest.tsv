@@ -1,0 +1,5 @@
+acl	authz	guid	md5	size	urls
+			04e6256303c44ccd4ce4019e8d28a7fc	4667	gs://myotherfile1.txt
+			10cb099ac4adff0b0f12b92faa670248	4338	gs://myotherfile2.txt
+X Y		dg.456/789	c49d4ebfd75b4e763866c3089358137a	15790	s3://myfile2.txt
+X Y		dg.123/456	60cd84362c7ee2b173381aee5a89fce9	10486	s3://myfile1.txt
