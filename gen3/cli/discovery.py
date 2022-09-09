@@ -3,6 +3,7 @@ import asyncio
 import click
 
 from gen3.tools.metadata.discovery import (
+    generate_discovery_metadata,
     publish_discovery_metadata,
     output_expanded_discovery_metadata,
     try_delete_discovery_guid,
@@ -92,6 +93,14 @@ def discovery_delete(ctx, guid):
     """
     auth = ctx.obj["auth_factory"].get()
     try_delete_discovery_guid(auth, guid)
+
+
+@click.command()
+@click.pass_context
+def discovery_generate(ctx):
+    auth = ctx.obj["auth_factory"].get()
+    endpoint = ctx.obj.get("endpoint")
+    generate_discovery_metadata(auth, endpoint)
 
 
 discovery.add_command(discovery_read, name="read")

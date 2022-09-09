@@ -5,11 +5,13 @@ from cdislogging import get_logger
 import tempfile
 import asyncio
 import os
+from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 
 import requests.exceptions
 
 from gen3.metadata import Gen3Metadata
+from gen3.submission import Gen3Submission
 from gen3.tools import metadata
 from gen3.utils import raise_for_status_and_print_error
 
@@ -23,6 +25,80 @@ BASE_CSV_PARSER_SETTINGS = {
 }
 
 logging = get_logger("__name__")
+
+
+def generate_discovery_metadata(auth, endpoint):
+    """
+    Get discovery metadata from dbgap for currently submitted studies in a commons
+    """
+    submission = Gen3Submission(endpoint, auth_provider=auth)
+    query_txt = """
+{
+  project(first:0) {
+    project_id
+    code
+    name
+    studies(first:0) {
+      study_id
+      dbgap_phs
+      dbgap_consent
+      dbgap_version
+      dbgap_accession
+      dbgap_consent_text
+      dbgap_participant_set
+      authz
+      full_name
+      short_name
+      study_description
+      _subjects_count
+    }
+  }
+}
+    """
+    raw_results = submission.query(query_txt).get("data", {}).get("project", [])
+    results = []
+    fields = set()
+
+    for raw_result in raw_results:
+        studies = raw_result.get("studies")
+        study_data = {}
+        if len(studies) != 1:
+            logging.warning(
+                f"expect 1:1 project:study, got {studies} from {raw_result}"
+            )
+        else:
+            study_data = studies[0]
+
+        del raw_result["studies"]
+        result = copy.deepcopy(raw_result)
+        result.update(study_data)
+
+        if "authz" in result:
+            result["authz"] = str(result["authz"]).replace("'", '"')
+
+        result["tags"] = _determine_tags_from_study_info(result)
+        result["study_description"] = _get_study_description(result)
+
+        # don't include studies with no subjects for now, this effectively removes
+        # any projects that were created but have no data submitted
+        if result.get("_subjects_count"):
+            results.append(result)
+
+    fields = fields | set(result.keys())
+    output_filepath = _dbgap_file_from_auth(auth)
+
+    with open(output_filepath, "w+", encoding="utf-8") as output_file:
+        logging.info(f"writing headers to {output_filepath}: {fields}")
+        output_writer = csv.DictWriter(
+            output_file,
+            delimiter="\t",
+            fieldnames=fields,
+            extrasaction="ignore",
+        )
+        output_writer.writeheader()
+
+        for row in results:
+            output_writer.writerow(row)
 
 
 async def output_expanded_discovery_metadata(
@@ -254,3 +330,134 @@ def _metadata_file_from_auth(auth):
     return (
         "-".join(urlparse(auth.endpoint).netloc.split(".")) + "-discovery_metadata.tsv"
     )
+
+
+def _dbgap_file_from_auth(auth):
+    return "-".join(urlparse(auth.endpoint).netloc.split(".")) + "-dbgap_metadata.tsv"
+
+
+def _determine_tags_from_study_info(study):
+    tags = []
+    if study.get("project_id", "") and study.get("project_id", "").startswith("parent"):
+        tags.append(_get_tag("Parent", "Program"))
+        tags.append(_get_tag("DCC Harmonized", "Data Type"))
+        tags.append(_get_tag("Clinical Phenotype", "Data Type"))
+
+    if study.get("project_id", "") and study.get("project_id", "").startswith("topmed"):
+        tags.append(_get_tag("TOPMed", "Program"))
+        tags.append(_get_tag("Genotype", "Data Type"))
+
+        if _is_topmed_study_geno_and_pheno(study.get("code", "")):
+            tags.append(_get_tag("Clinical Phenotype", "Data Type"))
+
+    if study.get("project_id", "") and study.get("project_id", "").startswith("COVID"):
+        tags.append(_get_tag("COVID 19", "Program"))
+
+    if study.get("dbgap_accession", "") and study.get("dbgap_accession", "").startswith(
+        "phs"
+    ):
+        tags.append(_get_tag("dbGaP", "Study Registration"))
+
+    return str(tags).replace("'", '"')
+
+
+def _get_tag(name, category):
+    return {"name": name, "category": category}
+
+
+def _is_topmed_study_geno_and_pheno(study):
+    # if the topmed study has both gennomic and phenotype data (instead of having a parent
+    # study with pheno and a topmed with geno separately)
+    #
+    # determined from https://docs.google.com/spreadsheets/d/1iVOmZVu_IzsVMdefH-1Rgf8zrjqvnZOUEA2dxS5iRjc/edit#gid=698119570
+    # filter to "program"=="topmed" and "parent_study_accession"==""
+    return study in [
+        "SAGE_DS-LD-IRB-COL",
+        "Amish_HMB-IRB-MDS",
+        "CRA_DS-ASTHMA-IRB-MDS-RD",
+        "VAFAR_HMB-IRB",
+        "PARTNERS_HMB",
+        "WGHS_HMB",
+        "BAGS_GRU-IRB",
+        "Sarcoidosis_DS-SAR-IRB",
+        "HyperGEN_GRU-IRB",
+        "HyperGEN_DS-CVD-IRB-RD",
+        "THRV_DS-CVD-IRB-COL-NPU-RD",
+        "miRhythm_GRU",
+        "AustralianFamilialAF_HMB-NPU-MDS",
+        "pharmHU_HMB",
+        "pharmHU_DS-SCD-RD",
+        "pharmHU_DS-SCD",
+        "SAPPHIRE_asthma_DS-ASTHMA-IRB-COL",
+        "REDS-III_Brazil_SCD_GRU-IRB-PUB-NPU",
+        "Walk_PHaSST_SCD_HMB-IRB-PUB-COL-NPU-MDS-GSO",
+        "Walk_PHaSST_SCD_DS-SCD-IRB-PUB-COL-NPU-MDS-RD",
+        "MLOF_HMB-PUB",
+        "AFLMU_HMB-IRB-PUB-COL-NPU-MDS",
+        "MPP_HMB-NPU-MDS",
+        "INSPIRE_AF_DS-MULTIPLE_DISEASES-MDS",
+        "DECAF_GRU",
+        "GENAF_HMB-NPU",
+        "JHU_AF_HMB-NPU-MDS",
+        "ChildrensHS_GAP_GRU",
+        "ChildrensHS_IGERA_GRU",
+        "ChildrensHS_MetaAir_GRU",
+        "CHIRAH_DS-ASTHMA-IRB-COL",
+        "EGCUT_GRU",
+        "IPF_DS-PUL-ILD-IRB-NPU",
+        "IPF_DS-LD-IRB-NPU",
+        "IPF_DS-PFIB-IRB-NPU",
+        "IPF_HMB-IRB-NPU",
+        "IPF_DS-ILD-IRB-NPU",
+        "OMG_SCD_DS-SCD-IRB-PUB-COL-MDS-RD",
+        "BioVU_AF_HMB-GSO",
+        "LTRC_HMB-MDS",
+        "PUSH_SCD_DS-SCD-IRB-PUB-COL",
+        "GGAF_GRU",
+        "PIMA_DS-ASTHMA-IRB-COL",
+        "CARE_BADGER_DS-ASTHMA-IRB-COL",
+        "CARE_TREXA_DS-ASTHMA-IRB-COL",
+    ]
+
+
+def _get_study_description(study):
+    dbgap_phs = study.get("dbgap_phs", "") or ""
+    dbgap_version = study.get("dbgap_version", "") or ""
+    dbgap_participant_set = study.get("dbgap_participant_set", "") or ""
+    dbgap_study = f"{dbgap_phs}.{dbgap_version}.{dbgap_participant_set}"
+
+    study_description = study.get("study_description")
+    if dbgap_study != "..":
+        DBGAP_WEBSITE = (
+            "https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study_id="
+        )
+        url = DBGAP_WEBSITE + dbgap_study
+
+        logging.debug(f"scraping {url}")
+        page = requests.get(url)
+        soup = BeautifulSoup(page.content, "html.parser")
+
+        report = soup.find("dl", class_="report")
+        if report:
+            study_description_start = report.find("dt")
+
+            # sometimes the study description isn't the first "dd" tag
+            if "Study Description" not in study_description_start.getText():
+                study_description_start = study_description_start.find_next_sibling(
+                    "dt"
+                )
+
+            study_description = study_description_start.find_next_sibling("dd") or ""
+
+            if study_description:
+                links = study_description.find(id="important-links")
+                if links:
+                    links.decompose()
+
+                study_description = (
+                    study_description.getText().strip().replace("\t", " ")
+                    + f"\n\nNOTE: This text was scraped from https://www.ncbi.nlm.nih.gov/ on {date.today()} and may not include exact formatting or images."
+                )
+                logging.debug(f"{study_description}")
+
+    return study_description
