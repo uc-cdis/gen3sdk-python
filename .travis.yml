@@ -14,13 +14,11 @@ jobs:
 before_install:
 - pip install --upgrade pip
 - pip install poetry
-- poetry install -vv --no-interaction
-- poetry show -vv
 - which poetry
 - poetry --version
 install:
-- poetry install -vv
-- poetry show
+- poetry install -vv --no-interaction
+- poetry show -vv
 script:
 - poetry run pytest -vv ./tests
 before_deploy:
