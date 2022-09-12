@@ -10,7 +10,7 @@ import gen3.cli.wss as wss
 import gen3.cli.discovery as discovery
 import gen3.cli.configure as configure
 import gen3.cli.objects as objects
-import gen3.cli.download as download
+import gen3.cli.file as file
 import gen3.cli.drs_pull as drs_pull
 import gen3
 from gen3 import logging as sdklogging
@@ -105,5 +105,5 @@ main.add_command(discovery.discovery)
 main.add_command(configure.configure)
 main.add_command(objects.objects)
 main.add_command(drs_pull.drs_pull)
-main.add_command(download.download_files)
+main.add_command(file.file)
 main()
