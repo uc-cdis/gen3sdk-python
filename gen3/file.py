@@ -13,7 +13,7 @@ import os
 import requests
 from gen3.index import Gen3Index
 
-logging = get_logger("async")
+logging = get_logger("__name__")
 no_retry = [400, 401, 402, 403, 405, 406, 407, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 421, 422, 423, 424, 426, 428, 429, 431, 451, 500, 501, 502, 505, 506, 507, 508, 510, 511]
 
 class Gen3FileError(Exception):
@@ -222,7 +222,6 @@ class Gen3File:
         successful = True
         try:
             url = self.get_presigned_url(object_id)
-            print(url)
             if not url:
                 logging.critical("No url on retrial, try again later")
                 successful = False
@@ -250,7 +249,7 @@ class Gen3File:
             index = Gen3Index(self._auth_provider)
             entry = index.get_record(object_id)
             filename = entry['file_name']  
-            
+
             with open(os.path.join(path, filename), "wb") as f:
                 for data in response.content.iter_content(4096):
                     total_downloaded += len(data)
@@ -315,9 +314,6 @@ def download_single(object_id, path, cred):
 
     auth = Gen3Auth(refresh_file = f'{cred}')  #obtaining authorisation from credentials 
     file_download = Gen3File(auth)
-    """ index = Gen3Index(auth)
-    entry = index.get_record(object_id)
-    logging.info(entry) """
 
     result = file_download._download_using_object_id(object_id, path)
 
