@@ -5,9 +5,10 @@ from cdislogging import get_logger
 import tempfile
 import asyncio
 import os
+import copy
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
-
+from datetime import date
 import requests.exceptions
 
 from gen3.metadata import Gen3Metadata
@@ -27,10 +28,11 @@ BASE_CSV_PARSER_SETTINGS = {
 logging = get_logger("__name__")
 
 
-def generate_discovery_metadata(auth, endpoint):
+def generate_discovery_metadata(auth, endpoint=None):
     """
     Get discovery metadata from dbgap for currently submitted studies in a commons
     """
+    print(f"getting currently submitted project/study data from {endpoint}...")
     submission = Gen3Submission(endpoint, auth_provider=auth)
     query_txt = """
 {
@@ -59,6 +61,7 @@ def generate_discovery_metadata(auth, endpoint):
     results = []
     fields = set()
 
+    print(f"parsing {endpoint} submission query...")
     for raw_result in raw_results:
         studies = raw_result.get("studies")
         study_data = {}
@@ -86,7 +89,7 @@ def generate_discovery_metadata(auth, endpoint):
 
     fields = fields | set(result.keys())
     output_filepath = _dbgap_file_from_auth(auth)
-
+    print(f"Writing to {output_filepath}...")
     with open(output_filepath, "w+", encoding="utf-8") as output_file:
         logging.info(f"writing headers to {output_filepath}: {fields}")
         output_writer = csv.DictWriter(
@@ -425,6 +428,7 @@ def _get_study_description(study):
     dbgap_version = study.get("dbgap_version", "") or ""
     dbgap_participant_set = study.get("dbgap_participant_set", "") or ""
     dbgap_study = f"{dbgap_phs}.{dbgap_version}.{dbgap_participant_set}"
+    print(f"Getting study description for {dbgap_study}...")
 
     study_description = study.get("study_description")
     if dbgap_study != "..":

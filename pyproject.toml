@@ -35,6 +35,7 @@ python-dateutil = "*"
 aiofiles = "^0.8.0"
 pandas = "^1.4.2"
 httpx = "*"
+bs4 = "^0.0.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.0.0"

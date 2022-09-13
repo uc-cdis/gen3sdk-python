@@ -98,11 +98,18 @@ def discovery_delete(ctx, guid):
 @click.command()
 @click.pass_context
 def discovery_generate(ctx):
+    """
+    Generate discovery metadata from dbgap
+    """
+    print("get auth")
     auth = ctx.obj["auth_factory"].get()
+    print("get endpoint")
     endpoint = ctx.obj.get("endpoint")
-    generate_discovery_metadata(auth, endpoint)
+    print(f"generate_discovery_metadata() for {endpoint}")
+    generate_discovery_metadata(auth, endpoint=endpoint)
 
 
 discovery.add_command(discovery_read, name="read")
 discovery.add_command(discovery_publish, name="publish")
 discovery.add_command(discovery_delete, name="delete")
+discovery.add_command(discovery_generate, name="generate")
