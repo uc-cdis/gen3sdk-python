@@ -3,7 +3,8 @@ import asyncio
 import click
 
 from gen3.tools.metadata.discovery import (
-    generate_discovery_metadata,
+    scrape_discovery_metadata,
+    create_new_discovery_page_file,
     publish_discovery_metadata,
     output_expanded_discovery_metadata,
     try_delete_discovery_guid,
@@ -97,19 +98,36 @@ def discovery_delete(ctx, guid):
 
 @click.command()
 @click.pass_context
-def discovery_generate(ctx):
+def discovery_scrape(ctx):
     """
-    Generate discovery metadata from dbgap
+    Scrape discovery metadata from dbgap
     """
-    print("get auth")
     auth = ctx.obj["auth_factory"].get()
-    print("get endpoint")
     endpoint = ctx.obj.get("endpoint")
-    print(f"generate_discovery_metadata() for {endpoint}")
-    generate_discovery_metadata(auth, endpoint=endpoint)
+    output_file = scrape_discovery_metadata(auth, endpoint=endpoint)
+    click.echo(output_file)
+
+
+@click.command()
+@click.argument("dbgap_metadata_file", required=True)
+@click.argument("discovery_metadata_file", required=True)
+@click.pass_context
+def discovery_generate(ctx, dbgap_metadata_file, discovery_metadata_file):
+    """
+    Generate a metadata TSV file of new discovery page metadata.
+    New metadata is determined by reading current explore page metadata and scraped dbgap metadata.
+    """
+    output_file = create_new_discovery_page_file(
+        dbgap_metadata_file,
+        discovery_metadata_file,
+        output_filepath="new_discovery_page_metadata.tsv",
+    )
+
+    click.echo(output_file)
 
 
 discovery.add_command(discovery_read, name="read")
 discovery.add_command(discovery_publish, name="publish")
 discovery.add_command(discovery_delete, name="delete")
+discovery.add_command(discovery_scrape, name="scrape")
 discovery.add_command(discovery_generate, name="generate")

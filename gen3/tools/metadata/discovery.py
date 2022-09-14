@@ -28,11 +28,11 @@ BASE_CSV_PARSER_SETTINGS = {
 logging = get_logger("__name__")
 
 
-def generate_discovery_metadata(auth, endpoint=None):
+def scrape_discovery_metadata(auth, endpoint=None):
     """
     Get discovery metadata from dbgap for currently submitted studies in a commons
     """
-    print(f"getting currently submitted project/study data from {endpoint}...")
+    logging.info(f"Getting currently submitted project/study data from '{endpoint}'...")
     submission = Gen3Submission(endpoint, auth_provider=auth)
     query_txt = """
 {
@@ -61,7 +61,6 @@ def generate_discovery_metadata(auth, endpoint=None):
     results = []
     fields = set()
 
-    print(f"parsing {endpoint} submission query...")
     for raw_result in raw_results:
         studies = raw_result.get("studies")
         study_data = {}
@@ -89,7 +88,7 @@ def generate_discovery_metadata(auth, endpoint=None):
 
     fields = fields | set(result.keys())
     output_filepath = _dbgap_file_from_auth(auth)
-    print(f"Writing to {output_filepath}...")
+    logging.info(f"Writing to {output_filepath}")
     with open(output_filepath, "w+", encoding="utf-8") as output_file:
         logging.info(f"writing headers to {output_filepath}: {fields}")
         output_writer = csv.DictWriter(
@@ -102,6 +101,107 @@ def generate_discovery_metadata(auth, endpoint=None):
 
         for row in results:
             output_writer.writerow(row)
+
+    return output_filepath
+
+
+def create_new_discovery_page_file(
+    dbgap_metadata_file,
+    current_explore_file,
+    output_filepath="new_discovery_page_metadata.tsv",
+):
+    """
+    Generate new discovery page metadata from dbgap metadata and existing discovery metadata
+    """
+    explore_page_dict = {}
+    explore_fieldnames = []
+
+    # Build dictionary from current discovery metadata
+    with open(current_explore_file) as curr_file:
+        logging.info("Reading discovery page metadata...")
+        curr_reader = csv.DictReader(curr_file, delimiter="\t")
+        explore_fieldnames = curr_reader.fieldnames
+
+        for i, line in enumerate(curr_reader):
+            key = line["guid"]
+            explore_page_dict[key] = line
+
+    # Build a dictionary of new studies and metadata from dbgap metadata
+    # Write to an output file for submission
+    new_metadata_dict = {}
+    with open(dbgap_metadata_file) as dbgap_file, open(
+        output_filepath, "w+", encoding="utf-8"
+    ) as output_file:
+        dbgap_reader = csv.DictReader(dbgap_file, delimiter="\t")
+        logging.info("Building new discovery page metadata manifest...")
+
+        for i, line in enumerate(dbgap_reader):
+            if (line["study_id"] not in explore_page_dict.keys()) and (
+                line["project_id"] not in explore_page_dict.keys()
+            ):
+                logging.info(line["study_id"] + ": " + line["project_id"])
+                guid = (
+                    line["study_id"]
+                    if (line["study_id"][:3] == "phs")
+                    else line["project_id"]
+                )
+                curr_dict_row = {}
+                tag_string = line["tags"]
+                tag_list = ast.literal_eval(tag_string)
+                for field in explore_fieldnames:
+                    if "tag" in field:
+                        if tag_list:
+                            curr_tag_dict = tag_list.pop(0)
+                            curr_tag = (
+                                curr_tag_dict["category"] + ": " + curr_tag_dict["name"]
+                            )
+                            curr_dict_row[field] = curr_tag
+                        else:
+                            curr_dict_row[field] = ""
+
+                    elif field == "dbgap_url":
+                        study_link_ending = guid[:-3] if (guid[:3] == "phs") else ".."
+                        dbgap_url = (
+                            "https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study_id="
+                            + study_link_ending
+                        )
+                        curr_dict_row[field] = dbgap_url
+
+                    elif field == "guid":
+                        curr_dict_row[field] = guid
+
+                    elif field == "authz":
+                        curr_dict_row[field] = line[field].strip(']["')
+
+                    elif field == "study_description":
+                        curr_dict_row[field] = line[field].replace("\n", "")
+
+                    elif field == "__manifest":
+                        curr_dict_row[field] = ""
+
+                    elif field == "null":
+                        curr_dict_row[field] = ""
+
+                    else:
+                        curr_dict_row[field] = line[field]
+
+                new_metadata_dict[guid] = curr_dict_row
+
+            else:
+                pass
+
+        output_writer = csv.DictWriter(
+            output_file,
+            delimiter="\t",
+            fieldnames=explore_fieldnames,
+            extrasaction="ignore",
+        )
+        output_writer.writeheader()
+        for i, guid in enumerate(new_metadata_dict.keys()):
+            line = new_metadata_dict[guid]
+            output_writer.writerow(line)
+
+    return output_filepath
 
 
 async def output_expanded_discovery_metadata(
@@ -428,7 +528,7 @@ def _get_study_description(study):
     dbgap_version = study.get("dbgap_version", "") or ""
     dbgap_participant_set = study.get("dbgap_participant_set", "") or ""
     dbgap_study = f"{dbgap_phs}.{dbgap_version}.{dbgap_participant_set}"
-    print(f"Getting study description for {dbgap_study}...")
+    logging.info(f"Getting study description for {dbgap_study}...")
 
     study_description = study.get("study_description")
     if dbgap_study != "..":
@@ -459,7 +559,7 @@ def _get_study_description(study):
                     links.decompose()
 
                 study_description = (
-                    study_description.getText().strip().replace("\t", " ")
+                    study_description.getText().strip().replace("\t", "")
                     + f"\n\nNOTE: This text was scraped from https://www.ncbi.nlm.nih.gov/ on {date.today()} and may not include exact formatting or images."
                 )
                 logging.debug(f"{study_description}")
