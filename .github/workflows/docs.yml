@@ -26,7 +26,7 @@ jobs:
       run: |
         pip install poetry
         poetry config virtualenvs.create false
-        poetry install -vv --no-root --no-interaction
+        poetry install -vv --no-interaction
         poetry show -vv
 
         # install sphinx from PyPI (as of 03/16/21 python3-sphinx is broken)
