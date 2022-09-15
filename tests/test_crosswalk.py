@@ -104,7 +104,7 @@ def test_publish_multiple_crosswalks(
     guid_3 = "33333333-aac4-11ed-861d-0242ac120002"
     guid_4 = "44444444-aac4-11ed-861d-0242ac120002"
 
-    async def mock_async_update_metadata(guid, metadata, *_, **__):
+    async def mock_async_update_metadata(guid, metadata, *args, **kwargs):
         assert metadata["_guid_type"] == GUID_TYPE
         crosswalk_metadata = metadata[CROSSWALK_NAMESPACE]
 
@@ -139,6 +139,11 @@ def test_publish_multiple_crosswalks(
     assert get_valid_guids_patch.called
     assert create_metadata_patch.called
 
+    # ensure the correct aliases were requested
+    assert sorted(["A01-00888", "phs002363.v1_RC-1358"]) == sorted(
+        create_metadata_patch.call_args.kwargs.get("aliases")
+    )
+
     async def mock_async_get_metadata(guid, *_, **__):
         return {
             "_guid_type": GUID_TYPE,
@@ -166,6 +171,11 @@ def test_publish_multiple_crosswalks(
     )
     assert get_valid_guids_patch.called
     assert update_metadata_patch.called
+
+    # ensure the correct aliases were requested
+    assert sorted(["A01-00888", "foobar", "123dfj4ia5oi*@a"]) == sorted(
+        update_metadata_patch.call_args.kwargs.get("aliases")
+    )
 
 
 @patch("gen3.metadata.Gen3Metadata.async_update")
@@ -219,6 +229,11 @@ def test_publish_single_crosswalk(
     )
     assert get_valid_guids_patch.called
     assert create_metadata_patch.called
+
+    # ensure the correct aliases were requested
+    assert sorted(
+        ["foobar", "A01-00888", "123dfj4ia5oi*@a", "phs002363.v1_RC-1358"]
+    ) == sorted(create_metadata_patch.call_args.kwargs.get("aliases"))
 
 
 @pytest.mark.parametrize(
