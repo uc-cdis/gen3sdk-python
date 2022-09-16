@@ -84,7 +84,7 @@ class Gen3File:
 
         return output
 
-    def upload_file(self, file_name, authz=None, protocol=None, expires_in=None):
+    def upload_file(self, file_name, authz=None, protocol=None, expires_in=None, bucket=None):
         """
         Get a presigned url for a file to upload
 
@@ -96,6 +96,7 @@ class Gen3File:
             expires_in (int): Amount in seconds that the signed url will expire from datetime.utcnow().
                 Be sure to use a positive integer.
                 This value will also be treated as <= MAX_PRESIGNED_URL_TTL in the fence configuration.
+            bucket (str): Bucket name, corresponds to fence_config.S3_BUCKETS keys, defaults to DATA_UPLOAD_BUCKET
         Returns:
             Document: json representation for the file upload
         """
@@ -109,6 +110,8 @@ class Gen3File:
             body["expires_in"] = expires_in
         if file_name:
             body["file_name"] = file_name
+        if bucket:
+            body["bucket"] = bucket
 
         headers = {"Content-Type": "application/json"}
         output = requests.post(
