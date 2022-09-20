@@ -1,3 +1,4 @@
+import ast
 import asyncio
 import csv
 from cdislogging import get_logger
@@ -136,18 +137,18 @@ async def _parse_from_queue(queue, lock, commons_url, output_queue, auth):
         expected = expected.replace("expected", "").strip(" ")
         actual = actual.replace("actual", "").strip(" ")
 
-        try:
-            actual_record = copy.deepcopy(
-                await _get_record_from_indexd(guid, commons_url, lock)
-            )
-        except Exception as exc:
-            msg = f"getting {guid} failed. error {exc}\n"
-            output_queue.put(msg)
-            logging.error(msg)
+        if error != "no_record":
+            try:
+                actual_record = copy.deepcopy(
+                    await _get_record_from_indexd(guid, commons_url, lock)
+                )
+            except Exception as exc:
+                msg = f"getting {guid} failed. error {exc}\n"
+                output_queue.put(msg)
+                logging.error(msg)
 
-            row = queue.get()
-            continue
-
+                row = queue.get()
+                continue
         if error == "acl":
             acls = [
                 expected,
@@ -233,7 +234,6 @@ async def _parse_from_queue(queue, lock, commons_url, output_queue, auth):
                 output_queue.put(msg)
                 logging.error(msg)
                 pass
-
         elif error == "md5":
             raise NotImplementedError("md5 correction not officially supported yet")
 
@@ -291,6 +291,32 @@ async def _parse_from_queue(queue, lock, commons_url, output_queue, auth):
             msg = f"{guid}: update response {response}\n"
             output_queue.put(msg)
             logging.debug(msg)
+        elif error == "no_record":
+            msg = (
+                f"No recored found with guid: {guid}, creating record with {expected}\n"
+            )
+            output_queue.put(msg)
+            logging.info(msg)
+            # expected {'guid': 'dg.4503/f457b69c-d85d-11ec-afc0-3bfa72d85dca', 'size': '674476976', 'md5': '293a17c4f095b0a968244946983c09e0', 'acl': 'phs001599.c1 admin', 'authz': '', 'urls': 's3://nih-nhlbi-topmed-released-phs001599-c1/Boston-Brazil_SCD_phs001599_TOPMed_WGS_freeze.9b.chr12.hg38.vcf.gz gs://nih-nhlbi-topmed-released-phs001599-c1/Boston-Brazil_SCD_phs001599_TOPMed_WGS_freeze.9b.chr12.hg38.vcf.gz', 'analyte_type': '', 'biosample_id': '', 'body_site': '', 'consent_code': '', 'consent_short_name': '', 'dbgap_sample_id': '', 'dbgap_status': '', 'dbgap_subject_id': '', 'repository': '', 'sample_id': '', 'sample_use': '', 'sex': '', 'sra_data_details': '', 'sra_sample_id': '', 'study_accession': '', 'study_accession_with_consent': '', 'study_subject_id': '', 'study_with_consent': '', 'submitted_sample_id': '', 'submitted_subject_id': ''}
+            expected_dict = ast.literal_eval(expected)
+            record = {
+                "did": expected_dict["guid"],
+                "hashes": {"md5": expected_dict["md5"]},
+                "size": expected_dict["size"],
+                "acl": expected_dict["acl"],
+                "auth": expected_dict["auth"],
+                "urls": expected_dict["urls"],
+            }
+            try:
+                response = index.create_record(**record)
+                msg = f"{guid}: create response {response}\n"
+                output_queue.put(msg)
+                logging.info(msg)
+            except Exception as exc:
+                msg = f"{guid}: tried to create. ignoring error {exc}\n"
+                output_queue.put(msg)
+                logging.error(msg)
+                pass
         else:
             raise NotImplementedError(
                 f"{error} correction not officially supported yet"
