@@ -297,7 +297,7 @@ async def _parse_from_queue(queue, lock, commons_url, output_queue, auth):
             )
             output_queue.put(msg)
             logging.info(msg)
-            # expected {'guid': 'dg.4503/f457b69c-d85d-11ec-afc0-3bfa72d85dca', 'size': '674476976', 'md5': '293a17c4f095b0a968244946983c09e0', 'acl': 'phs001599.c1 admin', 'authz': '', 'urls': 's3://nih-nhlbi-topmed-released-phs001599-c1/Boston-Brazil_SCD_phs001599_TOPMed_WGS_freeze.9b.chr12.hg38.vcf.gz gs://nih-nhlbi-topmed-released-phs001599-c1/Boston-Brazil_SCD_phs001599_TOPMed_WGS_freeze.9b.chr12.hg38.vcf.gz', 'analyte_type': '', 'biosample_id': '', 'body_site': '', 'consent_code': '', 'consent_short_name': '', 'dbgap_sample_id': '', 'dbgap_status': '', 'dbgap_subject_id': '', 'repository': '', 'sample_id': '', 'sample_use': '', 'sex': '', 'sra_data_details': '', 'sra_sample_id': '', 'study_accession': '', 'study_accession_with_consent': '', 'study_subject_id': '', 'study_with_consent': '', 'submitted_sample_id': '', 'submitted_subject_id': ''}
+
             expected_dict = ast.literal_eval(expected)
             record = {
                 "did": expected_dict["guid"],
@@ -307,6 +307,7 @@ async def _parse_from_queue(queue, lock, commons_url, output_queue, auth):
                 "auth": expected_dict["auth"],
                 "urls": expected_dict["urls"],
             }
+
             try:
                 response = index.create_record(**record)
                 msg = f"{guid}: create response {response}\n"
