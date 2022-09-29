@@ -136,6 +136,7 @@ def objects_manifest_verify(ctx, file, max_concurrent_requests):
     "allowed_protocols",
     help="""
     space-delimited string list of allowed protocols for url validation.
+
     Note that if allowed_protocols is provided, url values will only be
     validated using the provided protocols (e.g. if
     allowed_protocols="http https" an error would be raised when
@@ -149,8 +150,10 @@ def objects_manifest_verify(ctx, file, max_concurrent_requests):
     "allow_base64_encoded_md5",
     help="""
     whether or not Base64 encoded md5 values are allowed.
+
     if False, only hexadecimal encoded 128-bit md5 values are considered valid,
     and Base64 encoded values will be logged as errors.
+
     if arg provided, both hexadecimal and Base64 encoded 128-bit md5 values are considered
     valid
     """,
@@ -162,6 +165,7 @@ def objects_manifest_verify(ctx, file, max_concurrent_requests):
     "error_on_empty_url",
     help="""
     whether to treat completely empty url values as errors
+
     for the following example manifest, if error_on_empty_url is False,
     a warning would be logged for the completely empty url value on
     line 2. if error_on_empty_url is True, an error would be generated
@@ -170,6 +174,7 @@ def objects_manifest_verify(ctx, file, max_concurrent_requests):
     md5,url,size
     1596f493ba9ec53023fca640fb69bd3b,,42
     ```
+
     note that regardless of error_on_empty_url, errors will be
     generated no matter what for arrays or quotes from which urls could
     not be extracted. for example, for the following manifest, errors
@@ -191,6 +196,7 @@ def objects_manifest_verify(ctx, file, max_concurrent_requests):
     help="""
     number of lines in manifest to validate including the header. if
     not provided, every line is validated.
+
     This can be helpful as a way to only attempt validation of a few rows to get
     an idea if there are large format issues without needing to run against every
     row in the manifest.
@@ -241,6 +247,7 @@ def objects_manifest_validate_format(
     help="""
     If supplied, will append urls for existing records. e.g. existing urls will
     still exist and new ones will be added
+
     By default the newly provided urls will REPLACE existing urls
     """,
     is_flag=True,
@@ -334,10 +341,12 @@ manifest.add_command(objects_manifest_delete_all_guids, name="delete-all-guids")
         """
     Publishes specified crosswalk from local files to Gen3 instance and merges
     with existing crosswalk data already in Gen3.\n
+
     FILE\n
     \tA file path to a CSV containing mapping identifiers. Has a specialized
     \tcolumn naming format. Column names MUST be pipe-delimited and contain:\n
     \t\tcommons url | identifier type | identifier name\n
+    
     \tYou can have any number of columns for mapping.\n
     """
     )
@@ -419,8 +428,4 @@ def objects_crosswalk_delete(ctx):
 crosswalk.add_command(objects_crosswalk_publish, name="publish")
 crosswalk.add_command(objects_crosswalk_read, name="read")
 crosswalk.add_command(objects_crosswalk_verify, name="verify")
-<<<<<<< HEAD
 crosswalk.add_command(objects_crosswalk_delete, name="delete")
-=======
-crosswalk.add_command(objects_crosswalk_delete, name="delete")
->>>>>>> 5b711e21d2693a78304d182ab692cca25a48dfed

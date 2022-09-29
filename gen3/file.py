@@ -12,9 +12,11 @@ from types import SimpleNamespace as Namespace
 import os
 import requests
 from gen3.index import Gen3Index
+from gen3.utils import DEFAULT_BACKOFF_SETTINGS
+from pathlib import Path
+import backoff
 
 logging = get_logger("__name__")
-no_retry = [400, 401, 402, 403, 405, 406, 407, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 421, 422, 423, 424, 426, 428, 429, 431, 451, 500, 501, 502, 505, 506, 507, 508, 510, 511]
 
 class Gen3FileError(Exception):
     pass
@@ -152,7 +154,7 @@ class Gen3File:
             logging.critical(f"Error in load manifest: {e}")
             return None
 
-
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS) 
     async def _download_using_url(self, sem, entry, client, path, pbar): 
 
         """
@@ -163,6 +165,8 @@ class Gen3File:
         successful = False
         try:
             await sem.acquire()
+            if entry.object_id == None:
+                logging.critical("Wrong manifest entry, no object_id provided")
 
             url = self.get_presigned_url(entry.object_id)
             if not url:
@@ -171,7 +175,7 @@ class Gen3File:
             async with client.get(url['url'], read_bufsize = 4096) as response:
                 if response.status!= 200:
                     logging.error(f"Response code: {response.status_code}")
-                    if response.status not in no_retry:
+                    if response.status >= 500:
                         for _ in range(3):
                             logging.info("Retrying now...")
                             response = await client.get(url['url'], read_bufsize=4096)
@@ -182,9 +186,15 @@ class Gen3File:
                         
                 response.raise_for_status()
 
+                if entry.file_name == None:
+                    index = Gen3Index(self._auth_provider)
+                    entry = index.get_record(entry.object_id)
+                    filename = entry['file_name']
+                else:
+                    filename = entry.file_name
+
                 total_size_in_bytes = int(response.headers.get("content-length"))
-                total_downloaded = 0
-                filename = (entry.file_name if entry.file_name else entry.object_id)  
+                total_downloaded = 0 
                 async with aiofiles.open(os.path.join(path, filename), "wb") as f:
                     with tqdm(desc = f"File {entry.file_name}", total = total_size_in_bytes, position = 1, unit_scale = True, unit_divisor = 1024, unit = "B", ncols = 90) as progress:
                         async for data in response.content.iter_chunked(4096):
@@ -212,7 +222,7 @@ class Gen3File:
             sem.release()
             return successful
 
-        
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)    
     def _download_using_object_id(self, object_id, path):
 
         """
@@ -229,7 +239,7 @@ class Gen3File:
             response = requests.get(url['url'], stream = True)
             if response.status_code!= 200:
                     logging.error(f"Response code: {response.status_code}")
-                    if response.status_code not in no_retry:
+                    if response.status_code >= 500:
                         for _ in range(3):
                             logging.info("Retrying now...")
                             response = requests.get(url['url'], stream = True)
@@ -250,7 +260,12 @@ class Gen3File:
             entry = index.get_record(object_id)
             filename = entry['file_name']  
 
-            with open(os.path.join(path, filename), "wb") as f:
+            out_path: Path = path
+
+            if not out_path.exists():
+                out_path.mkdir(parents = True, exists_ok = True)
+
+            with open(os.path.join(out_path, filename), "wb") as f:
                 for data in response.content.iter_content(4096):
                     total_downloaded += len(data)
                     f.write(data)

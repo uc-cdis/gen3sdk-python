@@ -39,6 +39,7 @@ def single_download(ctx,  object_id,  path,  cred):
         path = path, 
         cred = cred, 
     )
+    
 
 file.add_command(manifest_async_download, name = "download-manifest")
 file.add_command(single_download, name = "download-single")

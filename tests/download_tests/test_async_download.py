@@ -58,8 +58,9 @@ class Test_Async_Download:
 
 
     @patch("gen3.file.requests")
+    @patch("gen3.index.Gen3Index.get_record")
     def test_download_manifest(
-        self, mock_get, download_dir, gen3_file_download, download_test_files
+        self, mock_index, mock_get,  download_dir, gen3_file_download, download_test_files
     ):
         """
         Testing the download functionality (function - download_single) in manifest_downloader by comparing file 
@@ -85,6 +86,7 @@ class Test_Async_Download:
         mock_get.get().status_code = 200
         gen3_file_download._auth_provider._refresh_token = {"api_key": "123"}
         mock_get.get().headers = {'content-length': str(len(content['content']))}
+        mock_index.return_value = {"file_name": "TestDataSet1.sav"}
 
         result = gen3_file_download._download_using_object_id(manifest_list[0].object_id, download_dir)
 
