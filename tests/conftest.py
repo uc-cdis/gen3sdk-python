@@ -233,8 +233,9 @@ def drsclient(drs_client):
     """
     return drs_client
 
+
 @pytest.fixture
 def gen3_file_download(mock_gen3_auth):
-    manifest_file_path = 'tests/download_tests/resources/manifest_test_1.json'
+    manifest_file_path = "tests/download_tests/resources/manifest_test_1.json"
     endpoint = "http://test.commons1.io"
     return Gen3File(endpoint, manifest_file_path, mock_gen3_auth)
