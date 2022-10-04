@@ -35,6 +35,9 @@ class MockAuth:
         self.refresh_token = {"api_key": "123"}
         self._token_info = {"sub": "42"}
 
+    def _get_auth_value(self):
+        return "foobar"
+
     @property
     def __class__(self):
         """

@@ -220,7 +220,7 @@ class Gen3Auth(AuthBase):
                 if idp or (
                     endpoint
                     and (
-                        not endpoint
+                        not endpoint.rstrip("/")
                         == endpoint_from_token(self._refresh_token["api_key"])
                     )
                 ):
