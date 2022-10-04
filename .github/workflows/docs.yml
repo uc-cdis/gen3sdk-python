@@ -44,9 +44,10 @@ jobs:
         poetry run make html
         cd ..
 
-    - uses: stefanzweifel/git-auto-commit-action@v4
+    - uses: stefanzweifel/git-auto-commit-action@v4.8.0
       with:
         commit_message: Apply automatic documentation changes
 
         # Optional name of the branch the commit should be pushed to
         # Required if Action is used in Workflow listening to the `pull_request` event
+        branch: ${{ github.head_ref }}
