@@ -14,6 +14,7 @@
     <script src="_static/underscore.js"></script>
     <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Gen3 Metadata Class" href="metadata.html" />
@@ -168,7 +169,19 @@ sleep in a linear delay until the job is done, starting with 1 second.</p>
 <li class="toctree-l1"><a class="reference internal" href="auth.html">Gen3 Auth Helper</a></li>
 <li class="toctree-l1"><a class="reference internal" href="file.html">Gen3 File Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="indexing.html">Gen3 Index Class</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Gen3 Jobs Class</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Gen3 Jobs Class</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#gen3.jobs.Gen3Jobs"><code class="docutils literal notranslate"><span class="pre">Gen3Jobs</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.jobs.Gen3Jobs.async_run_job_and_wait"><code class="docutils literal notranslate"><span class="pre">Gen3Jobs.async_run_job_and_wait()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.jobs.Gen3Jobs.create_job"><code class="docutils literal notranslate"><span class="pre">Gen3Jobs.create_job()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.jobs.Gen3Jobs.get_output"><code class="docutils literal notranslate"><span class="pre">Gen3Jobs.get_output()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.jobs.Gen3Jobs.get_status"><code class="docutils literal notranslate"><span class="pre">Gen3Jobs.get_status()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.jobs.Gen3Jobs.get_version"><code class="docutils literal notranslate"><span class="pre">Gen3Jobs.get_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.jobs.Gen3Jobs.is_healthy"><code class="docutils literal notranslate"><span class="pre">Gen3Jobs.is_healthy()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.jobs.Gen3Jobs.list_jobs"><code class="docutils literal notranslate"><span class="pre">Gen3Jobs.list_jobs()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="metadata.html">Gen3 Metadata Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="object.html">Gen3 Object Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="query.html">Gen3 Query Class</a></li>

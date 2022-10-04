@@ -14,6 +14,7 @@
     <script src="_static/underscore.js"></script>
     <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Gen3 Object Class" href="object.html" />
@@ -563,7 +564,38 @@ attached to the provided GUID as metadata</p></li>
 <li class="toctree-l1"><a class="reference internal" href="file.html">Gen3 File Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="indexing.html">Gen3 Index Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="jobs.html">Gen3 Jobs Class</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Gen3 Metadata Class</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Gen3 Metadata Class</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#gen3.metadata.Gen3Metadata"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.endpoint"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.endpoint</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.auth_provider"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.auth_provider</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.async_create"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.async_create()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.async_create_aliases"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.async_create_aliases()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.async_delete_alias"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.async_delete_alias()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.async_delete_aliases"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.async_delete_aliases()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.async_get"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.async_get()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.async_get_aliases"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.async_get_aliases()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.async_update"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.async_update()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.async_update_aliases"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.async_update_aliases()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.batch_create"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.batch_create()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.create"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.create()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.create_aliases"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.create_aliases()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.create_index_key_path"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.create_index_key_path()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.delete"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.delete()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.delete_alias"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.delete_alias()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.delete_aliases"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.delete_aliases()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.delete_index_key_path"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.delete_index_key_path()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.get"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.get()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.get_aliases"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.get_aliases()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.get_index_key_paths"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.get_index_key_paths()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.get_version"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.get_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.is_healthy"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.is_healthy()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.query"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.query()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.update"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.update()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.metadata.Gen3Metadata.update_aliases"><code class="docutils literal notranslate"><span class="pre">Gen3Metadata.update_aliases()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="object.html">Gen3 Object Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="query.html">Gen3 Query Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="submission.html">Gen3 Submission Class</a></li>
