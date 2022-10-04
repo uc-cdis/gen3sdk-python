@@ -14,6 +14,7 @@
     <script src="_static/underscore.js"></script>
     <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Gen3 Tools" href="tools.html" />
@@ -476,7 +477,33 @@ in the Data Commons.</p>
 <li class="toctree-l1"><a class="reference internal" href="metadata.html">Gen3 Metadata Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="object.html">Gen3 Object Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="query.html">Gen3 Query Class</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Gen3 Submission Class</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Gen3 Submission Class</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#gen3.submission.Gen3Submission"><code class="docutils literal notranslate"><span class="pre">Gen3Submission</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.create_program"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.create_program()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.create_project"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.create_project()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.delete_node"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.delete_node()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.delete_nodes"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.delete_nodes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.delete_program"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.delete_program()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.delete_project"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.delete_project()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.delete_record"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.delete_record()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.delete_records"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.delete_records()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.export_node"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.export_node()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.export_record"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.export_record()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.get_dictionary_all"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.get_dictionary_all()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.get_dictionary_node"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.get_dictionary_node()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.get_graphql_schema"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.get_graphql_schema()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.get_programs"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.get_programs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.get_project_dictionary"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.get_project_dictionary()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.get_project_manifest"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.get_project_manifest()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.get_projects"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.get_projects()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.open_project"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.open_project()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.query"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.query()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.submit_file"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.submit_file()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.submission.Gen3Submission.submit_record"><code class="docutils literal notranslate"><span class="pre">Gen3Submission.submit_record()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="tools.html">Gen3 Tools</a></li>
 <li class="toctree-l1"><a class="reference internal" href="wss.html">Gen3 Workspace Storage</a></li>
 </ul>
