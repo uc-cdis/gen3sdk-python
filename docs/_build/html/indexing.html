@@ -14,6 +14,7 @@
     <script src="_static/underscore.js"></script>
     <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Gen3 Jobs Class" href="jobs.html" />
@@ -534,7 +535,41 @@ eg <code class="docutils literal notranslate"><span class="pre">hashes={'md5':</
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="auth.html">Gen3 Auth Helper</a></li>
 <li class="toctree-l1"><a class="reference internal" href="file.html">Gen3 File Class</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Gen3 Index Class</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Gen3 Index Class</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#gen3.index.Gen3Index"><code class="docutils literal notranslate"><span class="pre">Gen3Index</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.async_create_record"><code class="docutils literal notranslate"><span class="pre">Gen3Index.async_create_record()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.async_get_record"><code class="docutils literal notranslate"><span class="pre">Gen3Index.async_get_record()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.async_get_records_from_checksum"><code class="docutils literal notranslate"><span class="pre">Gen3Index.async_get_records_from_checksum()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.async_get_records_on_page"><code class="docutils literal notranslate"><span class="pre">Gen3Index.async_get_records_on_page()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.async_get_with_params"><code class="docutils literal notranslate"><span class="pre">Gen3Index.async_get_with_params()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.async_query_urls"><code class="docutils literal notranslate"><span class="pre">Gen3Index.async_query_urls()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.async_update_record"><code class="docutils literal notranslate"><span class="pre">Gen3Index.async_update_record()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.create_blank"><code class="docutils literal notranslate"><span class="pre">Gen3Index.create_blank()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.create_new_version"><code class="docutils literal notranslate"><span class="pre">Gen3Index.create_new_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.create_record"><code class="docutils literal notranslate"><span class="pre">Gen3Index.create_record()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.delete_record"><code class="docutils literal notranslate"><span class="pre">Gen3Index.delete_record()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.get"><code class="docutils literal notranslate"><span class="pre">Gen3Index.get()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.get_all_records"><code class="docutils literal notranslate"><span class="pre">Gen3Index.get_all_records()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.get_guids_prefix"><code class="docutils literal notranslate"><span class="pre">Gen3Index.get_guids_prefix()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.get_latest_version"><code class="docutils literal notranslate"><span class="pre">Gen3Index.get_latest_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.get_record"><code class="docutils literal notranslate"><span class="pre">Gen3Index.get_record()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.get_record_doc"><code class="docutils literal notranslate"><span class="pre">Gen3Index.get_record_doc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.get_records"><code class="docutils literal notranslate"><span class="pre">Gen3Index.get_records()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.get_records_on_page"><code class="docutils literal notranslate"><span class="pre">Gen3Index.get_records_on_page()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.get_stats"><code class="docutils literal notranslate"><span class="pre">Gen3Index.get_stats()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.get_urls"><code class="docutils literal notranslate"><span class="pre">Gen3Index.get_urls()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.get_valid_guids"><code class="docutils literal notranslate"><span class="pre">Gen3Index.get_valid_guids()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.get_version"><code class="docutils literal notranslate"><span class="pre">Gen3Index.get_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.get_versions"><code class="docutils literal notranslate"><span class="pre">Gen3Index.get_versions()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.get_with_params"><code class="docutils literal notranslate"><span class="pre">Gen3Index.get_with_params()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.is_healthy"><code class="docutils literal notranslate"><span class="pre">Gen3Index.is_healthy()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.query_urls"><code class="docutils literal notranslate"><span class="pre">Gen3Index.query_urls()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.update_blank"><code class="docutils literal notranslate"><span class="pre">Gen3Index.update_blank()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.index.Gen3Index.update_record"><code class="docutils literal notranslate"><span class="pre">Gen3Index.update_record()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="jobs.html">Gen3 Jobs Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="metadata.html">Gen3 Metadata Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="object.html">Gen3 Object Class</a></li>
