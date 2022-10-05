@@ -1,26 +1,40 @@
+import backoff
 import json
 import requests
 import json
 import asyncio
 import aiohttp
 import aiofiles
-from cdislogging import get_logger
 import time
-from gen3.auth import Gen3Auth
 from tqdm import tqdm
 from types import SimpleNamespace as Namespace
 import os
 import requests
+from pathlib import Path
+
+from cdislogging import get_logger
+
 from gen3.index import Gen3Index
 from gen3.utils import DEFAULT_BACKOFF_SETTINGS
-from pathlib import Path
-import backoff
+
 
 logging = get_logger("__name__")
 
 
-class Gen3FileError(Exception):
-    pass
+def _load_manifest(manifest_file_path):
+
+    """
+    Function to convert manifest to python objects, stored in a list
+    Manifest format - same as that accepted by cdis-data-client
+    """
+    try:
+        with open(manifest_file_path, "rt") as f:
+            data = json.load(f, object_hook=lambda d: Namespace(**d))
+            return data
+
+    except Exception as e:
+        logging.critical(f"Error in load manifest: {e}")
+        return None
 
 
 class Gen3File:
@@ -45,7 +59,7 @@ class Gen3File:
         # auth_provider legacy interface required endpoint as 1st arg
         self._auth_provider = auth_provider or endpoint
         self._endpoint = self._auth_provider.endpoint
-        self.unsuccessful = []
+        self.unsuccessful_downloads = []
 
     def get_presigned_url(self, guid, protocol=None):
         """Generates a presigned URL for a file.
@@ -139,21 +153,6 @@ class Gen3File:
 
         return data
 
-    def _load_manifest(self, manifest_file_path):
-
-        """
-        Function to convert manifest to python objects, stored in a list
-        Manifest format - same as that accepted by cdis-data-client
-        """
-        try:
-            with open(manifest_file_path, "rt") as f:
-                data = json.load(f, object_hook=lambda d: Namespace(**d))
-                return data
-
-        except Exception as e:
-            logging.critical(f"Error in load manifest: {e}")
-            return None
-
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     async def _download_using_url(self, sem, entry, client, path, pbar):
 
@@ -165,7 +164,7 @@ class Gen3File:
         successful = False
         try:
             await sem.acquire()
-            if entry.object_id == None:
+            if not entry.object_id:
                 logging.critical("Wrong manifest entry, no object_id provided")
 
             url = self.get_presigned_url(entry.object_id)
@@ -186,10 +185,10 @@ class Gen3File:
 
                 response.raise_for_status()
 
-                if entry.file_name == None:
+                if entry.file_name is None:
                     index = Gen3Index(self._auth_provider)
-                    entry = index.get_record(entry.object_id)
-                    filename = entry["file_name"]
+                    record = index.get_record(entry.object_id)
+                    filename = record["file_name"]
                 else:
                     filename = entry.file_name
 
@@ -235,7 +234,7 @@ class Gen3File:
                 else:
                     logging.error(f"File {entry.file_name} not downloaded successfully")
                     sem.release()
-                    self.unsuccessful.append(entry)
+                    self.unsuccessful_downloads.append(entry)
 
                 return successful
 
@@ -243,7 +242,7 @@ class Gen3File:
             logging.critical(
                 f"\nError in {entry.file_name}: {e} Type: {e.__class__.__name__}\n"
             )
-            self.unsuccessful.append(entry)
+            self.unsuccessful_downloads.append(entry)
             sem.release()
             return successful
 
@@ -298,9 +297,9 @@ class Gen3File:
             total_downloaded = 0
 
             index = Gen3Index(self._auth_provider)
-            entry = index.get_record(object_id)
+            record = index.get_record(object_id)
 
-            filename = entry["file_name"]
+            filename = record["file_name"]
 
             out_path = Gen3File._ensure_dirpath_exists(Path(path))
 
@@ -334,9 +333,9 @@ class Gen3File:
         start_time = time.perf_counter()
         logging.info(f"Start time: {start_time}")
 
-        manifest_list = self._load_manifest(manifest_file_path)
+        manifest_list = _load_manifest(manifest_file_path)
         if not manifest_list:
-            logging.error("Nothing to download")
+            raise Exception("Nothing to download")
         logging.info("Done loading manifest")
 
         tasks = []
@@ -371,7 +370,8 @@ class Gen3File:
 
         duration = time.perf_counter() - start_time
         logging.info(f"\nDuration = {duration}\n")
-        logging.info(f"Unsuccessful downloads - {self.unsuccessful}\n")
+        if self.unsuccessful_downloads:
+            logging.info(f"Unsuccessful downloads - {self.unsuccessful_downloads}\n")
 
     def download_single(self, object_id, path):
 
@@ -384,7 +384,7 @@ class Gen3File:
 
         result = self._download_using_object_id(object_id, path)
 
-        logging.info(f"Download - {result}")
+        logging.info(f"Download - {'success' if result else 'failure'}")
 
         duration = time.perf_counter() - start_time
         logging.info(f"\nDuration = {duration}\n")

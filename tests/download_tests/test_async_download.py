@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 import os
 
-from gen3.file import Gen3File
+from gen3.file import Gen3File, _load_manifest
 
 
 # function to create temporary directory to download test files in
@@ -55,8 +55,7 @@ class Test_Async_Download:
         Testing the load_manifest function, which converts the manifest provided to list of python objects
         Test passes if number of python objects created is equal to number of files specified in manifest
         """
-        file_tool = Gen3File("http://test.commons1.io", mock_gen3_auth)
-        manifest_list = file_tool._load_manifest(self.manifest_file_path)
+        manifest_list = _load_manifest(self.manifest_file_path)
         f = open(self.manifest_file_path)
         data = json.load(f)
         assert len(data) == len(manifest_list)
@@ -92,7 +91,7 @@ class Test_Async_Download:
         ]
 
         file_tool.manifest_file_path = self.manifest_file_path
-        manifest_list = file_tool._load_manifest(self.manifest_file_path)
+        manifest_list = _load_manifest(self.manifest_file_path)
         mock_get.get().status_code = 200
         file_tool._auth_provider._refresh_token = {"api_key": "123"}
         mock_get.get().headers = {"content-length": str(len(content["content"]))}
@@ -137,7 +136,7 @@ class Test_Async_Download:
         ]
 
         file_tool.manifest_file_path = self.manifest_file_path
-        manifest_list = file_tool._load_manifest(self.manifest_file_path)
+        manifest_list = _load_manifest(self.manifest_file_path)
         mock_get.get().status_code = 403
         file_tool._auth_provider._refresh_token = None
         mock_get.get().headers = {"content-length": str(len(content["content"]))}
@@ -169,7 +168,7 @@ class Test_Async_Download:
         ]
 
         file_tool.manifest_file_path = self.manifest_file_path
-        manifest_list = file_tool._load_manifest(self.manifest_file_path)
+        manifest_list = _load_manifest(self.manifest_file_path)
         mock_get.get().status_code = 403
         file_tool._auth_provider._refresh_token = {"api_key": "wrong_auth"}
         mock_get.get().headers = {"content-length": str(len(content["content"]))}
@@ -203,7 +202,7 @@ class Test_Async_Download:
         DIR = Path(__file__).resolve().parent
         file_tool.manifest_file_path = Path(DIR, "resources/manifest_test_bad_id.json")
 
-        manifest_list = file_tool._load_manifest(self.manifest_file_path)
+        manifest_list = _load_manifest(self.manifest_file_path)
         mock_get.get().status_code = 404
         file_tool._auth_provider._refresh_token = {"api_key": "123"}
         mock_get.get().headers = {"content-length": str(len(content["content"]))}
@@ -223,5 +222,5 @@ class Test_Async_Download:
 
         file_tool = Gen3File("http://test.commons1.io", mock_gen3_auth)
         DIR = Path(__file__).resolve().parent
-        manifest_list = file_tool._load_manifest(Path(DIR, "resources/bad_format.json"))
+        manifest_list = _load_manifest(Path(DIR, "resources/bad_format.json"))
         assert manifest_list == None
