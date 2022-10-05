@@ -325,74 +325,69 @@ class Gen3File:
             )
             return False
 
+    async def download_manifest(
+        self, auth, manifest_file_path, download_path, cred, total_sem
+    ):
 
-async def download_manifest(auth, manifest_file_path, download_path, cred, total_sem):
+        """
+        Function calling download_using_url function for all entries in the manifest asynchronously as tasks,
+        gathering all the tasks and logging which files were successful and which weren't
+        """
 
-    """
-    Function calling download_using_url function for all entries in the manifest asynchronously as tasks,
-    gathering all the tasks and logging which files were successful and which weren't
-    """
+        start_time = time.perf_counter()
+        logging.info(f"Start time: {start_time}")
 
-    start_time = time.perf_counter()
-    logging.info(f"Start time: {start_time}")
+        manifest_list = self._load_manifest()
+        if not manifest_list:
+            logging.error("Nothing to download")
+        logging.info("Done loading manifest")
 
-    auth = Gen3Auth(refresh_file=f"{cred}")  # obtaining authorisation from credentials
-    manifest = Gen3File(auth, manifest_file_path)
-    manifest_list = manifest._load_manifest()
-    if not manifest_list:
-        logging.error("Nothing to download")
-    logging.info("Done loading manifest")
+        tasks = []
+        sem = asyncio.Semaphore(
+            value=total_sem
+        )  # semaphores to control number of requests to server at a particular moment
+        connector = aiohttp.TCPConnector(force_close=True)
 
-    tasks = []
-    sem = asyncio.Semaphore(
-        value=total_sem
-    )  # semaphores to control number of requests to server at a particular moment
-    connector = aiohttp.TCPConnector(force_close=True)
-
-    async with aiohttp.ClientSession(
-        timeout=aiohttp.ClientTimeout(600), connector=connector, trust_env=True
-    ) as client:
-        with tqdm(
-            desc="Manifest progress",
-            total=len(manifest_list),
-            unit_scale=True,
-            position=0,
-            unit_divisor=1024,
-            unit="B",
-            ncols=90,
-        ) as pbar:
-            # progress bar to show how many files in the manifest have been downloaded
-            for entry in manifest_list:
-                # creating a task for each entry
-                tasks.append(
-                    asyncio.create_task(
-                        manifest._download_using_url(
-                            sem, entry, client, download_path, pbar
+        async with aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(600), connector=connector, trust_env=True
+        ) as client:
+            with tqdm(
+                desc="Manifest progress",
+                total=len(manifest_list),
+                unit_scale=True,
+                position=0,
+                unit_divisor=1024,
+                unit="B",
+                ncols=90,
+            ) as pbar:
+                # progress bar to show how many files in the manifest have been downloaded
+                for entry in manifest_list:
+                    # creating a task for each entry
+                    tasks.append(
+                        asyncio.create_task(
+                            self._download_using_url(
+                                sem, entry, client, download_path, pbar
+                            )
                         )
                     )
-                )
-            await asyncio.gather(*tasks)
+                await asyncio.gather(*tasks)
 
-    duration = time.perf_counter() - start_time
-    logging.info(f"\nDuration = {duration}\n")
-    logging.info(f"Unsuccessful downloads - {manifest.unsuccessful}\n")
+        duration = time.perf_counter() - start_time
+        logging.info(f"\nDuration = {duration}\n")
+        logging.info(f"Unsuccessful downloads - {self.unsuccessful}\n")
 
+    def download_single(self, auth, object_id, path, cred):
 
-def download_single(auth, object_id, path, cred):
+        """
+        Function calling download_using_object_id function for downloading a single file when provided with the object-ID
+        """
 
-    """
-    Function calling download_using_object_id function for downloading a single file when provided with the object-ID
-    """
+        start_time = time.perf_counter()
+        logging.info(f"Start time: {start_time}")
 
-    start_time = time.perf_counter()
-    logging.info(f"Start time: {start_time}")
+        result = self._download_using_object_id(object_id, path)
 
-    auth = Gen3Auth(refresh_file=f"{cred}")  # obtaining authorisation from credentials
-    file_download = Gen3File(auth)
+        logging.info(f"Download - {result}")
 
-    result = file_download._download_using_object_id(object_id, path)
-
-    logging.info(f"Download - {result}")
-
-    duration = time.perf_counter() - start_time
-    logging.info(f"\nDuration = {duration}\n")
+        duration = time.perf_counter() - start_time
+        logging.info(f"\nDuration = {duration}\n")

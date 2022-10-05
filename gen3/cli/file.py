@@ -1,5 +1,6 @@
 import click
-import gen3
+
+from gen3.file import Gen3File
 from gen3.utils import get_or_create_event_loop_for_thread
 
 
@@ -19,9 +20,10 @@ def file():
 @click.pass_context
 def manifest_async_download(ctx, file, path, cred, semaphores):
     auth = ctx.obj["auth_factory"].get()
+    file_tool = Gen3File(auth)
     loop = get_or_create_event_loop_for_thread()
     loop.run_until_complete(
-        gen3.file.download_manifest(
+        file_tool.download_manifest(
             auth,
             manifest_file_path=file,
             download_path=path,
@@ -38,7 +40,8 @@ def manifest_async_download(ctx, file, path, cred, semaphores):
 @click.pass_context
 def single_download(ctx, object_id, path, cred):
     auth = ctx.obj["auth_factory"].get()
-    gen3.file.download_single(
+    file_tool = Gen3File(auth)
+    file_tool.download_single(
         auth,
         object_id=object_id,
         path=path,
