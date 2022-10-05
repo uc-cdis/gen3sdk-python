@@ -30,19 +30,21 @@ def manifest_async_download(ctx, file, path, cred, semaphores):
         )
     )
 
-@click.command(help = "Download a single file when provided with object ID")
-@click.argument("object_id", required = True)
-@click.option("--path", "path", help = "Path to store downloaded file in", default = ".")
-@click.option("--cred", "cred", help = "Path to credentials",  required = True)
+
+@click.command(help="Download a single file when provided with object ID")
+@click.argument("object_id", required=True)
+@click.option("--path", "path", help="Path to store downloaded file in", default=".")
+@click.option("--cred", "cred", help="Path to credentials", required=True)
 @click.pass_context
-def single_download(ctx,  object_id,  path,  cred):
-    auth  =  ctx.obj["auth_factory"].get()
+def single_download(ctx, object_id, path, cred):
+    auth = ctx.obj["auth_factory"].get()
     gen3.file.download_single(
         auth,
-        object_id = object_id,
-        path = path, 
-        cred = cred, 
+        object_id=object_id,
+        path=path,
+        cred=cred,
     )
+
 
 file.add_command(manifest_async_download, name="download-manifest")
 file.add_command(single_download, name="download-single")

@@ -139,7 +139,7 @@ class Gen3File:
             return output
 
         return data
-        
+
     def _load_manifest(self):
 
         """
@@ -197,11 +197,21 @@ class Gen3File:
                 out_path = Gen3File._ensure_dirpath_exists(Path(path))
 
                 total_size_in_bytes = int(response.headers.get("content-length"))
-                total_downloaded = 0 
+                total_downloaded = 0
                 async with aiofiles.open(os.path.join(out_path, filename), "wb") as f:
-                    with tqdm(desc = f"File {entry.file_name}", total = total_size_in_bytes, position = 1, unit_scale = True, unit_divisor = 1024, unit = "B", ncols = 90) as progress:
+                    with tqdm(
+                        desc=f"File {entry.file_name}",
+                        total=total_size_in_bytes,
+                        position=1,
+                        unit_scale=True,
+                        unit_divisor=1024,
+                        unit="B",
+                        ncols=90,
+                    ) as progress:
                         total_downloaded = 0
-                        async with aiofiles.open(os.path.join(path, filename), "wb") as f:
+                        async with aiofiles.open(
+                            os.path.join(path, filename), "wb"
+                        ) as f:
                             with tqdm(
                                 desc=f"File {entry.file_name}",
                                 total=total_size_in_bytes,
@@ -254,7 +264,7 @@ class Gen3File:
 
         return out_path
 
-    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)    
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def _download_using_object_id(self, object_id, path):
 
         """
@@ -291,7 +301,7 @@ class Gen3File:
             index = Gen3Index(self._auth_provider)
             entry = index.get_record(object_id)
 
-            filename = entry['file_name']  
+            filename = entry["file_name"]
 
             out_path = Gen3File._ensure_dirpath_exists(Path(path))
 
@@ -334,10 +344,14 @@ async def download_manifest(auth, manifest_file_path, download_path, cred, total
     logging.info("Done loading manifest")
 
     tasks = []
-    sem = asyncio.Semaphore(value=total_sem)  # semaphores to control number of requests to server at a particular moment
+    sem = asyncio.Semaphore(
+        value=total_sem
+    )  # semaphores to control number of requests to server at a particular moment
     connector = aiohttp.TCPConnector(force_close=True)
 
-    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(600), connector=connector, trust_env=True) as client:
+    async with aiohttp.ClientSession(
+        timeout=aiohttp.ClientTimeout(600), connector=connector, trust_env=True
+    ) as client:
         with tqdm(
             desc="Manifest progress",
             total=len(manifest_list),
@@ -382,6 +396,3 @@ def download_single(auth, object_id, path, cred):
 
     duration = time.perf_counter() - start_time
     logging.info(f"\nDuration = {duration}\n")
-
-
-   
