@@ -17,7 +17,7 @@ def file():
 
 
 @click.command(
-    help="""Asynchronouslt download all entries in the provided manifest.
+    help="""Asynchronously download all entries in the provided manifest.
     The manifest should be a JSON file in the following format:
     [
         { "object_id": "", "file_name"(optional): "" },

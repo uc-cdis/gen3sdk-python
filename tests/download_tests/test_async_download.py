@@ -81,7 +81,7 @@ class Test_Async_Download:
 
         Includes a test for downloading to a sub-directory that does not exist yet.
         """
-        file_tool = Gen3File("http://test.commons1.io", mock_gen3_auth)
+        file_tool = Gen3File(mock_gen3_auth)
         download_path = (
             os.path.join(DIR, download_dir_overwrite)
             if download_dir_overwrite
@@ -132,7 +132,7 @@ class Test_Async_Download:
         Testing how download_single function reacts when it is given no authorisation details
         Request(url) should return status_code = 403 and download function should return False
         """
-        file_tool = Gen3File("http://test.commons1.io", mock_gen3_auth)
+        file_tool = Gen3File(mock_gen3_auth)
 
         content = {
             "file_name": "TestDataSet1.json",
@@ -162,7 +162,7 @@ class Test_Async_Download:
         Testing how download_single function reacts when it is given wrong authorisation details
         Request(url) should return status_code = 403 and download function should return False
         """
-        file_tool = Gen3File("http://test.commons1.io", mock_gen3_auth)
+        file_tool = Gen3File(mock_gen3_auth)
 
         content = {
             "file_name": "TestDataSet1.json",
@@ -192,7 +192,7 @@ class Test_Async_Download:
         Testing how download_single function reacts when it is given a manifest with bad id
         Request(url) should return status_code = 404 (File not found) and download function should return False
         """
-        file_tool = Gen3File("http://test.commons1.io", mock_gen3_auth)
+        file_tool = Gen3File(mock_gen3_auth)
 
         content = {
             "file_name": "TestDataSet1.json",

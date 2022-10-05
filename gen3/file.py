@@ -14,7 +14,7 @@ from pathlib import Path
 from cdislogging import get_logger
 
 from gen3.index import Gen3Index
-from gen3.utils import DEFAULT_BACKOFF_SETTINGS
+from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status_and_print_error
 
 
 logging = get_logger("__name__")
@@ -39,9 +39,20 @@ def _load_manifest(manifest_file_path):
     Returns:
         List of objects
     """
+
+    def dict_to_entry(d):
+        """
+        Ensure the expected keys are in each manifest entry
+        """
+        if not d.get("object_id"):
+            raise Exception(f"Manifest entry missing 'object_id': {d}")
+        if "file_name" not in d:
+            d["file_name"] = None
+        return Namespace(**d)
+
     try:
         with open(manifest_file_path, "rt") as f:
-            data = json.load(f, object_hook=lambda d: Namespace(**d))
+            data = json.load(f, object_hook=dict_to_entry)
             return data
 
     except Exception as e:
@@ -90,13 +101,13 @@ class Gen3File:
         api_url = "{}/user/data/download/{}".format(self._endpoint, guid)
         if protocol:
             api_url += "?protocol={}".format(protocol)
-        output = requests.get(api_url, auth=self._auth_provider).text
+        resp = requests.get(api_url, auth=self._auth_provider)
+        raise_for_status_and_print_error(resp)
 
         try:
-            data = json.loads(output)
+            return resp.json()
         except:
-            return output
-        return data
+            return resp.text
 
     def delete_file(self, guid):
         """
@@ -211,7 +222,7 @@ class Gen3File:
                 total_downloaded = 0
                 async with aiofiles.open(os.path.join(out_path, filename), "wb") as f:
                     with tqdm(
-                        desc=f"File {entry.file_name}",
+                        desc=f"File {filename}",
                         total=total_size_in_bytes,
                         position=1,
                         unit_scale=True,
@@ -219,23 +230,10 @@ class Gen3File:
                         unit="B",
                         ncols=90,
                     ) as progress:
-                        total_downloaded = 0
-                        async with aiofiles.open(
-                            os.path.join(path, filename), "wb"
-                        ) as f:
-                            with tqdm(
-                                desc=f"File {entry.file_name}",
-                                total=total_size_in_bytes,
-                                position=1,
-                                unit_scale=True,
-                                unit_divisor=1024,
-                                unit="B",
-                                ncols=90,
-                            ) as progress:
-                                async for data in response.content.iter_chunked(4096):
-                                    progress.update(len(data))
-                                    total_downloaded += len(data)
-                                    await f.write(data)
+                        async for data in response.content.iter_chunked(4096):
+                            progress.update(len(data))
+                            total_downloaded += len(data)
+                            await f.write(data)
 
                 if total_size_in_bytes == total_downloaded:
                     pbar.update()
@@ -281,67 +279,59 @@ class Gen3File:
             object_id (str): The file's unique ID
             path (str): Path to store the downloaded file at
         """
-
-        successful = True
         try:
             url = self.get_presigned_url(object_id)
-            if not url:
-                logging.critical("No url on retrial, try again later")
-                successful = False
-
-            response = requests.get(url["url"], stream=True)
-            if response.status_code != 200:
-                logging.error(f"Response code: {response.status_code}")
-                if response.status_code >= 500:
-                    for _ in range(MAX_RETRIES):
-                        logging.info("Retrying now...")
-                        # NOTE could be updated with exponential backoff
-                        time.sleep(1)
-                        response = requests.get(url["url"], stream=True)
-                        if response.status == 200:
-                            break
-                    if response.status != 200:
-                        logging.critical("Response status not 200, try again later")
-                        successful = False
-                else:
-                    successful = False
-
-            response.raise_for_status()
-
-            total_size_in_bytes = int(response.headers.get("content-length"))
-            total_downloaded = 0
-
-            index = Gen3Index(self._auth_provider)
-            record = index.get_record(object_id)
-
-            filename = record["file_name"]
-
-            out_path = Gen3File._ensure_dirpath_exists(Path(path))
-
-            with open(os.path.join(out_path, filename), "wb") as f:
-                for data in response.iter_content(4096):
-                    total_downloaded += len(data)
-                    f.write(data)
-
-            if total_size_in_bytes == total_downloaded:
-                logging.info(f"File {filename} downloaded successfully")
-
-            else:
-                logging.error(f"File {filename} not downloaded successfully")
-                successful = False
-
-            return successful
-
         except Exception as e:
-            logging.critical(
-                f"\nError in {object_id}: {e} Type: {e.__class__.__name__}\n"
-            )
+            logging.critical(f"Unable to get a presigned URL for download: {e}")
             return False
+
+        response = requests.get(url["url"], stream=True)
+        if response.status_code != 200:
+            logging.error(f"Response code: {response.status_code}")
+            if response.status_code >= 500:
+                for _ in range(MAX_RETRIES):
+                    logging.info("Retrying now...")
+                    # NOTE could be updated with exponential backoff
+                    time.sleep(1)
+                    response = requests.get(url["url"], stream=True)
+                    if response.status == 200:
+                        break
+                if response.status != 200:
+                    logging.critical("Response status not 200, try again later")
+                    return False
+            else:
+                return False
+
+        response.raise_for_status()
+
+        total_size_in_bytes = int(response.headers.get("content-length"))
+        total_downloaded = 0
+
+        index = Gen3Index(self._auth_provider)
+        record = index.get_record(object_id)
+
+        filename = record["file_name"]
+
+        out_path = Gen3File._ensure_dirpath_exists(Path(path))
+
+        with open(os.path.join(out_path, filename), "wb") as f:
+            for data in response.iter_content(4096):
+                total_downloaded += len(data)
+                f.write(data)
+
+        if total_size_in_bytes == total_downloaded:
+            logging.info(f"File {filename} downloaded successfully")
+
+        else:
+            logging.error(f"File {filename} not downloaded successfully")
+            return False
+
+        return True
 
     async def download_manifest(self, manifest_file_path, download_path, total_sem=10):
 
         """
-        Asynchronouslt download all entries in the provided manifest.
+        Asynchronously download all entries in the provided manifest.
 
         Args:
             manifest_file_path (str): path to the manifest file. The manifest should be a JSON file
