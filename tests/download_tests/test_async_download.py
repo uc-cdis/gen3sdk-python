@@ -3,8 +3,16 @@ import json
 import pytest
 from pathlib import Path
 import os
+import shutil
 
 from gen3.file import Gen3File, _load_manifest
+
+
+DIR = Path(__file__).resolve().parent
+NO_DOWNLOAD_ACCESS_MESSAGE = """
+You do not have access to download data.
+You need read permissions on the files specified in the manifest provided
+"""
 
 
 # function to create temporary directory to download test files in
@@ -18,7 +26,6 @@ def download_dir(tmpdir_factory):
 @pytest.fixture
 def download_test_files():
     data = {}
-    DIR = Path(__file__).resolve().parent
     with open(Path(DIR, "resources/download_test_data.json")) as fin:
         data = json.load(fin)
         for item in data.values():
@@ -26,18 +33,11 @@ def download_test_files():
     return data
 
 
-NO_DOWNLOAD_ACCESS_MESSAGE = """
-You do not have access to download data.
-You need read permissions on the files specified in the manifest provided
-"""
-
-
 class Test_Async_Download:
     """
-    Class containing all test cases for Gen3File.download_manifest and Gen3File.download_single
+    Class containing all test cases for `Gen3File.download_manifest` and `Gen3File.download_single`
     """
 
-    DIR = Path(__file__).resolve().parent
     manifest_file_path = Path(DIR, "resources/manifest_test_1.json")
 
     def iter_content(
@@ -62,11 +62,13 @@ class Test_Async_Download:
 
     @patch("gen3.file.requests")
     @patch("gen3.index.Gen3Index.get_record")
-    def test_download_manifest(
+    @pytest.mark.parametrize("download_dir_overwrite", [None, "sub/path"])
+    def test_download_single(
         self,
         mock_index,
         mock_get,
         download_dir,
+        download_dir_overwrite,
         download_test_files,
         mock_gen3_auth,
     ):
@@ -76,8 +78,15 @@ class Test_Async_Download:
 
         Also checks if download_single function returns True; function returns true when
         response content-length is equal to number of bytes downloaded
+
+        Includes a test for downloading to a sub-directory that does not exist yet.
         """
         file_tool = Gen3File("http://test.commons1.io", mock_gen3_auth)
+        download_path = (
+            os.path.join(DIR, download_dir_overwrite)
+            if download_dir_overwrite
+            else download_dir
+        )
 
         content = {
             "file_name": "TestDataSet1.json",
@@ -97,24 +106,27 @@ class Test_Async_Download:
         mock_get.get().headers = {"content-length": str(len(content["content"]))}
         mock_index.return_value = {"file_name": "TestDataSet1.sav"}
 
-        result = file_tool.download_single(manifest_list[0].object_id, download_dir)
+        result = file_tool.download_single(manifest_list[0].object_id, download_path)
 
-        DIR = Path(__file__).resolve().parent
-        with open(
-            os.path.join(DIR, download_dir, (manifest_list[0].file_name)), "r"
-        ) as fin:
+        try:
+            with open(
+                os.path.join(DIR, download_path, (manifest_list[0].file_name)), "r"
+            ) as fin:
 
-            assert (
-                fin.read()
-                == download_test_files["dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e"][
-                    "content"
-                ]
-            )
+                assert (
+                    fin.read()
+                    == download_test_files[
+                        "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e"
+                    ]["content"]
+                )
 
-        assert result == True
+            assert result == True
+        finally:
+            if download_dir_overwrite and os.path.exists(download_path):
+                shutil.rmtree(download_path)
 
     @patch("gen3.file.requests")
-    def test_download_manifest_no_auth(self, mock_get, download_dir, mock_gen3_auth):
+    def test_download_single_no_auth(self, mock_get, download_dir, mock_gen3_auth):
 
         """
         Testing how download_single function reacts when it is given no authorisation details
@@ -144,7 +156,7 @@ class Test_Async_Download:
         assert result == False
 
     @patch("gen3.file.requests")
-    def test_download_manifest_wrong_auth(self, mock_get, download_dir, mock_gen3_auth):
+    def test_download_single_wrong_auth(self, mock_get, download_dir, mock_gen3_auth):
 
         """
         Testing how download_single function reacts when it is given wrong authorisation details
@@ -174,7 +186,7 @@ class Test_Async_Download:
         assert result == False
 
     @patch("gen3.file.requests")
-    def test_download_bad_manifest_id(self, mock_get, download_dir, mock_gen3_auth):
+    def test_download_single_bad_id(self, mock_get, download_dir, mock_gen3_auth):
 
         """
         Testing how download_single function reacts when it is given a manifest with bad id
@@ -193,7 +205,6 @@ class Test_Async_Download:
             )
         ]
 
-        DIR = Path(__file__).resolve().parent
         file_tool.manifest_file_path = Path(DIR, "resources/manifest_test_bad_id.json")
 
         manifest_list = _load_manifest(self.manifest_file_path)
@@ -205,14 +216,12 @@ class Test_Async_Download:
 
         assert result == False
 
-    def test_download_bad_manifest_format(self, mock_gen3_auth):
+    def test_load_manifest_bad_format(self):
 
         """
         Testing how load_manifest function reacts when it is given a manifest with bad format as input
         Function should not load the manifest and should return an empty manifest_list
         """
 
-        file_tool = Gen3File("http://test.commons1.io", mock_gen3_auth)
-        DIR = Path(__file__).resolve().parent
         manifest_list = _load_manifest(Path(DIR, "resources/bad_format.json"))
         assert manifest_list == None
