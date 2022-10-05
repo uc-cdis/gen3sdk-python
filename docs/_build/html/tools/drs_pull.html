@@ -14,6 +14,7 @@
     <script src="../_static/underscore.js"></script>
     <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Indexing Tools" href="indexing.html" />
@@ -531,7 +532,54 @@ This list is passed to the DownloadManager methods of download, and list</p>
 <li class="toctree-l1"><a class="reference internal" href="../query.html">Gen3 Query Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../submission.html">Gen3 Submission Class</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../tools.html">Gen3 Tools</a><ul class="current">
-<li class="toctree-l2 current"><a class="current reference internal" href="#">DRS Download Tools</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">DRS Download Tools</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.tools.download.drs_download.DownloadManager"><code class="docutils literal notranslate"><span class="pre">DownloadManager</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.DownloadManager.cache_hosts_wts_tokens"><code class="docutils literal notranslate"><span class="pre">DownloadManager.cache_hosts_wts_tokens()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.DownloadManager.download"><code class="docutils literal notranslate"><span class="pre">DownloadManager.download()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.DownloadManager.get_fresh_token"><code class="docutils literal notranslate"><span class="pre">DownloadManager.get_fresh_token()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.DownloadManager.resolve_objects"><code class="docutils literal notranslate"><span class="pre">DownloadManager.resolve_objects()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.DownloadManager.user_access"><code class="docutils literal notranslate"><span class="pre">DownloadManager.user_access()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.tools.download.drs_download.DownloadStatus"><code class="docutils literal notranslate"><span class="pre">DownloadStatus</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.DownloadStatus.status"><code class="docutils literal notranslate"><span class="pre">DownloadStatus.status</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.DownloadStatus.start_time"><code class="docutils literal notranslate"><span class="pre">DownloadStatus.start_time</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.DownloadStatus.end_time"><code class="docutils literal notranslate"><span class="pre">DownloadStatus.end_time</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable"><code class="docutils literal notranslate"><span class="pre">Downloadable</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable.object_id"><code class="docutils literal notranslate"><span class="pre">Downloadable.object_id</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable.object_type"><code class="docutils literal notranslate"><span class="pre">Downloadable.object_type</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable.hostname"><code class="docutils literal notranslate"><span class="pre">Downloadable.hostname</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable.file_size"><code class="docutils literal notranslate"><span class="pre">Downloadable.file_size</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable.file_name"><code class="docutils literal notranslate"><span class="pre">Downloadable.file_name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable.updated_time"><code class="docutils literal notranslate"><span class="pre">Downloadable.updated_time</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable.created_time"><code class="docutils literal notranslate"><span class="pre">Downloadable.created_time</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable.access_methods"><code class="docutils literal notranslate"><span class="pre">Downloadable.access_methods</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable.children"><code class="docutils literal notranslate"><span class="pre">Downloadable.children</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable._manager"><code class="docutils literal notranslate"><span class="pre">Downloadable._manager</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable.download"><code class="docutils literal notranslate"><span class="pre">Downloadable.download()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Downloadable.pprint"><code class="docutils literal notranslate"><span class="pre">Downloadable.pprint()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.tools.download.drs_download.Manifest"><code class="docutils literal notranslate"><span class="pre">Manifest</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Manifest.object_id"><code class="docutils literal notranslate"><span class="pre">Manifest.object_id</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Manifest.file_size"><code class="docutils literal notranslate"><span class="pre">Manifest.file_size</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Manifest.file_name"><code class="docutils literal notranslate"><span class="pre">Manifest.file_name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Manifest.md5sum"><code class="docutils literal notranslate"><span class="pre">Manifest.md5sum</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Manifest.commons_url"><code class="docutils literal notranslate"><span class="pre">Manifest.commons_url</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Manifest.create_object_list"><code class="docutils literal notranslate"><span class="pre">Manifest.create_object_list()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Manifest.load"><code class="docutils literal notranslate"><span class="pre">Manifest.load()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.download.drs_download.Manifest.load_manifest"><code class="docutils literal notranslate"><span class="pre">Manifest.load_manifest()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.tools.download.drs_download.download_drs_object"><code class="docutils literal notranslate"><span class="pre">download_drs_object()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.tools.download.drs_download.download_files_in_drs_manifest"><code class="docutils literal notranslate"><span class="pre">download_files_in_drs_manifest()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.tools.download.drs_download.list_access_in_drs_manifest"><code class="docutils literal notranslate"><span class="pre">list_access_in_drs_manifest()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.tools.download.drs_download.list_drs_object"><code class="docutils literal notranslate"><span class="pre">list_drs_object()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.tools.download.drs_download.list_files_in_drs_manifest"><code class="docutils literal notranslate"><span class="pre">list_files_in_drs_manifest()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="indexing.html">Indexing Tools</a></li>
 <li class="toctree-l2"><a class="reference internal" href="metadata.html">Metadata Tools</a></li>
 </ul>
