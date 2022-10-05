@@ -224,7 +224,6 @@
         <span class="n">input_record_chunks</span> <span class="o">=</span> <span class="p">(</span>
             <span class="s2">&quot;|||&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">,</span> <span class="n">record_chunks</span><span class="p">[</span><span class="n">x</span><span class="p">]))</span> <span class="k">if</span> <span class="n">record_chunks</span> <span class="k">else</span> <span class="s2">&quot;|||&quot;</span>
         <span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">input_record_chunks</span><span class="p">)</span>
 
         <span class="c1"># write record_checksum chunks to temporary files since the size can overload</span>
         <span class="c1"># command line arguments</span>
