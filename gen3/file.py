@@ -24,8 +24,18 @@ logging = get_logger("__name__")
 def _load_manifest(manifest_file_path):
 
     """
-    Function to convert manifest to python objects, stored in a list
-    Manifest format - same as that accepted by cdis-data-client
+    Function to convert manifest to python objects, stored in a list.
+
+    Args:
+        manifest_file_path (str): path to the manifest file. The manifest should be a JSON file
+            in the following format:
+            [
+                { "object_id": "", "file_name"(optional): "" },
+                ...
+            ]
+
+    Returns:
+        List of objects
     """
     try:
         with open(manifest_file_path, "rt") as f:
@@ -228,13 +238,10 @@ class Gen3File:
                     pbar.update()
                     successful = True
 
-                if successful:
-                    sem.release()
-
-                else:
+                if not successful:
                     logging.error(f"File {entry.file_name} not downloaded successfully")
-                    sem.release()
                     self.unsuccessful_downloads.append(entry)
+                sem.release()
 
                 return successful
 
@@ -263,10 +270,14 @@ class Gen3File:
         return out_path
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    def _download_using_object_id(self, object_id, path):
+    def download_single(self, object_id, path):
 
         """
-        Function only executing the download functionality of the async code for a single entry
+        Download a single file using its GUID.
+
+        Args:
+            object_id (str): The file's unique ID
+            path (str): Path to store the downloaded file at
         """
 
         successful = True
@@ -323,11 +334,20 @@ class Gen3File:
             )
             return False
 
-    async def download_manifest(self, manifest_file_path, download_path, total_sem):
+    async def download_manifest(self, manifest_file_path, download_path, total_sem=10):
 
         """
-        Function calling download_using_url function for all entries in the manifest asynchronously as tasks,
-        gathering all the tasks and logging which files were successful and which weren't
+        Asynchronouslt download all entries in the provided manifest.
+
+        Args:
+            manifest_file_path (str): path to the manifest file. The manifest should be a JSON file
+                in the following format:
+                [
+                    { "object_id": "", "file_name"(optional): "" },
+                    ...
+                ]
+            download_path (str): Path to store downloaded files at
+            total_sem (int): Number of semaphores (default = 10)
         """
 
         start_time = time.perf_counter()
@@ -372,19 +392,3 @@ class Gen3File:
         logging.info(f"\nDuration = {duration}\n")
         if self.unsuccessful_downloads:
             logging.info(f"Unsuccessful downloads - {self.unsuccessful_downloads}\n")
-
-    def download_single(self, object_id, path):
-
-        """
-        Function calling download_using_object_id function for downloading a single file when provided with the object-ID
-        """
-
-        start_time = time.perf_counter()
-        logging.info(f"Start time: {start_time}")
-
-        result = self._download_using_object_id(object_id, path)
-
-        logging.info(f"Download - {'success' if result else 'failure'}")
-
-        duration = time.perf_counter() - start_time
-        logging.info(f"\nDuration = {duration}\n")

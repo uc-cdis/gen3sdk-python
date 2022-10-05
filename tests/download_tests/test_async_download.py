@@ -97,9 +97,7 @@ class Test_Async_Download:
         mock_get.get().headers = {"content-length": str(len(content["content"]))}
         mock_index.return_value = {"file_name": "TestDataSet1.sav"}
 
-        result = file_tool._download_using_object_id(
-            manifest_list[0].object_id, download_dir
-        )
+        result = file_tool.download_single(manifest_list[0].object_id, download_dir)
 
         DIR = Path(__file__).resolve().parent
         with open(
@@ -141,9 +139,7 @@ class Test_Async_Download:
         file_tool._auth_provider._refresh_token = None
         mock_get.get().headers = {"content-length": str(len(content["content"]))}
 
-        result = file_tool._download_using_object_id(
-            manifest_list[0].object_id, download_dir
-        )
+        result = file_tool.download_single(manifest_list[0].object_id, download_dir)
 
         assert result == False
 
@@ -173,9 +169,7 @@ class Test_Async_Download:
         file_tool._auth_provider._refresh_token = {"api_key": "wrong_auth"}
         mock_get.get().headers = {"content-length": str(len(content["content"]))}
 
-        result = file_tool._download_using_object_id(
-            manifest_list[0].object_id, download_dir
-        )
+        result = file_tool.download_single(manifest_list[0].object_id, download_dir)
 
         assert result == False
 
@@ -207,9 +201,7 @@ class Test_Async_Download:
         file_tool._auth_provider._refresh_token = {"api_key": "123"}
         mock_get.get().headers = {"content-length": str(len(content["content"]))}
 
-        result = file_tool._download_using_object_id(
-            manifest_list[0].object_id, download_dir
-        )
+        result = file_tool.download_single(manifest_list[0].object_id, download_dir)
 
         assert result == False
 
