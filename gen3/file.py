@@ -1,4 +1,3 @@
-import backoff
 import json
 import requests
 import json
@@ -19,6 +18,9 @@ from gen3.utils import DEFAULT_BACKOFF_SETTINGS
 
 
 logging = get_logger("__name__")
+
+
+MAX_RETRIES = 3
 
 
 def _load_manifest(manifest_file_path):
@@ -163,7 +165,6 @@ class Gen3File:
 
         return data
 
-    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     async def _download_using_url(self, sem, entry, client, path, pbar):
 
         """
@@ -185,8 +186,10 @@ class Gen3File:
                 if response.status != 200:
                     logging.error(f"Response code: {response.status_code}")
                     if response.status >= 500:
-                        for _ in range(3):
+                        for _ in range(MAX_RETRIES):
                             logging.info("Retrying now...")
+                            # NOTE could be updated with exponential backoff
+                            await asyncio.sleep(1)
                             response = await client.get(url["url"], read_bufsize=4096)
                             if response.status == 200:
                                 break
@@ -269,7 +272,6 @@ class Gen3File:
 
         return out_path
 
-    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def download_single(self, object_id, path):
 
         """
@@ -291,8 +293,10 @@ class Gen3File:
             if response.status_code != 200:
                 logging.error(f"Response code: {response.status_code}")
                 if response.status_code >= 500:
-                    for _ in range(3):
+                    for _ in range(MAX_RETRIES):
                         logging.info("Retrying now...")
+                        # NOTE could be updated with exponential backoff
+                        time.sleep(1)
                         response = requests.get(url["url"], stream=True)
                         if response.status == 200:
                             break
