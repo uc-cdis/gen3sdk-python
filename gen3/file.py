@@ -41,11 +41,10 @@ class Gen3File:
 
     """
 
-    def __init__(self, endpoint=None, manifest_file_path=None, auth_provider=None):
+    def __init__(self, endpoint=None, auth_provider=None):
         # auth_provider legacy interface required endpoint as 1st arg
         self._auth_provider = auth_provider or endpoint
         self._endpoint = self._auth_provider.endpoint
-        self.manifest_file_path = manifest_file_path
         self.unsuccessful = []
 
     def get_presigned_url(self, guid, protocol=None):
@@ -140,14 +139,14 @@ class Gen3File:
 
         return data
 
-    def _load_manifest(self):
+    def _load_manifest(self, manifest_file_path):
 
         """
         Function to convert manifest to python objects, stored in a list
         Manifest format - same as that accepted by cdis-data-client
         """
         try:
-            with open(self.manifest_file_path, "rt") as f:
+            with open(manifest_file_path, "rt") as f:
                 data = json.load(f, object_hook=lambda d: Namespace(**d))
                 return data
 
@@ -325,9 +324,7 @@ class Gen3File:
             )
             return False
 
-    async def download_manifest(
-        self, auth, manifest_file_path, download_path, cred, total_sem
-    ):
+    async def download_manifest(self, manifest_file_path, download_path, total_sem):
 
         """
         Function calling download_using_url function for all entries in the manifest asynchronously as tasks,
@@ -337,7 +334,7 @@ class Gen3File:
         start_time = time.perf_counter()
         logging.info(f"Start time: {start_time}")
 
-        manifest_list = self._load_manifest()
+        manifest_list = self._load_manifest(manifest_file_path)
         if not manifest_list:
             logging.error("Nothing to download")
         logging.info("Done loading manifest")
@@ -376,7 +373,7 @@ class Gen3File:
         logging.info(f"\nDuration = {duration}\n")
         logging.info(f"Unsuccessful downloads - {self.unsuccessful}\n")
 
-    def download_single(self, auth, object_id, path, cred):
+    def download_single(self, object_id, path):
 
         """
         Function calling download_using_object_id function for downloading a single file when provided with the object-ID
