@@ -715,6 +715,8 @@ class Gen3Index:
         acl=None,
         authz=None,
         urls_metadata=None,
+        _ssl=None,
+        **kwargs,
     ):
         """
         Asynchronous function to update a record in indexd.
@@ -736,15 +738,29 @@ class Gen3Index:
                 "authz": authz,
                 "urls_metadata": urls_metadata,
             }
-            record = await async_get_record(guid)
+            record = await self.async_get_record(guid)
             revision = record.get("rev")
 
             for key, value in updatable_attrs.items():
                 if value is not None:
                     record[key] = value
 
+            del record["created_date"]
+            del record["rev"]
+            del record["updated_date"]
+            del record["version"]
+            del record["uploader"]
+            del record["form"]
+            del record["urls_metadata"]
+            del record["baseid"]
+            del record["size"]
+            del record["hashes"]
+            del record["did"]
+
+            logging.info(f"PUT-ing record: {record}")
+
             async with session.put(
-                f"{self.client.url}/index/{guid}/rev={revision}",
+                f"{self.client.url}/index/{guid}?rev={revision}",
                 json=record,
                 headers={"content-type": "application/json"},
                 ssl=_ssl,

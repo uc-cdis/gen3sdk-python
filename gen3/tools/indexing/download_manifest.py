@@ -189,7 +189,6 @@ async def _write_all_index_records_to_file(
         input_record_chunks = (
             "|||".join(map(json.dumps, record_chunks[x])) if record_chunks else "|||"
         )
-        print(input_record_chunks)
 
         # write record_checksum chunks to temporary files since the size can overload
         # command line arguments

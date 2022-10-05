@@ -282,6 +282,7 @@ def objects_manifest_publish(
     append_urls,
     manifest_file_delimiter,
     out_manifest_file,
+    force_metadata_columns_even_if_empty,
 ):
     auth = ctx.obj["auth_factory"].get()
     loop = get_or_create_event_loop_for_thread()
