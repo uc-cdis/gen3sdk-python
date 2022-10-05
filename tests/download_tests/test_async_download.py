@@ -75,7 +75,7 @@ class Test_Async_Download:
             "content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etdolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquipex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum doloreeu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt inculpa qui officia deserunt mollit anim id est laborum.",
         }
 
-        mock_get.get().content.iter_content = lambda size: [
+        mock_get.get().iter_content = lambda size: [
             Test_Async_Download.iter_content(
                 chunk_size=size, content=content["content"]
             )

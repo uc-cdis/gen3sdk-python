@@ -35,6 +35,7 @@ def manifest_async_download(ctx,  file,  path,  cred,  semaphores):
 def single_download(ctx,  object_id,  path,  cred):
     auth  =  ctx.obj["auth_factory"].get()
     gen3.file.download_single(
+        auth,
         object_id = object_id,
         path = path, 
         cred = cred, 

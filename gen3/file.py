@@ -138,7 +138,6 @@ class Gen3File:
             return output
 
         return data
-
     def _load_manifest(self):
 
         """
@@ -193,9 +192,11 @@ class Gen3File:
                 else:
                     filename = entry.file_name
 
+                out_path = Gen3File._ensure_dirpath_exists(Path(path))
+
                 total_size_in_bytes = int(response.headers.get("content-length"))
                 total_downloaded = 0 
-                async with aiofiles.open(os.path.join(path, filename), "wb") as f:
+                async with aiofiles.open(os.path.join(out_path, filename), "wb") as f:
                     with tqdm(desc = f"File {entry.file_name}", total = total_size_in_bytes, position = 1, unit_scale = True, unit_divisor = 1024, unit = "B", ncols = 90) as progress:
                         async for data in response.content.iter_chunked(4096):
                             progress.update(len(data))
@@ -221,6 +222,22 @@ class Gen3File:
             self.unsuccessful.append(entry)
             sem.release()
             return successful
+
+    def _ensure_dirpath_exists(path: Path) -> Path:
+        """Utility to create a directory if missing.
+        Returns the path so that the call can be inlined in another call
+        Args:
+            path (Path): path to create
+        Returns
+            path of created directory
+        """
+        assert path
+        out_path: Path = path
+
+        if not out_path.exists():
+            out_path.mkdir(parents=True, exist_ok=True)
+
+        return out_path
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)    
     def _download_using_object_id(self, object_id, path):
@@ -258,15 +275,13 @@ class Gen3File:
 
             index = Gen3Index(self._auth_provider)
             entry = index.get_record(object_id)
+
             filename = entry['file_name']  
 
-            out_path: Path = path
-
-            if not out_path.exists():
-                out_path.mkdir(parents = True, exists_ok = True)
+            out_path = Gen3File._ensure_dirpath_exists(Path(path))
 
             with open(os.path.join(out_path, filename), "wb") as f:
-                for data in response.content.iter_content(4096):
+                for data in response.iter_content(4096):
                     total_downloaded += len(data)
                     f.write(data)
             
@@ -318,7 +333,7 @@ async def download_manifest(auth, manifest_file_path, download_path, cred, total
     logging.info(f"Unsuccessful downloads - {manifest.unsuccessful}\n")
 
 
-def download_single(object_id, path, cred):
+def download_single(auth, object_id, path, cred):
 
     """
     Function calling download_using_object_id function for downloading a single file when provided with the object-ID
@@ -336,3 +351,6 @@ def download_single(object_id, path, cred):
 
     duration = time.perf_counter() - start_time
     logging.info(f"\nDuration = {duration}\n")
+
+
+   
