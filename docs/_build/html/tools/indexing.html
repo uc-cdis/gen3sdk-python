@@ -14,6 +14,7 @@
     <script src="../_static/underscore.js"></script>
     <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Metadata Tools" href="metadata.html" />
@@ -379,7 +380,7 @@ processes/threads</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="gen3.tools.indexing.verify_manifest.async_verify_object_manifest">
-<em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.verify_manifest.</span></span><span class="sig-name descname"><span class="pre">async_verify_object_manifest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">commons_url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_concurrent_requests=24</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_row_parsers={'acl':</span> <span class="pre">&lt;function</span> <span class="pre">_get_acl_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'authz':</span> <span class="pre">&lt;function</span> <span class="pre">_get_authz_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'file_name':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_name_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'file_size':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_size_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'guid':</span> <span class="pre">&lt;function</span> <span class="pre">_get_guid_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'md5':</span> <span class="pre">&lt;function</span> <span class="pre">_get_md5_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'urls':</span> <span class="pre">&lt;function</span> <span class="pre">_get_urls_from_row&gt;}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_file_delimiter=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filename='verify-manifest-errors-1662574232.3439965.log'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/verify_manifest.html#async_verify_object_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.indexing.verify_manifest.async_verify_object_manifest" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.verify_manifest.</span></span><span class="sig-name descname"><span class="pre">async_verify_object_manifest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">commons_url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_concurrent_requests=24</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_row_parsers={'acl':</span> <span class="pre">&lt;function</span> <span class="pre">_get_acl_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'authz':</span> <span class="pre">&lt;function</span> <span class="pre">_get_authz_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'file_name':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_name_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'file_size':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_size_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'guid':</span> <span class="pre">&lt;function</span> <span class="pre">_get_guid_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'md5':</span> <span class="pre">&lt;function</span> <span class="pre">_get_md5_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'urls':</span> <span class="pre">&lt;function</span> <span class="pre">_get_urls_from_row&gt;}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_file_delimiter=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filename='verify-manifest-errors-1664913404.4600763.log'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/verify_manifest.html#async_verify_object_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.indexing.verify_manifest.async_verify_object_manifest" title="Permalink to this definition">¶</a></dt>
 <dd><p>Verify all file object records into a manifest csv</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -434,9 +435,34 @@ processes/threads</p>
 <li class="toctree-l1 current"><a class="reference internal" href="../tools.html">Gen3 Tools</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="drs_pull.html">DRS Download Tools</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Indexing Tools</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#module-gen3.tools.indexing.download_manifest">Download</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#module-gen3.tools.indexing.index_manifest">Index</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#module-gen3.tools.indexing.verify_manifest">Verify</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-gen3.tools.indexing.download_manifest">Download</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.download_manifest.CURRENT_DIR"><code class="docutils literal notranslate"><span class="pre">CURRENT_DIR</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.download_manifest.INDEXD_RECORD_PAGE_SIZE"><code class="docutils literal notranslate"><span class="pre">INDEXD_RECORD_PAGE_SIZE</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.download_manifest.MAX_CONCURRENT_REQUESTS"><code class="docutils literal notranslate"><span class="pre">MAX_CONCURRENT_REQUESTS</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.download_manifest.TMP_FOLDER"><code class="docutils literal notranslate"><span class="pre">TMP_FOLDER</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.download_manifest.async_download_object_manifest"><code class="docutils literal notranslate"><span class="pre">async_download_object_manifest()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-gen3.tools.indexing.index_manifest">Index</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.index_manifest.CURRENT_DIR"><code class="docutils literal notranslate"><span class="pre">CURRENT_DIR</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.index_manifest.GUID"><code class="docutils literal notranslate"><span class="pre">GUID</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.index_manifest.SIZE"><code class="docutils literal notranslate"><span class="pre">SIZE</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.index_manifest.MD5"><code class="docutils literal notranslate"><span class="pre">MD5</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.index_manifest.ACLS"><code class="docutils literal notranslate"><span class="pre">ACLS</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.index_manifest.URLS"><code class="docutils literal notranslate"><span class="pre">URLS</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.index_manifest.AUTHZ"><code class="docutils literal notranslate"><span class="pre">AUTHZ</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.index_manifest.PREV_GUID"><code class="docutils literal notranslate"><span class="pre">PREV_GUID</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.index_manifest.ThreadControl"><code class="docutils literal notranslate"><span class="pre">ThreadControl</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.index_manifest.delete_all_guids"><code class="docutils literal notranslate"><span class="pre">delete_all_guids()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.index_manifest.index_object_manifest"><code class="docutils literal notranslate"><span class="pre">index_object_manifest()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-gen3.tools.indexing.verify_manifest">Verify</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.verify_manifest.CURRENT_DIR"><code class="docutils literal notranslate"><span class="pre">CURRENT_DIR</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.verify_manifest.MAX_CONCURRENT_REQUESTS"><code class="docutils literal notranslate"><span class="pre">MAX_CONCURRENT_REQUESTS</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gen3.tools.indexing.verify_manifest.async_verify_object_manifest"><code class="docutils literal notranslate"><span class="pre">async_verify_object_manifest()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="metadata.html">Metadata Tools</a></li>

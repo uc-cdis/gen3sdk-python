@@ -2,28 +2,31 @@ import click
 import gen3
 from gen3.utils import get_or_create_event_loop_for_thread
 
+
 @click.group()
 def file():
     "Commands for asynchronously downloading files from a server"
     pass
 
 
-@click.command(help = "Downloads all files from manifest asynchronously")
-@click.argument("file", required = True)
-@click.option("--path", "path", help = "Path to store downloaded files in", default = ".")
-@click.option("--cred", "cred", help = "Path to credentials",  required = True)
-@click.option("--semaphores", "semaphores", help = "Number of semaphores (default = 10)", default = 10)
+@click.command(help="Downloads all files from manifest asynchronously")
+@click.argument("file", required=True)
+@click.option("--path", "path", help="Path to store downloaded files in", default=".")
+@click.option("--cred", "cred", help="Path to credentials", required=True)
+@click.option(
+    "--semaphores", "semaphores", help="Number of semaphores (default = 10)", default=10
+)
 @click.pass_context
-def manifest_async_download(ctx,  file,  path,  cred,  semaphores):
-    auth  =  ctx.obj["auth_factory"].get()
-    loop  =  get_or_create_event_loop_for_thread()
+def manifest_async_download(ctx, file, path, cred, semaphores):
+    auth = ctx.obj["auth_factory"].get()
+    loop = get_or_create_event_loop_for_thread()
     loop.run_until_complete(
         gen3.file.download_manifest(
-            auth, 
-            manifest_file_path = file, 
-            download_path = path, 
-            cred = cred, 
-            total_sem = semaphores,
+            auth,
+            manifest_file_path=file,
+            download_path=path,
+            cred=cred,
+            total_sem=semaphores,
         )
     )
 
@@ -40,7 +43,6 @@ def single_download(ctx,  object_id,  path,  cred):
         path = path, 
         cred = cred, 
     )
-    
 
-file.add_command(manifest_async_download, name = "download-manifest")
-file.add_command(single_download, name = "download-single")
+file.add_command(manifest_async_download, name="download-manifest")
+file.add_command(single_download, name="download-single")

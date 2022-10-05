@@ -11,7 +11,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        ref: ${{ github.head_ref }}
+        ref: ${{github.event.pull_request.head.ref}}
+        repository: ${{github.event.pull_request.head.repo.full_name}}
     - name: Set up Python 3.9
       uses: actions/setup-python@v1
       with:
@@ -26,11 +27,14 @@ jobs:
       run: |
         pip install poetry
         poetry config virtualenvs.create false
-        poetry install -vv
+        poetry install -vv --no-interaction
+        poetry show -vv
+
         # install sphinx from PyPI (as of 03/16/21 python3-sphinx is broken)
         # sudo apt-get install python3-sphinx
         pip install sphinx
         pip uninstall -y asyncio
+        pip list
         cd
     - name: Build docs
       run: |

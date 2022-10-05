@@ -17,8 +17,8 @@ before_install:
 - which poetry
 - poetry --version
 install:
-- poetry install -vv
-- poetry show
+- poetry install -vv --no-interaction
+- poetry show -vv
 script:
 - poetry run pytest -vv ./tests
 before_deploy:

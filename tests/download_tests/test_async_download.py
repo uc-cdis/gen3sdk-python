@@ -5,13 +5,14 @@ from gen3 import file
 from pathlib import Path
 import os
 
-#function to create temporary directory to download test files in 
+# function to create temporary directory to download test files in
 @pytest.fixture
 def download_dir(tmpdir_factory):
     path = tmpdir_factory.mktemp("async_download")
     return path
 
-#function to download test files, to compare with the download in download_manifest
+
+# function to download test files, to compare with the download in download_manifest
 @pytest.fixture
 def download_test_files():
     data = {}
@@ -33,12 +34,13 @@ class Test_Async_Download:
     """
     Class containing all test cases for class manifest_downloader
     """
+
     DIR = Path(__file__).resolve().parent
     manifest_file_path = Path(DIR, "resources/manifest_test_1.json")
 
     def iter_content(
-        chunk_size = 4096,
-        content = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etdolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquipex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum doloreeu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt inculpa qui officia deserunt mollit anim id est laborum.",
+        chunk_size=4096,
+        content="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etdolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquipex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum doloreeu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt inculpa qui officia deserunt mollit anim id est laborum.",
     ):
         rest = content
         while rest:
@@ -49,24 +51,28 @@ class Test_Async_Download:
     def test_load_manifest(self):
         """
         Testing the load_manifest function, which converts the manifest provided to list of python objects
-        Test passes if number of python objects created is equal to number of files specified in manifest 
+        Test passes if number of python objects created is equal to number of files specified in manifest
         """
         manifest_list = file.Gen3File._load_manifest(self)
         f = open(self.manifest_file_path)
         data = json.load(f)
         assert len(data) == len(manifest_list)
 
-
     @patch("gen3.file.requests")
     @patch("gen3.index.Gen3Index.get_record")
     def test_download_manifest(
-        self, mock_index, mock_get,  download_dir, gen3_file_download, download_test_files
+        self,
+        mock_index,
+        mock_get,
+        download_dir,
+        gen3_file_download,
+        download_test_files,
     ):
         """
-        Testing the download functionality (function - download_single) in manifest_downloader by comparing file 
+        Testing the download functionality (function - download_single) in manifest_downloader by comparing file
         content of file to be downloaded and download performed by download_single
 
-        Also checks if download_single function returns True; function returns true when 
+        Also checks if download_single function returns True; function returns true when
         response content-length is equal to number of bytes downloaded
         """
 
@@ -85,10 +91,12 @@ class Test_Async_Download:
         manifest_list = gen3_file_download._load_manifest()
         mock_get.get().status_code = 200
         gen3_file_download._auth_provider._refresh_token = {"api_key": "123"}
-        mock_get.get().headers = {'content-length': str(len(content['content']))}
+        mock_get.get().headers = {"content-length": str(len(content["content"]))}
         mock_index.return_value = {"file_name": "TestDataSet1.sav"}
 
-        result = gen3_file_download._download_using_object_id(manifest_list[0].object_id, download_dir)
+        result = gen3_file_download._download_using_object_id(
+            manifest_list[0].object_id, download_dir
+        )
 
         DIR = Path(__file__).resolve().parent
         with open(
@@ -103,7 +111,7 @@ class Test_Async_Download:
             )
 
         assert result == True
-    
+
     @patch("gen3.file.requests")
     def test_download_manifest_no_auth(
         self, mock_get, download_dir, gen3_file_download
@@ -113,7 +121,7 @@ class Test_Async_Download:
         Testing how download_single function reacts when it is given no authorisation details
         Request(url) should return status_code = 403 and download function should return False
         """
-        
+
         content = {
             "file_name": "TestDataSet1.json",
             "content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etdolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquipex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum doloreeu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt inculpa qui officia deserunt mollit anim id est laborum.",
@@ -129,9 +137,11 @@ class Test_Async_Download:
         manifest_list = gen3_file_download._load_manifest()
         mock_get.get().status_code = 403
         gen3_file_download._auth_provider._refresh_token = None
-        mock_get.get().headers = {'content-length': str(len(content['content']))}
+        mock_get.get().headers = {"content-length": str(len(content["content"]))}
 
-        result = gen3_file_download._download_using_object_id(manifest_list[0].object_id, download_dir)
+        result = gen3_file_download._download_using_object_id(
+            manifest_list[0].object_id, download_dir
+        )
 
         assert result == False
 
@@ -159,17 +169,17 @@ class Test_Async_Download:
         gen3_file_download.manifest_file_path = self.manifest_file_path
         manifest_list = gen3_file_download._load_manifest()
         mock_get.get().status_code = 403
-        gen3_file_download._auth_provider._refresh_token = {"api_key" : "wrong_auth"}
-        mock_get.get().headers = {'content-length': str(len(content['content']))}
+        gen3_file_download._auth_provider._refresh_token = {"api_key": "wrong_auth"}
+        mock_get.get().headers = {"content-length": str(len(content["content"]))}
 
-        result = gen3_file_download._download_using_object_id(manifest_list[0].object_id, download_dir)
+        result = gen3_file_download._download_using_object_id(
+            manifest_list[0].object_id, download_dir
+        )
 
         assert result == False
-    
+
     @patch("gen3.file.requests")
-    def test_download_bad_manifest_id(
-        self, mock_get, download_dir, gen3_file_download
-    ):
+    def test_download_bad_manifest_id(self, mock_get, download_dir, gen3_file_download):
 
         """
         Testing how download_single function reacts when it is given a manifest with bad id
@@ -187,30 +197,30 @@ class Test_Async_Download:
             )
         ]
 
-        DIR = Path(__file__).resolve().parent 
-        gen3_file_download.manifest_file_path = Path(DIR, "resources/manifest_test_bad_id.json")
+        DIR = Path(__file__).resolve().parent
+        gen3_file_download.manifest_file_path = Path(
+            DIR, "resources/manifest_test_bad_id.json"
+        )
 
         manifest_list = gen3_file_download._load_manifest()
         mock_get.get().status_code = 404
-        gen3_file_download._auth_provider._refresh_token = {"api_key" : "123"}
-        mock_get.get().headers = {'content-length': str(len(content['content']))}
+        gen3_file_download._auth_provider._refresh_token = {"api_key": "123"}
+        mock_get.get().headers = {"content-length": str(len(content["content"]))}
 
-        result = gen3_file_download._download_using_object_id(manifest_list[0].object_id, download_dir)
+        result = gen3_file_download._download_using_object_id(
+            manifest_list[0].object_id, download_dir
+        )
 
         assert result == False
 
-    
-    def test_download_bad_manifest_format(
-        self, gen3_file_download
-    ):
-        
+    def test_download_bad_manifest_format(self, gen3_file_download):
+
         """
         Testing how load_manifest function reacts when it is given a manifest with bad format as input
         Function should not load the manifest and should return an empty manifest_list
         """
-        
+
         DIR = Path(__file__).resolve().parent
-        gen3_file_download.manifest_file_path = Path(DIR, 'resources/bad_format.json')
+        gen3_file_download.manifest_file_path = Path(DIR, "resources/bad_format.json")
         manifest_list = gen3_file_download._load_manifest()
         assert manifest_list == None
-    
