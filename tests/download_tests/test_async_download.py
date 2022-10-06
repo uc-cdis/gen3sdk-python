@@ -4,9 +4,8 @@ import pytest
 from pathlib import Path
 import os
 import shutil
-from types import SimpleNamespace as Namespace
 
-from gen3.file import Gen3File
+from gen3.file import Gen3File, _load_manifest
 from gen3.utils import get_or_create_event_loop_for_thread
 
 
@@ -17,43 +16,6 @@ You need read permissions on the files specified in the manifest provided
 """
 
 
-def _load_manifest(manifest_file_path):
-
-    """
-    Function to convert manifest to python objects, stored in a list.
-
-    Args:
-        manifest_file_path (str): path to the manifest file. The manifest should be a JSON file
-            in the following format:
-            [
-                { "object_id": "", "file_name"(optional): "" },
-                ...
-            ]
-
-    Returns:
-        List of objects
-    """
-
-    def dict_to_entry(d):
-        """
-        Ensure the expected keys are in each manifest entry
-        """
-        if not d.get("object_id"):
-            raise Exception(f"Manifest entry missing 'object_id': {d}")
-        if "file_name" not in d:
-            d["file_name"] = None
-        return Namespace(**d)
-
-    try:
-        with open(manifest_file_path, "rt") as f:
-            data = json.load(f, object_hook=dict_to_entry)
-            return data
-
-    except Exception as e:
-        print(f"Error in load manifest: {e}")
-        return None
-
-
 # function to create temporary directory to download test files in
 @pytest.fixture
 def download_dir(tmpdir_factory):
@@ -61,7 +23,7 @@ def download_dir(tmpdir_factory):
     return path
 
 
-# function to download test files
+# function to download test files, to compare with the download in download_manifest
 @pytest.fixture
 def download_test_files():
     data = {}
@@ -74,7 +36,7 @@ def download_test_files():
 
 class Test_Async_Download:
     """
-    Class containing all test cases for `Gen3File.download_single`
+    Class containing all test cases for `Gen3File.download_manifest` and `Gen3File.download_single`
     """
 
     manifest_file_path = Path(DIR, "resources/manifest_test_1.json")
@@ -88,6 +50,16 @@ class Test_Async_Download:
             chunk = rest[:chunk_size]
             rest = rest[chunk_size:]
         return chunk.encode("utf-8")
+
+    def test_load_manifest(self, mock_gen3_auth):
+        """
+        Testing the load_manifest function, which converts the manifest provided to list of python objects
+        Test passes if number of python objects created is equal to number of files specified in manifest
+        """
+        manifest_list = _load_manifest(self.manifest_file_path)
+        f = open(self.manifest_file_path)
+        data = json.load(f)
+        # assert len(data) == len(manifest_list)
 
     @patch("gen3.file.requests")
     @patch("gen3.index.Gen3Index.get_record")
@@ -119,7 +91,9 @@ class Test_Async_Download:
 
         content = {
             "file_name": "TestDataSet1.json",
-            "content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etdolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquipex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum doloreeu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt inculpa qui officia deserunt mollit anim id est laborum.",
+            "content": download_test_files[
+                "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e"
+            ]["content"],
         }
 
         mock_get.get().iter_content = lambda size: [
@@ -254,3 +228,57 @@ class Test_Async_Download:
 
         manifest_list = _load_manifest(Path(DIR, "resources/bad_format.json"))
         assert manifest_list == None
+
+    @patch("gen3.file.requests")
+    @patch("gen3.index.Gen3Index.get_record")
+    def test_download_manifest(
+        self, mock_index, mock_get, mock_gen3_auth, download_test_files, download_dir
+    ):
+        # TODO subdir
+        file_tool = Gen3File(mock_gen3_auth)
+        # file_tool.download_manifest(self.manifest_file_path, download_dir)
+        import requests_mock
+
+        content = {
+            "file_name": "TestDataSet1.json",
+            "content": download_test_files[
+                "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e"
+            ]["content"],
+            # for f, d in download_test_files.items()
+        }
+
+        mock_get.get().iter_content = lambda size: [
+            Test_Async_Download.iter_content(
+                chunk_size=size, content=content["content"]
+            )
+        ]
+        mock_get.get().status_code = 200
+        file_tool._endpoint = "https://example.commons.com"
+        # file_tool._auth_provider._refresh_token = {"api_key": "123"}
+        mock_get.get().headers = {"content-length": str(len(content["content"]))}
+        mock_index.return_value = {"file_name": "TestDataSet1.sav"}
+
+        loop = get_or_create_event_loop_for_thread()
+        url = "https://example.commons.com/user/data/download/dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e"
+        with requests_mock.Mocker() as m:
+            # m.get(url, json={"url": "pauline"})
+            loop.run_until_complete(
+                file_tool.download_manifest(
+                    manifest_file_path=self.manifest_file_path,
+                    download_path=download_dir,
+                    total_sem=2,
+                )
+            )
+            print(dir(m))
+
+        dir = "/".join(str(download_dir).split("/")[:-1]) + "/async_download0"
+        print(dir, os.listdir(dir))
+
+        with open(os.path.join(DIR, download_dir, "TestDataSet1.sav"), "r") as fin:
+
+            assert (
+                fin.read()
+                == download_test_files["dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e"][
+                    "content"
+                ]
+            )

@@ -72,6 +72,7 @@ def mock_gen3_auth():
     """
     mock_auth = MockAuth()
     # patch as __init__ has method call
+    print("mock_auth.endpoint", mock_auth.endpoint)
     with patch("gen3.auth.endpoint_from_token") as mock_endpoint_from_token:
         mock_endpoint_from_token().return_value = mock_auth.endpoint
         return Gen3Auth(
