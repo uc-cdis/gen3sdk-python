@@ -4,8 +4,10 @@ import pytest
 from pathlib import Path
 import os
 import shutil
+from types import SimpleNamespace as Namespace
 
-from gen3.file import Gen3File, _load_manifest
+from gen3.file import Gen3File
+from gen3.utils import get_or_create_event_loop_for_thread
 
 
 DIR = Path(__file__).resolve().parent
@@ -15,6 +17,43 @@ You need read permissions on the files specified in the manifest provided
 """
 
 
+def _load_manifest(manifest_file_path):
+
+    """
+    Function to convert manifest to python objects, stored in a list.
+
+    Args:
+        manifest_file_path (str): path to the manifest file. The manifest should be a JSON file
+            in the following format:
+            [
+                { "object_id": "", "file_name"(optional): "" },
+                ...
+            ]
+
+    Returns:
+        List of objects
+    """
+
+    def dict_to_entry(d):
+        """
+        Ensure the expected keys are in each manifest entry
+        """
+        if not d.get("object_id"):
+            raise Exception(f"Manifest entry missing 'object_id': {d}")
+        if "file_name" not in d:
+            d["file_name"] = None
+        return Namespace(**d)
+
+    try:
+        with open(manifest_file_path, "rt") as f:
+            data = json.load(f, object_hook=dict_to_entry)
+            return data
+
+    except Exception as e:
+        print(f"Error in load manifest: {e}")
+        return None
+
+
 # function to create temporary directory to download test files in
 @pytest.fixture
 def download_dir(tmpdir_factory):
@@ -22,7 +61,7 @@ def download_dir(tmpdir_factory):
     return path
 
 
-# function to download test files, to compare with the download in download_manifest
+# function to download test files
 @pytest.fixture
 def download_test_files():
     data = {}
@@ -35,7 +74,7 @@ def download_test_files():
 
 class Test_Async_Download:
     """
-    Class containing all test cases for `Gen3File.download_manifest` and `Gen3File.download_single`
+    Class containing all test cases for `Gen3File.download_single`
     """
 
     manifest_file_path = Path(DIR, "resources/manifest_test_1.json")
