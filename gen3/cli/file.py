@@ -1,6 +1,13 @@
 import click
-import gen3
+import time
+
+from cdislogging import get_logger
+
+from gen3.file import Gen3File
 from gen3.utils import get_or_create_event_loop_for_thread
+
+
+logger = get_logger("__name__")
 
 
 @click.group()
@@ -9,42 +16,26 @@ def file():
     pass
 
 
-@click.command(help="Downloads all files from manifest asynchronously")
-@click.argument("file", required=True)
-@click.option("--path", "path", help="Path to store downloaded files in", default=".")
-@click.option("--cred", "cred", help="Path to credentials", required=True)
-@click.option(
-    "--semaphores", "semaphores", help="Number of semaphores (default = 10)", default=10
-)
-@click.pass_context
-def manifest_async_download(ctx, file, path, cred, semaphores):
-    auth = ctx.obj["auth_factory"].get()
-    loop = get_or_create_event_loop_for_thread()
-    loop.run_until_complete(
-        gen3.file.download_manifest(
-            auth,
-            manifest_file_path=file,
-            download_path=path,
-            cred=cred,
-            total_sem=semaphores,
-        )
-    )
-
-
-@click.command(help="Download a single file when provided with object ID")
+@click.command(help="Download a single file using its GUID")
 @click.argument("object_id", required=True)
 @click.option("--path", "path", help="Path to store downloaded file in", default=".")
-@click.option("--cred", "cred", help="Path to credentials", required=True)
 @click.pass_context
-def single_download(ctx, object_id, path, cred):
+def single_download(ctx, object_id, path):
     auth = ctx.obj["auth_factory"].get()
-    gen3.file.download_single(
-        auth,
+    file_tool = Gen3File(auth)
+
+    start_time = time.perf_counter()
+    logger.info(f"Start time: {start_time}")
+
+    result = file_tool.download_single(
         object_id=object_id,
         path=path,
-        cred=cred,
     )
 
+    logger.info(f"Download - {'success' if result else 'failure'}")
 
-file.add_command(manifest_async_download, name="download-manifest")
+    duration = time.perf_counter() - start_time
+    logger.info(f"\nDuration = {duration}\n")
+
+
 file.add_command(single_download, name="download-single")
