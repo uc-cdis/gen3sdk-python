@@ -112,7 +112,7 @@ Delete all locations of a stored data file and remove its record from indexd</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.file.Gen3File.upload_file">
-<span class="sig-name descname"><span class="pre">upload_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">authz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protocol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expires_in</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.upload_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.upload_file" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">upload_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">authz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protocol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expires_in</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.upload_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.upload_file" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get a presigned url for a file to upload</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -124,6 +124,36 @@ If this isn’t set, the default will be “s3”</p></li>
 <li><p><strong>expires_in</strong> (<em>int</em>) – Amount in seconds that the signed url will expire from datetime.utcnow().
 Be sure to use a positive integer.
 This value will also be treated as &lt;= MAX_PRESIGNED_URL_TTL in the fence configuration.</p></li>
+<li><p><strong>bucket</strong> (<em>str</em>) – Bucket to upload to. The bucket must be configured in the Fence instance’s
+<cite>ALLOWED_DATA_UPLOAD_BUCKETS</cite> setting. If not specified, Fence defaults to the
+<cite>DATA_UPLOAD_BUCKET</cite> setting.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>json representation for the file upload</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Document</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gen3.file.Gen3File.upload_file_to_guid">
+<span class="sig-name descname"><span class="pre">upload_file_to_guid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protocol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expires_in</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.upload_file_to_guid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.upload_file_to_guid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a presigned url for a file to upload to the specified existing GUID</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_name</strong> (<em>str</em>) – file_name to use for upload</p></li>
+<li><p><strong>protocol</strong> (<em>str</em>) – Storage protocol to use for upload: “s3”, “az”.
+If this isn’t set, the default will be “s3”</p></li>
+<li><p><strong>expires_in</strong> (<em>int</em>) – Amount in seconds that the signed url will expire from datetime.utcnow().
+Be sure to use a positive integer.
+This value will also be treated as &lt;= MAX_PRESIGNED_URL_TTL in the fence configuration.</p></li>
+<li><p><strong>bucket</strong> (<em>str</em>) – Bucket to upload to. The bucket must be configured in the Fence instance’s
+<cite>ALLOWED_DATA_UPLOAD_BUCKETS</cite> setting. If not specified, Fence defaults to the
+<cite>DATA_UPLOAD_BUCKET</cite> setting.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -171,6 +201,7 @@ This value will also be treated as &lt;= MAX_PRESIGNED_URL_TTL in the fence conf
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.delete_file_locations"><code class="docutils literal notranslate"><span class="pre">Gen3File.delete_file_locations()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.get_presigned_url"><code class="docutils literal notranslate"><span class="pre">Gen3File.get_presigned_url()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.upload_file"><code class="docutils literal notranslate"><span class="pre">Gen3File.upload_file()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.upload_file_to_guid"><code class="docutils literal notranslate"><span class="pre">Gen3File.upload_file_to_guid()</span></code></a></li>
 </ul>
 </li>
 </ul>
