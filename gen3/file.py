@@ -15,7 +15,7 @@ from cdislogging import get_logger
 
 from gen3.index import Gen3Index
 from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status_and_print_error
-
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 logging = get_logger("__name__")
 
@@ -102,7 +102,9 @@ class Gen3File:
 
         return output
 
-    def upload_file(self, file_name, authz=None, protocol=None, expires_in=None):
+    def upload_file(
+        self, file_name, authz=None, protocol=None, expires_in=None, bucket=None
+    ):
         """
         Get a presigned url for a file to upload
 
@@ -114,6 +116,9 @@ class Gen3File:
             expires_in (int): Amount in seconds that the signed url will expire from datetime.utcnow().
                 Be sure to use a positive integer.
                 This value will also be treated as <= MAX_PRESIGNED_URL_TTL in the fence configuration.
+            bucket (str): Bucket to upload to. The bucket must be configured in the Fence instance's
+                `ALLOWED_DATA_UPLOAD_BUCKETS` setting. If not specified, Fence defaults to the
+                `DATA_UPLOAD_BUCKET` setting.
         Returns:
             Document: json representation for the file upload
         """
@@ -127,15 +132,18 @@ class Gen3File:
             body["expires_in"] = expires_in
         if file_name:
             body["file_name"] = file_name
+        if bucket:
+            body["bucket"] = bucket
 
         headers = {"Content-Type": "application/json"}
-        output = requests.post(
+        resp = requests.post(
             api_url, auth=self._auth_provider, json=body, headers=headers
-        ).text
+        )
+        raise_for_status_and_print_error(resp)
         try:
-            data = json.loads(output)
+            data = json.loads(resp.text)
         except:
-            return output
+            return resp.text
 
         return data
 
@@ -212,3 +220,44 @@ class Gen3File:
             return False
 
         return True
+      
+    def upload_file_to_guid(
+        self, guid, file_name, protocol=None, expires_in=None, bucket=None
+    ):
+        """
+        Get a presigned url for a file to upload to the specified existing GUID
+
+        Args:
+            file_name (str): file_name to use for upload
+            protocol (str): Storage protocol to use for upload: "s3", "az".
+                If this isn't set, the default will be "s3"
+            expires_in (int): Amount in seconds that the signed url will expire from datetime.utcnow().
+                Be sure to use a positive integer.
+                This value will also be treated as <= MAX_PRESIGNED_URL_TTL in the fence configuration.
+            bucket (str): Bucket to upload to. The bucket must be configured in the Fence instance's
+                `ALLOWED_DATA_UPLOAD_BUCKETS` setting. If not specified, Fence defaults to the
+                `DATA_UPLOAD_BUCKET` setting.
+        Returns:
+            Document: json representation for the file upload
+        """
+        url = f"{self._endpoint}/user/data/upload/{guid}"
+        params = {}
+        if protocol:
+            params["protocol"] = protocol
+        if expires_in:
+            params["expires_in"] = expires_in
+        if file_name:
+            params["file_name"] = file_name
+        if bucket:
+            params["bucket"] = bucket
+
+        url_parts = list(urlparse(url))
+        query = dict(parse_qsl(url_parts[4]))
+        query.update(params)
+        url_parts[4] = urlencode(query)
+        url = urlunparse(url_parts)
+
+        resp = requests.get(url, auth=self._auth_provider)
+        raise_for_status_and_print_error(resp)
+        return resp.json()
+

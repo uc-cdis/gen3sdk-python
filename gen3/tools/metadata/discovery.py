@@ -1,6 +1,5 @@
 import csv
 import json
-import datetime
 from cdislogging import get_logger
 import tempfile
 import asyncio
@@ -10,8 +9,6 @@ from urllib.parse import urlparse
 import requests.exceptions
 
 from gen3.metadata import Gen3Metadata
-from gen3.tools import metadata
-from gen3.utils import raise_for_status_and_print_error
 
 MAX_GUIDS_PER_REQUEST = 2000
 MAX_CONCURRENT_REQUESTS = 5
@@ -134,6 +131,7 @@ async def publish_discovery_metadata(
     guid_field=None,
     is_unregistered_metadata=False,
     reset_unregistered_metadata=False,
+    update_registered_metadata=True,
 ):
     """
     Publish discovery metadata from a tsv file
@@ -159,11 +157,21 @@ async def publish_discovery_metadata(
         ]
         pending_requests = []
 
+        registered_metadata_guids = []
+        registered_metadata = {}
         if is_unregistered_metadata:
-            registered_metadata_guids = mds.query(
-                f"_guid_type={guid_type}", limit=2000, offset=0
-            )
-            guid_type = f"unregistered_{guid_type}"
+            if not update_registered_metadata:
+                registered_metadata_guids = mds.query(
+                    f"_guid_type={guid_type}", limit=2000, offset=0
+                )
+            else:
+                registered_metadata = mds.query(
+                    f"_guid_type={guid_type}",
+                    return_full_metadata=True,
+                    limit=2000,
+                    offset=0,
+                )
+                registered_metadata_guids = registered_metadata.keys()
 
         for metadata_line in metadata_reader:
             discovery_metadata = {
@@ -175,11 +183,12 @@ async def publish_discovery_metadata(
             else:
                 guid = discovery_metadata[guid_field]
 
-            # when publishing unregistered metadata, skip those who are already registered if reset_unregistered_metadata is set to false
+            # when publishing unregistered metadata, skip those who are already registered if both reset_unregistered_metadata and update_registered_metadata are set to false
             if (
-                not reset_unregistered_metadata
-                and is_unregistered_metadata
+                is_unregistered_metadata
                 and str(guid) in registered_metadata_guids
+                and not reset_unregistered_metadata
+                and not update_registered_metadata
             ):
                 continue
 
@@ -202,8 +211,32 @@ async def publish_discovery_metadata(
                     if value not in ["", [], {}]
                 }
 
+            new_guid_type = guid_type
+            if is_unregistered_metadata:
+                if reset_unregistered_metadata or (
+                    str(guid) not in registered_metadata_guids
+                ):
+                    # only set GUID type to "unregistered_discovery_metadata" for unregistered metadata, or reset_unregistered_metadata is set
+                    new_guid_type = f"unregistered_{guid_type}"
+                elif str(guid) in registered_metadata_guids:
+                    if update_registered_metadata:
+                        existing_registered_metadata = {}
+                        try:
+                            existing_registered_metadata = registered_metadata.get(
+                                str(guid)
+                            ).get("gen3_discovery")
+                        except AttributeError:
+                            pass
+                        discovery_metadata = {
+                            **existing_registered_metadata,
+                            **discovery_metadata,
+                        }
+                    else:
+                        logging.warning(f"{guid} is not already registered. Skipping.")
+                        continue
+
             metadata = {
-                "_guid_type": guid_type,
+                "_guid_type": new_guid_type,
                 "gen3_discovery": discovery_metadata,
             }
 
