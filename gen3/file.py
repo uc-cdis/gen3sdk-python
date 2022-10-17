@@ -220,7 +220,7 @@ class Gen3File:
             return False
 
         return True
-      
+
     def upload_file_to_guid(
         self, guid, file_name, protocol=None, expires_in=None, bucket=None
     ):
@@ -260,4 +260,3 @@ class Gen3File:
         resp = requests.get(url, auth=self._auth_provider)
         raise_for_status_and_print_error(resp)
         return resp.json()
-
