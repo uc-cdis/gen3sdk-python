@@ -346,7 +346,7 @@ manifest.add_command(objects_manifest_delete_all_guids, name="delete-all-guids")
     \tA file path to a CSV containing mapping identifiers. Has a specialized
     \tcolumn naming format. Column names MUST be pipe-delimited and contain:\n
     \t\tcommons url | identifier type | identifier name\n
-
+    
     \tYou can have any number of columns for mapping.\n
     """
     )

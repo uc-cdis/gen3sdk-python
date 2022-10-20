@@ -1,12 +1,26 @@
 import json
 import requests
+import json
+import asyncio
+import aiohttp
+import aiofiles
+import time
+from tqdm import tqdm
+from types import SimpleNamespace as Namespace
+import os
+import requests
+from pathlib import Path
+
+from cdislogging import get_logger
+
+from gen3.index import Gen3Index
+from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status_and_print_error
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
-from gen3.utils import raise_for_status_and_print_error
+logging = get_logger("__name__")
 
 
-class Gen3FileError(Exception):
-    pass
+MAX_RETRIES = 3
 
 
 class Gen3File:
@@ -31,6 +45,7 @@ class Gen3File:
         # auth_provider legacy interface required endpoint as 1st arg
         self._auth_provider = auth_provider or endpoint
         self._endpoint = self._auth_provider.endpoint
+        self.unsuccessful_downloads = []
 
     def get_presigned_url(self, guid, protocol=None):
         """Generates a presigned URL for a file.
@@ -49,13 +64,13 @@ class Gen3File:
         api_url = "{}/user/data/download/{}".format(self._endpoint, guid)
         if protocol:
             api_url += "?protocol={}".format(protocol)
-        output = requests.get(api_url, auth=self._auth_provider).text
+        resp = requests.get(api_url, auth=self._auth_provider)
+        raise_for_status_and_print_error(resp)
 
         try:
-            data = json.loads(output)
+            return resp.json
         except:
-            return output
-        return data
+            return resp.text
 
     def delete_file(self, guid):
         """
@@ -131,6 +146,80 @@ class Gen3File:
             return resp.text
 
         return data
+
+    def _ensure_dirpath_exists(path: Path) -> Path:
+        """Utility to create a directory if missing.
+        Returns the path so that the call can be inlined in another call
+        Args:
+            path (Path): path to create
+        Returns
+            path of created directory
+        """
+        assert path
+        out_path: Path = path
+
+        if not out_path.exists():
+            out_path.mkdir(parents=True, exist_ok=True)
+
+        return out_path
+
+    def download_single(self, object_id, path):
+
+        """
+        Download a single file using its GUID.
+
+        Args:
+            object_id (str): The file's unique ID
+            path (str): Path to store the downloaded file at
+        """
+        try:
+            url = self.get_presigned_url(object_id)
+        except Exception as e:
+            logging.critical(f"Unable to get a presigned URL for download: {e}")
+            return False
+
+        response = requests.get(url["url"], stream=True)
+        if response.status_code != 200:
+            logging.error(f"Response code: {response.status_code}")
+            if response.status_code >= 500:
+                for _ in range(MAX_RETRIES):
+                    logging.info("Retrying now...")
+                    # NOTE could be updated with exponential backoff
+                    time.sleep(1)
+                    response = requests.get(url["url"], stream=True)
+                    if response.status == 200:
+                        break
+                if response.status != 200:
+                    logging.critical("Response status not 200, try again later")
+                    return False
+            else:
+                return False
+
+        response.raise_for_status()
+
+        total_size_in_bytes = int(response.headers.get("content-length"))
+        total_downloaded = 0
+
+        index = Gen3Index(self._auth_provider)
+        record = index.get_record(object_id)
+
+        filename = record["file_name"]
+
+        out_path = Gen3File._ensure_dirpath_exists(Path(path))
+
+        with open(os.path.join(out_path, filename), "wb") as f:
+            for data in response.iter_content(4096):
+                total_downloaded += len(data)
+                f.write(data)
+
+        if total_size_in_bytes == total_downloaded:
+            logging.info(f"File {filename} downloaded successfully")
+
+        else:
+            logging.error(f"File {filename} not downloaded successfully")
+            return False
+
+        return True
 
     def upload_file_to_guid(
         self, guid, file_name, protocol=None, expires_in=None, bucket=None

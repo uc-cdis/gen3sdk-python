@@ -13,6 +13,7 @@ from cdisutilstest.code.indexd_fixture import (
     clear_database,
     create_user,
 )
+from gen3.cli.auth import endpoint
 from indexd import get_app
 from indexd.default_settings import settings
 
