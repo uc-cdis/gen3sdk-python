@@ -269,7 +269,7 @@ DEFAULT_BACKOFF_SETTINGS = {
     "logger": None,
     "on_backoff": log_backoff_retry,
     "on_giveup": log_backoff_giveup,
-    "max_tries": os.environ.get("GEN3SDK_MAX_RETRIES", 3),
+    "max_tries": int(os.environ.get("GEN3SDK_MAX_RETRIES", 3)),
     "giveup": exception_do_not_retry,
 }
 
@@ -279,6 +279,6 @@ BACKOFF_NO_LOG_IF_NOT_RETRIED = {
     "logger": None,
     "on_backoff": log_backoff_retry,
     "on_giveup": log_backoff_giveup_except_on_no_retries,
-    "max_tries": os.environ.get("GEN3SDK_MAX_RETRIES", 3),
+    "max_tries": int(os.environ.get("GEN3SDK_MAX_RETRIES", 3)),
     "giveup": exception_do_not_retry,
 }
