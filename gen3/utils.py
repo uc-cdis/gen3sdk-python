@@ -48,6 +48,9 @@ def get_or_create_event_loop_for_thread():
 
 
 def raise_for_status_and_print_error(response):
+    """
+    This only works for sync requests
+    """
     try:
         response.raise_for_status()
     except requests.HTTPError as exception:

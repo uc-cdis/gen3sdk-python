@@ -473,30 +473,39 @@ class Gen3Index:
                 urls = []
 
             json = {
-                "urls": urls,
                 "form": "object",
                 "hashes": hashes,
                 "size": size,
-                "file_name": file_name,
-                "metadata": metadata,
-                "urls_metadata": urls_metadata,
-                "baseid": baseid,
-                "acl": acl,
-                "authz": authz,
-                "version": version,
+                "urls": urls or [],
             }
-
             if did:
                 json["did"] = did
+            if file_name:
+                json["file_name"] = file_name
+            if metadata:
+                json["metadata"] = metadata
+            if baseid:
+                json["baseid"] = baseid
+            if acl:
+                json["acl"] = acl
+            if urls_metadata:
+                json["urls_metadata"] = urls_metadata
+            if version:
+                json["version"] = version
+            if authz:
+                json["authz"] = authz
+
+            # aiohttp only allows basic auth with their built in auth, so we
+            # need to manually add JWT auth header
+            headers = {"Authorization": self.client.auth._get_auth_value()}
 
             async with session.post(
                 f"{self.client.url}/index/",
                 json=json,
-                headers={"content-type": "application/json"},
+                headers=headers,
                 ssl=_ssl,
-                auth=self.client.auth,
             ) as response:
-                raise_for_status_and_print_error(response)
+                assert response.status == 200, await response.json()
                 response = await response.json()
 
         return response
@@ -759,14 +768,17 @@ class Gen3Index:
 
             logging.info(f"PUT-ing record: {record}")
 
+            # aiohttp only allows basic auth with their built in auth, so we
+            # need to manually add JWT auth header
+            headers = {"Authorization": self.client.auth._get_auth_value()}
+
             async with session.put(
                 f"{self.client.url}/index/{guid}?rev={revision}",
                 json=record,
-                headers={"content-type": "application/json"},
+                headers=headers,
                 ssl=_ssl,
-                auth=self.client.auth,
             ) as response:
-                raise_for_status_and_print_error(response)
+                assert response.status == 200, await response.json()
                 response = await response.json()
 
         return response
