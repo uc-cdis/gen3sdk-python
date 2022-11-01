@@ -473,30 +473,39 @@ class Gen3Index:
                 urls = []
 
             json = {
-                "urls": urls,
                 "form": "object",
                 "hashes": hashes,
                 "size": size,
-                "file_name": file_name,
-                "metadata": metadata,
-                "urls_metadata": urls_metadata,
-                "baseid": baseid,
-                "acl": acl,
-                "authz": authz,
-                "version": version,
+                "urls": urls or [],
             }
-
             if did:
                 json["did"] = did
+            if file_name:
+                json["file_name"] = file_name
+            if metadata:
+                json["metadata"] = metadata
+            if baseid:
+                json["baseid"] = baseid
+            if acl:
+                json["acl"] = acl
+            if urls_metadata:
+                json["urls_metadata"] = urls_metadata
+            if version:
+                json["version"] = version
+            if authz:
+                json["authz"] = authz
+
+            # aiohttp only allows basic auth with their built in auth, so we
+            # need to manually add JWT auth header
+            headers = {"Authorization": self.client.auth._get_auth_value()}
 
             async with session.post(
                 f"{self.client.url}/index/",
                 json=json,
-                headers={"content-type": "application/json"},
+                headers=headers,
                 ssl=_ssl,
-                auth=self.client.auth,
             ) as response:
-                raise_for_status_and_print_error(response)
+                assert response.status == 200, await response.json()
                 response = await response.json()
 
         return response
@@ -715,6 +724,8 @@ class Gen3Index:
         acl=None,
         authz=None,
         urls_metadata=None,
+        _ssl=None,
+        **kwargs,
     ):
         """
         Asynchronous function to update a record in indexd.
@@ -736,21 +747,38 @@ class Gen3Index:
                 "authz": authz,
                 "urls_metadata": urls_metadata,
             }
-            record = await async_get_record(guid)
+            record = await self.async_get_record(guid)
             revision = record.get("rev")
 
             for key, value in updatable_attrs.items():
                 if value is not None:
                     record[key] = value
 
+            del record["created_date"]
+            del record["rev"]
+            del record["updated_date"]
+            del record["version"]
+            del record["uploader"]
+            del record["form"]
+            del record["urls_metadata"]
+            del record["baseid"]
+            del record["size"]
+            del record["hashes"]
+            del record["did"]
+
+            logging.info(f"PUT-ing record: {record}")
+
+            # aiohttp only allows basic auth with their built in auth, so we
+            # need to manually add JWT auth header
+            headers = {"Authorization": self.client.auth._get_auth_value()}
+
             async with session.put(
-                f"{self.client.url}/index/{guid}/rev={revision}",
+                f"{self.client.url}/index/{guid}?rev={revision}",
                 json=record,
-                headers={"content-type": "application/json"},
+                headers=headers,
                 ssl=_ssl,
-                auth=self.client.auth,
             ) as response:
-                raise_for_status_and_print_error(response)
+                assert response.status == 200, await response.json()
                 response = await response.json()
 
         return response

@@ -508,30 +508,39 @@
                 <span class="n">urls</span> <span class="o">=</span> <span class="p">[]</span>
 
             <span class="n">json</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;urls&quot;</span><span class="p">:</span> <span class="n">urls</span><span class="p">,</span>
                 <span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;hashes&quot;</span><span class="p">:</span> <span class="n">hashes</span><span class="p">,</span>
                 <span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="n">size</span><span class="p">,</span>
-                <span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="n">file_name</span><span class="p">,</span>
-                <span class="s2">&quot;metadata&quot;</span><span class="p">:</span> <span class="n">metadata</span><span class="p">,</span>
-                <span class="s2">&quot;urls_metadata&quot;</span><span class="p">:</span> <span class="n">urls_metadata</span><span class="p">,</span>
-                <span class="s2">&quot;baseid&quot;</span><span class="p">:</span> <span class="n">baseid</span><span class="p">,</span>
-                <span class="s2">&quot;acl&quot;</span><span class="p">:</span> <span class="n">acl</span><span class="p">,</span>
-                <span class="s2">&quot;authz&quot;</span><span class="p">:</span> <span class="n">authz</span><span class="p">,</span>
-                <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="n">version</span><span class="p">,</span>
+                <span class="s2">&quot;urls&quot;</span><span class="p">:</span> <span class="n">urls</span> <span class="ow">or</span> <span class="p">[],</span>
             <span class="p">}</span>
-
             <span class="k">if</span> <span class="n">did</span><span class="p">:</span>
                 <span class="n">json</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">did</span>
+            <span class="k">if</span> <span class="n">file_name</span><span class="p">:</span>
+                <span class="n">json</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">file_name</span>
+            <span class="k">if</span> <span class="n">metadata</span><span class="p">:</span>
+                <span class="n">json</span><span class="p">[</span><span class="s2">&quot;metadata&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">metadata</span>
+            <span class="k">if</span> <span class="n">baseid</span><span class="p">:</span>
+                <span class="n">json</span><span class="p">[</span><span class="s2">&quot;baseid&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">baseid</span>
+            <span class="k">if</span> <span class="n">acl</span><span class="p">:</span>
+                <span class="n">json</span><span class="p">[</span><span class="s2">&quot;acl&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">acl</span>
+            <span class="k">if</span> <span class="n">urls_metadata</span><span class="p">:</span>
+                <span class="n">json</span><span class="p">[</span><span class="s2">&quot;urls_metadata&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">urls_metadata</span>
+            <span class="k">if</span> <span class="n">version</span><span class="p">:</span>
+                <span class="n">json</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">version</span>
+            <span class="k">if</span> <span class="n">authz</span><span class="p">:</span>
+                <span class="n">json</span><span class="p">[</span><span class="s2">&quot;authz&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">authz</span>
+
+            <span class="c1"># aiohttp only allows basic auth with their built in auth, so we</span>
+            <span class="c1"># need to manually add JWT auth header</span>
+            <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">_get_auth_value</span><span class="p">()}</span>
 
             <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">url</span><span class="si">}</span><span class="s2">/index/&quot;</span><span class="p">,</span>
                 <span class="n">json</span><span class="o">=</span><span class="n">json</span><span class="p">,</span>
-                <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;content-type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">},</span>
+                <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
                 <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span><span class="p">,</span>
-                <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">auth</span><span class="p">,</span>
             <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
-                <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+                <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="mi">200</span><span class="p">,</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
                 <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
 
         <span class="k">return</span> <span class="n">response</span></div>
@@ -750,6 +759,8 @@
         <span class="n">acl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">authz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">urls_metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Asynchronous function to update a record in indexd.</span>
@@ -771,21 +782,38 @@
                 <span class="s2">&quot;authz&quot;</span><span class="p">:</span> <span class="n">authz</span><span class="p">,</span>
                 <span class="s2">&quot;urls_metadata&quot;</span><span class="p">:</span> <span class="n">urls_metadata</span><span class="p">,</span>
             <span class="p">}</span>
-            <span class="n">record</span> <span class="o">=</span> <span class="k">await</span> <span class="n">async_get_record</span><span class="p">(</span><span class="n">guid</span><span class="p">)</span>
+            <span class="n">record</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_get_record</span><span class="p">(</span><span class="n">guid</span><span class="p">)</span>
             <span class="n">revision</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;rev&quot;</span><span class="p">)</span>
 
             <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">updatable_attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="n">record</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
 
+            <span class="k">del</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;created_date&quot;</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;rev&quot;</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;updated_date&quot;</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;uploader&quot;</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;form&quot;</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;urls_metadata&quot;</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;baseid&quot;</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;size&quot;</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;hashes&quot;</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">]</span>
+
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;PUT-ing record: </span><span class="si">{</span><span class="n">record</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="c1"># aiohttp only allows basic auth with their built in auth, so we</span>
+            <span class="c1"># need to manually add JWT auth header</span>
+            <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">_get_auth_value</span><span class="p">()}</span>
+
             <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">put</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">url</span><span class="si">}</span><span class="s2">/index/</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">/rev=</span><span class="si">{</span><span class="n">revision</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">url</span><span class="si">}</span><span class="s2">/index/</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">?rev=</span><span class="si">{</span><span class="n">revision</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
                 <span class="n">json</span><span class="o">=</span><span class="n">record</span><span class="p">,</span>
-                <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;content-type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">},</span>
+                <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
                 <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span><span class="p">,</span>
-                <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">auth</span><span class="p">,</span>
             <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
-                <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+                <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="mi">200</span><span class="p">,</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
                 <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
 
         <span class="k">return</span> <span class="n">response</span></div>

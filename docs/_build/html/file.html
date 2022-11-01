@@ -92,6 +92,20 @@ Delete all locations of a stored data file and remove its record from indexd</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="gen3.file.Gen3File.download_single">
+<span class="sig-name descname"><span class="pre">download_single</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.download_single"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.download_single" title="Permalink to this definition">¶</a></dt>
+<dd><p>Download a single file using its GUID.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>object_id</strong> (<em>str</em>) – The file’s unique ID</p></li>
+<li><p><strong>path</strong> (<em>str</em>) – Path to store the downloaded file at</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="gen3.file.Gen3File.get_presigned_url">
 <span class="sig-name descname"><span class="pre">get_presigned_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protocol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.get_presigned_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.get_presigned_url" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates a presigned URL for a file.</p>
@@ -199,6 +213,7 @@ This value will also be treated as &lt;= MAX_PRESIGNED_URL_TTL in the fence conf
 <li class="toctree-l2"><a class="reference internal" href="#gen3.file.Gen3File"><code class="docutils literal notranslate"><span class="pre">Gen3File</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.delete_file"><code class="docutils literal notranslate"><span class="pre">Gen3File.delete_file()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.delete_file_locations"><code class="docutils literal notranslate"><span class="pre">Gen3File.delete_file_locations()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.download_single"><code class="docutils literal notranslate"><span class="pre">Gen3File.download_single()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.get_presigned_url"><code class="docutils literal notranslate"><span class="pre">Gen3File.get_presigned_url()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.upload_file"><code class="docutils literal notranslate"><span class="pre">Gen3File.upload_file()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.upload_file_to_guid"><code class="docutils literal notranslate"><span class="pre">Gen3File.upload_file_to_guid()</span></code></a></li>
