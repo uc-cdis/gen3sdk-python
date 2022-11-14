@@ -3,7 +3,7 @@ import os
 import sys
 
 import cdislogging
-
+import pkg_resources
 import gen3.cli.auth as auth
 import gen3.cli.pfb as pfb
 import gen3.cli.wss as wss
@@ -67,6 +67,12 @@ class AuthFactory:
     is_flag=True,
     default=False,
     help="only show ERROR logs",
+)
+@click.version_option(
+    pkg_resources.get_distribution("gen3").version,
+    "--version",
+    is_flag=True,
+    help="Show Gen3 Version",
 )
 @click.pass_context
 def main(ctx, auth_config, endpoint, verbose_logs, very_verbose_logs, only_error_logs):
