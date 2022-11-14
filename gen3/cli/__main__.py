@@ -69,8 +69,7 @@ class AuthFactory:
     help="only show ERROR logs",
 )
 @click.version_option(
-    pkg_resources.get_distribution("gen3").version,
-    "--version",
+    version=pkg_resources.get_distribution("gen3").version,
     is_flag=True,
     help="Show Gen3 Version",
 )
