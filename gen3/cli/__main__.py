@@ -68,19 +68,28 @@ class AuthFactory:
     default=False,
     help="only show ERROR logs",
 )
-@click.version_option(
-    version=pkg_resources.get_distribution("gen3").version,
-    is_flag=True,
+@click.option(
+    "--version",
     help="Show Gen3 Version",
 )
 @click.pass_context
-def main(ctx, auth_config, endpoint, verbose_logs, very_verbose_logs, only_error_logs):
+def main(
+    ctx,
+    auth_config,
+    endpoint,
+    verbose_logs,
+    very_verbose_logs,
+    only_error_logs,
+    version,
+):
     """Gen3 Command Line Interface"""
     ctx.ensure_object(dict)
     ctx.obj["auth_config"] = auth_config
     ctx.obj["endpoint"] = endpoint
     ctx.obj["auth_factory"] = AuthFactory(auth_config)
 
+    if version:
+        click.echo(pkg_resources.get_distribution("gen3").version)
     if very_verbose_logs:
         logger = cdislogging.get_logger(
             __name__, format=gen3.LOG_FORMAT, log_level="debug"
