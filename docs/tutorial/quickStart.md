@@ -3,6 +3,7 @@
 * install the sdk: `pip install gen3`
 * for authenticated access to a commons - download an API key from the portal's Profile page, and save it as `~/.gen3/credentials.json`
 * write a script that uses the sdk (examples below)
+* function calls that are configred with a backoff are retried 3 times by default. The number of retries can be customized by setting the `GEN3SDK_MAX_RETRIES` environment variable
 
 ## Quickstart Example - Object Index
 
