@@ -347,19 +347,22 @@ class Gen3Auth(AuthBase):
             )
         else:
             self._access_token = get_access_token_with_key(self._refresh_token)
+
         self._access_token_info = decode_token(self._access_token)
+
+        cache_file = None
         if self._use_wts:
             cache_file = get_token_cache_file_name(self._wts_idp)
-        else:
-            if self._refresh_file:
-                cache_file = get_token_cache_file_name(self._refresh_token["api_key"])
+        elif self._refresh_file:
+            cache_file = get_token_cache_file_name(self._refresh_token["api_key"])
 
-        try:
-            self._write_to_file(cache_file, self._access_token)
-        except Exception as e:
-            logging.warning(
-                f"Unable to write access token to cache file. Exceeded number of retries."
-            )
+        if cache_file:
+            try:
+                self._write_to_file(cache_file, self._access_token)
+            except Exception as e:
+                logging.warning(
+                    f"Unable to write access token to cache file. Exceeded number of retries. Details: {e}"
+                )
 
         return self._access_token
 
