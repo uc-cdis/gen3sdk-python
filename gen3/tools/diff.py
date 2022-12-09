@@ -70,6 +70,7 @@ def manifest_diff(
             output_manifest=output_manifest,
             diff_content=diff_content,
         )
+
     except Exception as e:
         exc_info = sys.exc_info()
         traceback.print_exception(*exc_info)
@@ -140,6 +141,9 @@ def _precheck_manifests(
 
             content = {}
             for row in csv_reader:
+                for column in row:
+                    if column == "acl":
+                        row[column] = str(sorted(eval(row[column])))
                 content[row[key_column]] = row
 
             manifest_content.append(content)

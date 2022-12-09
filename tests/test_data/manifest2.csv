@@ -1,0 +1,4 @@
+guid,md5,size,authz,url
+255e396f-f1f8-11e9-9a07-0a80fada099c,473d83400bc1bc9dc635e334faddf33d,363455714,['Open'],['s3://pdcdatastore/test1.raw']
+255e396f-f1f8-11e9-9a07-0a80fada098d,473d83400bc1bc9dc635e334faddd33c,343434344,['Open'],['s3://pdcdatastore/test2.raw']
+255e396f-f1f8-11e9-9a07-0a80fada097c,473d83400bc1bc9dc635e334fadd433c,543434443,['phs0001'],['s3://pdcdatastore/test3.raw']
