@@ -148,13 +148,14 @@ def _precheck_manifests(
                     content[row[key_column]] = row
 
                 manifest_content.append(content)
+
+        return {
+            "csvdict": manifest_content,
+            "headers": [x for x in headers[0] if x in headers[1]],
+        }
+
     except Exception as e:
         print(e)
-
-    return {
-        "csvdict": manifest_content,
-        "headers": [x for x in headers[0] if x in headers[1]],
-    }
 
 
 def _compare_manifest_columns(
