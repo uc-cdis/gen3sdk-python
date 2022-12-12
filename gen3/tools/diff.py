@@ -122,7 +122,7 @@ def _precheck_manifests(
         elif len(csv_files) == len(files):
             file_delimiter = ","
         else:
-            raise Exception("Not all files have the same extension type")
+            sys.exit("Not all files have the same extension type")
 
         headers = []
         manifest_content = []
