@@ -109,44 +109,47 @@ def _precheck_manifests(
         }
     """
 
-    logging.info(f"Prechecking manifest files: {files}")
+    try:
+        logging.info(f"Prechecking manifest files: {files}")
 
-    if not len(files) == 2:
-        raise Exception("Must take difference of two files")
+        if not len(files) == 2:
+            raise Exception("Must take difference of two files")
 
-    tsv_files = [file_name for file_name in files if ".tsv" in file_name.lower()]
-    csv_files = [file_name for file_name in files if ".csv" in file_name.lower()]
-    if len(tsv_files) == len(files):
-        file_delimiter = "\t"
-    elif len(csv_files) == len(files):
-        file_delimiter = ","
-    else:
-        raise Exception("Not all files have the same extension type")
+        tsv_files = [file_name for file_name in files if ".tsv" in file_name.lower()]
+        csv_files = [file_name for file_name in files if ".csv" in file_name.lower()]
+        if len(tsv_files) == len(files):
+            file_delimiter = "\t"
+        elif len(csv_files) == len(files):
+            file_delimiter = ","
+        else:
+            raise Exception("Not all files have the same extension type")
 
-    headers = []
-    manifest_content = []
-    for manifest in files:
-        with open(manifest, "r", encoding="utf-8-sig") as csvfile:
-            csv_reader = csv.DictReader(csvfile, delimiter=file_delimiter)
+        headers = []
+        manifest_content = []
+        for manifest in files:
+            with open(manifest, "r", encoding="utf-8-sig") as csvfile:
+                csv_reader = csv.DictReader(csvfile, delimiter=file_delimiter)
 
-            field_names = csv_reader.fieldnames
-            logging.debug(f"Field names from {manifest}: {field_names}")
-            headers.append(field_names)
-            if len(headers) == 2:
-                if not allow_additional_columns:
-                    if not headers[0] == headers[1]:
-                        raise Exception(
-                            f"Headers are not the same among manifests. {set(headers[1]) ^ set(headers[0])}"
-                        )
+                field_names = csv_reader.fieldnames
+                logging.debug(f"Field names from {manifest}: {field_names}")
+                headers.append(field_names)
+                if len(headers) == 2:
+                    if not allow_additional_columns:
+                        if not headers[0] == headers[1]:
+                            raise Exception(
+                                f"Headers are not the same among manifests. {set(headers[1]) ^ set(headers[0])}"
+                            )
 
-            content = {}
-            for row in csv_reader:
-                for column in row:
-                    if column == "acl":
-                        row[column] = str(sorted(eval(row[column])))
-                content[row[key_column]] = row
+                content = {}
+                for row in csv_reader:
+                    for column in row:
+                        if column == "acl":
+                            row[column] = str(sorted(eval(row[column])))
+                    content[row[key_column]] = row
 
-            manifest_content.append(content)
+                manifest_content.append(content)
+    except Exception as e:
+        print(e)
 
     return {
         "csvdict": manifest_content,
