@@ -78,7 +78,7 @@ def test_file_input_mismatch():
     Test for fail due to different file types.
     """
 
-    with pytest.raises(Exception):
+    with pytest.raises(SystemExit):
         manifest_diff(
             files=[
                 "tests/test_data/manifest1.csv",
