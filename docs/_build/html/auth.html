@@ -84,7 +84,10 @@ constructor.</p>
 <p>If working with an OIDC client that has the ‘client_credentials’ grant, allowing it to obtain
 access tokens, provide the client ID and secret:</p>
 <p>Note: client secrets should never be hardcoded!</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">client_credentials</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;client ID&quot;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;GEN3_OIDC_CLIENT_CREDS_SECRET&quot;</span><span class="p">]))</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span>
+<span class="go">    endpoint=&quot;https://datacommons.example&quot;,</span>
+<span class="go">    client_credentials=(&quot;client ID&quot;, os.environ[&quot;GEN3_OIDC_CLIENT_CREDS_SECRET&quot;])</span>
+<span class="go">)</span>
 </pre></div>
 </div>
 <p>If working in a Gen3 Workspace, initialize as follows:</p>

@@ -201,7 +201,10 @@
 
 <span class="sd">        Note: client secrets should never be hardcoded!</span>
 
-<span class="sd">        &gt;&gt;&gt; auth = Gen3Auth(client_credentials=(&quot;client ID&quot;, os.environ[&quot;GEN3_OIDC_CLIENT_CREDS_SECRET&quot;]))</span>
+<span class="sd">        &gt;&gt;&gt; auth = Gen3Auth(</span>
+<span class="sd">            endpoint=&quot;https://datacommons.example&quot;,</span>
+<span class="sd">            client_credentials=(&quot;client ID&quot;, os.environ[&quot;GEN3_OIDC_CLIENT_CREDS_SECRET&quot;])</span>
+<span class="sd">        )</span>
 
 <span class="sd">        If working in a Gen3 Workspace, initialize as follows:</span>
 
