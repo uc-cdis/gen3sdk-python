@@ -46,7 +46,7 @@ def endpoint_from_token(token_str):
     endpoint = urlparts.scheme + "://" + urlparts.hostname
     if urlparts.port:
         endpoint += ":" + str(urlparts.port)
-    return endpoint
+    return remove_trailing_whitespace_and_slashes_in_url(endpoint)
 
 
 def _handle_access_token_response(resp, token_key):
@@ -75,6 +75,22 @@ def get_access_token_with_key(api_key):
     resp = requests.post(auth_url, json=api_key)
     token_key = "access_token"
     return _handle_access_token_response(resp, token_key)
+
+
+def get_access_token_with_client_credentials(endpoint, client_credentials, scopes):
+    """
+    Try to get an access token from Fence using client credentials
+
+    Args:
+        endpoint (str): URL of the Gen3 instance to get an access token for
+        client_credentials ((str, str) tuple): (client ID, client secret) tuple
+        scopes (str): space-delimited list of scopes to request
+    """
+    if not endpoint:
+        raise ValueError("'endpoint' must be specified when using client credentials")
+    url = f"{endpoint}/user/oauth2/token?grant_type=client_credentials&scope={scopes}"
+    resp = requests.post(url, auth=client_credentials)
+    return _handle_access_token_response(resp, "access_token")
 
 
 def get_wts_endpoint(namespace=os.getenv("NAMESPACE", "default")):
@@ -121,6 +137,10 @@ class Gen3Auth(AuthBase):
         refresh_token (str, opt): The JSON web token. Optional if working in a Gen3 Workspace.
         idp (str, opt): If working in a Gen3 Workspace, the IDP to use can be specified -
                 "local" indicates the local environment fence idp
+        client_credentials (tuple, opt): The (client_id, client_secret) credentials for an OIDC client
+                that has the 'client_credentials' grant, allowing it to obtain access tokens.
+        client_scopes (str, opt): Space-separated list of scopes requested for access tokens obtained from client
+                credentials. Default: "user data openid"
 
     Examples:
         This generates the Gen3Auth class pointed at the sandbox commons while
@@ -141,13 +161,32 @@ class Gen3Auth(AuthBase):
         than pass the refresh_file argument to the Gen3Auth
         constructor.
 
+        If working with an OIDC client that has the 'client_credentials' grant, allowing it to obtain
+        access tokens, provide the client ID and secret:
+
+        Note: client secrets should never be hardcoded!
+
+        >>> auth = Gen3Auth(
+            endpoint="https://datacommons.example",
+            client_credentials=("client ID", os.environ["GEN3_OIDC_CLIENT_CREDS_SECRET"])
+        )
+
         If working in a Gen3 Workspace, initialize as follows:
 
         >>> auth = Gen3Auth()
     """
 
-    def __init__(self, endpoint=None, refresh_file=None, refresh_token=None, idp=None):
-        # note - this is not actually a JWT refresh token - it's a
+    def __init__(
+        self,
+        endpoint=None,
+        refresh_file=None,
+        refresh_token=None,
+        idp=None,
+        client_credentials=None,
+        client_scopes=None,
+    ):
+        self.endpoint = remove_trailing_whitespace_and_slashes_in_url(endpoint)
+        # note - `_refresh_token` is not actually a JWT refresh token - it's a
         #  gen3 api key with a token as the "api_key" property
         self._refresh_token = refresh_token
         self._access_token = None
@@ -157,6 +196,13 @@ class Gen3Auth(AuthBase):
         self._use_wts = False
         self._external_wts_host = None
         self._refresh_file = refresh_file
+        self._client_credentials = client_credentials
+        if self._client_credentials:
+            self._client_scopes = client_scopes or "user data openid"
+        elif client_scopes:
+            raise ValueError(
+                "'client_scopes' cannot be specified without 'client_credentials'"
+            )
 
         if refresh_file and refresh_token:
             raise ValueError(
@@ -192,6 +238,15 @@ class Gen3Auth(AuthBase):
                 if not os.path.isfile(refresh_file):
                     logging.warning("Unable to find refresh_file")
                     refresh_file = None
+
+        if self._client_credentials:
+            if not endpoint:
+                raise ValueError(
+                    "'endpoint' must be specified when '_client_credentials' is specified"
+                )
+            self._access_token = get_access_token_with_client_credentials(
+                endpoint, self._client_credentials, self._client_scopes
+            )
 
         if not self._access_token:
             # at this point - refresh_file either exists or is None
@@ -230,18 +285,18 @@ class Gen3Auth(AuthBase):
                             endpoint_from_token(self._refresh_token["api_key"])
                             + "/wts/"
                         )
-                        self.get_access_token(
-                            remove_trailing_whitespace_and_slashes_in_url(endpoint)
-                        )
+                        self.get_access_token()
                     except Gen3AuthError as g:
                         logging.warning(
                             "Could not obtain access token from WTS service."
                         )
                         raise g
-        if self._access_token:
-            self.endpoint = endpoint_from_token(self._access_token)
-        else:
-            self.endpoint = endpoint_from_token(self._refresh_token["api_key"])
+
+        if not self.endpoint:
+            if self._access_token:
+                self.endpoint = endpoint_from_token(self._access_token)
+            else:
+                self.endpoint = endpoint_from_token(self._refresh_token["api_key"])
 
     @property
     def _token_info(self):
@@ -300,21 +355,28 @@ class Gen3Auth(AuthBase):
         """Get a new access token"""
         if self._use_wts:
             self._access_token = self.get_access_token_from_wts(endpoint)
+        elif self._client_credentials:
+            self._access_token = get_access_token_with_client_credentials(
+                endpoint, self._client_credentials, self._client_scopes
+            )
         else:
             self._access_token = get_access_token_with_key(self._refresh_token)
+
         self._access_token_info = decode_token(self._access_token)
+
+        cache_file = None
         if self._use_wts:
             cache_file = get_token_cache_file_name(self._wts_idp)
-        else:
-            if self._refresh_file:
-                cache_file = get_token_cache_file_name(self._refresh_token["api_key"])
+        elif self._refresh_file:
+            cache_file = get_token_cache_file_name(self._refresh_token["api_key"])
 
-        try:
-            self._write_to_file(cache_file, self._access_token)
-        except Exception as e:
-            logging.warning(
-                f"Unable to write access token to cache file. Exceeded number of retries."
-            )
+        if cache_file:
+            try:
+                self._write_to_file(cache_file, self._access_token)
+            except Exception as e:
+                logging.warning(
+                    f"Unable to write access token to cache file. Exceeded number of retries. Details: {e}"
+                )
 
         return self._access_token
 
@@ -337,7 +399,7 @@ class Gen3Auth(AuthBase):
             logging.warning(str(e))
             raise e
 
-    def get_access_token(self, endpoint=None):
+    def get_access_token(self):
         """Get the access token - auto refresh if within 5 minutes of expiration"""
         if not self._access_token:
             if self._use_wts == True:
@@ -364,7 +426,9 @@ class Gen3Auth(AuthBase):
             or time.time() + 300 > self._access_token_info["exp"]
         )
         if need_new_token:
-            return self.refresh_access_token(endpoint)
+            return self.refresh_access_token(
+                self.endpoint if hasattr(self, "endpoint") else None
+            )
         # use cache
         return self._access_token
 
@@ -451,6 +515,10 @@ class Gen3Auth(AuthBase):
                     lambda provider: provider["base_url"] == endpoint,
                     provider_List["providers"],
                 )
+            )
+        else:
+            raise Exception(
+                "Unable to generate matching identity providers (no IdP or endpoint provided)"
             )
 
         if len(matchProviders) == 1:
