@@ -166,7 +166,10 @@ class Gen3Auth(AuthBase):
 
         Note: client secrets should never be hardcoded!
 
-        >>> auth = Gen3Auth(client_credentials=("client ID", os.environ["GEN3_OIDC_CLIENT_CREDS_SECRET"]))
+        >>> auth = Gen3Auth(
+            endpoint="https://datacommons.example",
+            client_credentials=("client ID", os.environ["GEN3_OIDC_CLIENT_CREDS_SECRET"])
+        )
 
         If working in a Gen3 Workspace, initialize as follows:
 
