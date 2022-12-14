@@ -78,6 +78,14 @@ def get_access_token_with_key(api_key):
 
 
 def get_access_token_with_client_credentials(endpoint, client_credentials, scopes):
+    """
+    Try to get an access token from Fence using client credentials
+
+    Args:
+        endpoint (str): URL of the Gen3 instance to get an access token for
+        client_credentials ((str, str) tuple): (client ID, client secret) tuple
+        scopes (str): space-delimited list of scopes to request
+    """
     if not endpoint:
         raise ValueError("'endpoint' must be specified when using client credentials")
     url = f"{endpoint}/user/oauth2/token?grant_type=client_credentials&scope={scopes}"
@@ -153,9 +161,12 @@ class Gen3Auth(AuthBase):
         than pass the refresh_file argument to the Gen3Auth
         constructor.
 
-        If working with an OIDC client that has the 'client_credentials' grant, allowing it to obtain access tokens:
+        If working with an OIDC client that has the 'client_credentials' grant, allowing it to obtain
+        access tokens, provide the client ID and secret:
 
-        >>> auth = Gen3Auth(client_credentials=("client ID", "client secret"))
+        Note: client secrets should never be hardcoded!
+
+        >>> auth = Gen3Auth(client_credentials=("client ID", os.environ["GEN3_OIDC_CLIENT_CREDS_SECRET"]))
 
         If working in a Gen3 Workspace, initialize as follows:
 
@@ -171,9 +182,9 @@ class Gen3Auth(AuthBase):
         client_credentials=None,
         client_scopes=None,
     ):
-        # note - this is not actually a JWT refresh token - it's a
-        #  gen3 api key with a token as the "api_key" property
         self.endpoint = remove_trailing_whitespace_and_slashes_in_url(endpoint)
+        # note - `_refresh_token` is not actually a JWT refresh token - it's a
+        #  gen3 api key with a token as the "api_key" property
         self._refresh_token = refresh_token
         self._access_token = None
         self._access_token_info = None
@@ -503,7 +514,9 @@ class Gen3Auth(AuthBase):
                 )
             )
         else:
-            raise Exception("Unable to generate match providers")
+            raise Exception(
+                "Unable to generate matching identity providers (no IdP or endpoint provided)"
+            )
 
         if len(matchProviders) == 1:
             self._wts_idp = matchProviders[0]["idp"]

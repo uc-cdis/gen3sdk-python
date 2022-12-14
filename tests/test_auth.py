@@ -521,8 +521,7 @@ def test_auth_init_with_endpoint_and_external_wts():
 
 def test_auth_init_with_client_credentials():
     """
-    Test that a Gen3Auth instance can be initialized when the
-    required parameters are included.
+    Test that a Gen3Auth instance can be initialized with client credentials and an endpoint.
     """
     client_id = "id"
     client_secret = "secret"
@@ -545,3 +544,13 @@ def test_auth_init_with_client_credentials():
     assert auth._client_scopes == "user data openid"
     assert auth._use_wts == False
     assert auth._access_token == test_access_token["access_token"]
+
+
+def test_auth_init_with_client_credentials_no_endpoint():
+    """
+    Test that a Gen3Auth instance CANNOT be initialized with client credentials and NO endpoint.
+    """
+    client_id = "id"
+    client_secret = "secret"
+    with pytest.raises(ValueError, match="'endpoint' must be specified"):
+        gen3.auth.Gen3Auth(client_credentials=(client_id, client_secret))
