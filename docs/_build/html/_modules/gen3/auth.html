@@ -113,6 +113,14 @@
 
 
 <span class="k">def</span> <span class="nf">get_access_token_with_client_credentials</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">client_credentials</span><span class="p">,</span> <span class="n">scopes</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Try to get an access token from Fence using client credentials</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        endpoint (str): URL of the Gen3 instance to get an access token for</span>
+<span class="sd">        client_credentials ((str, str) tuple): (client ID, client secret) tuple</span>
+<span class="sd">        scopes (str): space-delimited list of scopes to request</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">endpoint</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;endpoint&#39; must be specified when using client credentials&quot;</span><span class="p">)</span>
     <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">endpoint</span><span class="si">}</span><span class="s2">/user/oauth2/token?grant_type=client_credentials&amp;scope=</span><span class="si">{</span><span class="n">scopes</span><span class="si">}</span><span class="s2">&quot;</span>
@@ -188,9 +196,12 @@
 <span class="sd">        than pass the refresh_file argument to the Gen3Auth</span>
 <span class="sd">        constructor.</span>
 
-<span class="sd">        If working with an OIDC client that has the &#39;client_credentials&#39; grant, allowing it to obtain access tokens:</span>
+<span class="sd">        If working with an OIDC client that has the &#39;client_credentials&#39; grant, allowing it to obtain</span>
+<span class="sd">        access tokens, provide the client ID and secret:</span>
 
-<span class="sd">        &gt;&gt;&gt; auth = Gen3Auth(client_credentials=(&quot;client ID&quot;, &quot;client secret&quot;))</span>
+<span class="sd">        Note: client secrets should never be hardcoded!</span>
+
+<span class="sd">        &gt;&gt;&gt; auth = Gen3Auth(client_credentials=(&quot;client ID&quot;, os.environ[&quot;GEN3_OIDC_CLIENT_CREDS_SECRET&quot;]))</span>
 
 <span class="sd">        If working in a Gen3 Workspace, initialize as follows:</span>
 
@@ -206,9 +217,9 @@
         <span class="n">client_credentials</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">client_scopes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
-        <span class="c1"># note - this is not actually a JWT refresh token - it&#39;s a</span>
-        <span class="c1">#  gen3 api key with a token as the &quot;api_key&quot; property</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">=</span> <span class="n">remove_trailing_whitespace_and_slashes_in_url</span><span class="p">(</span><span class="n">endpoint</span><span class="p">)</span>
+        <span class="c1"># note - `_refresh_token` is not actually a JWT refresh token - it&#39;s a</span>
+        <span class="c1">#  gen3 api key with a token as the &quot;api_key&quot; property</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span> <span class="o">=</span> <span class="n">refresh_token</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_access_token_info</span> <span class="o">=</span> <span class="kc">None</span>
@@ -538,7 +549,9 @@
                 <span class="p">)</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Unable to generate match providers&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                <span class="s2">&quot;Unable to generate matching identity providers (no IdP or endpoint provided)&quot;</span>
+            <span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">matchProviders</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span> <span class="o">=</span> <span class="n">matchProviders</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;idp&quot;</span><span class="p">]</span>
