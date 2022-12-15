@@ -734,7 +734,7 @@ def get_download_url_using_drs(
         logger.critical(f"Was unable to download: {object_id}. Timeout Error.")
     except requests.exceptions.HTTPError as exc:
         logger.critical(
-            f"HTTP Error ({exc.response.status_code}): requesting download url from {access_method}"
+            f"HTTP Error ({exc.response.status_code}) when requesting download url from {access_method}"
         )
     return None
 
