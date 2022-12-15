@@ -68,7 +68,7 @@ class Gen3File:
         raise_for_status_and_print_error(resp)
 
         try:
-            return resp.json
+            return resp.json()
         except:
             return resp.text
 
