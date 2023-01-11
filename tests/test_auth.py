@@ -517,3 +517,40 @@ def test_auth_init_with_endpoint_and_external_wts():
 
             if os.path.isfile(test_cred_file_name):
                 os.remove(test_cred_file_name)
+
+
+def test_auth_init_with_client_credentials():
+    """
+    Test that a Gen3Auth instance can be initialized with client credentials and an endpoint.
+    """
+    client_id = "id"
+    client_secret = "secret"
+
+    def _mock_request(url, **kwargs):
+        mocked_response = MagicMock(requests.Response)
+        if "/user/oauth2/token" in url:
+            mocked_response.status_code = 200
+            mocked_response.json.return_value = test_access_token
+        return mocked_response
+
+    with patch("gen3.auth.requests.post") as mock_request_post:
+        mock_request_post.side_effect = _mock_request
+        auth = gen3.auth.Gen3Auth(
+            endpoint=test_endpoint, client_credentials=(client_id, client_secret)
+        )
+
+    assert auth.endpoint == test_endpoint
+    assert auth._client_credentials == (client_id, client_secret)
+    assert auth._client_scopes == "user data openid"
+    assert auth._use_wts == False
+    assert auth._access_token == test_access_token["access_token"]
+
+
+def test_auth_init_with_client_credentials_no_endpoint():
+    """
+    Test that a Gen3Auth instance CANNOT be initialized with client credentials and NO endpoint.
+    """
+    client_id = "id"
+    client_secret = "secret"
+    with pytest.raises(ValueError, match="'endpoint' must be specified"):
+        gen3.auth.Gen3Auth(client_credentials=(client_id, client_secret))
