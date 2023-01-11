@@ -78,13 +78,30 @@ def test_file_input_mismatch():
     Test for fail due to different file types.
     """
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(ValueError):
         manifest_diff(
             files=[
                 "tests/test_data/manifest1.csv",
                 "tests/test_data/diff_manifests/manifest3.tsv",
             ],
         )
+
+
+def test_no_diff():
+    """
+    Test for an empty diff.
+    """
+
+    manifest_diff(
+        files=[f"{cwd}/test_data/manifest1.csv", f"{cwd}/test_data/manifest1.csv"],
+        output_manifest=f"{cwd}/test_data/manifest_diff3.csv",
+        key_column="guid",
+    )
+
+    assert check_diff(
+        file=f"{cwd}/test_data/manifest_diff3.tsv",
+        expected={},
+    )
 
 
 def check_diff(

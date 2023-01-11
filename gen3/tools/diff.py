@@ -113,7 +113,9 @@ def _precheck_manifests(
         logging.info(f"Prechecking manifest files: {files}")
 
         if not len(files) == 2:
-            raise Exception("Must take difference of two files")
+            raise Exception(
+                "Must take difference of two files, check dir for hidden files"
+            )
 
         tsv_files = [file_name for file_name in files if ".tsv" in file_name.lower()]
         csv_files = [file_name for file_name in files if ".csv" in file_name.lower()]
@@ -122,7 +124,7 @@ def _precheck_manifests(
         elif len(csv_files) == len(files):
             file_delimiter = ","
         else:
-            sys.exit("Not all files have the same extension type")
+            raise ValueError("Not all files have the same extension type")
 
         headers = []
         manifest_content = []
@@ -155,7 +157,7 @@ def _precheck_manifests(
         }
 
     except Exception as e:
-        print(e)
+        return e
 
 
 def _compare_manifest_columns(
