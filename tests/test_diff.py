@@ -99,7 +99,7 @@ def test_no_diff():
     )
 
     assert check_diff(
-        file=f"{cwd}/test_data/manifest_diff3.tsv",
+        file=f"{cwd}/test_data/manifest_diff3.csv",
         expected={},
     )
 
