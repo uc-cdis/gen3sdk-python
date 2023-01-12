@@ -53,29 +53,22 @@ def manifest_diff(
 
     files.sort()
 
-    try:
-        content = _precheck_manifests(
-            allow_additional_columns=allow_additional_columns,
-            files=files,
-            key_column=key_column,
-        )
+    content = _precheck_manifests(
+        allow_additional_columns=allow_additional_columns,
+        files=files,
+        key_column=key_column,
+    )
 
-        diff_content = _compare_manifest_columns(
-            allow_additional_columns=allow_additional_columns,
-            manifest_content=content,
-        )
+    diff_content = _compare_manifest_columns(
+        allow_additional_columns=allow_additional_columns,
+        manifest_content=content,
+    )
 
-        _write_csv(
-            output_manifest_file_delimiter=output_manifest_file_delimiter,
-            output_manifest=output_manifest,
-            diff_content=diff_content,
-        )
-
-    except Exception as e:
-        exc_info = sys.exc_info()
-        traceback.print_exception(*exc_info)
-        logging.error("Detail {}", e)
-        return None
+    _write_csv(
+        output_manifest_file_delimiter=output_manifest_file_delimiter,
+        output_manifest=output_manifest,
+        diff_content=diff_content,
+    )
 
 
 def _precheck_manifests(
