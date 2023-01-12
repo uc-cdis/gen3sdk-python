@@ -121,7 +121,7 @@ def check_diff(
     equivalent = True
     with open(file, "r", encoding="utf-8-sig") as csvfile:
         file_reader = csv.DictReader(csvfile, delimiter=file_delimiter)
-        next(file_reader)
+        next(file_reader, [])
 
         for row in file_reader:
             diff_guid = row["guid"]
