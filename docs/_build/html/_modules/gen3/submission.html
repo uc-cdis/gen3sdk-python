@@ -9,9 +9,6 @@
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css" />
     <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-    <script src="../../_static/jquery.js"></script>
-    <script src="../../_static/underscore.js"></script>
-    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../_static/doctools.js"></script>
     <script src="../../_static/sphinx_highlight.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -58,7 +55,7 @@
 
 
 <div class="viewcode-block" id="Gen3Submission"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission">[docs]</a><span class="k">class</span> <span class="nc">Gen3Submission</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Submit/Export/Query data from a Gen3 Submission system.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Submit/Export/Query data from a Gen3 Submission system.</span>
 
 <span class="sd">    A class for interacting with the Gen3 submission services.</span>
 <span class="sd">    Supports submitting and exporting from Sheepdog.</span>
@@ -82,7 +79,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">endpoint</span>
 
     <span class="k">def</span> <span class="nf">__export_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">output</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Writes an API response to a file.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Writes an API response to a file.&quot;&quot;&quot;</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
             <span class="n">outfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Output written to file: &quot;</span> <span class="o">+</span> <span class="n">filename</span><span class="p">)</span>
@@ -90,14 +87,14 @@
     <span class="c1">### Program functions</span>
 
 <div class="viewcode-block" id="Gen3Submission.get_programs"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.get_programs">[docs]</a>    <span class="k">def</span> <span class="nf">get_programs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;List registered programs&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List registered programs&quot;&quot;&quot;</span>
         <span class="n">api_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="si">}</span><span class="s2">/api/v0/submission/&quot;</span>
         <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
         <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Gen3Submission.create_program"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.create_program">[docs]</a>    <span class="k">def</span> <span class="nf">create_program</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">json</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Create a program.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a program.</span>
 <span class="sd">        Args:</span>
 <span class="sd">            json (object): The json of the program to create</span>
 
@@ -112,7 +109,7 @@
         <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Gen3Submission.delete_program"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.delete_program">[docs]</a>    <span class="k">def</span> <span class="nf">delete_program</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Delete a program.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Delete a program.</span>
 
 <span class="sd">        This deletes an empty program from the commons.</span>
 
@@ -133,7 +130,7 @@
     <span class="c1">### Project functions</span>
 
 <div class="viewcode-block" id="Gen3Submission.get_projects"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.get_projects">[docs]</a>    <span class="k">def</span> <span class="nf">get_projects</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;List registered projects for a given program</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List registered projects for a given program</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            program: the name of the program you want the projects from</span>
@@ -150,7 +147,7 @@
         <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Gen3Submission.create_project"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.create_project">[docs]</a>    <span class="k">def</span> <span class="nf">create_project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">json</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Create a project.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a project.</span>
 <span class="sd">        Args:</span>
 <span class="sd">            program (str): The program to create a project on</span>
 <span class="sd">            json (object): The json of the project to create</span>
@@ -166,7 +163,7 @@
         <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Gen3Submission.delete_project"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.delete_project">[docs]</a>    <span class="k">def</span> <span class="nf">delete_project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Delete a project.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Delete a project.</span>
 
 <span class="sd">        This deletes an empty project from the commons.</span>
 
@@ -186,7 +183,7 @@
         <span class="k">return</span> <span class="n">output</span></div>
 
 <div class="viewcode-block" id="Gen3Submission.get_project_dictionary"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.get_project_dictionary">[docs]</a>    <span class="k">def</span> <span class="nf">get_project_dictionary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Get dictionary schema for a given project</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get dictionary schema for a given project</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            program: the name of the program the project is from</span>
@@ -203,7 +200,7 @@
         <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Gen3Submission.open_project"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.open_project">[docs]</a>    <span class="k">def</span> <span class="nf">open_project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Mark a project ``open``. Opening a project means uploads, deletions, etc. are allowed.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Mark a project ``open``. Opening a project means uploads, deletions, etc. are allowed.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            program: the name of the program the project is from</span>
@@ -222,7 +219,7 @@
     <span class="c1">### Record functions</span>
 
 <div class="viewcode-block" id="Gen3Submission.submit_record"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.submit_record">[docs]</a>    <span class="k">def</span> <span class="nf">submit_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">json</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Submit record(s) to a project as json.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Submit record(s) to a project as json.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            program (str): The program to submit to.</span>
@@ -243,7 +240,7 @@
         <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Gen3Submission.delete_record"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.delete_record">[docs]</a>    <span class="k">def</span> <span class="nf">delete_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">uuid</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Delete a record from a project.</span>
 
 <span class="sd">        Args:</span>
@@ -259,7 +256,7 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">delete_records</span><span class="p">(</span><span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="p">[</span><span class="n">uuid</span><span class="p">])</span></div>
 
 <div class="viewcode-block" id="Gen3Submission.delete_records"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.delete_records">[docs]</a>    <span class="k">def</span> <span class="nf">delete_records</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">uuids</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Delete a list of records from a project.</span>
 
 <span class="sd">        Args:</span>
@@ -296,7 +293,7 @@
         <span class="k">return</span> <span class="n">output</span></div>
 
 <div class="viewcode-block" id="Gen3Submission.delete_node"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.delete_node">[docs]</a>    <span class="k">def</span> <span class="nf">delete_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">node_name</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Delete all records for a node from a project.</span>
 
 <span class="sd">        Args:</span>
@@ -318,7 +315,7 @@
 <div class="viewcode-block" id="Gen3Submission.delete_nodes"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.delete_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">delete_nodes</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">ordered_node_list</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span>
     <span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Delete all records for a list of nodes from a project.</span>
 
 <span class="sd">        Args:</span>
@@ -339,10 +336,10 @@
                 <span class="nb">print</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="n">first_uuid</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
             <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-                <span class="n">query_string</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span><span class="se">{{</span><span class="s2"></span>
-<span class="s2">                    </span><span class="si">{</span><span class="n">node</span><span class="si">}</span><span class="s2"> (first: </span><span class="si">{</span><span class="n">batch_size</span><span class="si">}</span><span class="s2">, project_id: &quot;</span><span class="si">{</span><span class="n">project_id</span><span class="si">}</span><span class="s2">&quot;) </span><span class="se">{{</span><span class="s2"></span>
+                <span class="n">query_string</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span><span class="se">{{</span>
+<span class="s2">                    </span><span class="si">{</span><span class="n">node</span><span class="si">}</span><span class="s2"> (first: </span><span class="si">{</span><span class="n">batch_size</span><span class="si">}</span><span class="s2">, project_id: &quot;</span><span class="si">{</span><span class="n">project_id</span><span class="si">}</span><span class="s2">&quot;) </span><span class="se">{{</span>
 <span class="s2">                        id</span>
-<span class="s2">                    </span><span class="se">}}</span><span class="s2"></span>
+<span class="s2">                    </span><span class="se">}}</span>
 <span class="s2">                </span><span class="se">}}</span><span class="s2">&quot;&quot;&quot;</span>
                 <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">query_string</span><span class="p">)</span>
                 <span class="n">uuids</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">res</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">][</span><span class="n">node</span><span class="p">]]</span>
@@ -358,7 +355,7 @@
                 <span class="nb">print</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Gen3Submission.export_record"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.export_record">[docs]</a>    <span class="k">def</span> <span class="nf">export_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">uuid</span><span class="p">,</span> <span class="n">fileformat</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Export a single record into json.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Export a single record into json.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            program (str): The program the record is under.</span>
@@ -394,7 +391,7 @@
             <span class="k">return</span> <span class="n">output</span></div>
 
 <div class="viewcode-block" id="Gen3Submission.export_node"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.export_node">[docs]</a>    <span class="k">def</span> <span class="nf">export_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">node_type</span><span class="p">,</span> <span class="n">fileformat</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Export all records in a single node type of a project.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Export all records in a single node type of a project.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            program (str): The program to which records belong.</span>
@@ -432,7 +429,7 @@
     <span class="c1">### Query functions</span>
 
 <div class="viewcode-block" id="Gen3Submission.query"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.query">[docs]</a>    <span class="k">def</span> <span class="nf">query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query_txt</span><span class="p">,</span> <span class="n">variables</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_tries</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Execute a GraphQL query against a Data Commons.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Execute a GraphQL query against a Data Commons.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            query_txt (str): Query text.</span>
@@ -470,7 +467,7 @@
         <span class="k">return</span> <span class="n">data</span></div>
 
 <div class="viewcode-block" id="Gen3Submission.get_graphql_schema"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.get_graphql_schema">[docs]</a>    <span class="k">def</span> <span class="nf">get_graphql_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Returns the GraphQL schema for a commons.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the GraphQL schema for a commons.</span>
 
 <span class="sd">        This runs the GraphQL introspection query against a commons and returns the results.</span>
 
@@ -488,7 +485,7 @@
     <span class="c1">### Dictionary functions</span>
 
 <div class="viewcode-block" id="Gen3Submission.get_dictionary_node"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.get_dictionary_node">[docs]</a>    <span class="k">def</span> <span class="nf">get_dictionary_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_type</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Returns the dictionary schema for a specific node.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the dictionary schema for a specific node.</span>
 
 <span class="sd">        This gets the current json dictionary schema for a specific node type in a commons.</span>
 
@@ -509,7 +506,7 @@
         <span class="k">return</span> <span class="n">data</span></div>
 
 <div class="viewcode-block" id="Gen3Submission.get_dictionary_all"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.get_dictionary_all">[docs]</a>    <span class="k">def</span> <span class="nf">get_dictionary_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Returns the entire dictionary object for a commons.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the entire dictionary object for a commons.</span>
 
 <span class="sd">        This gets a json of the current dictionary schema for a commons.</span>
 
@@ -524,7 +521,7 @@
     <span class="c1">### File functions</span>
 
 <div class="viewcode-block" id="Gen3Submission.get_project_manifest"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.get_project_manifest">[docs]</a>    <span class="k">def</span> <span class="nf">get_project_manifest</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Get a projects file manifest</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get a projects file manifest</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            program: the name of the program the project is from</span>
@@ -540,7 +537,7 @@
         <span class="k">return</span> <span class="n">output</span></div>
 
 <div class="viewcode-block" id="Gen3Submission.submit_file"><a class="viewcode-back" href="../../submission.html#gen3.submission.Gen3Submission.submit_file">[docs]</a>    <span class="k">def</span> <span class="nf">submit_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">project_id</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">row_offset</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            project_id (str): The project_id to submit to.</span>
