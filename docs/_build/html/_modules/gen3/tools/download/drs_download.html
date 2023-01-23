@@ -9,9 +9,6 @@
     <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/alabaster.css" />
     <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
-    <script src="../../../../_static/jquery.js"></script>
-    <script src="../../../../_static/underscore.js"></script>
-    <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../../../_static/doctools.js"></script>
     <script src="../../../../_static/sphinx_highlight.js"></script>
     <link rel="index" title="Index" href="../../../../genindex.html" />
@@ -88,7 +85,7 @@
 <div class="viewcode-block" id="Manifest"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.Manifest">[docs]</a><span class="nd">@dataclass_json</span><span class="p">(</span><span class="n">letter_case</span><span class="o">=</span><span class="n">LetterCase</span><span class="o">.</span><span class="n">SNAKE</span><span class="p">)</span>
 <span class="nd">@dataclass</span>
 <span class="k">class</span> <span class="nc">Manifest</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Data class representing a Gen3 JSON manifest typically exported from a Gen3 discovery page.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Data class representing a Gen3 JSON manifest typically exported from a Gen3 discovery page.</span>
 
 <span class="sd">    The class is passed to the DownloadManager to download or list all of the files in the manifest.</span>
 <span class="sd">    The Download manager will cache additional information (if available)</span>
@@ -109,14 +106,14 @@
 
 <div class="viewcode-block" id="Manifest.load_manifest"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.Manifest.load_manifest">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">load_manifest</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Loads a json manifest&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Loads a json manifest&quot;&quot;&quot;</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rt&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fin</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">json_load</span><span class="p">(</span><span class="n">fin</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">Manifest</span><span class="o">.</span><span class="n">schema</span><span class="p">()</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">many</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Manifest.create_object_list"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.Manifest.create_object_list">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">create_object_list</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="s2">&quot;Downloadable&quot;</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;Create a list of Downloadable instances from the manifest</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a list of Downloadable instances from the manifest</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            manifest(list): list of manifest objects</span>
@@ -137,7 +134,7 @@
 
 <div class="viewcode-block" id="Manifest.load"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.Manifest.load">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="s2">&quot;Downloadable&quot;</span><span class="p">]]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Method to load a json manifest and return a list of Bownloadable object.</span>
 <span class="sd">        This list is passed to the DownloadManager methods of download, and list</span>
 
@@ -159,7 +156,7 @@
 
 <span class="nd">@dataclass</span>
 <span class="k">class</span> <span class="nc">KnownDRSEndpoint</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Dataclass used internally by the DownloadManager class to cache hostnames and tokens</span>
 <span class="sd">    for Gen3 commons possibly accessed using the Workspace Token Service (WTS). The endpoint is</span>
 <span class="sd">    assumed to support DRS and therefore caches additional DRS information.</span>
@@ -183,11 +180,11 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">available</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;If endpoint has access token it is available&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;If endpoint has access token it is available&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">access_token</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
 
     <span class="k">def</span> <span class="nf">expired</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;check if WTS token is older than the default expiration date</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;check if WTS token is older than the default expiration date</span>
 
 <span class="sd">        If not using the WTS return false and use standard Gen3 Auth</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -197,7 +194,7 @@
         <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">expire</span>
 
     <span class="k">def</span> <span class="nf">renew_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wts_server_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">server_access_token</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Gets a new token from the WTS and updates the token and refresh time</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Gets a new token from the WTS and updates the token and refresh time</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            wts_server_name (str): hostname of WTS server</span>
@@ -217,7 +214,7 @@
 
 
 <span class="k">class</span> <span class="nc">DRSObjectType</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Enum defining the 3 possible DRS object types.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Enum defining the 3 possible DRS object types.&quot;&quot;&quot;</span>
 
     <span class="n">unknown</span> <span class="o">=</span> <span class="s2">&quot;unknown&quot;</span>
     <span class="nb">object</span> <span class="o">=</span> <span class="s2">&quot;object&quot;</span>
@@ -226,7 +223,7 @@
 
 <div class="viewcode-block" id="Downloadable"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.Downloadable">[docs]</a><span class="nd">@dataclass</span>
 <span class="k">class</span> <span class="nc">Downloadable</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class handling the information for a DRS object. The information is populated from the manifest or</span>
 <span class="sd">    by retrieving the information from a DRS server.</span>
 
@@ -256,26 +253,26 @@
 
     <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">(</span>
-            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">file_name</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;not available&quot;</span> <span class="si">:</span><span class="s1"> &gt;45</span><span class="si">}</span><span class="s1">; &#39;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">humanfriendly</span><span class="o">.</span><span class="n">format_size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_size</span><span class="p">)</span> <span class="si">:</span><span class="s2">&gt;12</span><span class="si">}</span><span class="s2">; &quot;</span>
-            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">hostname</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hostname</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;not resolved&quot;</span><span class="si">}</span><span class="s1">; &#39;</span>
-            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">created_time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%m/</span><span class="si">%d</span><span class="s2">/%Y, %H:%M:%S&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">created_time</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;not available&quot;</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s2">&quot;not available&quot;</span><span class="w"> </span><span class="si">:</span><span class="s1"> &gt;45</span><span class="si">}</span><span class="s1">; &#39;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">humanfriendly</span><span class="o">.</span><span class="n">format_size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_size</span><span class="p">)</span><span class="w"> </span><span class="si">:</span><span class="s2">&gt;12</span><span class="si">}</span><span class="s2">; &quot;</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">hostname</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">hostname</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s2">&quot;not resolved&quot;</span><span class="si">}</span><span class="s1">; &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">created_time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%m/</span><span class="si">%d</span><span class="s2">/%Y, %H:%M:%S&quot;</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">created_time</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s2">&quot;not available&quot;</span><span class="si">}</span><span class="s1">&#39;</span>
         <span class="p">)</span>
 
     <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">(</span>
-            <span class="sa">f</span><span class="s1">&#39;(Downloadable: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">file_name</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;not available&quot;</span><span class="si">}</span><span class="s1">; &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;(Downloadable: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s2">&quot;not available&quot;</span><span class="si">}</span><span class="s1">; &#39;</span>
             <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">humanfriendly</span><span class="o">.</span><span class="n">format_size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_size</span><span class="p">)</span><span class="si">}</span><span class="s2">; &quot;</span>
-            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">hostname</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hostname</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;not resolved&quot;</span><span class="si">}</span><span class="s1">; &#39;</span>
-            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">created_time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%m/</span><span class="si">%d</span><span class="s2">/%Y, %H:%M:%S&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">created_time</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;not available&quot;</span><span class="si">}</span><span class="s1">)&#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">hostname</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">hostname</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s2">&quot;not resolved&quot;</span><span class="si">}</span><span class="s1">; &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">created_time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%m/</span><span class="si">%d</span><span class="s2">/%Y, %H:%M:%S&quot;</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">created_time</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s2">&quot;not available&quot;</span><span class="si">}</span><span class="s1">)&#39;</span>
         <span class="p">)</span>
 
 <div class="viewcode-block" id="Downloadable.download"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.Downloadable.download">[docs]</a>    <span class="k">def</span> <span class="nf">download</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;calls the manager to download this object. Allows Downloadables to be self downloading&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;calls the manager to download this object. Allows Downloadables to be self downloading&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">download</span><span class="p">([</span><span class="bp">self</span><span class="p">])</span></div>
 
 <div class="viewcode-block" id="Downloadable.pprint"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.Downloadable.pprint">[docs]</a>    <span class="k">def</span> <span class="nf">pprint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indent</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Pretty prints the object information. This is used for listing an object.</span>
 <span class="sd">        In the case of a DRS bundle the child objects are listed similar to the linux tree command</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -297,7 +294,7 @@
 
 <div class="viewcode-block" id="DownloadStatus"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.DownloadStatus">[docs]</a><span class="nd">@dataclass</span>
 <span class="k">class</span> <span class="nc">DownloadStatus</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Stores the download status of objectIDs.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stores the download status of objectIDs.</span>
 
 <span class="sd">    The DataManager will return a list of DownloadStatus as a result of calling the download method</span>
 
@@ -316,10 +313,10 @@
 
     <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">(</span>
-            <span class="sa">f</span><span class="s1">&#39;filename: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">filename</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;not available&quot;</span><span class="si">}</span><span class="s1">; &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;filename: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s2">&quot;not available&quot;</span><span class="si">}</span><span class="s1">; &#39;</span>
             <span class="sa">f</span><span class="s2">&quot;status: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">; &quot;</span>
-            <span class="sa">f</span><span class="s1">&#39;start_time: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%m/</span><span class="si">%d</span><span class="s2">/%Y, %H:%M:%S&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;n/a&quot;</span><span class="si">}</span><span class="s1">; &#39;</span>
-            <span class="sa">f</span><span class="s1">&#39;end_time: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">end_time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%m/</span><span class="si">%d</span><span class="s2">/%Y, %H:%M:%S&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;n/a&quot;</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;start_time: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%m/</span><span class="si">%d</span><span class="s2">/%Y, %H:%M:%S&quot;</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s2">&quot;n/a&quot;</span><span class="si">}</span><span class="s1">; &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;end_time: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">end_time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%m/</span><span class="si">%d</span><span class="s2">/%Y, %H:%M:%S&quot;</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s2">&quot;n/a&quot;</span><span class="si">}</span><span class="s1">&#39;</span>
         <span class="p">)</span>
 
     <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -327,7 +324,7 @@
 
 
 <span class="k">def</span> <span class="nf">wts_external_oidc</span><span class="p">(</span><span class="n">hostname</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get the external_oidc from a connected WTS. Will report if WTS service</span>
 <span class="sd">    is missing. Note that in some cases this can be considered a warning not a error.</span>
 
@@ -352,7 +349,7 @@
 
     <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">HTTPError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s1">&#39;HTTP Error (</span><span class="si">{</span><span class="n">exc</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s1">): </span><span class="si">{</span><span class="n">json_loads</span><span class="p">(</span><span class="n">exc</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;HTTP Error (</span><span class="si">{</span><span class="n">exc</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s1">): </span><span class="si">{</span><span class="n">json_loads</span><span class="p">(</span><span class="n">exc</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="n">JSONDecodeError</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
@@ -364,7 +361,7 @@
 
 
 <span class="k">def</span> <span class="nf">wts_get_token</span><span class="p">(</span><span class="n">hostname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">idp</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">access_token</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Gets a auth token from a Gen3 WTS server for the supplied idp</span>
 <span class="sd">    Args:</span>
 <span class="sd">        hostname (str): Gen3 common&#39;s WTS service</span>
@@ -403,7 +400,7 @@
 
 
 <span class="k">def</span> <span class="nf">get_drs_object_info</span><span class="p">(</span><span class="n">hostname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">object_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Retrieves information for a DRS object residing on the hostname</span>
 <span class="sd">    Args:</span>
 <span class="sd">        hostname (str): hostname of DRS object</span>
@@ -434,7 +431,7 @@
 
 
 <span class="k">def</span> <span class="nf">extract_filename_from_object_info</span><span class="p">(</span><span class="n">object_info</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-    <span class="sd">&quot;&quot;&quot;Extracts the filename from the object_info.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extracts the filename from the object_info.</span>
 
 <span class="sd">    if filename is in object_info use that, otherwise try to extract it from the one of the access methods.</span>
 <span class="sd">    Returns filename if found, else return None</span>
@@ -455,7 +452,7 @@
 
 
 <span class="k">def</span> <span class="nf">get_access_methods</span><span class="p">(</span><span class="n">object_info</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Returns the DRS GA4GH access methods from the object_info.</span>
 
 <span class="sd">    Args:</span>
@@ -471,7 +468,7 @@
 
 
 <span class="k">def</span> <span class="nf">get_drs_object_type</span><span class="p">(</span><span class="n">object_info</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DRSObjectType</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;From the object info determine the type of object.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;From the object info determine the type of object.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        object_info (dict): DRS object dictionary</span>
@@ -491,7 +488,7 @@
 
 
 <span class="k">def</span> <span class="nf">get_drs_object_timestamp</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">datetime</span><span class="p">]:</span>
-    <span class="sd">&quot;&quot;&quot;returns the timestamp in datetime if not none otherwise returns None</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;returns the timestamp in datetime if not none otherwise returns None</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        s (Optional[str]): string to parse</span>
@@ -502,7 +499,7 @@
 
 
 <span class="k">def</span> <span class="nf">add_drs_object_info</span><span class="p">(</span><span class="n">info</span><span class="p">:</span> <span class="n">Downloadable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Given a downloader object fill in the required fields</span>
 <span class="sd">    from the resolved hostname.</span>
 <span class="sd">    In the case of a bundle, try to resolve all object_ids contained in the bundle including other objects and bundles.</span>
@@ -542,7 +539,7 @@
 
 
 <span class="k">class</span> <span class="nc">InvisibleProgress</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Invisible progress bar which stubs a tqdm progress bar</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -553,7 +550,7 @@
 <span class="k">def</span> <span class="nf">download_file_from_url</span><span class="p">(</span>
     <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Downloads a file using the URL. The URL is a pre-signed url created by the download manager</span>
 <span class="sd">    from the access method of the DRS object.</span>
 
@@ -589,7 +586,7 @@
 
     <span class="n">progress_bar</span> <span class="o">=</span> <span class="p">(</span>
         <span class="n">tqdm</span><span class="p">(</span>
-            <span class="n">desc</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="si">:</span><span class="s2"> &lt;45</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">desc</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span><span class="w"> </span><span class="si">:</span><span class="s2"> &lt;45</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
             <span class="n">total</span><span class="o">=</span><span class="n">total_size_in_bytes</span><span class="p">,</span>
             <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;iB&quot;</span><span class="p">,</span>
             <span class="n">unit_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
@@ -627,7 +624,7 @@
 
 
 <span class="k">def</span> <span class="nf">parse_drs_identifier</span><span class="p">(</span><span class="n">drs_candidate</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Parses a DRS identifier to extract a hostname in the case of hostname based DRS</span>
 <span class="sd">    otherwise it look for a DRS compact identifier.</span>
 
@@ -669,7 +666,7 @@
 <span class="k">def</span> <span class="nf">resolve_drs_hostname_from_id</span><span class="p">(</span>
     <span class="n">object_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">resolved_drs_prefix_cache</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">mds_url</span><span class="p">:</span> <span class="nb">str</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
-    <span class="sd">&quot;&quot;&quot;Resolves and returns a DRS identifier</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolves and returns a DRS identifier</span>
 <span class="sd">    The resolved_drs_prefix_cache is updated if needed and is a potential side effect of this</span>
 <span class="sd">    call</span>
 <span class="sd">    Args:</span>
@@ -699,7 +696,7 @@
 <span class="k">def</span> <span class="nf">resolve_objects_drs_hostname_from_id</span><span class="p">(</span>
     <span class="n">object_ids</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Downloadable</span><span class="p">],</span> <span class="n">resolved_drs_prefix_cache</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">mds_url</span><span class="p">:</span> <span class="nb">str</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Given a list of object_ids go through list and resolve + cache any unknown hosts</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Given a list of object_ids go through list and resolve + cache any unknown hosts</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        object_ids (List[Downloadable]): list of object to resolve</span>
@@ -720,7 +717,7 @@
 
 
 <span class="k">def</span> <span class="nf">ensure_dirpath_exists</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Utility to create a directory if missing.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Utility to create a directory if missing.</span>
 <span class="sd">    Returns the path so that the call can be inlined in a another call</span>
 
 <span class="sd">    Args:</span>
@@ -740,7 +737,7 @@
 <span class="k">def</span> <span class="nf">get_download_url_using_drs</span><span class="p">(</span>
     <span class="n">drs_hostname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">object_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">access_method</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">access_token</span><span class="p">:</span> <span class="nb">str</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Returns the presigned URL for a DRS object, from a DRS hostname, via the access method</span>
 <span class="sd">    Args:</span>
 <span class="sd">        drs_hostname (str): hostname of DRS server</span>
@@ -769,13 +766,13 @@
         <span class="n">logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Was unable to download: </span><span class="si">{</span><span class="n">object_id</span><span class="si">}</span><span class="s2">. Timeout Error.&quot;</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">HTTPError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;HTTP Error (</span><span class="si">{</span><span class="n">exc</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">): requesting download url from </span><span class="si">{</span><span class="n">access_method</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;HTTP Error (</span><span class="si">{</span><span class="n">exc</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">) when requesting download url from </span><span class="si">{</span><span class="n">access_method</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="kc">None</span>
 
 
 <span class="k">def</span> <span class="nf">get_user_auth</span><span class="p">(</span><span class="n">commons_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">access_token</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Retrieves a user&#39;s authz for the commons based on the access token.</span>
 <span class="sd">    Any error will be logged and None is returned</span>
 
@@ -786,7 +783,7 @@
 <span class="sd">    Returns:</span>
 <span class="sd">        The authz object from the user endpoint</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span>
@@ -808,7 +805,7 @@
 
 
 <span class="k">def</span> <span class="nf">list_auth</span><span class="p">(</span><span class="n">hostname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">authz</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Prints the authz for a DRS hostname</span>
 <span class="sd">    Args:</span>
 <span class="sd">        hostname (str): hostname to list access</span>
@@ -821,14 +818,14 @@
     <span class="k">if</span> <span class="n">authz</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">authz</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">access</span><span class="p">,</span> <span class="n">methods</span> <span class="ow">in</span> <span class="n">authz</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="nb">print</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;      </span><span class="si">{</span><span class="n">access</span> <span class="si">:</span><span class="s2"> &lt;55</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">methods</span><span class="p">)</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">:</span><span class="s2">&gt;40</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;      </span><span class="si">{</span><span class="n">access</span><span class="w"> </span><span class="si">:</span><span class="s2"> &lt;55</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">]</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">methods</span><span class="p">)</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">:</span><span class="s2">&gt;40</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;      No access&quot;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="DownloadManager"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.DownloadManager">[docs]</a><span class="k">class</span> <span class="nc">DownloadManager</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class to assist in downloading a list of Downloadable object which at a minimum is a json manifest</span>
 <span class="sd">    of DRS object ids. The methods of interest are download and user_access.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -840,7 +837,7 @@
         <span class="n">download_list</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Downloadable</span><span class="p">],</span>
         <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize the DownloadManager so that is ready to start downloading.</span>
 <span class="sd">        Note the downloadable objects are required so that all tokens are available</span>
 <span class="sd">        to support the download.</span>
@@ -869,7 +866,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">resolve_objects</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">download_list</span><span class="p">,</span> <span class="n">show_progress</span><span class="p">)</span>
 
 <div class="viewcode-block" id="DownloadManager.resolve_objects"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.DownloadManager.resolve_objects">[docs]</a>    <span class="k">def</span> <span class="nf">resolve_objects</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">object_list</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Downloadable</span><span class="p">],</span> <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Given an Downloadable object list, resolve the DRS hostnames and update each Downloadable</span>
 
 <span class="sd">        Args:</span>
@@ -892,7 +889,7 @@
             <span class="n">progress_bar</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="DownloadManager.cache_hosts_wts_tokens"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.DownloadManager.cache_hosts_wts_tokens">[docs]</a>    <span class="k">def</span> <span class="nf">cache_hosts_wts_tokens</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">object_list</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Using the list of DRS host obtain a WTS token for all DRS hosts in the list. It&#39;s is possible</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># create two sets: one of the know WTS host and the other of the host in the manifest</span>
@@ -927,7 +924,7 @@
             <span class="p">)</span></div>
 
 <div class="viewcode-block" id="DownloadManager.get_fresh_token"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.DownloadManager.get_fresh_token">[docs]</a>    <span class="k">def</span> <span class="nf">get_fresh_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">drs_hostname</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;Will return and/or refresh and return a WTS token if hostname is known otherwise returns None.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Will return and/or refresh and return a WTS token if hostname is known otherwise returns None.</span>
 <span class="sd">        Args:</span>
 <span class="sd">            drs_hostname (str): hostname to get token for</span>
 
@@ -957,7 +954,7 @@
         <span class="n">unpack_packages</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">delete_unpacked_packages</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Downloads objects to the directory or current working directory.</span>
 <span class="sd">        The input is an list of Downloadable object created by loading a manifest</span>
 <span class="sd">        using the Manifest class or a call to Manifest.load(...</span>
@@ -1092,7 +1089,7 @@
         <span class="k">return</span> <span class="n">completed</span></div>
 
 <div class="viewcode-block" id="DownloadManager.user_access"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.DownloadManager.user_access">[docs]</a>    <span class="k">def</span> <span class="nf">user_access</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        List the user&#39;s access permissions on each host needed to download</span>
 <span class="sd">        DRS objects in the manifest. A useful way to determine if access permissions</span>
 <span class="sd">        are one reason a download failed.</span>
@@ -1124,7 +1121,7 @@
     <span class="n">unpack_packages</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">delete_unpacked_packages</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A convenience function used to download a json manifest.</span>
 <span class="sd">    Args:</span>
 <span class="sd">        hostname (str): hostname of Gen3 commons to use for access and WTS</span>
@@ -1174,7 +1171,7 @@
     <span class="n">unpack_packages</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">delete_unpacked_packages</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A convenience function used to download a single DRS object.</span>
 <span class="sd">    Args:</span>
 <span class="sd">        hostname (str): hostname of Gen3 commons to use for access and WTS</span>
@@ -1213,7 +1210,7 @@
 
 
 <span class="k">def</span> <span class="nf">_listfiles</span><span class="p">(</span><span class="n">hostname</span><span class="p">,</span> <span class="n">auth</span><span class="p">,</span> <span class="n">infile</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A wrapper function used by the cli to list files in a manifest.</span>
 <span class="sd">    Args:</span>
 <span class="sd">        hostname (str): hostname of Gen3 commons to use for access and WTS</span>
@@ -1249,7 +1246,7 @@
 
 
 <span class="k">def</span> <span class="nf">_list_object</span><span class="p">(</span><span class="n">hostname</span><span class="p">,</span> <span class="n">auth</span><span class="p">,</span> <span class="n">object_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Lists a DRS object.</span>
 <span class="sd">    Args:</span>
 <span class="sd">        hostname (str): hostname of Gen3 commons to use for access and WTS</span>
@@ -1282,7 +1279,7 @@
 
 
 <span class="k">def</span> <span class="nf">_list_access</span><span class="p">(</span><span class="n">hostname</span><span class="p">,</span> <span class="n">auth</span><span class="p">,</span> <span class="n">infile</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A convenience function to list a users access for all DRS hostname in a manifest.</span>
 <span class="sd">    Args:</span>
 <span class="sd">        hostname (str): hostname of Gen3 commons to use for access and WTS</span>
@@ -1319,7 +1316,7 @@
 
 <span class="c1"># These functions are exposed to the SDK&#39;s cli under the drs-pull subcommand</span>
 <div class="viewcode-block" id="list_files_in_drs_manifest"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.list_files_in_drs_manifest">[docs]</a><span class="k">def</span> <span class="nf">list_files_in_drs_manifest</span><span class="p">(</span><span class="n">hostname</span><span class="p">,</span> <span class="n">auth</span><span class="p">,</span> <span class="n">infile</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A wrapper function used by the cli to list files in a manifest.</span>
 <span class="sd">    Args:</span>
 <span class="sd">        hostname (str): hostname of Gen3 commons to use for access and WTS</span>
@@ -1333,7 +1330,7 @@
 
 
 <div class="viewcode-block" id="list_drs_object"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.list_drs_object">[docs]</a><span class="k">def</span> <span class="nf">list_drs_object</span><span class="p">(</span><span class="n">hostname</span><span class="p">,</span> <span class="n">auth</span><span class="p">,</span> <span class="n">object_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A convenience function used to list a DRS object.</span>
 <span class="sd">    Args:</span>
 <span class="sd">        hostname (str): hostname of Gen3 commons to use for access and WTS</span>
@@ -1355,7 +1352,7 @@
     <span class="n">unpack_packages</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">delete_unpacked_packages</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A convenience function used to download a json manifest.</span>
 <span class="sd">    Args:</span>
 <span class="sd">        hostname (str): hostname of Gen3 commons to use for access and WTS</span>
@@ -1387,7 +1384,7 @@
     <span class="n">unpack_packages</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">delete_unpacked_packages</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A convenience function used to download a single DRS object.</span>
 <span class="sd">    Args:</span>
 <span class="sd">        hostname (str): hostname of Gen3 commons to use for access and WTS</span>
@@ -1412,7 +1409,7 @@
 
 
 <div class="viewcode-block" id="list_access_in_drs_manifest"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.list_access_in_drs_manifest">[docs]</a><span class="k">def</span> <span class="nf">list_access_in_drs_manifest</span><span class="p">(</span><span class="n">hostname</span><span class="p">,</span> <span class="n">auth</span><span class="p">,</span> <span class="n">infile</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A convenience function to list a users access for all DRS hostname in a manifest.</span>
 <span class="sd">    Args:</span>
 <span class="sd">        hostname (str): hostname of Gen3 commons to use for access and WTS</span>
