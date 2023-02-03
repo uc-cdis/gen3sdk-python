@@ -109,7 +109,7 @@ async def output_expanded_discovery_metadata(
                     true_guid = guid
                     if use_agg_mds:
                         true_guid = guid.split("__")[1]
-                    output_metadata = _sanitize_tsv_row(
+                    output_metadata = sanitize_tsv_row(
                         {
                             **base_schema,
                             **fetched_metadata,
@@ -263,12 +263,23 @@ def try_delete_discovery_guid(auth, guid):
         logging.warning(e)
 
 
-def _sanitize_tsv_row(tsv_row):
+def sanitize_tsv_row(tsv_row, escape_new_lines=True):
+    """
+    Cleanup dictionary (tsv_row) so that nested lists/dicts are represented
+    in valid JSON and if escape_new_lines, then \n are escaped.
+
+    Args:
+        tsv_row (Dict): Dictionary representing a TSV row to write
+        escape_new_lines (bool, optional): Whether or not to escape \n as \\n
+
+    Returns:
+        Dict: Sanitized input
+    """
     sanitized = {}
     for k, v in tsv_row.items():
         if type(v) in [list, dict]:
             sanitized[k] = json.dumps(v)
-        elif type(v) == str:
+        elif (type(v) == str) and escape_new_lines:
             sanitized[k] = v.replace("\n", "\\n")
     return sanitized
 
