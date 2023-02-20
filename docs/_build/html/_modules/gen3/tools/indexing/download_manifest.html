@@ -154,7 +154,12 @@
 
 
 <span class="k">async</span> <span class="k">def</span> <span class="nf">_write_all_index_records_to_file</span><span class="p">(</span>
-    <span class="n">commons_url</span><span class="p">,</span> <span class="n">output_filename</span><span class="p">,</span> <span class="n">num_processes</span><span class="p">,</span> <span class="n">max_concurrent_requests</span><span class="p">,</span> <span class="n">input_manifest</span><span class="p">,</span> <span class="n">python_subprocess_command</span>
+    <span class="n">commons_url</span><span class="p">,</span>
+    <span class="n">output_filename</span><span class="p">,</span>
+    <span class="n">num_processes</span><span class="p">,</span>
+    <span class="n">max_concurrent_requests</span><span class="p">,</span>
+    <span class="n">input_manifest</span><span class="p">,</span>
+    <span class="n">python_subprocess_command</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Spins up number of processes provided to parse indexd records and eventually</span>
