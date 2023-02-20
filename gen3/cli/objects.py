@@ -78,14 +78,19 @@ def crosswalk():
     "--python-subprocess-command",
     "python_subprocess_command",
     help="Command used to execute a python process. By default you should not need "
-         "to change this, but if you are running something like MacOS and only "
-         "installed Python 3.x you may need to specify 'python3'",
+    "to change this, but if you are running something like MacOS and only "
+    "installed Python 3.x you may need to specify 'python3'",
     default="python",
     show_default=True,
 )
 @click.pass_context
 def objects_manifest_read(
-    ctx, output_file, num_processes, max_concurrent_requests, input_manifest, python_subprocess_command
+    ctx,
+    output_file,
+    num_processes,
+    max_concurrent_requests,
+    input_manifest,
+    python_subprocess_command,
 ):
     auth = ctx.obj["auth_factory"].get()
     loop = get_or_create_event_loop_for_thread()

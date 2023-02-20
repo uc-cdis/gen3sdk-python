@@ -122,7 +122,12 @@ async def async_download_object_manifest(
 
 
 async def _write_all_index_records_to_file(
-    commons_url, output_filename, num_processes, max_concurrent_requests, input_manifest, python_subprocess_command
+    commons_url,
+    output_filename,
+    num_processes,
+    max_concurrent_requests,
+    input_manifest,
+    python_subprocess_command,
 ):
     """
     Spins up number of processes provided to parse indexd records and eventually
