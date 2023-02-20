@@ -64,6 +64,7 @@ async def async_download_object_manifest(
     num_processes=4,
     max_concurrent_requests=MAX_CONCURRENT_REQUESTS,
     input_manifest=None,
+    python_subprocess_command="python",
 ):
     """
     Download all file object records into a manifest csv
@@ -79,6 +80,10 @@ async def async_download_object_manifest(
         input_manifest (str): Input file. Read available object data from objects in this
             file instead of reading everything in indexd. This will attempt to query
             indexd for only the records identified in this manifest.
+        python_subprocess_command (str, optional): Command used to execute a
+            python process. By default you should not need to change this, but
+            if you are running something like MacOS and only installed Python 3.x
+            you may need to specify "python3".
     """
     start_time = time.perf_counter()
     logging.info(f"start time: {start_time}")
@@ -108,6 +113,7 @@ async def async_download_object_manifest(
         num_processes,
         max_concurrent_requests,
         input_manifest,
+        python_subprocess_command,
     )
 
     end_time = time.perf_counter()
@@ -116,7 +122,12 @@ async def async_download_object_manifest(
 
 
 async def _write_all_index_records_to_file(
-    commons_url, output_filename, num_processes, max_concurrent_requests, input_manifest
+    commons_url,
+    output_filename,
+    num_processes,
+    max_concurrent_requests,
+    input_manifest,
+    python_subprocess_command,
 ):
     """
     Spins up number of processes provided to parse indexd records and eventually
@@ -201,7 +212,7 @@ async def _write_all_index_records_to_file(
 
         # call the cli function below and pass in chunks of pages for each process
         command = (
-            f"python {CURRENT_DIR}/download_manifest.py --commons_url "
+            f"{python_subprocess_command} {CURRENT_DIR}/download_manifest.py --commons_url "
             f"{commons_url} --pages {pages} --input-record-chunks-file {input_records_chunk_filename} "
             f"--num_processes {num_processes} --max_concurrent_requests {max_concurrent_requests}"
         )
