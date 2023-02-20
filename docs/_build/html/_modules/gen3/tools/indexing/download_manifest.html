@@ -96,6 +96,7 @@
     <span class="n">num_processes</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
     <span class="n">max_concurrent_requests</span><span class="o">=</span><span class="n">MAX_CONCURRENT_REQUESTS</span><span class="p">,</span>
     <span class="n">input_manifest</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">python_subprocess_command</span><span class="o">=</span><span class="s2">&quot;python&quot;</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Download all file object records into a manifest csv</span>
@@ -111,6 +112,10 @@
 <span class="sd">        input_manifest (str): Input file. Read available object data from objects in this</span>
 <span class="sd">            file instead of reading everything in indexd. This will attempt to query</span>
 <span class="sd">            indexd for only the records identified in this manifest.</span>
+<span class="sd">        python_subprocess_command (str, optional): Command used to execute a</span>
+<span class="sd">            python process. By default you should not need to change this, but</span>
+<span class="sd">            if you are running something like MacOS and only installed Python 3.x</span>
+<span class="sd">            you may need to specify &quot;python3&quot;.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
     <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;start time: </span><span class="si">{</span><span class="n">start_time</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -140,6 +145,7 @@
         <span class="n">num_processes</span><span class="p">,</span>
         <span class="n">max_concurrent_requests</span><span class="p">,</span>
         <span class="n">input_manifest</span><span class="p">,</span>
+        <span class="n">python_subprocess_command</span><span class="p">,</span>
     <span class="p">)</span>
 
     <span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
@@ -148,7 +154,7 @@
 
 
 <span class="k">async</span> <span class="k">def</span> <span class="nf">_write_all_index_records_to_file</span><span class="p">(</span>
-    <span class="n">commons_url</span><span class="p">,</span> <span class="n">output_filename</span><span class="p">,</span> <span class="n">num_processes</span><span class="p">,</span> <span class="n">max_concurrent_requests</span><span class="p">,</span> <span class="n">input_manifest</span>
+    <span class="n">commons_url</span><span class="p">,</span> <span class="n">output_filename</span><span class="p">,</span> <span class="n">num_processes</span><span class="p">,</span> <span class="n">max_concurrent_requests</span><span class="p">,</span> <span class="n">input_manifest</span><span class="p">,</span> <span class="n">python_subprocess_command</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Spins up number of processes provided to parse indexd records and eventually</span>
@@ -233,7 +239,7 @@
 
         <span class="c1"># call the cli function below and pass in chunks of pages for each process</span>
         <span class="n">command</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;python </span><span class="si">{</span><span class="n">CURRENT_DIR</span><span class="si">}</span><span class="s2">/download_manifest.py --commons_url &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">python_subprocess_command</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">CURRENT_DIR</span><span class="si">}</span><span class="s2">/download_manifest.py --commons_url &quot;</span>
             <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">commons_url</span><span class="si">}</span><span class="s2"> --pages </span><span class="si">{</span><span class="n">pages</span><span class="si">}</span><span class="s2"> --input-record-chunks-file </span><span class="si">{</span><span class="n">input_records_chunk_filename</span><span class="si">}</span><span class="s2"> &quot;</span>
             <span class="sa">f</span><span class="s2">&quot;--num_processes </span><span class="si">{</span><span class="n">num_processes</span><span class="si">}</span><span class="s2"> --max_concurrent_requests </span><span class="si">{</span><span class="n">max_concurrent_requests</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="p">)</span>
