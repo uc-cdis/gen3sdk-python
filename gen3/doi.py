@@ -1,3 +1,82 @@
+"""
+This is a lower-level DOI class for interacting with Datacite and actually
+minting the DOIs.
+
+For collecting DOI Metadata, other classes (outside of the ones in this module)
+can interact with different APIs to gather the necessary metadata.
+
+An example script that collects and then mints DOIs might look something like this:
+
+```
+import os
+from requests.auth import HTTPBasicAuth
+import sys
+from gen3.doi import DataCite, DigitalObjectIdentifer
+from gen3.nih import dbgapDOI, nihReporter
+
+PREFIX = "10.12345"
+ID_REGEX = "BDC-[a-z0-9]{4}-[a-z0-9]{4}"
+
+
+def main():
+    studies = [
+        "phs000007.p1.v1.c1",
+        "phs000007.p1.v1.c2",
+        "phs000166.p1.v1.c1",
+        "phs000179.p1.v1.c1",
+        "phs000179.p1.v1.c2",
+        "phs000179.p1.v1.c3",
+    ]
+    nih_reporter = nihReporter()
+    nih_reporter_data = nih_reporter.get_metadata_for_ids(phsids=studies)
+    nih_reporter_doi_data = nih_reporter.convert_to_doi_metadata(
+        prefix=PREFIX, id_regex="BDC-[a-z0-9]{4}-[a-z0-9]{4}", data=nih_reporter_data
+    )
+
+    # there's a separate  DOI class for dbGaP as a wrapper around various
+    # different APIs we need to call. Whereas if there are API sources that have
+    # all available data, they can have a convert_to_doi_metadata function
+    dbgap_doi = dbgapDOI(prefix=PREFIX, id_regex="BDC-[a-z0-9]{4}-[a-z0-9]{4}")
+    doi_data = dbgap_doi.get_metadata_for_ids(phsids=studies)
+    # doi_data will look something like:
+    #
+    # [{
+    #     creators=["test"],
+    #     titles=["test"],
+    #     publisher="test",
+    #     publication_year=2023,
+    #     doi_type="Dataset",
+    #     url="https://example.com",
+    #     version="0.1",
+    #     descriptions=[{"description": "this is a test resource"}],
+    #     foobar="test",
+    # }, ...]
+
+    # combine lists of DOI data
+    all_doi_data = nih_reporter_doi_data + doi_data
+
+    datacite = DataCite(
+        auth_provider=HTTPBasicAuth(
+            os.environ["DATACITE_USERNAME"], os.environ["DATACITE_PASSWORD"]
+        )
+    )
+    metadata = Gen3Metadata()
+
+    for phsid, doi_metadata in all_doi_data.items():
+        doi = DigitalObjectIdentifer(prefix=PREFIX, id_regex=ID_REGEX, **doi_metadata)
+
+        # writes metadata to a record
+        datacite.persist_doi_metadata_in_gen3(id=phsid, doi)
+
+        # takes either a DOI object, or an ID and will query the MDS
+        datacite.create_doi(doi)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+"""
 import requests
 import os
 from gen3.utils import raise_for_status_and_print_error
@@ -78,7 +157,7 @@ class DataCite(object):
         response = requests.post(
             endpoint, json=payload, auth=self._auth_provider, headers=headers
         )
-        logging.info(f"{response.text}")
+        logging.info(f"Response: {response.text}")
         raise_for_status_and_print_error(response)
         return response
 
@@ -150,7 +229,7 @@ class DigitalObjectIdentifer(object):
         "contributors",
         "dates",
         "relatedIdentifiers",
-        "descriptions",
+        "description",
         "geoLocations",
         "language",
         "identifiers",
@@ -166,7 +245,7 @@ class DigitalObjectIdentifer(object):
         prefix=None,
         identifier=None,
         creators=None,
-        titles=None,
+        title=None,
         publisher=None,
         publication_year=None,
         doi_type=None,
@@ -196,7 +275,7 @@ class DigitalObjectIdentifer(object):
             identifier (str, optional): a unique string that identifies the resource (the DOI)
             creators (List[str], optional): the main researcher(s) involved in producing the data,
                 or the author(s) of the publication
-            titles (List[str], optional): a name or title by which a resource is known
+            title (str, optional): a name or title by which a resource is known
             publisher (str, optional): The name of the entity that holds, archives, publishes
                 prints, distributes, releases, issues, or produces the resource.
                 This property will be used to formulate the citation, so consider the
@@ -216,7 +295,7 @@ class DigitalObjectIdentifer(object):
         self.prefix = prefix
         self.identifier = identifier
         self.creators = creators or []
-        self.titles = titles or []
+        self.title = title or []
         self.publisher = publisher
         self.publication_year = publication_year
         self.doi_type = doi_type
@@ -230,8 +309,12 @@ class DigitalObjectIdentifer(object):
         self.optional_fields = {}
 
         for key, value in kwargs.items():
+            print(key)
             if key in DigitalObjectIdentifer.OPTIONAL_FIELDS:
-                self.optional_fields[key] = value
+                if key == "description":
+                    self.optional_fields["descriptions"] = [{"description": value}]
+                else:
+                    self.optional_fields[key] = value
             else:
                 logging.warning(
                     f"Skipping '{key}={value}' because '{key}' "
@@ -270,10 +353,8 @@ class DigitalObjectIdentifer(object):
             data["data"]["attributes"]["creators"] = [
                 {"name": item} for item in self.creators
             ]
-        if self.titles:
-            data["data"]["attributes"]["titles"] = [
-                {"name": item} for item in self.titles
-            ]
+        if self.title:
+            data["data"]["attributes"]["titles"] = [{"name": self.title}]
         if self.publisher:
             data["data"]["attributes"]["publisher"] = self.publisher
         if self.publication_year:
