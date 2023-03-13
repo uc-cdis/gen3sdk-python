@@ -1,7 +1,9 @@
+import backoff
 import collections
 import copy
 import csv
 import time
+import re  # sorry. But trust me, it makes things a bit cleaner
 
 from cdislogging import get_logger
 import fhirclient.models.researchstudy as researchstudy
@@ -11,8 +13,17 @@ from fhirclient.models.identifier import Identifier
 from fhirclient.models.meta import Meta
 
 from gen3.tools.metadata.discovery import sanitize_tsv_row
+from gen3.utils import DEFAULT_BACKOFF_SETTINGS
 
 logging = get_logger("__name__")
+
+# For more details about this regex, see the function that uses it
+DBGAP_ACCESSION_REGEX = (
+    "(?P<phsid>phs(?P<phsid_number>[0-9]+))"
+    "(.(?P<version>v(?P<version_number>[0-9]+))){0,1}"
+    "(.(?P<participant_set>p(?P<participant_set_number>[0-9]+))){0,1}"
+    "(.(?P<consent>c(?P<consent_number>[0-9]+)+)){0,1}"
+)
 
 
 class dbgapFHIR(object):
@@ -22,16 +33,24 @@ class dbgapFHIR(object):
     Example Usage:
 
         ```
-        studies = [
-            "phs000007",
-            "phs000166",
-            "phs000179",
-        ]
-        dbgapfhir = dbgapFHIR()
-        simplified_data = dbgapfhir.get_metadata_for_ids(phsids=studies)
+        from gen3 import dbgapFHIR
 
-        file_name = "data_file.tsv"
-        dbgapFHIR.write_data_to_file(simplified_data, file_name)
+
+        def main():
+            studies = [
+                "phs000007",
+                "phs000166.c3",
+                "phs000179.v1.p1.c1",
+            ]
+            dbgapfhir = dbgapFHIR()
+            simplified_data = dbgapfhir.get_metadata_for_ids(phsids=studies)
+
+            file_name = "data_file.tsv"
+            dbgapFHIR.write_data_to_file(simplified_data, file_name)
+
+
+        if __name__ == "__main__":
+            main()
         ```
 
     This provides utilities for getting public study-level data using a third-party
@@ -94,9 +113,13 @@ class dbgapFHIR(object):
             in the API, but in all testing only yield (and logicially should only yield)
             a single result. The single item in the list will be pulled out so that the
             final field is NOT a list.
+        UNNECESSARY_FIELDS(List[str]): fields to remove in final result
     """
 
-    DBGAP_SLEEP_TIME_TO_AVOID_RATE_LIMITS = 0.4
+    # this is necessary in addition to exponential backoff to reduce the number
+    # of forced backoff requests (too many requests in a timeframe seem to trip
+    # some rate limiting on NIH's side)
+    DBGAP_SLEEP_TIME_TO_AVOID_RATE_LIMITS = 0.6
 
     SUSPECTED_SINGLE_ITEM_LIST_FIELDS = [
         "sponsor",
@@ -107,11 +130,29 @@ class dbgapFHIR(object):
         "category",
     ]
 
+    UNNECESSARY_FIELDS = [
+        "meta",
+        "StudyMarkersets",
+        "security",
+        "ComputedAncestry",
+        "MolecularDataTypes",
+    ]
+
+    DISCLAIMER = (
+        "This information was retrieved from dbGaP's FHIR API for "
+        "discoverability purposes and may not contain fully up-to-date "
+        "information. Please refer to the official dbGaP FHIR server for up-to-date "
+        "FHIR data."
+    )
+
     def __init__(
         self,
         api="https://dbgap-api.ncbi.nlm.nih.gov/fhir/x1",
         auth_provider=None,
         fhir_app_id="gen3_sdk",
+        suspected_single_item_list_fields=None,
+        unnecessary_fields=None,
+        disclaimer=None,
     ):
         """
         Inializate an instance of the class
@@ -128,45 +169,70 @@ class dbgapFHIR(object):
         self._auth_provider = auth_provider
         self.api = api
         self.fhir_client = client.FHIRClient(settings=fhir_client_settings)
+        self.suspected_single_item_list_fields = (
+            suspected_single_item_list_fields
+            or dbgapFHIR.SUSPECTED_SINGLE_ITEM_LIST_FIELDS
+        )
+        self.unnecessary_fields = unnecessary_fields or dbgapFHIR.UNNECESSARY_FIELDS
+        self.disclaimer = disclaimer or dbgapFHIR.DISCLAIMER
 
     def get_metadata_for_ids(self, phsids):
         """
-        Return metadata for each of the provided IDs.
+        Return simplified FHIR metadata for each of the provided IDs.
+
+        NOTE: This is NOT the raw metadata from the dbGaP FHIR server. This is a
+              denormalized and simplified representation of that data intended
+              to both reduce the nesting and ease the understanding of the
+              information.
 
         Args:
             phsids (List[str]): list of IDs to query FHIR for
 
         Returns:
-            Dict: metadata for each of the provided IDs
+            Dict[dict]: metadata for each of the provided IDs (which
+                        are the keys in the returned dict)
         """
         simplified_data = {}
 
-        # TODO ensure correct format of phsids
+        standardized_phsids = []
+        for phsid in phsids:
+            phsid_parts = get_dbgap_accession_as_parts(phsid)
 
-        all_data = self.get_dbgap_fhir_objects_for_studies(phsids)
+            # allow form of ONLY "phs000123", dbGaP FHIR API cannot handle
+            # isolating a specific version
+            standardized_phsid = phsid_parts["phsid"]
+            standardized_phsids.append(standardized_phsid)
+
+        all_data = self.get_dbgap_fhir_objects_for_studies(standardized_phsids)
         for study_id, study in all_data.items():
             data = self.get_simplified_data_from_object(study)
+
+            # custom fields
+            data["ResearchStudyURL"] = (
+                self.api.rstrip("/") + "/ResearchStudy/" + study_id
+            )
+            data["Disclaimer"] = self.disclaimer
+
             logging.debug(f"simplified study data: {data}")
             simplified_data[study_id] = data
 
         return simplified_data
 
     def get_dbgap_fhir_objects_for_studies(self, phsids):
-        """Summary
+        """
+        Return FHIR Objects
 
         Args:
             phsids (List[str]): list of IDs to query FHIR for
 
         Returns:
-            Dict: metadata for each of the provided IDs
+            Dict[fhirclient.models.ResearchStudy]: FHIR objects for each of the
+                provided IDs (which are the keys in the returned dict)
         """
         all_data = {}
         for study_id in phsids:
-            logging.info(f"getting {study_id} from FHIR API...")
             try:
-                study = researchstudy.ResearchStudy.read(
-                    study_id, self.fhir_client.server
-                )
+                study = self._get_dbgap_fhir_objects_for_study(study_id)
             except Exception as exc:
                 logging.warning(f"unable to get {study_id}, skipping. Error: {exc}")
                 continue
@@ -183,6 +249,19 @@ class dbgapFHIR(object):
             all_data[study_id] = study
 
         return all_data
+
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    def _get_dbgap_fhir_objects_for_study(self, phsid):
+        logging.info(f"getting {phsid} from dbGaP FHIR API...")
+        study = None
+
+        try:
+            study = researchstudy.ResearchStudy.read(phsid, self.fhir_client.server)
+        except Exception as exc:
+            logging.warning(f"unable to get {phsid}, skipping. Error: {exc}")
+            raise
+
+        return study
 
     @staticmethod
     def write_data_to_file(all_data, file_name):
@@ -216,8 +295,7 @@ class dbgapFHIR(object):
 
         logging.info(f"done writing data to file: {file_name}")
 
-    @staticmethod
-    def get_simplified_data_from_object(fhir_object):
+    def get_simplified_data_from_object(self, fhir_object):
         """
         An attempt at simplifying the representation of dbGaP's FHIR data to something
         more easily readable and more flat.
@@ -233,6 +311,9 @@ class dbgapFHIR(object):
         """
         all_data = {}
 
+        # special handling for FHIR "extensions", which are terms in the response
+        # that are not part of the standard FHIR model (in other words, they are
+        # custom fields that dbGaP has added)
         for extension in getattr(fhir_object, "extension", None) or []:
             for potential_value_type in dir(extension):
                 if potential_value_type == "extension" and extension.extension:
@@ -241,7 +322,7 @@ class dbgapFHIR(object):
                         all_data[ext_name] = []
 
                     all_data[ext_name].append(
-                        dbgapFHIR.get_simplified_data_from_object(extension)
+                        self.get_simplified_data_from_object(extension)
                     )
 
             for potential_value_type in dir(extension):
@@ -256,7 +337,7 @@ class dbgapFHIR(object):
                             f"Second: {potential_value_type}: {getattr(extension, potential_value_type, None)}"
                         )
                     value = getattr(extension, potential_value_type, None)
-                    # it's possible the value is another class, so try to represent it as json
+                    # it's possible the value is another FHIR class, so try to represent it as json
                     try:
                         value = value.as_json()
                         if value.get("value"):
@@ -278,19 +359,21 @@ class dbgapFHIR(object):
 
                     found_value = True
 
+        # use libraries built-in parsing for standard FHIR fields
         non_extension_data = fhir_object.as_json()
 
-        # we already parsed extension data, so remove the raw info and replace with our parsing
+        # The library attempts to parse extensions, but we already handled
+        # the dbGaP extension data above, so remove the raw info from the library
+        # and replace with our parsing
         del non_extension_data["extension"]
         all_data.update(non_extension_data)
 
-        # simplify everything
+        # simplify and clean up everything
         simplified_data = dbgapFHIR._get_simplified_data(fhir_object)
         all_data.update(simplified_data)
-
-        dbgapFHIR._flatten_relevant_fields(all_data)
-        dbgapFHIR._remove_unecessary_fields(all_data)
-        dbgapFHIR._captialize_top_level_keys(all_data)
+        self._flatten_relevant_fields(all_data)
+        self._remove_unecessary_fields(all_data)
+        self._captialize_top_level_keys(all_data)
 
         return all_data
 
@@ -367,7 +450,7 @@ class dbgapFHIR(object):
                 )
                 if simple_representation:
                     output.append(simple_representation)
-            # elif ... More?
+            # elif ... add any more FHIR objects we can simplify and parse here
             else:
                 logging.warning(
                     f"could not parse FHIR object to simple text, ignoring. Error: {exc}"
@@ -375,8 +458,7 @@ class dbgapFHIR(object):
 
         return output
 
-    @staticmethod
-    def _flatten_relevant_fields(dictionary):
+    def _flatten_relevant_fields(self, dictionary):
         for item in dictionary.get("Content", []):
             for item in dictionary["Content"]:
                 for key, value in item.items():
@@ -421,7 +503,7 @@ class dbgapFHIR(object):
                     citers.append(citer_sanitized)
             dictionary["Citers"] = citers
 
-        for item in dbgapFHIR.SUSPECTED_SINGLE_ITEM_LIST_FIELDS:
+        for item in self.suspected_single_item_list_fields:
             if dictionary.get(item) and len(dictionary.get(item, [])) == 1:
                 dictionary[item] = dictionary[item][0]
             elif dictionary.get(item) and len(dictionary.get(item, [])) > 1:
@@ -430,35 +512,86 @@ class dbgapFHIR(object):
                     f"item list. it has more: {dictionary.get(item)}"
                 )
 
-    @staticmethod
-    def _remove_unecessary_fields(all_data):
-        # remove some unecessary fields
-        try:
-            del all_data["meta"]
-        except KeyError:
-            pass
-        try:
-            del all_data["StudyMarkersets"]
-        except KeyError:
-            pass
-        try:
-            del all_data["security"]
-        except KeyError:
-            pass
-        try:
-            del all_data["ComputedAncestry"]
-        except KeyError:
-            pass
-        try:
-            del all_data["MolecularDataTypes"]
-        except KeyError:
-            pass
+    def _remove_unecessary_fields(self, all_data):
+        # remove some fields deemed unnecessary or not typically populated
+        for field in self.unnecessary_fields:
+            try:
+                del all_data[field]
+            except KeyError:
+                pass
 
     @staticmethod
     def _captialize_top_level_keys(all_data):
         for key, value in copy.deepcopy(all_data).items():
-            capitalized_first_letter = key[:1].upper() + key[1:]
-            all_data[capitalized_first_letter] = all_data[key]
+            capitalized_key = key[:1].upper() + key[1:]
+            all_data[capitalized_key] = all_data[key]
 
-            if key != capitalized_first_letter:
+            if key != capitalized_key:
                 del all_data[key]
+
+
+def get_dbgap_accession_as_parts(phsid):
+    """
+    Return a dictionary containing the various parts of the provided
+    dbGaP Accession (AKA phsid).
+
+    Uses a regex to match an assession number that has information in forms like:
+      phs000123.c1
+      phs000123.v3.p1.c3
+      phs000123.c3
+      phs000123.v3.p4.c1
+      phs000123
+
+    This separates out each part of the accession with named groups and includes
+    parts that include only the numbered value (which is needed in some NIH APIs)
+
+    A "picture" is worth a 1000 words:
+
+    Example for `phs000123.c1`:
+      Named groups
+      phsid                   phs000123
+      phsid_number            000123
+      version                 None
+      version_number          None
+      participant_set         None
+      participant_set_number  None
+      consent                 c1
+      consent_number          1
+
+    Args:
+        phsid (str): The dbGaP Accession (AKA phsid)
+
+    Returns:
+        dict[str]: A standardized dictionary (you can always expect these keys)
+                   with the values parsed from the provided dbGaP Accession
+                   Example if provided `phs000123.c1`: {
+                        "phsid": "phs000123",
+                        "phsid_number": "000123",
+                        "version": "",
+                        "version_number": "",
+                        "participant_set": "",
+                        "participant_set_number": "",
+                        "consent": "c1",
+                        "consent_number": "1",
+                    }
+
+                    NOTE: the "*_number" fields are still represented as strings.
+                    NOTE2: the regex groups that return None will be represented
+                           as empty strings (for easier upstream str concat-ing)
+    """
+    access_number_matcher = re.compile(DBGAP_ACCESSION_REGEX)
+    raw_phs_match = access_number_matcher.match(phsid)
+    phs_match = {}
+
+    if raw_phs_match:
+        phs_match = raw_phs_match.groupdict()
+
+    standardized_phs_match = {}
+    for key, value in phs_match.items():
+        if value is None:
+            standardized_phs_match[key] = ""
+            continue
+
+        standardized_phs_match[key] = value
+
+    return standardized_phs_match

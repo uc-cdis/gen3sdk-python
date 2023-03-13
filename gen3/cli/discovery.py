@@ -1,11 +1,12 @@
 import asyncio
-
 import click
+import csv
 
 from gen3.tools.metadata.discovery import (
     publish_discovery_metadata,
     output_expanded_discovery_metadata,
     try_delete_discovery_guid,
+    combine_discovery_metadata,
 )
 from gen3.utils import get_or_create_event_loop_for_thread
 
@@ -84,6 +85,84 @@ def discovery_read(ctx, limit, agg):
 
 
 @click.command()
+@click.argument("file", required=False)
+@click.option(
+    "--output-filename",
+    "output_filename",
+    help="filename for final combined output",
+    default="combined_discovery_metadata.tsv",
+    show_default=True,
+)
+@click.option(
+    "--limit",
+    "limit",
+    help="max number of metadata records to fetch",
+    default=500,
+    show_default=True,
+)
+@click.option(
+    "--discovery-column-to-map-on",
+    "discovery_column_to_map_on",
+    help="The column in the current discovery metadata to use to",
+    default="guid",
+    show_default=True,
+)
+@click.option(
+    "--metadata-column-to-map",
+    "metadata_column_to_map",
+    help="The column in the provided METADATA file to use to map/merge into the current Discovery metadata",
+    default="guid",
+    show_default=True,
+)
+@click.option(
+    "--metadata-prefix",
+    "metadata_prefix",
+    help="Prefix to add to the column names in the provided metadata file before final output",
+    default="",
+    show_default=True,
+)
+@click.option(
+    "--agg",
+    is_flag=True,
+    help="use aggregate metadata service instead of the metadata service",
+    show_default=True,
+)
+@click.pass_context
+def discovery_read_and_combine(
+    ctx,
+    file,
+    output_filename,
+    discovery_column_to_map_on,
+    metadata_column_to_map,
+    limit,
+    metadata_prefix,
+    agg,
+):
+    """
+    Combine provided metadata from file with current commons' discovery page metadata into a TSV.
+    """
+    auth = ctx.obj["auth_factory"].get()
+    loop = get_or_create_event_loop_for_thread()
+    endpoint = ctx.obj.get("endpoint")
+    current_discovery_metadata_file = loop.run_until_complete(
+        output_expanded_discovery_metadata(
+            auth, endpoint=endpoint, limit=limit, use_agg_mds=agg
+        )
+    )
+
+    output_file = combine_discovery_metadata(
+        current_discovery_metadata_file,
+        file,
+        discovery_column_to_map_on,
+        metadata_column_to_map,
+        output_filename,
+        metadata_prefix=metadata_prefix,
+    )
+
+    click.echo(f"{output_file}")
+
+
+@click.command()
 @click.argument("guid")
 @click.pass_context
 def discovery_delete(ctx, guid):
@@ -95,5 +174,6 @@ def discovery_delete(ctx, guid):
 
 
 discovery.add_command(discovery_read, name="read")
+discovery.add_command(discovery_read_and_combine, name="combine")
 discovery.add_command(discovery_publish, name="publish")
 discovery.add_command(discovery_delete, name="delete")

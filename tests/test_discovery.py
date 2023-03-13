@@ -7,6 +7,7 @@ import pytest
 
 from gen3.tools.metadata.discovery import (
     output_expanded_discovery_metadata,
+    combine_discovery_metadata,
     publish_discovery_metadata,
     BASE_CSV_PARSER_SETTINGS,
     _try_parse,
@@ -188,3 +189,45 @@ def test_discovery_publish_omit_empty_columns(
                 omit_empty_values=ignore_empty_columns,
             )
         )
+
+
+def test_discovery_combine():
+    """
+    Test the underlying logic for combining metadata manifests.
+    """
+    current_discovery_metadata_file = (
+        "tests/merge_manifests/discovery_combine/discovery.tsv"
+    )
+    metadata_filename = "tests/merge_manifests/discovery_combine/metadata_file.tsv"
+    discovery_column_to_map_on = "guid"
+    metadata_column_to_map = "Id"
+    output_filename = "test_combined_discovery_metadata.tsv"
+    metadata_prefix = "DBGAP_FHIR_"
+
+    output_file = combine_discovery_metadata(
+        current_discovery_metadata_file,
+        metadata_filename,
+        discovery_column_to_map_on,
+        metadata_column_to_map,
+        output_filename,
+        metadata_prefix=metadata_prefix,
+    )
+
+    assert _get_tsv_data(output_file) == _get_tsv_data(
+        "tests/merge_manifests/discovery_combine/combined_discovery_metadata.tsv"
+    )
+
+
+def _get_tsv_data(manifest, delimiter="\t"):
+    """
+    Returns a list of rows sorted by guid for the given manifest.
+    """
+    csv_data = list()
+    with open(manifest) as f:
+        rows = []
+        reader = csv.DictReader(f, delimiter=delimiter)
+        fieldnames = reader.fieldnames
+        for row in reader:
+            rows.append({key: value for key, value in row.items()})
+
+    return sorted(rows, key=lambda row: row.get("guid", ""))
