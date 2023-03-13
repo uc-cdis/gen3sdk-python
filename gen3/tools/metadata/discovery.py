@@ -445,6 +445,8 @@ def sanitize_tsv_row(tsv_row, escape_new_lines=True):
             sanitized[k] = json.dumps(v)
         elif (type(v) == str) and escape_new_lines:
             sanitized[k] = v.replace("\n", "\\n")
+        elif type(v) == int:
+            sanitized[k] = v
     return sanitized
 
 
