@@ -2397,6 +2397,248 @@ class Gen3Expansion:
 
         return results
 
+
+
+
+    def submit_file_dry(self, project_id, filename, chunk_size=30, row_offset=0, drop_props=['project_id']):
+        """Submit data in a spreadsheet file containing multiple records in rows to a Gen3 Data Commons.
+
+        Args:
+            project_id (str): The project_id to submit to.
+            filename (str): The file containing data to submit. The format can be TSV, CSV or XLSX (first worksheet only for now).
+            chunk_size (integer): The number of rows of data to submit for each request to the API.
+            row_offset (integer): The number of rows of data to skip; '0' starts submission from the first row and submits all data.
+
+        Examples:
+            This submits a spreadsheet file containing multiple records in rows to the CCLE project in the sandbox commons.
+
+            >>> Gen3Submission.submit_file("DCF-CCLE","data_spreadsheet.tsv")
+
+        """
+        # Read the file in as a pandas DataFrame
+        f = os.path.basename(filename)
+        if f.lower().endswith(".csv"):
+            df = pd.read_csv(filename, header=0, sep=",", dtype=str).fillna("")
+        elif f.lower().endswith(".xlsx"):
+            xl = pd.ExcelFile(filename, dtype=str)  # load excel file
+            sheet = xl.sheet_names[0]  # sheetname
+            df = xl.parse(sheet)  # save sheet as dataframe
+            converters = {
+                col: str for col in list(df)
+            }  # make sure int isn't converted to float
+            df = pd.read_excel(filename, converters=converters).fillna("")  # remove nan
+        elif filename.lower().endswith((".tsv", ".txt")):
+            df = pd.read_csv(filename, header=0, sep="\t", dtype=str).fillna("")
+        else:
+            raise Gen3Error("Please upload a file in CSV, TSV, or XLSX format.")
+        df.rename(
+            columns={c: c.lstrip("*") for c in df.columns}, inplace=True
+        )  # remove any leading asterisks in the DataFrame column names
+
+        # Check uniqueness of submitter_ids:
+        if len(list(df.submitter_id)) != len(list(df.submitter_id.unique())):
+            raise Gen3Error(
+                "Warning: file contains duplicate submitter_ids. \nNote: submitter_ids must be unique within a node!"
+            )
+
+        if drop_props is not None:
+            if isinstance(drop_props,str):
+                drop_props = [drop_props]
+            elif isinstance(drop_props,list):
+                for prop in drop_props:
+                    if prop in df:
+                        df.drop(columns=[prop],inplace=True)
+            else:
+                print("\n\n\tSubmit drop_props argument as a list of properties, e.g.,: drop_props=['id'].\n\n")
+
+        # Chunk the file
+        print("\nSubmitting {} with {} records.".format(filename, str(len(df))))
+        program, project = project_id.split("-", 1)
+        api_url = "{}/api/v0/submission/{}/{}/_dry_run".format(self._endpoint, program, project)
+        headers = {"content-type": "text/tab-separated-values"}
+
+        start = row_offset
+        end = row_offset + chunk_size
+        chunk = df[start:end]
+
+        count = 0
+
+        results = {
+            "invalid": {},  # these are invalid records
+            "other": [],  # any unhandled API responses
+            "details": [],  # entire API response details
+            "succeeded": [],  # list of submitter_ids that were successfully updated/created
+            "responses": [],  # list of API response codes
+        }
+
+        # Start the chunking loop:
+        while (start + len(chunk)) <= len(df):
+
+            timeout = False
+            valid_but_failed = []
+            invalid = []
+            count += 1
+            print(
+                "Chunk {} (chunk size: {}, submitted: {} of {})".format(
+                    str(count),
+                    str(chunk_size),
+                    str(len(results["succeeded"]) + len(results["invalid"])),
+                    str(len(df)),
+                )
+            )
+
+            try:
+                response = requests.put(
+                    api_url,
+                    auth=self._auth_provider,
+                    data=chunk.to_csv(sep="\t", index=False),
+                    headers=headers,
+                ).text
+            except requests.exceptions.ConnectionError as e:
+                results["details"].append(e.message)
+
+            # Handle the API response
+            if (
+                "Request Timeout" in response
+                or "413 Request Entity Too Large" in response
+                or "Connection aborted." in response
+                or "service failure - try again later" in response
+            ):  # time-out, response != valid JSON at the moment
+
+                print("\t Reducing Chunk Size: {}".format(response))
+                results["responses"].append("Reducing Chunk Size: {}".format(response))
+                timeout = True
+
+            else:
+                try:
+                    json_res = json.loads(response)
+                except JSONDecodeError as e:
+                    print(response)
+                    print(str(e))
+                    raise Gen3Error("Unable to parse API response as JSON!")
+
+                if "message" in json_res and "code" not in json_res:
+                    print(json_res)  # trouble-shooting
+                    print(
+                        "\t No code in the API response for Chunk {}: {}".format(
+                            str(count), json_res.get("message")
+                        )
+                    )
+                    print("\t {}".format(str(json_res.get("transactional_errors"))))
+                    results["responses"].append(
+                        "Error Chunk {}: {}".format(str(count), json_res.get("message"))
+                    )
+                    results["other"].append(json_res.get("message"))
+
+                elif "code" not in json_res:
+                    print("\t Unhandled API-response: {}".format(response))
+                    results["responses"].append(
+                        "Unhandled API response: {}".format(response)
+                    )
+
+                elif json_res["code"] == 200:  # success
+
+                    entities = json_res.get("entities", [])
+                    print("\t Succeeded: {} entities.".format(str(len(entities))))
+                    results["responses"].append(
+                        "Chunk {} Succeeded: {} entities.".format(
+                            str(count), str(len(entities))
+                        )
+                    )
+
+                    for entity in entities:
+                        sid = entity["unique_keys"][0]["submitter_id"]
+                        results["succeeded"].append(sid)
+
+                elif (
+                    json_res["code"] == 400
+                    or json_res["code"] == 403
+                    or json_res["code"] == 404
+                ):  # failure
+
+                    entities = json_res.get("entities", [])
+                    print("\tChunk Failed: {} entities.".format(str(len(entities))))
+                    results["responses"].append(
+                        "Chunk {} Failed: {} entities.".format(
+                            str(count), str(len(entities))
+                        )
+                    )
+
+                    message = ""
+                    for entity in entities:
+                        sid = entity["unique_keys"][0]["submitter_id"]
+                        if entity["valid"]:  # valid but failed
+                            valid_but_failed.append(sid)
+                        else:  # invalid and failed
+                            message = str(entity["errors"])
+                            results["invalid"][sid] = message
+                            invalid.append(sid)
+                    print(
+                        "\tInvalid records in this chunk: {}, {}".format(
+                            len(invalid), message
+                        )
+                    )
+
+                elif json_res["code"] == 500:  # internal server error
+
+                    print("\t Internal Server Error: {}".format(response))
+                    results["responses"].append(
+                        "Internal Server Error: {}".format(response)
+                    )
+
+            if (
+                len(valid_but_failed) > 0 and len(invalid) > 0
+            ):  # if valid entities failed bc grouped with invalid, retry submission
+                chunk = chunk.loc[
+                    df["submitter_id"].isin(valid_but_failed)
+                ]  # these are records that weren't successful because they were part of a chunk that failed, but are valid and can be resubmitted without changes
+                print(
+                    "Retrying submission of valid entities from failed chunk: {} valid entities.".format(
+                        str(len(chunk))
+                    )
+                )
+
+            elif (
+                len(valid_but_failed) > 0 and len(invalid) == 0
+            ):  # if all entities are valid but submission still failed, probably due to duplicate submitter_ids. Can remove this section once the API response is fixed: https://ctds-planx.atlassian.net/browse/PXP-3065
+                # raise Gen3Error(
+                #     "Please check your data for correct file encoding, special characters, or duplicate submitter_ids or ids."
+                # )
+                print("\tUnhandled API response. Adding chunk to 'other' in results. Check for special characters or malformed links or property values.")
+                results["other"].append(chunk)
+                start += chunk_size
+                end = start + chunk_size
+                chunk = df[start:end]
+
+            elif timeout == False:  # get new chunk if didn't timeout
+                start += chunk_size
+                end = start + chunk_size
+                chunk = df[start:end]
+
+            else:  # if timeout, reduce chunk size and retry smaller chunk
+                if chunk_size >= 2:
+                    chunk_size = int(chunk_size / 2)
+                    end = start + chunk_size
+                    chunk = df[start:end]
+                    print(
+                        "Retrying Chunk with reduced chunk_size: {}".format(
+                            str(chunk_size)
+                        )
+                    )
+                    timeout = False
+                else:
+                    raise Gen3SubmissionError(
+                        "Submission is timing out. Please contact the Helpdesk."
+                    )
+
+        print("Finished data submission.")
+        print("Successful records: {}".format(str(len(set(results["succeeded"])))))
+        print("Failed invalid records: {}".format(str(len(results["invalid"]))))
+
+        return results
+
+
+
     # indexd functions:
     def query_indexd(self, limit=100, page=0, uploader=None, args=None):
         """Queries indexd with given records limit and page number.
@@ -2448,6 +2690,7 @@ class Gen3Expansion:
         if format in ["JSON", "TSV"]:
             dc_regex = re.compile(r"https:\/\/(.+)\/?$")
             dc = dc_regex.match(self._endpoint).groups()[0]
+            dc = dc.strip('/')
         else:
             print("\n\n'{}' != a valid output format. Please provide a format of either 'JSON' or 'TSV'.\n\n".format(format))
 
@@ -2875,7 +3118,7 @@ class Gen3Expansion:
             print("ERROR:" + output)
         return outdir
 
-    def list_links(self, link_list, dd):
+    def old_list_links(self, link_list, dd):
         """return a list of indiv link names."""
         link_names = []
         for link in link_list:
@@ -2886,6 +3129,20 @@ class Gen3Expansion:
             else:
                 link_names.append(link["name"])
         return link_names
+
+    def list_links(self, node, dd):
+        """return a list of indiv link names for a node"""
+        link_list = dd[node]['links']
+        link_names = []
+        for link in link_list:
+            if "subgroup" in link:
+                sublinks = list(link["subgroup"])
+                for sublink in sublinks:
+                    link_names.append(sublink["name"])
+            else:
+                link_names.append(link["name"])
+        return link_names
+
 
     def get_prop_type(self, node, prop, dd):
         prop_def = dd[node]["properties"][prop]

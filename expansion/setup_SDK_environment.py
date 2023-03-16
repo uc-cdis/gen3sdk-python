@@ -74,7 +74,7 @@ sub = Gen3Submission(api, auth) # Initialize an instance this class, using your 
 
 # run my local working copy
 %run /Users/christopher/Documents/GitHub/cgmeyer/gen3sdk-python/expansion/expansion.py # Some additional functions in Gen3Expansion class
-exp = Gen3Expansion(api, auth) # Initialize an instance, using its functions like exp.get_project_tsvs()
+exp = Gen3Expansion(sub, api, auth) # Initialize an instance, using its functions like exp.get_project_tsvs()
 
 # download the sdk files directly from GitHub and run in ipython:
 #!wget https://raw.githubusercontent.com/uc-cdis/gen3sdk-python/master/gen3/submission.py
