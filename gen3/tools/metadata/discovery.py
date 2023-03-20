@@ -270,6 +270,8 @@ def _sanitize_tsv_row(tsv_row):
             sanitized[k] = json.dumps(v)
         elif type(v) == str:
             sanitized[k] = v.replace("\n", "\\n")
+        elif type(v) == int:
+            sanitized[k] = v
     return sanitized
 
 
