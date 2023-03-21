@@ -1050,8 +1050,11 @@ class DownloadManager:
 
                     if delete_unpacked_packages:
                         filepath.unlink()
-
-            completed[entry.object_id].status = "downloaded" if res else "error"
+            if res:
+                completed[entry.object_id].status = "downloaded"
+                logger.info("The files/packages have been successfully downloaded.")
+            else:
+                "error"
             completed[entry.object_id].end_time = datetime.now(timezone.utc)
 
         return completed
