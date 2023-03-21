@@ -213,7 +213,7 @@ class dbgapFHIR(object):
             )
             data["Disclaimer"] = self.disclaimer
 
-            logging.debug(f"simplified study data: {data}")
+            logging.debug(f"simplified {study_id} study data: {data}")
             simplified_data[study_id] = data
 
         return simplified_data
