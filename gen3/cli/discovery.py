@@ -94,10 +94,11 @@ def discovery_read(ctx, limit, agg):
     show_default=True,
 )
 @click.option(
-    "--limit",
-    "limit",
-    help="max number of metadata records to fetch",
-    default=500,
+    "--max-number-discovery-records",
+    "max_number_discovery_records",
+    help="max number of metadata records to fetch. Initially defaulted to something very high. If you start to miss records, you may need to bump this up.",
+    default=8192,
+    type=int,
     show_default=True,
 )
 @click.option(
@@ -110,7 +111,7 @@ def discovery_read(ctx, limit, agg):
 @click.option(
     "--metadata-column-to-map",
     "metadata_column_to_map",
-    help="The column in the provided METADATA file to use to map/merge into the current Discovery metadata",
+    help="The column in the provided metadata file to use to map/merge into the current Discovery metadata",
     default="guid",
     show_default=True,
 )
@@ -134,19 +135,20 @@ def discovery_read_and_combine(
     output_filename,
     discovery_column_to_map_on,
     metadata_column_to_map,
-    limit,
+    max_number_discovery_records,
     metadata_prefix,
     agg,
 ):
     """
-    Combine provided metadata from file with current commons' discovery page metadata into a TSV.
+    Combine provided metadata from file with current commons' discovery page metadata.
+    Outputs a TSV with the original discovery metadata and provided metadata.
     """
     auth = ctx.obj["auth_factory"].get()
     loop = get_or_create_event_loop_for_thread()
     endpoint = ctx.obj.get("endpoint")
     current_discovery_metadata_file = loop.run_until_complete(
         output_expanded_discovery_metadata(
-            auth, endpoint=endpoint, limit=limit, use_agg_mds=agg
+            auth, endpoint=endpoint, limit=max_number_discovery_records, use_agg_mds=agg
         )
     )
 

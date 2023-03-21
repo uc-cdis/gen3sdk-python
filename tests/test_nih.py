@@ -19,9 +19,15 @@ from tests.utils_mock_fhir_response import (
 
 def test_dbgap_fhir():
     """
-    Test DOI creation under various inputs, ensure it still works even when
-    special characters are used. Ensure it doesn't work when invalid input is
-    provided (like not specify prefix OR id).
+    Test dbGaP FHIR parsing works and outputs expected fields and values.
+
+    Note that the dbGaP FHIR response is mocked, but the response provided
+    is a real response from the dbGaP FHIR Server (to simulate current state).
+
+    This does not integration test the dbGaP FHIR server. In other words,
+    if they change format and it would break our code, this will not catch that
+    (and it's not the intention to catch that here). This is intended to unit
+    test our code to ensure we don't break specifically our parsing in the future.
     """
     dbgap_fhir = dbgapFHIR(
         api="https://example.com/fhir/x1",

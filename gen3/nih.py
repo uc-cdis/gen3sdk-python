@@ -234,7 +234,7 @@ class dbgapFHIR(object):
             try:
                 study = self._get_dbgap_fhir_objects_for_study(study_id)
             except Exception as exc:
-                logging.warning(f"unable to get {study_id}, skipping. Error: {exc}")
+                logging.error(f"unable to get {study_id}, skipping. Error: {exc}")
                 continue
 
             # dbGaP API rate limits if we go too fast
@@ -250,7 +250,12 @@ class dbgapFHIR(object):
 
         return all_data
 
-    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    @backoff.on_exception(
+        backoff.expo,
+        Exception,
+        max_tries=7,
+        **{key: value for key, value in DEFAULT_BACKOFF_SETTINGS.items() if key != "max_tries"},
+    )
     def _get_dbgap_fhir_objects_for_study(self, phsid):
         logging.info(f"getting {phsid} from dbGaP FHIR API...")
         study = None
@@ -351,6 +356,8 @@ class dbgapFHIR(object):
                         pass
 
                     ext_name = extension.url.split("/")[-1].split("-")[-1]
+                    # if it's a Mapping, we weren't able to simplify the value,
+                    # so just leave the existing entry in all_data
                     if not isinstance(value, collections.abc.Mapping):
                         if not all_data.get(ext_name):
                             all_data[ext_name] = []
@@ -373,7 +380,7 @@ class dbgapFHIR(object):
         all_data.update(simplified_data)
         self._flatten_relevant_fields(all_data)
         self._remove_unecessary_fields(all_data)
-        self._captialize_top_level_keys(all_data)
+        self._capitalize_top_level_keys(all_data)
 
         return all_data
 
@@ -399,7 +406,6 @@ class dbgapFHIR(object):
         #       serialized, as: ("name", "json_name", type, is_list, "of_many", not_optional)
         for item in fhir_object.elementProperties():
             variables_to_simplify.add(item[0])
-            variables_to_simplify.add(item[1])
 
         for var in variables_to_simplify:
             simplified_var = dbgapFHIR._get_simple_text_from_fhir_object(
@@ -521,7 +527,7 @@ class dbgapFHIR(object):
                 pass
 
     @staticmethod
-    def _captialize_top_level_keys(all_data):
+    def _capitalize_top_level_keys(all_data):
         for key, value in copy.deepcopy(all_data).items():
             capitalized_key = key[:1].upper() + key[1:]
             all_data[capitalized_key] = all_data[key]

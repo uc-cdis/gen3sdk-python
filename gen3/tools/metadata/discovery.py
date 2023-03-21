@@ -141,6 +141,7 @@ def combine_discovery_metadata(
     metadata_column_to_map,
     output_filename,
     metadata_prefix=None,
+    exact_match=False,
 ):
     """
     Combine the provided metadata manifest with the existing Discovery metadata
@@ -152,12 +153,16 @@ def combine_discovery_metadata(
         metadata_file_to_combine (str): filename of TSV containing the metadata
             to combine with the discovery metadata
         discovery_column_to_map_on (str): The column in the current discovery
-            metadata to use to
-        metadata_column_to_map (str): The column in the provided METADATA file
+            metadata to use to map on
+        metadata_column_to_map (str): The column in the provided metadata file
             to use to map/merge into the current Discovery metadata
         metadata_prefix (str): Prefix to add to the column names in the provided
             metadata file before final output
         output_filename (str): filename to output combined metadata
+        exact_match (str): whether or not the content of discovery_column_to_map_on
+            is an EXACT match of the content in metadata_column_to_map.
+            Setting this to True when applicable improves the runtime of the
+            overall combination.
     """
 
     logging.info(
@@ -170,33 +175,35 @@ def combine_discovery_metadata(
     )
 
     # First we need to add a prefix if it was provided
-    temporary_prefixed_filename = (
-        CURRENT_DIR + "temp_" + os.path.basename(metadata_file_to_combine)
-    )
-    delimiter = get_delimiter_from_extension(metadata_file_to_combine)
-    with open(metadata_file_to_combine) as metadata_file:
-        reader = csv.DictReader(metadata_file, delimiter=delimiter)
+    temporary_prefixed_filename = None
+    if metadata_prefix:
+        temporary_prefixed_filename = (
+            CURRENT_DIR.rstrip("/") + "/temp_" + os.path.basename(metadata_file_to_combine)
+        )
+        delimiter = get_delimiter_from_extension(metadata_file_to_combine)
+        with open(metadata_file_to_combine) as metadata_file:
+            reader = csv.DictReader(metadata_file, delimiter=delimiter)
 
-        new_headers = []
-        for header in reader.fieldnames:
-            new_headers.append(metadata_prefix + header)
+            new_headers = []
+            for header in reader.fieldnames:
+                new_headers.append(metadata_prefix + header)
 
-        with open(temporary_prefixed_filename, "w") as prefixed_metadata_file:
-            writer = csv.DictWriter(
-                prefixed_metadata_file, fieldnames=new_headers, delimiter=delimiter
-            )
-
-            # write the new header out
-            writer.writeheader()
-
-            for row in reader:
-                writer.writerow(
-                    {
-                        metadata_prefix + key: value
-                        for (key, value) in row.items()
-                        if key
-                    }
+            with open(temporary_prefixed_filename, "w") as prefixed_metadata_file:
+                writer = csv.DictWriter(
+                    prefixed_metadata_file, fieldnames=new_headers, delimiter=delimiter
                 )
+
+                # write the new header out
+                writer.writeheader()
+
+                for row in reader:
+                    writer.writerow(
+                        {
+                            metadata_prefix + key: value
+                            for (key, value) in row.items()
+                            if key
+                        }
+                    )
 
     # Now we need to associate the provided metadata with a Discovery GUID
 
@@ -218,48 +225,63 @@ def combine_discovery_metadata(
     # by default, the functions for parsing the manifests and rows assumes a 1:1
     # mapping. There is an additional function provided for partial string matching
     # which we can use here.
-    custom_manifest_row_parsers[
-        "guids_for_manifest_row"
-    ] = get_guids_for_manifest_row_partial_match
+    if not exact_match:
+        custom_manifest_row_parsers[
+            "guids_for_manifest_row"
+        ] = get_guids_for_manifest_row_partial_match
 
     temporary_output_filename = (
-        CURRENT_DIR + "temp_" + os.path.basename(output_filename)
+        CURRENT_DIR.rstrip("/") + "/temp_" + os.path.basename(output_filename)
     )
 
-    merge_guids_into_metadata(
-        indexing_manifest=current_discovery_metadata,
-        metadata_manifest=temporary_prefixed_filename,
-        output_filename=temporary_output_filename,
-        manifests_mapping_config=custom_manifests_mapping_config,
-        manifest_row_parsers=custom_manifest_row_parsers,
-        include_all_indexing_cols_in_output=False,
-    )
+    if exact_match:
+        merge_guids_into_metadata(
+            indexing_manifest=current_discovery_metadata,
+            metadata_manifest=temporary_prefixed_filename or metadata_file_to_combine,
+            output_filename=temporary_output_filename,
+            manifests_mapping_config=custom_manifests_mapping_config,
+            manifest_row_parsers=manifest_row_parsers,
+            include_all_indexing_cols_in_output=True,
+        )
 
-    # Now the GUID exists in the output (Discovery GUID has been associated
-    # to the provided metadata), so we can easily merge that back
-    # into the discovery metadata
+        output_filename = make_folders_for_filename(
+            output_filename, current_directory=CURRENT_DIR
+        )
+    else:
+        merge_guids_into_metadata(
+            indexing_manifest=current_discovery_metadata,
+            metadata_manifest=temporary_prefixed_filename or metadata_file_to_combine,
+            output_filename=temporary_output_filename,
+            manifests_mapping_config=custom_manifests_mapping_config,
+            manifest_row_parsers=custom_manifest_row_parsers,
+            include_all_indexing_cols_in_output=False,
+        )
 
-    custom_manifests_mapping_config["row_column_name"] = "guid"
-    custom_manifests_mapping_config["indexing_manifest_column_name"] = "guid"
+        # Now the GUID exists in the output (Discovery GUID has been associated
+        # to the provided metadata), so we can easily merge that back
+        # into the discovery metadata
 
-    merge_guids_into_metadata(
-        indexing_manifest=temporary_output_filename,
-        metadata_manifest=current_discovery_metadata,
-        output_filename=temporary_output_filename,
-        manifests_mapping_config=custom_manifests_mapping_config,
-        manifest_row_parsers=manifest_row_parsers,
-        include_all_indexing_cols_in_output=True,
-    )
+        custom_manifests_mapping_config["row_column_name"] = "guid"
+        custom_manifests_mapping_config["indexing_manifest_column_name"] = "guid"
 
-    output_filename = make_folders_for_filename(
-        output_filename, current_directory=CURRENT_DIR
-    )
+        merge_guids_into_metadata(
+            indexing_manifest=temporary_output_filename,
+            metadata_manifest=current_discovery_metadata,
+            output_filename=temporary_output_filename,
+            manifests_mapping_config=custom_manifests_mapping_config,
+            manifest_row_parsers=manifest_row_parsers,
+            include_all_indexing_cols_in_output=True,
+        )
+
+        output_filename = make_folders_for_filename(
+            output_filename, current_directory=CURRENT_DIR
+        )
 
     # remove rows with GUID of None (this means there was no matching
     # metadata to update in Discovery)
     with open(
         temporary_output_filename, "rt", encoding="utf-8-sig"
-    ) as input_file, open(output_filename, "w", encoding="utf-8-sig") as output_file:
+    ) as input_file, open(output_filename, "w") as output_file:
         delimiter = get_delimiter_from_extension(temporary_output_filename)
         reader = csv.DictReader(input_file, delimiter=delimiter)
 
@@ -276,7 +298,11 @@ def combine_discovery_metadata(
                 writer.writerow(row)
 
     # cleanup temporary files
-    for temporary_file in [temporary_output_filename, temporary_prefixed_filename]:
+    for temporary_file in [
+        temp_file
+        for temp_file in [temporary_output_filename, temporary_prefixed_filename]
+        if temp_file
+    ]:
         try:
             os.remove(temporary_file)
         except Exception as exc:

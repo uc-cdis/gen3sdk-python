@@ -567,7 +567,6 @@ class Gen3Submission:
 
         # Start the chunking loop:
         while (start + len(chunk)) <= len(df):
-
             timeout = False
             valid_but_failed = []
             invalid = []
@@ -599,7 +598,6 @@ class Gen3Submission:
                 or "Connection aborted." in response
                 or "service failure - try again later" in response
             ):  # time-out, response is not valid JSON at the moment
-
                 print("\t Reducing Chunk Size: {}".format(response))
                 results["responses"].append("Reducing Chunk Size: {}".format(response))
                 timeout = True
@@ -631,7 +629,6 @@ class Gen3Submission:
                     )
 
                 elif json_res["code"] == 200:  # success
-
                     entities = json_res.get("entities", [])
                     print("\t Succeeded: {} entities.".format(len(entities)))
                     results["responses"].append(
@@ -643,14 +640,12 @@ class Gen3Submission:
                         results["succeeded"].append(sid)
 
                 elif json_res["code"] == 500:  # internal server error
-
                     print("\t Internal Server Error: {}".format(response))
                     results["responses"].append(
                         "Internal Server Error: {}".format(response)
                     )
 
                 else:  # failure (400, 401, 403, 404...)
-
                     entities = json_res.get("entities", [])
                     print(
                         "\tChunk Failed (status code {}): {} entities.".format(

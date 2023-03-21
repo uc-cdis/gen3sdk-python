@@ -217,13 +217,55 @@ def test_discovery_combine():
         "tests/merge_manifests/discovery_combine/combined_discovery_metadata.tsv"
     )
 
+    _remove_temporary_file(output_file)
+
+
+def test_discovery_combine_exact_match():
+    """
+    Test the underlying logic for combining metadata manifests when there's a column
+    with an exact match.
+    """
+    current_discovery_metadata_file = (
+        "tests/merge_manifests/discovery_combine/discovery.tsv"
+    )
+    metadata_filename = (
+        "tests/merge_manifests/discovery_combine/metadata_file_exact_match.tsv"
+    )
+    discovery_column_to_map_on = "guid"
+    metadata_column_to_map = "guid_exact_match"
+    output_filename = "test_combined_discovery_metadata_exact_match.tsv"
+    metadata_prefix = "DBGAP_FHIR_"
+
+    output_file = combine_discovery_metadata(
+        current_discovery_metadata_file,
+        metadata_filename,
+        discovery_column_to_map_on,
+        metadata_column_to_map,
+        output_filename,
+        metadata_prefix=metadata_prefix,
+        exact_match=True,
+    )
+
+    assert _get_tsv_data(output_file) == _get_tsv_data(
+        "tests/merge_manifests/discovery_combine/combined_discovery_metadata_exact_match.tsv"
+    )
+
+    _remove_temporary_file(output_file)
+
+
+def _remove_temporary_file(filename):
+    try:
+        os.remove(filename)
+    except Exception as exc:
+        pass
+
 
 def _get_tsv_data(manifest, delimiter="\t"):
     """
     Returns a list of rows sorted by guid for the given manifest.
     """
     csv_data = list()
-    with open(manifest) as f:
+    with open(manifest, "r", encoding="utf-8-sig") as f:
         rows = []
         reader = csv.DictReader(f, delimiter=delimiter)
         fieldnames = reader.fieldnames

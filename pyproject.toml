@@ -51,7 +51,7 @@ cdisutilstest = { git = "https://github.com/uc-cdis/cdisutils-test.git", tag = "
 indexd = { git = "https://github.com/uc-cdis/indexd.git", tag = "3.5.0" }
 
 [tool.poetry.scripts]
-gen3 = 'gen3.cli.__main__:main'
+gen3 = "gen3.cli.__main__:main"
 
 [tool.poetry.plugins."gen3.plugins"]
 

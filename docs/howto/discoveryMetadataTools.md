@@ -26,6 +26,8 @@ This will describe how to use the SDK functions directly. If you use the CLI,
 it will automatically read current Discovery metadata and then combine with the
 file you provide (after applying a prefix to all the columns, if you specify that).
 
+> Note: This supports CSV and TSV formats for the metadata file
+
 Let's assume:
 
 - You don't have the current Discovery metadata in a file locally
