@@ -65,7 +65,7 @@ def test_update_config_lines(test_lines, monkeypatch):
     monkeypatch.setattr(config_tool, "CONFIG_FILE_PATH", file_name)
     try:
         config_tool.update_config_lines(test_lines, expected_profile_line, new_lines)
-        with (open(file_name, "r")) as f:
+        with open(file_name, "r") as f:
             assert f.readlines() == [expected_profile_line] + new_lines
     finally:
         if os.path.exists(file_name):

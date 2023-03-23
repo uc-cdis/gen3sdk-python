@@ -113,6 +113,7 @@ import asyncio
 
 from gen3.auth import Gen3Auth
 from gen3.jobs import Gen3Jobs, DBGAP_METADATA_JOB
+from gen3.utils import get_or_create_event_loop_for_thread
 
 # An API Key downloaded from the above commons' "Profile" page
 API_KEY_FILEPATH = "credentials.json"
