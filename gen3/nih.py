@@ -254,7 +254,11 @@ class dbgapFHIR(object):
         backoff.expo,
         Exception,
         max_tries=7,
-        **{key: value for key, value in DEFAULT_BACKOFF_SETTINGS.items() if key != "max_tries"},
+        **{
+            key: value
+            for key, value in DEFAULT_BACKOFF_SETTINGS.items()
+            if key != "max_tries"
+        },
     )
     def _get_dbgap_fhir_objects_for_study(self, phsid):
         logging.info(f"getting {phsid} from dbGaP FHIR API...")
@@ -441,9 +445,7 @@ class dbgapFHIR(object):
                     output.append(simple_representation)
         # ignore non lists unless it's a FHIR object we know how to parse
         elif type(getattr(fhir_object, list_variable, None)) == FHIRReference:
-            simple_representation = getattr(
-                fhir_object, list_variable, None
-            ).display
+            simple_representation = getattr(fhir_object, list_variable, None).display
             if simple_representation:
                 output.append(simple_representation)
         elif type(getattr(fhir_object, list_variable, None)) == Meta:
@@ -457,9 +459,7 @@ class dbgapFHIR(object):
                 output.append(simple_representation)
         # elif ... add any more FHIR objects we can simplify and parse here
         else:
-            logging.warning(
-                f"could not parse FHIR object to simple text, ignoring"
-            )
+            logging.warning(f"could not parse FHIR object to simple text, ignoring")
 
         return output
 

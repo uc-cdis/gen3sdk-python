@@ -178,7 +178,9 @@ def combine_discovery_metadata(
     temporary_prefixed_filename = None
     if metadata_prefix:
         temporary_prefixed_filename = (
-            CURRENT_DIR.rstrip("/") + "/temp_" + os.path.basename(metadata_file_to_combine)
+            CURRENT_DIR.rstrip("/")
+            + "/temp_"
+            + os.path.basename(metadata_file_to_combine)
         )
         delimiter = get_delimiter_from_extension(metadata_file_to_combine)
         with open(metadata_file_to_combine) as metadata_file:
