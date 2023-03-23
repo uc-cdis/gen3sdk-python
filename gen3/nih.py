@@ -419,7 +419,7 @@ class dbgapFHIR(object):
     @staticmethod
     def _get_simple_text_from_fhir_object(fhir_object, list_variable):
         output = []
-        try:
+        if type(getattr(fhir_object, list_variable, None)) is list:
             for item in getattr(fhir_object, list_variable, None) or []:
                 simple_representation = getattr(item, "display", {})
                 simple_representation = simple_representation or getattr(
@@ -439,28 +439,27 @@ class dbgapFHIR(object):
                 )
                 if simple_representation:
                     output.append(simple_representation)
-        except TypeError as exc:
-            # ignore non lists unless it's a FHIR object we know how to parse
-            if type(getattr(fhir_object, list_variable, None)) == FHIRReference:
-                simple_representation = getattr(
-                    fhir_object, list_variable, None
-                ).display
-                if simple_representation:
-                    output.append(simple_representation)
-            elif type(getattr(fhir_object, list_variable, None)) == Meta:
-                # ignore meta info
-                pass
-            elif type(getattr(fhir_object, list_variable, None)) == Identifier:
-                simple_representation = dbgapFHIR._get_simple_text_from_fhir_object(
-                    getattr(fhir_object, list_variable, None), "identifier"
-                )
-                if simple_representation:
-                    output.append(simple_representation)
-            # elif ... add any more FHIR objects we can simplify and parse here
-            else:
-                logging.warning(
-                    f"could not parse FHIR object to simple text, ignoring. Error: {exc}"
-                )
+        # ignore non lists unless it's a FHIR object we know how to parse
+        elif type(getattr(fhir_object, list_variable, None)) == FHIRReference:
+            simple_representation = getattr(
+                fhir_object, list_variable, None
+            ).display
+            if simple_representation:
+                output.append(simple_representation)
+        elif type(getattr(fhir_object, list_variable, None)) == Meta:
+            # ignore meta info
+            pass
+        elif type(getattr(fhir_object, list_variable, None)) == Identifier:
+            simple_representation = dbgapFHIR._get_simple_text_from_fhir_object(
+                getattr(fhir_object, list_variable, None), "identifier"
+            )
+            if simple_representation:
+                output.append(simple_representation)
+        # elif ... add any more FHIR objects we can simplify and parse here
+        else:
+            logging.warning(
+                f"could not parse FHIR object to simple text, ignoring"
+            )
 
         return output
 
@@ -500,11 +499,11 @@ class dbgapFHIR(object):
                     {'Title': ['A novel variational Bayes multiple locus Z-statistic '
                            'for genome-wide association studies with Bayesian '
                            'model averaging'],
-                    'Url': ['https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3381972']}
+                    'Url': 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3381972'}
                     """
                     citer_sanitized = {
                         "Title": citer.get("Title", [""])[0],
-                        "Url": citer.get("Url", [""])[0],
+                        "Url": citer.get("Url", [""]),
                     }
                     citers.append(citer_sanitized)
             dictionary["Citers"] = citers
