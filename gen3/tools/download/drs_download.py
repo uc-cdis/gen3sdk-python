@@ -1054,7 +1054,7 @@ class DownloadManager:
                 completed[entry.object_id].status = "downloaded"
                 logger.info("The files/packages have been successfully downloaded.")
             else:
-                "error"
+                completed[entry.object_id].status = "error"
             completed[entry.object_id].end_time = datetime.now(timezone.utc)
 
         return completed
