@@ -47,7 +47,7 @@ DEFAULT_EXPIRE: timedelta = timedelta(hours=1)
 # package formats we handle for unpacking
 PACKAGE_EXTENSIONS = [".zip"]
 
-logger = get_logger("drs-pull", log_level="warning")
+logger = get_logger("drs-pull", log_level="info")
 
 
 @dataclass_json(letter_case=LetterCase.SNAKE)
