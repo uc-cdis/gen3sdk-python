@@ -79,7 +79,7 @@
 <span class="c1"># package formats we handle for unpacking</span>
 <span class="n">PACKAGE_EXTENSIONS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;.zip&quot;</span><span class="p">]</span>
 
-<span class="n">logger</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="s2">&quot;drs-pull&quot;</span><span class="p">,</span> <span class="n">log_level</span><span class="o">=</span><span class="s2">&quot;warning&quot;</span><span class="p">)</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="s2">&quot;drs-pull&quot;</span><span class="p">,</span> <span class="n">log_level</span><span class="o">=</span><span class="s2">&quot;info&quot;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="Manifest"><a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.Manifest">[docs]</a><span class="nd">@dataclass_json</span><span class="p">(</span><span class="n">letter_case</span><span class="o">=</span><span class="n">LetterCase</span><span class="o">.</span><span class="n">SNAKE</span><span class="p">)</span>
@@ -1082,8 +1082,11 @@
 
                     <span class="k">if</span> <span class="n">delete_unpacked_packages</span><span class="p">:</span>
                         <span class="n">filepath</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
-
-            <span class="n">completed</span><span class="p">[</span><span class="n">entry</span><span class="o">.</span><span class="n">object_id</span><span class="p">]</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;downloaded&quot;</span> <span class="k">if</span> <span class="n">res</span> <span class="k">else</span> <span class="s2">&quot;error&quot;</span>
+            <span class="k">if</span> <span class="n">res</span><span class="p">:</span>
+                <span class="n">completed</span><span class="p">[</span><span class="n">entry</span><span class="o">.</span><span class="n">object_id</span><span class="p">]</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;downloaded&quot;</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;The files/packages have been successfully downloaded.&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="s2">&quot;error&quot;</span>
             <span class="n">completed</span><span class="p">[</span><span class="n">entry</span><span class="o">.</span><span class="n">object_id</span><span class="p">]</span><span class="o">.</span><span class="n">end_time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">completed</span></div>
