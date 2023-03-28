@@ -11,7 +11,6 @@ TOC
 - [Using Gen3 Jobs](#using-gen3-jobs)
 - [Verify Metadata Manifest](#verify-metadata-manifest)
 
-
 ### Ingest Manifest
 
 For populating the metadata service via a file filled with metadata. Uses asynchronous
@@ -249,6 +248,7 @@ import asyncio
 from gen3.auth import Gen3Auth
 from gen3.tools import metadata
 from gen3.tools.metadata.ingest_manifest import manifest_row_parsers
+from gen3.utils import get_or_create_event_loop_for_thread
 
 logging.basicConfig(filename="output.log", level=logging.DEBUG)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
@@ -534,6 +534,7 @@ import asyncio
 from gen3.index import Gen3Index
 from gen3.auth import Gen3Auth
 from gen3.jobs import Gen3Jobs, DBGAP_METADATA_JOB, INGEST_METADATA_JOB
+from gen3.utils import get_or_create_event_loop_for_thread
 
 # An API Key downloaded from the above commons' "Profile" page
 API_KEY_FILEPATH = "credentials.json"
@@ -626,6 +627,7 @@ import logging
 import asyncio
 
 from gen3.tools import metadata
+from gen3.utils import get_or_create_event_loop_for_thread
 
 logging.basicConfig(filename="output.log", level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))

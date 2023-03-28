@@ -72,7 +72,7 @@ def get_guids_for_manifest_row_partial_match(
     # the key from the row to use for the partial match against the keys in
     # data_from_indexing_manifest
     row_key = config.get("row_column_name")
-    key_from_row = row.get(row_key).strip()
+    key_from_row = row.get(row_key, "").strip()
 
     matching_guids = []
     matching_keys = []
@@ -128,8 +128,6 @@ def _get_data_from_indexing_manifest(
         if include_all_indexing_cols_in_output:
             value_column_names = value_column_names + csvReader.fieldnames
 
-        print(f"getting indexing columns: {value_column_names}")
-
         for row in csvReader:
             key = str(row[key_column_name]).strip()
             column_to_matching_rows.setdefault(key, []).append(
@@ -164,15 +162,15 @@ def merge_guids_into_metadata(
     include_all_indexing_cols_in_output=True,
 ):
     start_time = time.perf_counter()
-    logging.info(f"start time: {start_time}")
+    logging.debug(f"start time: {start_time}")
 
     # if delimiter not specified, try to get based on file ext
     if not indexing_manifest_file_delimiter:
-        indexing_manifest_file_delimiter = _get_delimiter_from_extension(
+        indexing_manifest_file_delimiter = get_delimiter_from_extension(
             indexing_manifest
         )
     if not metadata_manifest_file_delimiter:
-        metadata_manifest_file_delimiter = _get_delimiter_from_extension(
+        metadata_manifest_file_delimiter = get_delimiter_from_extension(
             metadata_manifest
         )
 
@@ -271,13 +269,22 @@ def merge_guids_into_metadata(
                     )
 
     end_time = time.perf_counter()
-    logging.info(f"end time: {end_time}")
-    logging.info(f"run time: {end_time-start_time}")
+    logging.debug(f"end time: {end_time}")
+    logging.debug(f"run time: {end_time-start_time}")
 
-    logging.info(f"output file:\n{os.path.abspath(output_filename)}")
+    logging.debug(f"output file:\n{os.path.abspath(output_filename)}")
 
 
-def _get_delimiter_from_extension(filename):
+def get_delimiter_from_extension(filename):
+    """
+    Return the file delimter based on the extension.
+
+    Args:
+        filename (str): file name with extension
+
+    Returns:
+        str: delimeter character, either \t or ,
+    """
     file_ext = os.path.splitext(filename)
     if file_ext[-1].lower() == ".tsv":
         file_delimiter = "\t"

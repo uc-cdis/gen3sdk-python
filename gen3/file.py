@@ -164,7 +164,6 @@ class Gen3File:
         return out_path
 
     def download_single(self, object_id, path):
-
         """
         Download a single file using its GUID.
 

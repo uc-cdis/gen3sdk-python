@@ -613,7 +613,6 @@ def parse_drs_identifier(drs_candidate: str) -> Tuple[str, str, str]:
     matches = re.findall(drs_regex, drs_candidate, re.UNICODE)
 
     if len(matches) == 1:  # this could be a hostname DRS id
-
         hostname_regex = (
             r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*"
             r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$"
