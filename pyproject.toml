@@ -56,7 +56,7 @@ gen3 = "gen3.cli.__main__:main"
 [tool.poetry.plugins."gen3.plugins"]
 
 [build-system]
-requires = ["poetry>=0.12"]
+requires = ["poetry>=1.4.1"]
 build-backend = "poetry.masonry.api"
 
 [tool.pytest.ini_options]
