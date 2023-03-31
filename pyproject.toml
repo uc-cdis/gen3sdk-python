@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "gen3"
 homepage = "https://gen3.org/"
-version = "4.16.1"
+version = "4.17.1"
 description = "Gen3 CLI and Python SDK"
 authors = ["Center for Translational Data Science at the University of Chicago <support@datacommons.io>"]
 license = "Apache-2.0"
@@ -36,6 +36,13 @@ aiofiles = "^0.8.0"
 pandas = "^1.4.2"
 httpx = "*"
 
+# A list of all of the optional dependencies, some of which are included in the
+# below `extras`. They can be opted into by apps.
+fhirclient = { version = "*", optional = true }
+
+[tool.poetry.extras]
+fhir = ["fhirclient"]
+
 [tool.poetry.dev-dependencies]
 pytest = "^6.0.0"
 pytest-cov = "*"
@@ -44,7 +51,7 @@ cdisutilstest = { git = "https://github.com/uc-cdis/cdisutils-test.git", tag = "
 indexd = { git = "https://github.com/uc-cdis/indexd.git", tag = "3.5.0" }
 
 [tool.poetry.scripts]
-gen3 = 'gen3.cli.__main__:main'
+gen3 = "gen3.cli.__main__:main"
 
 [tool.poetry.plugins."gen3.plugins"]
 

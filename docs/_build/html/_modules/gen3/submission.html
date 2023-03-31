@@ -599,7 +599,6 @@
 
         <span class="c1"># Start the chunking loop:</span>
         <span class="k">while</span> <span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">))</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
-
             <span class="n">timeout</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="n">valid_but_failed</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="n">invalid</span> <span class="o">=</span> <span class="p">[]</span>
@@ -631,7 +630,6 @@
                 <span class="ow">or</span> <span class="s2">&quot;Connection aborted.&quot;</span> <span class="ow">in</span> <span class="n">response</span>
                 <span class="ow">or</span> <span class="s2">&quot;service failure - try again later&quot;</span> <span class="ow">in</span> <span class="n">response</span>
             <span class="p">):</span>  <span class="c1"># time-out, response is not valid JSON at the moment</span>
-
                 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2"> Reducing Chunk Size: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">response</span><span class="p">))</span>
                 <span class="n">results</span><span class="p">[</span><span class="s2">&quot;responses&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Reducing Chunk Size: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">response</span><span class="p">))</span>
                 <span class="n">timeout</span> <span class="o">=</span> <span class="kc">True</span>
@@ -663,7 +661,6 @@
                     <span class="p">)</span>
 
                 <span class="k">elif</span> <span class="n">json_res</span><span class="p">[</span><span class="s2">&quot;code&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span>  <span class="c1"># success</span>
-
                     <span class="n">entities</span> <span class="o">=</span> <span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;entities&quot;</span><span class="p">,</span> <span class="p">[])</span>
                     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2"> Succeeded: </span><span class="si">{}</span><span class="s2"> entities.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">entities</span><span class="p">)))</span>
                     <span class="n">results</span><span class="p">[</span><span class="s2">&quot;responses&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
@@ -675,14 +672,12 @@
                         <span class="n">results</span><span class="p">[</span><span class="s2">&quot;succeeded&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sid</span><span class="p">)</span>
 
                 <span class="k">elif</span> <span class="n">json_res</span><span class="p">[</span><span class="s2">&quot;code&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">500</span><span class="p">:</span>  <span class="c1"># internal server error</span>
-
                     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2"> Internal Server Error: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">response</span><span class="p">))</span>
                     <span class="n">results</span><span class="p">[</span><span class="s2">&quot;responses&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                         <span class="s2">&quot;Internal Server Error: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
                     <span class="p">)</span>
 
                 <span class="k">else</span><span class="p">:</span>  <span class="c1"># failure (400, 401, 403, 404...)</span>
-
                     <span class="n">entities</span> <span class="o">=</span> <span class="n">json_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;entities&quot;</span><span class="p">,</span> <span class="p">[])</span>
                     <span class="nb">print</span><span class="p">(</span>
                         <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">Chunk Failed (status code </span><span class="si">{}</span><span class="s2">): </span><span class="si">{}</span><span class="s2"> entities.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>

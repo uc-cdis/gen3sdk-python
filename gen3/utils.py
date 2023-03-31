@@ -25,6 +25,41 @@ URL_FORMAT = r"^.*$"
 AUTHZ_FORMAT = r"^.*$"
 
 
+def make_folders_for_filename(filename, current_directory=None):
+    """
+    Make the directories up to the filename provided. Relative paths are supported.
+    Ensure you supply the current directory you want relative paths to be
+    based off of. Returns the absolute path for the file with the folders
+    created. This does NOT create the actual file.
+
+    Example:
+        output = make_folders_for_filename(
+            "../test/temp/output.txt",
+            current_directory="/home/me/foobar"
+        )
+        print(output)
+        >>> /home/me/test/temp/output.txt
+
+    Args:
+        filename (str): path to desired file
+        current_directory (str, optional): current directory you want relative paths to be
+    based off of
+
+    Returns:
+        str: the absolute path for the file with the folders created
+    """
+    current_directory = os.path.dirname(os.path.realpath(__file__))
+    directory = os.path.dirname(os.path.abspath(filename))
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    absolute_path_filename = (
+        directory.rstrip("/") + "/" + os.path.abspath(filename).split("/")[-1]
+    )
+
+    return absolute_path_filename
+
+
 def get_or_create_event_loop_for_thread():
     """
     Asyncio helper function to attempt to get a currently running loop and
@@ -164,6 +199,8 @@ def exception_do_not_retry(error):
             str(getattr(error, "code", None)) == code
             or str(getattr(error, "status", None)) == code
             or str(getattr(error, "status_code", None)) == code
+            or str(getattr(getattr(error, "response", {}), "code", "")) == code
+            or str(getattr(getattr(error, "response", {}), "status", "")) == code
             or str(getattr(getattr(error, "response", {}), "status_code", "")) == code
         )
 
