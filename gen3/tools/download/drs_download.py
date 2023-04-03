@@ -1056,6 +1056,7 @@ class DownloadManager:
                 )
             else:
                 completed[entry.object_id].status = "error"
+                logger.debug(f"object {entry.object_id} has failed to be downloaded.")
             completed[entry.object_id].end_time = datetime.now(timezone.utc)
 
         return completed
