@@ -1051,7 +1051,7 @@ class DownloadManager:
                         filepath.unlink()
             if res:
                 completed[entry.object_id].status = "downloaded"
-                logger.info(
+                logger.debug(
                     f"object {entry.object_id} has been successfully downloaded."
                 )
             else:
