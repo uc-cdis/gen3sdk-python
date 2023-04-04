@@ -3834,9 +3834,9 @@ class Gen3Expansion:
             print("Error querying Guppy")
             return response.text
 
-    def write_manifest(self, guids, manifest_name="gen3_manifest.json"):
+    def write_manifest(self, guids, filename="gen3_manifest.json"):
 
-        with open(manifest_name, "w") as mani:
+        with open(filename, "w") as mani:
 
             mani.write("[\n  {\n")
 
