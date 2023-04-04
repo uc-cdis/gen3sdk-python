@@ -321,7 +321,7 @@ class Gen3Expansion:
             nodes = sorted(
                 list(
                     set(
-                        json_normalize(
+                        pd.json_normalize(
                             self.sub.query("""{_node_type (first:-1) {id}}""")["data"][
                                 "_node_type"
                             ]
@@ -338,7 +338,7 @@ class Gen3Expansion:
 
         if projects == None:  # if no projects specified, get node for all projects
             projects = list(
-                json_normalize(
+                pd.json_normalize(
                     self.sub.query("""{project (first:0){project_id}}""")["data"][
                         "project"
                     ]
@@ -3849,6 +3849,9 @@ class Gen3Expansion:
                 else:
                     mani.write("  },\n  {\n")
                 count += 1
+
+        print("\tDone ({}/{}).".format(count, len(guids)))
+        print("\tManifest written to file: {}".format(filename))
 
     def list_nodes(
         self,
