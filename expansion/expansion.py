@@ -1,7 +1,7 @@
 import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy, re, operator, statistics, datetime
 import pandas as pd
 from os import path
-from pandas.io.json import json_normalize
+from pandas import json_normalize
 from collections import Counter
 from statistics import mean
 from io import StringIO
