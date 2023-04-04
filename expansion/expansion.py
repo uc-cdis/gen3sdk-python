@@ -205,12 +205,12 @@ class Gen3Expansion:
                 + "'"
             )
             query = """{node (first:0,of_type:"%s"){project_id}}""" % (node)
-            df = json_normalize(self.sub.query(query)["data"]["node"])
+            df = pd.json_normalize(self.sub.query(query)["data"]["node"])
             project_ids = project_ids + list(set(df["project_id"]))
         if len(queries) > 0:
             for query in queries:
                 res = self.sub.query(query)
-                df = json_normalize(res["data"]["project"])
+                df = pd.json_normalize(res["data"]["project"])
                 project_ids = project_ids + list(set(df["project_id"]))
         my_ids = sorted(project_ids, key=str.lower)
         print(my_ids)
