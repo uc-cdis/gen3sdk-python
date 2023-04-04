@@ -3852,6 +3852,7 @@ class Gen3Expansion:
 
         print("\tDone ({}/{}).".format(count, len(guids)))
         print("\tManifest written to file: {}".format(filename))
+        return filename
 
     def list_nodes(
         self,
