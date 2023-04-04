@@ -3842,13 +3842,13 @@ class Gen3Expansion:
 
             count = 0
             for guid in guids:
+                count += 1
                 file_line = '    "object_id": "{}"\n'.format(guid)
                 mani.write(file_line)
                 if count == len(guids):
                     mani.write("  }]")
                 else:
                     mani.write("  },\n  {\n")
-                count += 1
 
         print("\tDone ({}/{}).".format(count, len(guids)))
         print("\tManifest written to file: {}".format(filename))
