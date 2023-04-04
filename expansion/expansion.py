@@ -3840,7 +3840,7 @@ class Gen3Expansion:
 
             mani.write("[\n  {\n")
 
-            count = 1
+            count = 0
             for guid in guids:
                 file_line = '    "object_id": "{}"\n'.format(guid)
                 mani.write(file_line)
