@@ -3215,6 +3215,8 @@ class Gen3Expansion:
             "md5sum",
             "file_name",
             "object_id",
+            "series_uid",
+            "study_uid"
         ],
         omit_nodes=["metaschema", "root", "program", "project", "data_release"],
         outdir=".",
@@ -3256,6 +3258,7 @@ class Gen3Expansion:
                 "N",
                 "nn",
                 "null",
+                "perc_null",
                 "all_null",
                 "min",
                 "max",
@@ -3267,6 +3270,7 @@ class Gen3Expansion:
                 "bins",
             ]
         )
+        report["all_null"] = report["all_null"].astype(bool)
 
         dir_pattern = "{}*{}".format(prefix, "tsvs")
         project_dirs = glob.glob("{}/{}".format(tsv_dir, dir_pattern))
@@ -3346,11 +3350,14 @@ class Gen3Expansion:
 
                         prop_name = "{}.{}".format(node, prop)
                         prop_id = "{}.{}".format(project_id, prop_name)
+                        print(prop_name)
 
                         # because of sheepdog bug, need to inclue "None" in "null" (:facepalm:) https://ctds-planx.atlassian.net/browse/PXP-5663
-                        df.at[df[prop] == "None", prop] = np.nan
+                        #df.at[df[prop] == "None", prop] = np.nan
+
                         null = df.loc[df[prop].isnull()]
                         nn = df.loc[df[prop].notnull()]
+                        perc_null = len(null)/len(df)
                         ptype = self.get_prop_type(node, prop, dd)
 
                         # dict for the prop's row in report dataframe
@@ -3363,6 +3370,7 @@ class Gen3Expansion:
                             "N": len(df),
                             "nn": len(nn),
                             "null": len(null),
+                            "perc_null": perc_null,
                             "all_null": np.nan,
                             "min": np.nan,
                             "max": np.nan,
@@ -3524,12 +3532,18 @@ class Gen3Expansion:
                                 )
                                 exit()
 
-                        if bin_limit != False and isinstance(prop_stats["bins"], list):
+                        if bin_limit and isinstance(prop_stats["bins"], list): # if bin_limit != False
                             prop_stats["bins"] = prop_stats["bins"][: int(bin_limit)]
 
-                        report = report.append(prop_stats, ignore_index=True)
+                        #report = report.append(prop_stats, ignore_index=True)
+                        # print("\n{}\n".format(report))
+                        # print("\n{}\n".format(prop_stats))
+                        pdf = pd.DataFrame.from_records([prop_stats])
+                        pdf['all_null'] = pdf['all_null'].astype(bool)
+                        report = pd.concat([report,pdf])
 
-        if report_null == False:
+
+        if not report_null: # if report_null == False
             report = report.loc[report["all_null"] != True]
 
         # strip the col names so we can sort the report
@@ -3557,7 +3571,7 @@ class Gen3Expansion:
 
         summary["null_nodes"] = null_nodes
 
-        if write_report == True:
+        if write_report: # write_report == True
 
             self.create_output_dir(outdir=outdir)
 
