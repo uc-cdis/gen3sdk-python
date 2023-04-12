@@ -11,13 +11,14 @@ from requests.auth import HTTPBasicAuth
 from unittest.mock import MagicMock, patch
 
 from gen3.nih import dbgapFHIR
+from tests.test_discovery import _get_tsv_data
 from tests.utils_mock_fhir_response import (
     MOCK_NIH_DBGAP_FHIR_RESPONSE_FOR_PHS000007,
     MOCK_NIH_DBGAP_FHIR_RESPONSE_FOR_PHS000166,
 )
 
 
-def test_dbgap_fhir():
+def test_dbgap_fhir(tmp_path):
     """
     Test dbGaP FHIR parsing works and outputs expected fields and values.
 
@@ -143,3 +144,9 @@ def test_dbgap_fhir():
 
     assert "Disclaimer" in metadata["phs000007"]
     assert "Disclaimer" in metadata["phs000166"]
+
+    file_name = tmp_path / "fhir_metadata_file_TEST.tsv"
+    dbgapFHIR.write_data_to_file(metadata, file_name)
+    assert _get_tsv_data(file_name) == _get_tsv_data(
+        "tests/test_data/fhir_metadata.tsv"
+    )

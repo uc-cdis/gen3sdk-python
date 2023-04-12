@@ -12,7 +12,7 @@ from fhirclient.models.fhirreference import FHIRReference
 from fhirclient.models.identifier import Identifier
 from fhirclient.models.meta import Meta
 
-from gen3.tools.metadata.discovery import sanitize_tsv_row
+from gen3.tools.metadata.discovery import sanitize_tsv_row, BASE_CSV_PARSER_SETTINGS
 from gen3.utils import DEFAULT_BACKOFF_SETTINGS
 
 logging = get_logger("__name__")
@@ -294,7 +294,12 @@ class dbgapFHIR(object):
                 headers.add(item)
 
         csv_writer = csv.DictWriter(
-            data_file, delimiter="\t", fieldnames=sorted(headers), extrasaction="ignore"
+            data_file,
+            **{
+                **BASE_CSV_PARSER_SETTINGS,
+                "fieldnames": sorted(headers),
+                "extrasaction": "ignore",
+            },
         )
         csv_writer.writeheader()
 
