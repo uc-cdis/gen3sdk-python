@@ -20,8 +20,8 @@ logging = get_logger("__name__")
 # For more details about this regex, see the function that uses it
 DBGAP_ACCESSION_REGEX = (
     "(?P<phsid>phs(?P<phsid_number>[0-9]+))"
-    "(.(?P<version>v(?P<version_number>[0-9]+))){0,1}"
     "(.(?P<participant_set>p(?P<participant_set_number>[0-9]+))){0,1}"
+    "(.(?P<version>v(?P<version_number>[0-9]+))){0,1}"
     "(.(?P<consent>c(?P<consent_number>[0-9]+)+)){0,1}"
 )
 
