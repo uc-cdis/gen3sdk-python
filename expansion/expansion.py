@@ -2815,31 +2815,6 @@ class Gen3Expansion:
             print("Enter a valid method.\n\tValid methods: 'sheepdog','indexd'")
         return guids
 
-    def write_manifest_for_guids(self, guids, filename="gen3_manifest.json"):
-        """write a gen3-client manifest from provided list of guids"""
-
-        with open(filename, "w") as manifest:
-
-            manifest.write("[")
-
-            count = 0
-            for guid in guids:
-                count += 1
-                manifest.write("\n\t{")
-                manifest.write('"object_id": "{}"'.format(guid))
-
-                if count == len(guids):
-                    manifest.write("  }]")
-                else:
-                    manifest.write("  },")
-
-                print("\t{} ({}/{})".format(guid, count, len(guids)))
-
-            print("\tDone ({}/{}).".format(count, len(guids)))
-            print("\tManifest written to file: {}".format(filename))
-
-    # guids = exp.get_guids_for_file_names(file_names=file_names,method='sheepdog',match='submitter_id')
-
     def get_index_for_file_names(self, file_names, format='tsv'):
         # Get GUIDs for a list of file_names
         if isinstance(file_names, str):
@@ -3216,7 +3191,8 @@ class Gen3Expansion:
             "file_name",
             "object_id",
             "series_uid",
-            "study_uid"
+            "study_uid",
+            "token_record_id"
         ],
         omit_nodes=["metaschema", "root", "program", "project", "data_release"],
         outdir=".",
