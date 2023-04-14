@@ -4171,6 +4171,13 @@ class Gen3Expansion:
 
     # 1) check if 'type' property is in TSV
     def check_type(self,df,node):
+        """
+        Check that the type of all values for properties in a node submission TSV match the data dictionary type
+
+        Args:
+            df(pandas DataFrame): the DataFrame of a node submission TSV read into pandas
+            node(str): the name of the node (node ID) being checked
+        """
         if not 'type' in df:
             error = "{} TSV does not have 'type' header!".format(node)
             print(error)
@@ -4183,6 +4190,14 @@ class Gen3Expansion:
 
     # 2) check if 'submitter_id' is in TSV and all values are unique
     def check_submitter_id(self,df,node):
+        """
+        Check that the submitter_id column is complete and doesn't contain duplicates.
+        "sids" is short for "submitter_ids".
+
+        Args:
+            df(pandas DataFrame): the DataFrame of a node submission TSV read into pandas
+            node(str): the name of the node (node ID) being checked
+        """
         if not 'submitter_id' in df:
             error = "{} TSV does not have 'submitter_id' header!".format(node)
             print(error)
@@ -4195,7 +4210,16 @@ class Gen3Expansion:
                 errors[node].append(error)
 
     # 3) links
-    def check_links(self,df,node):
+    def check_links(self,df,node,dd):
+        """
+        Check whether link headers are provided in a node submission TSV
+        In many cases, node TSVs simply link to the case node, and submitters just provide the "case_ids" column, but we'll check anyways.
+
+        Args:
+            df(pandas DataFrame): the DataFrame of a node submission TSV read into pandas
+            node(str): the name of the node (node ID) being checked
+            dd(dictionary): the data dictionary being used, get with Gen3Submission.get_dictionary_all()
+        """
         links = self.list_links(node, dd)
         if "core_metadata_collections" in links:
             links.remove("core_metadata_collections")
@@ -4211,6 +4235,12 @@ class Gen3Expansion:
 
     # 4) special characters
     def check_special_chars(self,node): # probably need to add more types of special chars to this
+        """
+        Check for special characters that aren't compatible with Gen3's sheepdog submission service.
+
+        Args:
+            node(str): the name of the node (node ID) being checked
+        """
         filename = batch_tsvs["node_tsvs"][node]
         with open(filename, "rb") as tsv_file:
             lns = tsv_file.readlines()
@@ -4223,7 +4253,15 @@ class Gen3Expansion:
                     errors[node].append(error)
 
     # 5) required props
-    def check_required_props(self,df,node):
+    def check_required_props(self,df,node,dd):
+        """
+        Check whether all required properties for a node are provided in the submission TSV.
+
+        Args:
+            df(pandas DataFrame): the DataFrame of a node submission TSV read into pandas
+            node(str): the name of the node (node ID) being checked
+            dd(dictionary): the data dictionary being used, get with Gen3Submission.get_dictionary_all()
+        """
         any_na = df.columns[df.isna().any()].tolist()
         required_props = list(set(dd[node]['required']).difference(links).difference(exclude_props))
         for prop in required_props:
@@ -4240,6 +4278,13 @@ class Gen3Expansion:
 
     # 6) prop completeness: make a note of props with all NA
     def check_completeness(self,df,node):
+        """
+        Report on whether any properties in column headers have all NA/null values.
+
+        Args:
+            df(pandas DataFrame): the DataFrame of a node submission TSV read into pandas
+            node(str): the name of the node (node ID) being checked
+        """
         all_na = df.columns[df.isna().all()].tolist()
         if len(all_na) > 0:
             error = "'{}' TSV has all NA values for these properties: {}".format(node,all_na)
@@ -4248,7 +4293,15 @@ class Gen3Expansion:
         return all_na
 
     # 7) prop types
-    def check_prop_types(self,f,node):
+    def check_prop_types(self,df,node,dd):
+        """
+        Check that the types of properties match their values.
+
+        Args:
+            df(pandas DataFrame): the DataFrame of a node submission TSV read into pandas
+            node(str): the name of the node (node ID) being checked
+            dd(dictionary): the data dictionary being used, get with Gen3Submission.get_dictionary_all()
+        """
         if all_na == None:
             props = list(set(dd[node]['properties']).difference(links).difference(required_props).difference(dd[node]['systemProperties']).difference(exclude_props))
         else:
