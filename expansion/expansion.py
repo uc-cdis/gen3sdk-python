@@ -4170,7 +4170,7 @@ class Gen3Expansion:
 
         return errors
 
-    def check_type(self,df,node):
+    def check_type_field(self,df,node):
         """
         Check that the type of all values for properties in a node submission TSV match the data dictionary type
 
@@ -4335,6 +4335,8 @@ class Gen3Expansion:
             dd(dictionary): the data dictionary being used, get with Gen3Submission.get_dictionary_all()
         """
         errors = []
+        all_na = df.columns[df.isna().all()].tolist()
+        links = self.list_links(node, dd)
         if all_na == None:
             props = list(set(dd[node]['properties']).difference(links).difference(required_props).difference(dd[node]['systemProperties']).difference(exclude_props))
         else:
