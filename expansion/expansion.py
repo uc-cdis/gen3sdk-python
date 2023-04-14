@@ -4325,7 +4325,34 @@ class Gen3Expansion:
         return errors
 
     # 7) prop types
-    def check_prop_types(self,df,node,dd):
+    def check_prop_types(self,
+        df,
+        node,
+        dd,
+        exclude_props = [ # submitters don't provide these properties, so remove them from QC check
+            # case props not provided by submitters
+            "datasets.submitter_id",
+            "token_record_id",
+            "linked_external_data",
+            #series_file props not provided by submitters
+            "file_name",
+            "md5sum",
+            "file_size",
+            "object_id",
+            "storage_urls",
+            "core_metadata_collections.submitter_id",
+            "core_metadata_collections",
+            "associated_ids",
+            #imaging_study props not provided by submitters
+            "loinc_code",
+            "loinc_system",
+            "loinc_contrast",
+            "loinc_long_common_name",
+            "loinc_method",
+            "days_from_study_to_neg_covid_test",
+            "days_from_study_to_pos_covid_test"
+        ]
+    ):
         """
         Check that the types of properties match their values.
 
@@ -4337,6 +4364,7 @@ class Gen3Expansion:
         errors = []
         all_na = df.columns[df.isna().all()].tolist()
         links = self.list_links(node, dd)
+        required_props = list(set(dd[node]['required']).difference(links).difference(exclude_props))
         if all_na == None:
             props = list(set(dd[node]['properties']).difference(links).difference(required_props).difference(dd[node]['systemProperties']).difference(exclude_props))
         else:
