@@ -4139,9 +4139,14 @@ class Gen3Expansion:
                       "nomatch_tsvs":nomatch_tsvs}
         return batch_tsvs
 
-    def check_case_ids(self,df,node):
+    def check_case_ids(self,df,node,cids):
         """
         Check that all case IDs referenced across dataset are in case TSV; "cids" = "case_ids"
+
+        Args:
+            df(pandas DataFrame): the DataFrame of a node submission TSV read into pandas
+            node(str): the name of the node (node ID) being checked
+            cids(list): the list of case IDs provided in the batch case TSV
         """
         extra_cids = []
         if node != 'case':
