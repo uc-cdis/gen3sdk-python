@@ -4262,6 +4262,7 @@ class Gen3Expansion:
             node(str): the name of the node (node ID) being checked
             dd(dictionary): the data dictionary being used, get with Gen3Submission.get_dictionary_all()
         """
+        links = self.list_links(node, dd)
         any_na = df.columns[df.isna().any()].tolist()
         required_props = list(set(dd[node]['required']).difference(links).difference(exclude_props))
         for prop in required_props:
