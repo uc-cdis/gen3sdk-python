@@ -4491,6 +4491,7 @@ class Gen3Expansion:
 
     def check_image_manifest(self,
         idf,
+        cids,
         cols = ['md5sum',
                 'storage_urls',
                 'file_size',
@@ -4502,7 +4503,8 @@ class Gen3Expansion:
         Check for missing required columns in an image manifest.
 
         Args:
-            image_manifests(list): a list of all TSV files matching the format of an image manifest in a batch of TSVs
+            idf(DataFrame): the master imaging manifest DataFrame; obtained by running Gen3Expansion.read_image_manifests()
+            cids(list): list of all the case IDs from the case TSV
             cols(list): the columns required in the image manifest for the packaging script to run properly.
         """
         errors = []
