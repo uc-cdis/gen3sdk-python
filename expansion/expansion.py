@@ -4148,6 +4148,7 @@ class Gen3Expansion:
             node(str): the name of the node (node ID) being checked
             cids(list): the list of case IDs provided in the batch case TSV
         """
+        errors = []
         extra_cids = []
         if node != 'case':
             if "case_ids" in df:
@@ -4157,19 +4158,18 @@ class Gen3Expansion:
             else:
                 error = "Didn't find any case IDs in the {} TSV!".format(node)
                 print(error)
-                errors[node].append(error)
+                errors.append(error)
                 df_cids = []
             #print("Found {} case IDs in the {} TSV.".format(len(cids),node_id))
             extra_cids = list(set(df_cids).difference(cids))
 
             if len(extra_cids) > 0:
-                error = "{} TSV contains {} case IDs that are not present in the case TSV!".format(node,len(extra_cids))
+                error = "{} TSV contains {} case IDs that are not present in the case TSV!\n\t{}\n\n".format(node,len(extra_cids),extra_cids)
                 print(error)
-                errors[node_id].append(error)
+                errors.append(error)
 
-        return extra_cids
+        return errors
 
-    # 1) check if 'type' property is in TSV
     def check_type(self,df,node):
         """
         Check that the type of all values for properties in a node submission TSV match the data dictionary type
@@ -4178,17 +4178,18 @@ class Gen3Expansion:
             df(pandas DataFrame): the DataFrame of a node submission TSV read into pandas
             node(str): the name of the node (node ID) being checked
         """
+        errors = []
         if not 'type' in df:
             error = "{} TSV does not have 'type' header!".format(node)
             print(error)
-            errors[node].append(error)
+            errors.append(error)
         else:
             if not list(set(df.type))[0]==node:
                 error = "{} TSV does not have correct 'type' field.".format(node)
                 print(error)
-                errors[node].append(error)
+                errors.append(error)
+        return errors
 
-    # 2) check if 'submitter_id' is in TSV and all values are unique
     def check_submitter_id(self,df,node):
         """
         Check that the submitter_id column is complete and doesn't contain duplicates.
@@ -4198,18 +4199,19 @@ class Gen3Expansion:
             df(pandas DataFrame): the DataFrame of a node submission TSV read into pandas
             node(str): the name of the node (node ID) being checked
         """
+        errors = []
         if not 'submitter_id' in df:
             error = "{} TSV does not have 'submitter_id' header!".format(node)
             print(error)
-            errors[node].append(error)
+            errors.append(error)
         else:
             sids = list(set(df.submitter_id))
             if not len(sids)==len(df):
                 error = "{} TSV does not have unique submitter_ids! Submitter_ids: {}, TSV Length: {}".format(node,len(sids),len(df))
                 print(error)
-                errors[node].append(error)
+                errors.append(error)
+        return errors
 
-    # 3) links
     def check_links(self,df,node,dd):
         """
         Check whether link headers are provided in a node submission TSV
@@ -4220,6 +4222,7 @@ class Gen3Expansion:
             node(str): the name of the node (node ID) being checked
             dd(dictionary): the data dictionary being used, get with Gen3Submission.get_dictionary_all()
         """
+        errors = []
         links = self.list_links(node, dd)
         if "core_metadata_collections" in links:
             links.remove("core_metadata_collections")
@@ -4230,8 +4233,8 @@ class Gen3Expansion:
             if link_col not in df:
                 error = "'{}' link header not found in '{}' TSV.".format(link_col,node)
                 print(error) # this is not necessarily an error, as some links may be optional, but must have at least 1 link
-                errors[node].append(error)
-        return links
+                errors.append(error)
+        return errors
 
     # 4) special characters
     def check_special_chars(self,node,batch_tsvs): # probably need to add more types of special chars to this
@@ -4241,6 +4244,7 @@ class Gen3Expansion:
         Args:
             node(str): the name of the node (node ID) being checked
         """
+        errors = []
         filename = batch_tsvs["node_tsvs"][node]
         with open(filename, "rb") as tsv_file:
             lns = tsv_file.readlines()
@@ -4250,9 +4254,9 @@ class Gen3Expansion:
                 if b"\xe2" in ln:
                     error = "{} TSV has special char in line {}: {}".format(node,count,ln)
                     print(error)
-                    errors[node].append(error)
+                    errors.append(error)
+        return errors
 
-    # 5) required props
     def check_required_props(self,
         df,
         node,
@@ -4289,6 +4293,7 @@ class Gen3Expansion:
             node(str): the name of the node (node ID) being checked
             dd(dictionary): the data dictionary being used, get with Gen3Submission.get_dictionary_all()
         """
+        errors = []
         links = self.list_links(node, dd)
         any_na = df.columns[df.isna().any()].tolist()
         required_props = list(set(dd[node]['required']).difference(links).difference(exclude_props))
@@ -4296,15 +4301,13 @@ class Gen3Expansion:
             if prop not in df:
                 error = "{} TSV does not have required property header '{}'!".format(node,prop)
                 print(error)
-                errors[node].append(error)
+                errors.append(error)
             elif prop in any_na:
                 error = "{} TSV does not have complete data for required property '{}'!".format(node,prop)
                 print(error)
-                errors[node].append(error)
-        return required_props
+                errors.append(error)
+        return errors
 
-
-    # 6) prop completeness: make a note of props with all NA
     def check_completeness(self,df,node):
         """
         Report on whether any properties in column headers have all NA/null values.
@@ -4313,12 +4316,13 @@ class Gen3Expansion:
             df(pandas DataFrame): the DataFrame of a node submission TSV read into pandas
             node(str): the name of the node (node ID) being checked
         """
+        errors = []
         all_na = df.columns[df.isna().all()].tolist()
         if len(all_na) > 0:
             error = "'{}' TSV has all NA values for these properties: {}".format(node,all_na)
             print(error)
-            errors[node].append(error)
-        return all_na
+            errors.append(error)
+        return errors
 
     # 7) prop types
     def check_prop_types(self,df,node,dd):
@@ -4330,6 +4334,7 @@ class Gen3Expansion:
             node(str): the name of the node (node ID) being checked
             dd(dictionary): the data dictionary being used, get with Gen3Submission.get_dictionary_all()
         """
+        errors = []
         if all_na == None:
             props = list(set(dd[node]['properties']).difference(links).difference(required_props).difference(dd[node]['systemProperties']).difference(exclude_props))
         else:
@@ -4351,21 +4356,21 @@ class Gen3Expansion:
                         except Exception as e:
                             error = "'{}' prop should be integer, but has non-integer values: {}".format(prop,e)
                             print(error)
-                            errors[node].append(error)
+                            errors.append(error)
                     elif etype == 'number':
                         try:
                             d = d.astype(float)
                         except Exception as e:
                             error = "'{}' prop should be integer, but has non-integer values: {}".format(prop,e)
                             print(error)
-                            errors[node].append(error)
+                            errors.append(error)
                     elif etype == 'boolean':
                         vals = list(set(d))
                         wrong_vals = list(set(vals).difference(['True','False','true','false','TRUE','FALSE']))
                         if len(wrong_vals) > 0:
                             error = "'{}' property has incorrect boolean values: {}".format(prop,wrong_vals)
                             print(error)
-                            errors[node].append(error)
+                            errors.append(error)
                     else:
                         d = d.convert_dtypes(infer_objects=True, convert_string=True, convert_integer=True, convert_boolean=True, convert_floating=True)
                         #itype = d.dtypes[prop] # inferred type
@@ -4375,7 +4380,7 @@ class Gen3Expansion:
                         if not etype == itype:
                             error = "'{}' property has inferred type '{}' and not the expected type: '{}'".format(prop,itype,etype)
                             print(error)
-                            errors[node].append(error)
+                            errors.append(error)
 
                 elif 'enum' in dd[node]['properties'][prop]:
                     enums = dd[node]['properties'][prop]['enum']
@@ -4384,14 +4389,12 @@ class Gen3Expansion:
                     if len(wrong_vals) > 0:
                         error = "'{}' property has incorrect enum values: {}".format(prop,wrong_vals)
                         print(error)
-                        errors[node].append(error)
+                        errors.append(error)
 
             else:
                 error = "'{}' property in dictionary is not in the '{}' TSV.".format(prop,node)
                 print(error)
-                errors[node].append(error)
-
-        errors[node] = list(set(errors[node]))
+                errors.append(error)
 
         # check that columns in TSV are correctly named and present in data dictionary for that node
         df_props = list(df)
@@ -4405,9 +4408,10 @@ class Gen3Expansion:
         if len(extra_props) > 0:
             error = "'{}' properties in the {} TSV not in the data dictionary.".format(extra_props,node)
             print(error)
-            errors[node].append(error)
+            errors.append(error)
+        errors = list(set(errors))
+        return errors
 
-    # dry run submissions
     def check_dry_submit(self,node):
         """
         Attempt to dry submit a node submission TSV
@@ -4415,6 +4419,7 @@ class Gen3Expansion:
         Args:
             node(str): the name of the node (node ID) being checked
         """
+        errors = []
         if node in batch_tsvs["node_tsvs"]:
             filename = batch_tsvs["node_tsvs"][node]
             if not filename:
@@ -4425,9 +4430,8 @@ class Gen3Expansion:
                 except Exception as e:
                     error = "'{}' TSV dry run submission failed: {}".format(node,e)
                     print(error)
-                    errors[node].append(error)
-        return d
-
+                    errors.append(error)
+        return errors
 
     def read_image_manifests(self,
         image_manifests,
@@ -4447,9 +4451,12 @@ class Gen3Expansion:
         """
         idf = pd.DataFrame(columns=cols)
         for image_manifest in image_manifests:
-            df = pd.read_csv(image_manifest,sep='\t',header=0,dtype=str)
-            df = df[cols]
-            idf = pd.concat([idf,df])
+            try:
+                df = pd.read_csv(image_manifest,sep='\t',header=0,dtype=str)
+                df = df[cols]
+                idf = pd.concat([idf,df])
+            except:
+                print("Couldn't read in the image manifests!")
         return idf
 
     def check_image_manifest(self,
@@ -4468,30 +4475,25 @@ class Gen3Expansion:
             image_manifests(list): a list of all TSV files matching the format of an image manifest in a batch of TSVs
             cols(list): the columns required in the image manifest for the packaging script to run properly.
         """
+        errors = []
         for col in cols:
             missing = len(idf[idf[col].isnull()])
             if missing > 0:
-                if "image_manifest" not in errors:
-                    errors["image_manifest"] = []
-                error = "Missing {} values for column {}.".format(len(missing),col)
+                error = "'{}' values issing for image manifest column '{}'.".format(len(missing),col)
                 print(error)
-                errors["image_manifest"].append(error)
-
+                errors.append(error)
         if "case_ids" in idf:
             icids = list(set(idf["case_ids"]))
             extra_cids = list(set(icids).difference(cids))
             if len(extra_cids) > 0:
-                if "image_manifest" not in errors:
-                    errors["image_manifest"] = []
                 error = "The image manifest TSV contains {} case IDs that are not present in the case TSV!".format(len(extra_cids))
                 print(error)
-                errors["image_manifest"].append(error)
+                errors.append(error)
         else:
-            if "image_manifest" not in errors:
-                errors["image_manifest"] = []
-            error = "No case_ids column in image manifest!"
+            error = "'case_ids' column missing from image manifest!"
             print(error)
-            errors["image_manifest"].append(error)
+            errors.append(error)
+        return errors
 
     def summarize_new_batch(
         self,
