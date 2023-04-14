@@ -4381,6 +4381,12 @@ class Gen3Expansion:
 
     # dry run submissions
     def check_dry_submit(self,node):
+        """
+        Attempt to dry submit a node submission TSV
+
+        Args:
+            node(str): the name of the node (node ID) being checked
+        """
         if node in batch_tsvs["node_tsvs"]:
             filename = batch_tsvs["node_tsvs"][node]
             if not filename:
@@ -4395,7 +4401,22 @@ class Gen3Expansion:
         return d
 
 
-    def read_image_manifests(self,image_manifests,cols = ['md5sum','storage_urls','file_size','case_ids','study_uid','series_uid','file_name']):
+    def read_image_manifests(self,
+        image_manifests,
+        cols = ['md5sum',
+                'storage_urls',
+                'file_size',
+                'case_ids',
+                'study_uid',
+                'series_uid',
+                'file_name']):
+        """
+        Reads in and concatenates image manifests if multiple manifests are provided for a batch.
+
+        Args:
+            image_manifests(list): a list of all TSV files matching the format of an image manifest in a batch of TSVs
+            cols(list): the columns required in the image manifest for the packaging script to run properly.
+        """
         idf = pd.DataFrame(columns=cols)
         for image_manifest in image_manifests:
             df = pd.read_csv(image_manifest,sep='\t',header=0,dtype=str)
@@ -4403,9 +4424,22 @@ class Gen3Expansion:
             idf = pd.concat([idf,df])
         return idf
 
+    def check_image_manifest(self,
+        idf,
+        cols = ['md5sum',
+                'storage_urls',
+                'file_size',
+                'case_ids',
+                'study_uid',
+                'series_uid',
+                'file_name']):
+        """
+        Check for missing required columns in an image manifest.
 
-
-    def check_image_manifest(self,idf,cols = ['md5sum','storage_urls','file_size','case_ids','study_uid','series_uid','file_name']):
+        Args:
+            image_manifests(list): a list of all TSV files matching the format of an image manifest in a batch of TSVs
+            cols(list): the columns required in the image manifest for the packaging script to run properly.
+        """
         for col in cols:
             missing = len(idf[idf[col].isnull()])
             if missing > 0:
@@ -4460,8 +4494,8 @@ class Gen3Expansion:
     ):
 
         """
-        Returns a summary of TSV data per project, node, and property in the specified directory "tsv_dir".
-        For each property in each project, the total, non-null and null counts are returned.
+        Summarizes a batch of MIDRC submission TSVs.
+        For each property in each batch submission TSVs, the total, non-null and null counts are returned.
         For string, enumeration and boolean properties, bins and the number of unique bins are returned.
         For integers and numbers, the mean, median, min, max, and stdev are returned.
         Outliers in numeric data are identified using "+/- stdev". The cut-off for outlier identification can be changed by raising or lowering the outlier_threshold (common setting is ~3).
