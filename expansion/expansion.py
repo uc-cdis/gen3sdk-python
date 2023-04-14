@@ -4253,7 +4253,34 @@ class Gen3Expansion:
                     errors[node].append(error)
 
     # 5) required props
-    def check_required_props(self,df,node,dd):
+    def check_required_props(self,
+        df,
+        node,
+        dd,
+        exclude_props = [ # submitters don't provide these properties, so remove them from QC check
+            # case props not provided by submitters
+            "datasets.submitter_id",
+            "token_record_id",
+            "linked_external_data",
+            #series_file props not provided by submitters
+            "file_name",
+            "md5sum",
+            "file_size",
+            "object_id",
+            "storage_urls",
+            "core_metadata_collections.submitter_id",
+            "core_metadata_collections",
+            "associated_ids",
+            #imaging_study props not provided by submitters
+            "loinc_code",
+            "loinc_system",
+            "loinc_contrast",
+            "loinc_long_common_name",
+            "loinc_method",
+            "days_from_study_to_neg_covid_test",
+            "days_from_study_to_pos_covid_test"
+        ]
+    ):
         """
         Check whether all required properties for a node are provided in the submission TSV.
 
