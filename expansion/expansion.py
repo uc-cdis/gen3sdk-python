@@ -3172,6 +3172,57 @@ class Gen3Expansion:
 
         return dds
 
+    def sort_batch_tsvs(self,batch,batch_dir):
+        """
+        Sorts the TSVs provided by a MIDRC data submitter into manifests and node submission TSVs.
+
+        Args:
+            batch(str): the name of the batch, e.g., "RSNA_20230303"
+            batch_dir(str): the full path of the local directory where the batch TSVs are located.
+        """
+        tsvs = []
+        for file in os.listdir(batch_dir):
+            if file.endswith(".tsv"):
+                tsvs.append(os.path.join(batch_dir, file))
+
+        nodes = self.get_submission_order()
+        nodes = [i[0] for i in nodes]
+
+        node_tsvs = {}
+        clinical_manifests,image_manifests = [],[]
+        other_tsvs,nomatch_tsvs = [],[]
+        node_regex = r".*/(\w+)_{}\.tsv".format(batch)
+
+        for tsv in tsvs:
+            print(tsv)
+            if 'manifest' in tsv:
+                if 'clinical' in tsv:
+                    clinical_manifests.append(tsv)
+                elif 'image' in tsv or 'imaging' in tsv:
+                    image_manifests.append(tsv)
+            else:
+                match = re.findall(node_regex, tsv, re.M)
+                print(match)
+
+                if not match:
+                    nomatch_tsvs.append(tsv)
+                else:
+                    node = match[0]
+                    if node in nodes:
+                        #node_tsvs.append({node:tsv})
+                        node_tsvs[node] = tsv
+                    elif node + "_file" in nodes:
+                        #node_tsvs.append({"{}_file".format(node):tsv})
+                        node_tsvs["{}_file".format(node)] = tsv
+                    else:
+                        other_tsvs.append({node:tsv})
+        batch_tsvs = {"batch":batch,
+                      "node_tsvs":node_tsvs,
+                      "image_manifests":image_manifests,
+                      "clinical_manifests":clinical_manifests,
+                      "other_tsvs":other_tsvs,
+                      "nomatch_tsvs":nomatch_tsvs}
+        return batch_tsvs
 
     def summarize_new_batch(
         self,
