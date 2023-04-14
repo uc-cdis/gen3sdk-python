@@ -4234,7 +4234,7 @@ class Gen3Expansion:
         return links
 
     # 4) special characters
-    def check_special_chars(self,node): # probably need to add more types of special chars to this
+    def check_special_chars(self,node,batch_tsvs): # probably need to add more types of special chars to this
         """
         Check for special characters that aren't compatible with Gen3's sheepdog submission service.
 
