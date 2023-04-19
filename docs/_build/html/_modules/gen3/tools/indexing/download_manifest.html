@@ -54,6 +54,7 @@
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">asyncio</span>
 <span class="kn">import</span> <span class="nn">aiofiles</span>
+<span class="kn">import</span> <span class="nn">aiohttp</span>
 <span class="kn">import</span> <span class="nn">click</span>
 <span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">time</span>
@@ -181,18 +182,23 @@
     <span class="n">page_chunks</span> <span class="o">=</span> <span class="p">[]</span>
 
     <span class="c1"># used when an input manifest is provided, this will only read record info for</span>
-    <span class="c1"># the records referenced in the manifest based on their checksums</span>
+    <span class="c1"># the records referenced in the manifest based on their checksums or guids</span>
     <span class="n">record_chunks</span> <span class="o">=</span> <span class="p">[]</span>
 
     <span class="k">if</span> <span class="n">input_manifest</span><span class="p">:</span>
-        <span class="c1"># create chunks of checksums</span>
+        <span class="c1"># create chunks of requested records</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;parsing input file </span><span class="si">{</span><span class="n">input_manifest</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="n">input_records</span><span class="p">,</span> <span class="n">headers</span> <span class="o">=</span> <span class="n">get_and_verify_fileinfos_from_manifest</span><span class="p">(</span><span class="n">input_manifest</span><span class="p">)</span>
+
+        <span class="c1"># allow returning invalid b/c the input manifest won&#39;t always have complete</span>
+        <span class="c1"># information. e.g. it may not have a checksum b/c only a GUID column is provided</span>
+        <span class="n">input_records</span><span class="p">,</span> <span class="n">headers</span> <span class="o">=</span> <span class="n">get_and_verify_fileinfos_from_manifest</span><span class="p">(</span>
+            <span class="n">input_manifest</span><span class="p">,</span> <span class="n">return_invalid_records</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
         <span class="n">num_input_records</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_records</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">num_input_records</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;No valid records found in provided input file: </span><span class="si">{</span><span class="n">input_manifest</span><span class="si">}</span><span class="s2">. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;No records found in provided input file: </span><span class="si">{</span><span class="n">input_manifest</span><span class="si">}</span><span class="s2">. &quot;</span>
                 <span class="s2">&quot;Please check previous logs.&quot;</span>
             <span class="p">)</span>
 
@@ -233,7 +239,7 @@
             <span class="s2">&quot;|||&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">,</span> <span class="n">record_chunks</span><span class="p">[</span><span class="n">x</span><span class="p">]))</span> <span class="k">if</span> <span class="n">record_chunks</span> <span class="k">else</span> <span class="s2">&quot;|||&quot;</span>
         <span class="p">)</span>
 
-        <span class="c1"># write record_checksum chunks to temporary files since the size can overload</span>
+        <span class="c1"># write requested records chunks to temporary files since the size can overload</span>
         <span class="c1"># command line arguments</span>
         <span class="n">input_records_chunk_filename</span> <span class="o">=</span> <span class="n">TMP_FOLDER</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;input/input_records_chunk_</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s2">.txt&quot;</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
@@ -433,11 +439,12 @@
 
 <span class="sd">    Args:</span>
 <span class="sd">        commons_url (str): root domain for commons where indexd lives</span>
-<span class="sd">        input_record (int/str): indexd record to request (must contain checksum)</span>
+<span class="sd">        input_record (int/str): indexd record to request (must contain checksum OR guid)</span>
 <span class="sd">        lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http</span>
 <span class="sd">            connections</span>
 <span class="sd">        queue (asyncio.Queue): queue to put indexd records in</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">guid</span> <span class="o">=</span> <span class="n">input_record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">GUID_STANDARD_KEY</span><span class="p">)</span>
     <span class="n">checksum</span> <span class="o">=</span> <span class="n">input_record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">MD5_STANDARD_KEY</span><span class="p">)</span>
 
     <span class="n">index</span> <span class="o">=</span> <span class="n">Gen3Index</span><span class="p">(</span><span class="n">commons_url</span><span class="p">)</span>
@@ -447,9 +454,20 @@
         <span class="k">if</span> <span class="s2">&quot;https&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">commons_url</span><span class="p">:</span>
             <span class="n">ssl</span> <span class="o">=</span> <span class="kc">False</span>
 
-        <span class="n">records</span> <span class="o">=</span> <span class="k">await</span> <span class="n">index</span><span class="o">.</span><span class="n">async_get_records_from_checksum</span><span class="p">(</span>
-            <span class="n">checksum</span><span class="o">=</span><span class="n">checksum</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="n">ssl</span>
-        <span class="p">)</span>
+        <span class="n">records</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">guid</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">matched_record</span> <span class="o">=</span> <span class="k">await</span> <span class="n">index</span><span class="o">.</span><span class="n">async_get_record</span><span class="p">(</span><span class="n">guid</span><span class="o">=</span><span class="n">guid</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="n">ssl</span><span class="p">)</span>
+                <span class="n">records</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">matched_record</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">client_exceptions</span><span class="o">.</span><span class="n">ClientResponseError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="c1"># this means the GUID likely doesn&#39;t exist or there was an error</span>
+                <span class="c1"># receiving it. In this case, log and ignore</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;guid: </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2"> not found. Error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">matched_records</span> <span class="o">=</span> <span class="k">await</span> <span class="n">index</span><span class="o">.</span><span class="n">async_get_records_from_checksum</span><span class="p">(</span>
+                <span class="n">checksum</span><span class="o">=</span><span class="n">checksum</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="n">ssl</span>
+            <span class="p">)</span>
+            <span class="n">records</span> <span class="o">+=</span> <span class="n">matched_records</span>
 
         <span class="c1"># if nothing was found, we still want to output the input record</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">records</span><span class="p">:</span>
