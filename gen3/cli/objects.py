@@ -69,7 +69,7 @@ def crosswalk():
     "--input-manifest",
     "input_manifest",
     help="Input file. Read available object data only for records referenced in this file. "
-    "Currently requires at a minimum an `m5d` column with checksum.",
+    "Currently requires at a minimum an `m5d` OR `guid` column to be populated.",
     default=None,
     type=click.Path(writable=True),
     show_default=True,

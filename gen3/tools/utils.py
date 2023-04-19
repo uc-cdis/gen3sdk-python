@@ -64,7 +64,10 @@ ALIASES_COLUMN_NAME = ["alias", "aliases"]
 
 
 def get_and_verify_fileinfos_from_manifest(
-    manifest_file, manifest_file_delimiter=None, include_additional_columns=False
+    manifest_file,
+    manifest_file_delimiter=None,
+    include_additional_columns=False,
+    return_invalid_records=False,
 ):
     """
     Wrapper for above function to determine the delimiter based on file extention
@@ -82,11 +85,15 @@ def get_and_verify_fileinfos_from_manifest(
         manifest_file=manifest_file,
         manifest_file_delimiter=manifest_file_delimiter,
         include_additional_columns=include_additional_columns,
+        return_invalid_records=return_invalid_records,
     )
 
 
 def get_and_verify_fileinfos_from_tsv_manifest(
-    manifest_file, manifest_file_delimiter="\t", include_additional_columns=False
+    manifest_file,
+    manifest_file_delimiter="\t",
+    include_additional_columns=False,
+    return_invalid_records=False,
 ):
     """
     get and verify file infos from tsv manifest
@@ -150,7 +157,10 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                 ):
                     fieldnames[fieldnames.index(current_column_name)] = MD5_STANDARD_KEY
                     output_column_name = MD5_STANDARD_KEY
-                    if not _verify_format(row[current_column_name], MD5_FORMAT):
+                    if (
+                        not _verify_format(row[current_column_name], MD5_FORMAT)
+                        and not return_invalid_records
+                    ):
                         logging.error(
                             f"ERROR: {row[current_column_name]} is not in md5 format"
                         )
@@ -161,7 +171,10 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                 ):
                     fieldnames[fieldnames.index(current_column_name)] = ACL_STANDARD_KEY
                     output_column_name = ACL_STANDARD_KEY
-                    if not _verify_format(row[current_column_name], ACL_FORMAT):
+                    if (
+                        not _verify_format(row[current_column_name], ACL_FORMAT)
+                        and not return_invalid_records
+                    ):
                         logging.error(
                             f"ERROR: {row[current_column_name]} is not in acl format"
                         )
@@ -174,7 +187,10 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                         fieldnames.index(current_column_name)
                     ] = URLS_STANDARD_KEY
                     output_column_name = URLS_STANDARD_KEY
-                    if not _verify_format(row[current_column_name], URL_FORMAT):
+                    if (
+                        not _verify_format(row[current_column_name], URL_FORMAT)
+                        and not return_invalid_records
+                    ):
                         logging.error(
                             f"ERROR: {row[current_column_name]} is not in urls format"
                         )
@@ -187,7 +203,10 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                         fieldnames.index(current_column_name)
                     ] = AUTHZ_STANDARD_KEY
                     output_column_name = AUTHZ_STANDARD_KEY
-                    if not _verify_format(row[current_column_name], AUTHZ_FORMAT):
+                    if (
+                        not _verify_format(row[current_column_name], AUTHZ_FORMAT)
+                        and not return_invalid_records
+                    ):
                         logging.error(
                             f"ERROR: {row[current_column_name]} is not in authz format"
                         )
@@ -200,7 +219,10 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                         fieldnames.index(current_column_name)
                     ] = SIZE_STANDARD_KEY
                     output_column_name = SIZE_STANDARD_KEY
-                    if not _verify_format(row[current_column_name], SIZE_FORMAT):
+                    if (
+                        not _verify_format(row[current_column_name], SIZE_FORMAT)
+                        and not return_invalid_records
+                    ):
                         logging.error(
                             f"ERROR: {row[current_column_name]} is not in int format"
                         )
@@ -214,8 +236,10 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                     ] = PREV_GUID_STANDARD_KEY
                     output_column_name = PREV_GUID_STANDARD_KEY
                     # only validate format if value is provided (since this is optional)
-                    if row[current_column_name] and not _verify_format(
-                        row[current_column_name], UUID_FORMAT
+                    if (
+                        row[current_column_name]
+                        and not _verify_format(row[current_column_name], UUID_FORMAT)
+                        and not return_invalid_records
                     ):
                         logging.error(
                             f"ERROR: {row[current_column_name]} is not in UUID_FORMAT format"
@@ -226,7 +250,10 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                     and current_column_name.lower() == RECORD_TYPE_STANDARD_KEY
                 ):
                     output_column_name = RECORD_TYPE_STANDARD_KEY
-                    if row[current_column_name] not in RECORD_TYPE_ALLOWED_VALUES:
+                    if (
+                        row[current_column_name] not in RECORD_TYPE_ALLOWED_VALUES
+                        and not return_invalid_records
+                    ):
                         logging.error(
                             f"ERROR: '{row[current_column_name]}' is not one of the valid record types: {RECORD_TYPE_ALLOWED_VALUES}"
                         )
@@ -247,8 +274,11 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                         # don't break
                         pass
 
-            if not {URLS_STANDARD_KEY, MD5_STANDARD_KEY, SIZE_STANDARD_KEY}.issubset(
-                set(output_row.keys())
+            if (
+                not {URLS_STANDARD_KEY, MD5_STANDARD_KEY, SIZE_STANDARD_KEY}.issubset(
+                    set(output_row.keys())
+                )
+                and not return_invalid_records
             ):
                 logging.error(
                     f"ERROR: '{row[current_column_name]}' (columns names: "
@@ -270,7 +300,9 @@ def get_and_verify_fileinfos_from_tsv_manifest(
 
     if not pass_verification:
         logging.error("The manifest is not in the correct format!!!")
-        return [], []
+
+        if not return_invalid_records:
+            return [], []
 
     return files, fieldnames
 

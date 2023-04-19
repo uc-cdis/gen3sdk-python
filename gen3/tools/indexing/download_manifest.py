@@ -22,6 +22,7 @@ Attributes:
 """
 import asyncio
 import aiofiles
+import aiohttp
 import click
 import json
 import time
@@ -149,18 +150,23 @@ async def _write_all_index_records_to_file(
     page_chunks = []
 
     # used when an input manifest is provided, this will only read record info for
-    # the records referenced in the manifest based on their checksums
+    # the records referenced in the manifest based on their checksums or guids
     record_chunks = []
 
     if input_manifest:
-        # create chunks of checksums
+        # create chunks of requested records
         logging.debug(f"parsing input file {input_manifest}")
-        input_records, headers = get_and_verify_fileinfos_from_manifest(input_manifest)
+
+        # allow returning invalid b/c the input manifest won't always have complete
+        # information. e.g. it may not have a checksum b/c only a GUID column is provided
+        input_records, headers = get_and_verify_fileinfos_from_manifest(
+            input_manifest, return_invalid_records=True
+        )
         num_input_records = len(input_records)
 
         if not num_input_records:
             raise AttributeError(
-                f"No valid records found in provided input file: {input_manifest}. "
+                f"No records found in provided input file: {input_manifest}. "
                 "Please check previous logs."
             )
 
@@ -201,7 +207,7 @@ async def _write_all_index_records_to_file(
             "|||".join(map(json.dumps, record_chunks[x])) if record_chunks else "|||"
         )
 
-        # write record_checksum chunks to temporary files since the size can overload
+        # write requested records chunks to temporary files since the size can overload
         # command line arguments
         input_records_chunk_filename = TMP_FOLDER + f"input/input_records_chunk_{x}.txt"
         logging.info(
@@ -401,11 +407,12 @@ async def _put_records_from_input_manifest_in_queue(
 
     Args:
         commons_url (str): root domain for commons where indexd lives
-        input_record (int/str): indexd record to request (must contain checksum)
+        input_record (int/str): indexd record to request (must contain checksum OR guid)
         lock (asyncio.Semaphore): semaphones used to limit ammount of concurrent http
             connections
         queue (asyncio.Queue): queue to put indexd records in
     """
+    guid = input_record.get(GUID_STANDARD_KEY)
     checksum = input_record.get(MD5_STANDARD_KEY)
 
     index = Gen3Index(commons_url)
@@ -415,9 +422,20 @@ async def _put_records_from_input_manifest_in_queue(
         if "https" not in commons_url:
             ssl = False
 
-        records = await index.async_get_records_from_checksum(
-            checksum=checksum, _ssl=ssl
-        )
+        records = []
+        if guid:
+            try:
+                matched_record = await index.async_get_record(guid=guid, _ssl=ssl)
+                records.append(matched_record)
+            except aiohttp.client_exceptions.ClientResponseError as exc:
+                # this means the GUID likely doesn't exist or there was an error
+                # receiving it. In this case, log and ignore
+                logging.debug(f"guid: {guid} not found. Error: {exc}")
+        else:
+            matched_records = await index.async_get_records_from_checksum(
+                checksum=checksum, _ssl=ssl
+            )
+            records += matched_records
 
         # if nothing was found, we still want to output the input record
         if not records:

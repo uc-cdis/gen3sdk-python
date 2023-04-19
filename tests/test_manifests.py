@@ -378,18 +378,18 @@ def test_download_manifest_with_input_manifest(monkeypatch, gen3_index):
             assert "42" == record.get("file_size")
 
 
-def test_download_manifest_with_invalid_input_manifest(monkeypatch, gen3_index):
+def test_download_manifest_with_incomplete_input_manifest(monkeypatch, gen3_index):
     """
-    Test that dowload manifest errors when
-    provided an initial input manifest with an invalid format
+    Test that dowload manifest still works even when
+    provided an initial input manifest that's incomplete
     """
     with open("input.csv", "w+") as file:
         file.writelines(
             [
-                "guid,urls,authz,acl,md5,file_size,file_name\n",
-                ",gs://foo/bar,programs/foo/projects/bar,,a1234567891234567890123456789012,42,\n",
-                ",gs://foo/bar,programs/foo/projects/bar,,x1234567891234567890123456789012,42,\n",
-                ",gs://foo/bar,programs/foo/projects/bar,,f1234567891234567890123456789012,234,\n",
+                "guid\n",
+                "dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b\n",
+                "dg.TEST/does_not_exist\n",
+                "dg.TEST/a802e27d-4a5b-42e3-92b0-ba19e81b9dce\n",
             ]
         )
 
@@ -431,19 +431,88 @@ def test_download_manifest_with_invalid_input_manifest(monkeypatch, gen3_index):
     monkeypatch.setattr(download_manifest, "INDEXD_RECORD_PAGE_SIZE", 2)
 
     loop = get_or_create_event_loop_for_thread()
-    # ensure error is raised
-    try:
-        loop.run_until_complete(
-            async_download_object_manifest(
-                "http://localhost:8001",
-                output_filename="object-manifest.csv",
-                num_processes=1,
-                input_manifest="input.csv",
-            )
+    loop.run_until_complete(
+        async_download_object_manifest(
+            "http://localhost:8001",
+            output_filename="object-manifest.csv",
+            num_processes=1,
+            input_manifest="input.csv",
         )
+    )
+
+    records = {}
+    try:
+        with open("object-manifest.csv") as file:
+            # skip header
+            next(file)
+            for line in file:
+                guid, urls, authz, acl, md5, file_size, file_name = line.split(",")
+                guid = guid.strip("\n")
+                urls = urls.split(" ")
+                authz = authz.split(" ")
+                acl = acl.split(" ")
+                file_size = file_size.strip("\n")
+                file_name = file_name.strip("\n")
+
+                records[guid] = {
+                    "urls": urls,
+                    "authz": authz,
+                    "acl": acl,
+                    "md5": md5,
+                    "file_size": file_size,
+                    "file_name": file_name,
+                }
+    except Exception:
+        # unexpected file format, fail test
         assert False
-    except AttributeError:
-        assert True
+
+    # should have 3 records in the output manifest but only 2 have checksums (b/c they
+    # were the only ones with matches in indexd)
+    assert len(records) == 3
+
+    # ensure downloaded manifest populates expected info for a record
+    assert "gs://test/test.txt" in records.get(
+        "dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}
+    ).get("urls", [])
+    assert "s3://testaws/aws/test.txt" in records.get(
+        "dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}
+    ).get("urls", [])
+    assert "/programs/DEV/projects/test" in records.get(
+        "dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}
+    ).get("authz", [])
+    assert "DEV" in records.get("dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}).get(
+        "acl", []
+    )
+    assert "test" in records.get(
+        "dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}
+    ).get("acl", [])
+    assert "123" in records.get("dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}).get(
+        "file_size"
+    )
+    assert "a1234567891234567890123456789012" in records.get(
+        "dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}
+    ).get("md5")
+    assert not records.get("dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b", {}).get(
+        "file_name"
+    )
+
+    assert "gs://test/test4%20space.txt" in records.get(
+        "dg.TEST/a802e27d-4a5b-42e3-92b0-ba19e81b9dce", {}
+    ).get("urls", [])
+    assert "s3://test/test4%20space.txt" in records.get(
+        "dg.TEST/a802e27d-4a5b-42e3-92b0-ba19e81b9dce", {}
+    ).get("urls", [])
+
+    # ensure downloaded manifest populates expected info for input with a missing record
+    for key, record in records.items():
+        if not key:
+            assert "gs://foo/bar" in record.get("urls", [])
+            assert "programs/foo/projects/bar" in record.get("authz", [])
+            assert (
+                record["md5"]
+                == "51234567891234567890123456789012"  # pragma: allowlist secret
+            )
+            assert "42" == record.get("file_size")
 
 
 def _mock_get_guid(guid, **kwargs):
@@ -635,7 +704,6 @@ def test_read_manifest():
 
 
 def test_index_manifest(gen3_index, indexd_server):
-
     rec1 = gen3_index.create_record(
         did="255e396f-f1f8-11e9-9a07-0a80fada099c",
         hashes={"md5": "473d83400bc1bc9dc635e334faddf33c"},
@@ -800,7 +868,9 @@ def test_index_manifest_additional_metadata_force(
     guid = "111e396f-f1f8-11e9-9a07-0a80fada0900"
     assert indexd_records[guid]["file_name"] == "file.txt"
     assert indexd_records[guid]["size"] == 111
-    assert indexd_records[guid]["hashes"] == {"md5": "111d83400bc1bc9dc635e334faddf33c"}
+    assert indexd_records[guid]["hashes"] == {
+        "md5": "111d83400bc1bc9dc635e334faddf33c"  # pragma: allowlist secret
+    }
     assert indexd_records[guid]["authz"] == ["/open"]
     assert indexd_records[guid]["urls"] == ["s3://my-data-bucket/dg.111/path/file.txt"]
     assert guid in mds_records
@@ -808,7 +878,9 @@ def test_index_manifest_additional_metadata_force(
     guid = "222e396f-f1f8-11e9-9a07-0a80fada0900"
     assert indexd_records[guid]["file_name"] == "file.txt"
     assert indexd_records[guid]["size"] == 222
-    assert indexd_records[guid]["hashes"] == {"md5": "222d83400bc1bc9dc635e334faddf33c"}
+    assert indexd_records[guid]["hashes"] == {
+        "md5": "222d83400bc1bc9dc635e334faddf33c"  # pragma: allowlist secret
+    }
     assert indexd_records[guid]["authz"] == ["/open"]
     assert indexd_records[guid]["urls"] == ["s3://my-data-bucket/dg.222/path/file.txt"]
     assert guid in mds_records
