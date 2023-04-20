@@ -3974,6 +3974,7 @@ class Gen3Expansion:
             if data is True:
                 murl += "&data=True"
 
+            print("Fetching metadata from URL: \n\t{}".format(murl))
             try:
                 response = requests.get(murl)
                 md = json.loads(response.text)
@@ -3985,6 +3986,8 @@ class Gen3Expansion:
         else:
             if isinstance(guids,str):
                 murl = "{}/mds/metadata/{}".format(self._endpoint, guids)
+                print("Fetching metadata from URL: \n\t{}".format(murl))
+
                 response = requests.get(murl)
                 d = json.loads(response.text)
                 md = {guids: d}
@@ -3993,6 +3996,7 @@ class Gen3Expansion:
                 md = []
                 for guid in guids:
                     murl = "{}/mds/metadata/{}".format(self._endpoint, guid)
+                    print("Fetching metadata from URL: \n\t{}".format(murl))
                     response = requests.get(murl)
                     md.append(json.loads(response.text))
         if save == True:
