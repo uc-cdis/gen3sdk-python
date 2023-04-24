@@ -375,7 +375,9 @@ async def publish_discovery_metadata(
             else:
                 guid = discovery_metadata[guid_field]
 
-            # when publishing unregistered metadata, skip those who are already registered if both reset_unregistered_metadata and update_registered_metadata are set to false
+            # when publishing unregistered metadata, skip those who are already
+            # registered if both reset_unregistered_metadata and
+            # update_registered_metadata are set to false
             if (
                 is_unregistered_metadata
                 and str(guid) in registered_metadata_guids
@@ -408,7 +410,8 @@ async def publish_discovery_metadata(
                 if reset_unregistered_metadata or (
                     str(guid) not in registered_metadata_guids
                 ):
-                    # only set GUID type to "unregistered_discovery_metadata" for unregistered metadata, or reset_unregistered_metadata is set
+                    # only set GUID type to "unregistered_discovery_metadata"
+                    # for unregistered metadata, or reset_unregistered_metadata is set
                     new_guid_type = f"unregistered_{guid_type}"
                 elif str(guid) in registered_metadata_guids:
                     if update_registered_metadata:
@@ -427,10 +430,9 @@ async def publish_discovery_metadata(
                         logging.warning(f"{guid} is not already registered. Skipping.")
                         continue
 
-            metadata = {
-                "_guid_type": new_guid_type,
-                "gen3_discovery": discovery_metadata,
-            }
+            metadata = get_discovery_metadata(
+                provided_metadata=discovery_metadata, guid_type=new_guid_type
+            )
 
             pending_requests += [mds.async_create(guid, metadata, overwrite=True)]
             if len(pending_requests) == MAX_CONCURRENT_REQUESTS:
@@ -438,6 +440,24 @@ async def publish_discovery_metadata(
                 pending_requests = []
 
         await asyncio.gather(*pending_requests)
+
+
+def get_discovery_metadata(
+    provided_metadata,
+    guid_type="discovery_metadata",
+):
+    """
+    Return a metadata block representing Gen3 Discovery Metadata with the provided
+    metadata in the relevant block.
+
+    Args:
+        provided_metadata (Dict): Metadata fields you want in Gen3 Discovery
+        guid_type (str, optional): value to override the default _guid_type
+    """
+    return {
+        "_guid_type": guid_type,
+        "gen3_discovery": provided_metadata,
+    }
 
 
 def try_delete_discovery_guid(auth, guid):

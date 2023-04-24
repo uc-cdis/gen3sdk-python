@@ -33,8 +33,18 @@ def discovery():
     help="omit fields from empty columns if set",
     show_default=True,
 )
+@click.option(
+    "--guid-type",
+    "guid_type",
+    default="discovery_metadata",
+    help=(
+        "The value of this gets set as _guid_type in the root level metadata. "
+        "discovery_metadata is the default that enables the Gen3 Discovery Page to visualize the results."
+    ),
+    show_default=True,
+)
 @click.pass_context
-def discovery_publish(ctx, file, use_default_file, omit_empty):
+def discovery_publish(ctx, file, use_default_file, omit_empty, guid_type):
     """
     Run a discovery metadata ingestion on a given metadata TSV file with guid column.
     If [FILE] is omitted and --default-file not set, prompts for TSV file name.
@@ -47,7 +57,11 @@ def discovery_publish(ctx, file, use_default_file, omit_empty):
     endpoint = ctx.obj.get("endpoint")
     loop.run_until_complete(
         publish_discovery_metadata(
-            auth, file, endpoint=endpoint, omit_empty_values=omit_empty
+            auth,
+            file,
+            endpoint=endpoint,
+            omit_empty_values=omit_empty,
+            guid_type=guid_type,
         )
     )
 

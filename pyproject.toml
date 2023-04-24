@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "gen3"
 homepage = "https://gen3.org/"
-version = "4.17.1"
+version = "4.17.3"
 description = "Gen3 CLI and Python SDK"
 authors = ["Center for Translational Data Science at the University of Chicago <support@datacommons.io>"]
 license = "Apache-2.0"
@@ -35,6 +35,7 @@ python-dateutil = "*"
 aiofiles = "^0.8.0"
 pandas = "^1.4.2"
 httpx = "*"
+xmltodict = "^0.13.0"
 
 # A list of all of the optional dependencies, some of which are included in the
 # below `extras`. They can be opted into by apps.
