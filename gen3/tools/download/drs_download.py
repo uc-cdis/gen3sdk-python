@@ -47,7 +47,7 @@ DEFAULT_EXPIRE: timedelta = timedelta(hours=1)
 # package formats we handle for unpacking
 PACKAGE_EXTENSIONS = [".zip"]
 
-logger = get_logger("drs-pull", log_level="warning")
+logger = get_logger("__name__")
 
 
 @dataclass_json(letter_case=LetterCase.SNAKE)
@@ -1049,8 +1049,14 @@ class DownloadManager:
 
                     if delete_unpacked_packages:
                         filepath.unlink()
-
-            completed[entry.object_id].status = "downloaded" if res else "error"
+            if res:
+                completed[entry.object_id].status = "downloaded"
+                logger.debug(
+                    f"object {entry.object_id} has been successfully downloaded."
+                )
+            else:
+                completed[entry.object_id].status = "error"
+                logger.debug(f"object {entry.object_id} has failed to be downloaded.")
             completed[entry.object_id].end_time = datetime.now(timezone.utc)
 
         return completed
@@ -1364,7 +1370,7 @@ def download_drs_object(
     Returns:
         List of DownloadStatus objects for the DRS object
     """
-    _download_obj(
+    return _download_obj(
         hostname,
         auth,
         object_id,

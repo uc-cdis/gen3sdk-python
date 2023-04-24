@@ -9,7 +9,7 @@ from gen3.tools.download.drs_download import (
     list_access_in_drs_manifest,
 )
 
-logger = get_logger("download", log_level="warning")
+logger = get_logger("__name__")
 
 
 @click.command()
@@ -129,7 +129,8 @@ def download_object(
         gen3 --endpoint mydata.org drs-pull object dg.XXXT/181af989-5d66-4139-91e7-69f4570ccd41
 
     """
-    download_drs_object(
+    click.echo(f"GA4GH DRS Object Streaming Starting...")
+    res = download_drs_object(
         ctx.obj["endpoint"],
         ctx.obj["auth_factory"].get(),
         object_id,
@@ -138,6 +139,19 @@ def download_object(
         not no_unpack_packages,
         delete_unpacked_packages,
     )
+
+    success = True
+    for drs_object_id in res:
+        if drs_object_id in res and res[drs_object_id].status != "downloaded":
+            click.echo(f"Object {drs_object_id} download failed.")
+            success = False
+
+    if success:
+        click.echo("All objects downloaded successfully.")
+    else:
+        click.echo(
+            f"One or more objects have failed to be downloaded. Please check previous failure messages to see which ones have failed."
+        )
 
 
 @click.group()
