@@ -174,7 +174,7 @@ class DataCite(object):
         }
 
         endpoint = self.api.rstrip("/") + f"/dois/{identifier}"
-        logging.info(f"PUT-ing to {endpoint}...")
+        logging.info(f"DELETE-ing to {endpoint}...")
         response = requests.delete(endpoint, auth=self._auth_provider, headers=headers)
         logging.debug(f"Response: {response.text}")
         raise_for_status_and_print_error(response)
