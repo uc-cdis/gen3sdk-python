@@ -145,12 +145,13 @@ class DataCite(object):
             doi (gen3.doi.DigitalObjectIdentifier): DOI to update
         """
         payload = doi.as_dict()
+        identifier = doi.identifier
         headers = {
             "Content-type": "application/vnd.api+json",
             "Accept": "application/vnd.api+json",
         }
 
-        endpoint = self.api.rstrip("/") + "/dois"
+        endpoint = self.api.rstrip("/") + f"/dois/{identifier}"
         logging.info(f"PUT-ing to {endpoint}...")
         logging.debug(f"Data payload to {endpoint}: {payload}")
         response = requests.put(
