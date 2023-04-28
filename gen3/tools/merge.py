@@ -9,6 +9,8 @@ import base64
 from datetime import datetime
 from cdislogging import get_logger
 
+from gen3.utils import get_delimiter_from_extension
+
 logging = get_logger("__name__")
 
 
@@ -273,25 +275,6 @@ def merge_guids_into_metadata(
     logging.debug(f"run time: {end_time-start_time}")
 
     logging.debug(f"output file:\n{os.path.abspath(output_filename)}")
-
-
-def get_delimiter_from_extension(filename):
-    """
-    Return the file delimter based on the extension.
-
-    Args:
-        filename (str): file name with extension
-
-    Returns:
-        str: delimeter character, either \t or ,
-    """
-    file_ext = os.path.splitext(filename)
-    if file_ext[-1].lower() == ".tsv":
-        file_delimiter = "\t"
-    else:
-        # default, assume CSV
-        file_delimiter = ","
-    return file_delimiter
 
 
 def write_header_to_file(filename, fieldnames, delimiter="\t"):
