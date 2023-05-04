@@ -694,9 +694,7 @@ class Gen3Metadata:
 
         logging.debug(f"hitting: {url_with_params}")
         logging.debug(f"data: {data}")
-        response = requests.put(
-            url_with_params, json=data, merge=merge, auth=self._auth_provider
-        )
+        response = requests.put(url_with_params, json=data, auth=self._auth_provider)
         response.raise_for_status()
 
         return response.json()
