@@ -168,6 +168,28 @@ DOI url.
 ```json
 "discoveryConfig": {
     // ...
+    "features": {
+      // ...
+      "search": {
+        "searchBar": {
+          "enabled": true,
+          "searchableTextFields": [
+            "doi_titles",
+            "doi_version_information",
+            "doi_citation",
+            "doi_creators",
+            "doi_publisher",
+            "doi_identifier",
+            "doi_identifiers",
+            "doi_contributors",
+            "doi_descriptions",
+            "doi_publication_year",
+            "doi_resolveable_link",
+            "doi_fundingReferences",
+            "doi_relatedIdentifiers"
+          ]
+        },
+    // ...
     "detailView": {
       // ...
       "tabs": [
@@ -200,6 +222,12 @@ DOI url.
                     "label": "Data available:",
                     "sourceField": "doi_is_available",
                     "default": "None"
+                  },
+                  {
+                    "type": "text",
+                    "label": "Creators:",
+                    "sourceField": "doi_creators",
+                    "default": "Not specified"
                   },
                   {
                     "type": "text",
@@ -264,6 +292,18 @@ DOI url.
                     "label": "Version:",
                     "sourceField": "doi_version_information",
                     "default": "Not specified"
+                  },
+                  {
+                    "type": "text",
+                    "label": "Contributors:",
+                    "sourceField": "doi_contributors",
+                    "default": "Not specified"
+                  },
+                  {
+                    "type": "text",
+                    "label": "Related Identifiers:",
+                    "sourceField": "doi_relatedIdentifiers",
+                    "default": "Not specified"
                   }
                 ]
               },
@@ -317,6 +357,11 @@ def mint_discovery_dois():
     auth = Gen3Auth()
     dbgap_phsid_field = "dbgap_accession"
 
+    # When this is True, you CANNOT REVERT THIS ACTION. A published DOI
+    # cannot be deleted. It is recommended to test with "Draft" state DOIs first
+    # (which is the default when publish_dois is not True).
+    publish_dois = False
+
     mint_dois_for_dbgap_discovery_datasets(
         gen3_auth=auth,
         datacite_auth=HTTPBasicAuth(
@@ -331,6 +376,7 @@ def mint_discovery_dois():
         doi_access_information=DOI_ACCESS_INFORMATION,
         doi_access_information_link=DOI_ACCESS_INFORMATION_LINK,
         doi_contact=DOI_CONTACT,
+        publish_dois=publish_dois,
     )
 
 

@@ -569,7 +569,7 @@ class DigitalObjectIdentifier(object):
                 DataCite.DOI_RESOLVER.rstrip("/") + "/" + self.identifier
             )
         if self.creators:
-            data[prefix + "creators"] = "& ".join(
+            data[prefix + "creators"] = " & ".join(
                 [item["name"] for item in self.creators]
             )
         if self.titles:
@@ -585,7 +585,7 @@ class DigitalObjectIdentifier(object):
 
         for key, value in self.optional_fields.items():
             if key == "contributors":
-                data[prefix + key] = "& ".join([item["name"] for item in value])
+                data[prefix + key] = " & ".join([item["name"] for item in value])
             elif key == "descriptions":
                 data[prefix + key] = "\n\n".join(
                     [
