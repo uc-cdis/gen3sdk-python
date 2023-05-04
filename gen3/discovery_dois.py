@@ -147,7 +147,7 @@ def mint_dois_for_dbgap_discovery_datasets(
 
             # takes either a DOI object, or an ID and will query the MDS
             response = datacite.create_doi(doi)
-            doi = DigitalObjectIdentifer.from_datacite_create_doi_response(response)
+            doi = DigitalObjectIdentifier.from_datacite_create_doi_response(response)
 
             # writes metadata to a record
             guid = current_discovery_doi_id_to_guid[doi_id]
@@ -177,7 +177,7 @@ def mint_dois_for_dbgap_discovery_datasets(
                 doi.event = "publish"
 
             response = datacite.update_doi(doi)
-            doi = DigitalObjectIdentifer.from_datacite_create_doi_response(response)
+            doi = DigitalObjectIdentifier.from_datacite_create_doi_response(response)
 
             # writes metadata to a record
             guid = current_discovery_doi_id_to_guid[doi_id]

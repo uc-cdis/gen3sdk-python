@@ -283,12 +283,14 @@ DOI url.
         // ...
 ```
 
-#### Work in Progress. Script to automate dbGaP scraping for updating datasets and minting DOIs
+#### Automate DOI creation for dbGaP Datasets
 
-- TODO: Push DOI from submitted to registered
+Automates the pulling of current datasets from Discovery, getting dbGaP identifiers,
+scraping various dbGaP APIs for DOI related metadata, and then going through
+the DOI creation loop to mint the DOI in Datacite and persist the metadata back in
+Gen3.
 
-See below for a full example of DOI metadata gathering, minting, and persisting
-into Gen3.
+See below for a full example
 
 ```python
 import os
@@ -311,14 +313,7 @@ DOI_ACCESS_INFORMATION = "You can find information about how to access this reso
 DOI_ACCESS_INFORMATION_LINK = "https://example.com/more/info"
 DOI_CONTACT = "https://example.com/contact/"
 
-
-def get_doi_identifier():
-    return (
-        PREFIX + "/EXAMPLE-" + get_random_alphanumeric(4) + "-" + get_random_alphanumeric(4)
-    )
-
-
-def main():
+def mint_discovery_dois():
     auth = Gen3Auth()
     dbgap_phsid_field = "dbgap_accession"
 
@@ -337,6 +332,17 @@ def main():
         doi_access_information_link=DOI_ACCESS_INFORMATION_LINK,
         doi_contact=DOI_CONTACT,
     )
+
+
+def get_doi_identifier():
+    return (
+        PREFIX + "/EXAMPLE-" + get_random_alphanumeric(4) + "-" + get_random_alphanumeric(4)
+    )
+
+
+def main():
+    mint_discovery_dois()
+
 
 if __name__ == "__main__":
     main()

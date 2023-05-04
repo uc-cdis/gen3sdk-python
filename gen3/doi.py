@@ -316,9 +316,9 @@ class DataCite(object):
 
             metadata_service.update(guid=guid, metadata=metadata, aliases=[identifier])
 
-            logging.info(f"Updated existing record for {guid}.")
+            logging.info(f"Updated existing Gen3 metadata record for {guid}.")
             logging.debug(
-                f"Updated existing record metadata for {guid}: {existing_record}"
+                f"Updated existing Gen3 metadata record for {guid}: {existing_record}"
             )
         except requests.exceptions.HTTPError as exc:
             if is_status_code(exc, "404"):
