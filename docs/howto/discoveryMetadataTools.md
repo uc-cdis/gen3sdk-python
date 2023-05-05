@@ -118,7 +118,11 @@ def test_manual_single_doi(publish_dois=False):
   }
 
   # Create/Mint the DOI in DataCite
-  doi = DigitalObjectIdentifier(root_url=COMMONS_DISCOVERY_PAGE, **doi_metadata)
+  # The default url generated is "root_url" + identifier
+  # If your Discovery metadata records don't use the DOI as the GUID,
+  # you may need to supply the URL yourself like below
+  url = COMMONS_DISCOVERY_PAGE.rstrip("/") + f"/{gen3_metadata_guid}"
+  doi = DigitalObjectIdentifier(url=url, **doi_metadata)
 
   if publish_dois:
     logging.info(f"Publishing DOI `{identifier}`...")

@@ -28,6 +28,7 @@ def mint_dois_for_dbgap_discovery_datasets(
     doi_access_information,
     doi_access_information_link,
     doi_contact,
+    use_doi_in_landing_page_url=False,
     doi_metadata_field_prefix="doi_",
     datacite_api=DataCite.TEST_URL,
     publish_dois=False,
@@ -137,9 +138,22 @@ def mint_dois_for_dbgap_discovery_datasets(
                     f"Conflicting DOI identifier generated. {identifier} already exists in DataCite."
                 )
 
-            doi = DigitalObjectIdentifier(
-                identifier=identifier, root_url=commons_discovery_page, **doi_metadata
-            )
+            # writes metadata to a record
+            guid = current_discovery_doi_id_to_guid[doi_id]
+
+            if use_doi_in_landing_page_url:
+                doi = DigitalObjectIdentifier(
+                    identifier=identifier,
+                    root_url=commons_discovery_page,
+                    **doi_metadata,
+                )
+            else:
+                url = commons_discovery_page.rstrip("/") + f"/{guid}"
+                doi = DigitalObjectIdentifier(
+                    identifier=identifier,
+                    url=url,
+                    **doi_metadata,
+                )
 
             if publish_dois:
                 logging.info(f"Publishing DOI `{identifier}`...")
@@ -148,9 +162,6 @@ def mint_dois_for_dbgap_discovery_datasets(
             # takes either a DOI object, or an ID and will query the MDS
             response = datacite.create_doi(doi)
             doi = DigitalObjectIdentifier.from_datacite_create_doi_response(response)
-
-            # writes metadata to a record
-            guid = current_discovery_doi_id_to_guid[doi_id]
 
             metadata = datacite.persist_doi_metadata_in_gen3(
                 guid=guid,
@@ -167,10 +178,23 @@ def mint_dois_for_dbgap_discovery_datasets(
 
             doi_identifiers[identifier] = metadata
         else:
+            # writes metadata to a record
+            guid = current_discovery_doi_id_to_guid[doi_id]
+
             # the DOI already exists for existing metadata, update as necessary
-            doi = DigitalObjectIdentifier(
-                identifier=identifier, root_url=commons_discovery_page, **doi_metadata
-            )
+            if use_doi_in_landing_page_url:
+                doi = DigitalObjectIdentifier(
+                    identifier=identifier,
+                    root_url=commons_discovery_page,
+                    **doi_metadata,
+                )
+            else:
+                url = commons_discovery_page.rstrip("/") + f"/{guid}"
+                doi = DigitalObjectIdentifier(
+                    identifier=identifier,
+                    url=url,
+                    **doi_metadata,
+                )
 
             if publish_dois:
                 logging.info(f"Publishing DOI `{identifier}`...")
@@ -178,9 +202,6 @@ def mint_dois_for_dbgap_discovery_datasets(
 
             response = datacite.update_doi(doi)
             doi = DigitalObjectIdentifier.from_datacite_create_doi_response(response)
-
-            # writes metadata to a record
-            guid = current_discovery_doi_id_to_guid[doi_id]
 
             metadata = datacite.persist_doi_metadata_in_gen3(
                 guid=guid,
