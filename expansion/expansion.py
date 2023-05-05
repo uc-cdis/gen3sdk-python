@@ -4878,173 +4878,249 @@ class Gen3Expansion:
 
 
 #
-# def mock_project_tsvs():
-#     """
-#     This creates a collection of simulated data TSVs for use in QA mock ups; uses "mock_node_tsv" func to create TSVs for specified nodes.
-#     Args:
-#         dd (dict): the Gen3 data dictionary you get with Gen3Submission.get_dictionary_all()
-#         nodes(dictionary): keys are the names of the nodes in the data dictionary for which you'd like to create simulated data TSVs and values are the number of records to create for each node, i..e, the number of rows in each node submission TSV.
-#         outdir(str): the local directory to write simulated TSV data to
-#         filename(str): the filename to use, default is the name of the node
-#         links(list): a list of links to include in the submission TSV
-#         nodes(list): a list of nodes to create mock data TSVs for, will check data dictionary if none are provided
-#         exclude_nodes(list): a list of nodes to exclude from the mock data if nodes not provided
-#         excluded_schemas(list): a list of schemas in data dictionary to ignore
-#     """
-#
-#     node_order = self.get_submission_order(excluded_schemas=excluded_schemas)
-#
-#     if nodes is None:
-#         nodes = [i[0] for i in node_order if i[0] not in excluded_nodes]
-#     else:
-#         for node in nodes:
-#             if node not in dd: # exit if node isn't in the dictionary
-#                 print("'{}' node you provided is not in the data dictionary version '{}'!".format(node,dd_version))
-#                 return
-#
-#     for node in nodes:
-#         props = list(dd[node]["properties"])
-#         props = list(set(props).difference(excluded_props))
-#         tsv_cols = list(set(['type','submitter_id'] + props))
-#
-#         # add only the desired links to the TSV cols
-#         links = self.list_links(node, dd)
-#         link_targets = {i['name']:i['target_type'] for i in dd[node]['links']} # list of targets to filter out excluded nodes
-#         link_names = []
-#         for link in links:
-#             props.remove(link) if link in props else False # remove the links bc missing ".submitter_id", will add back below
-#             if link == "projects":
-#                 tsv_cols.remove("projects")
-#                 link_name = "projects.code"
-#             else:
-#                 target_type = link_targets[link]
-#                 if target_type not in excluded_nodes:
-#                     link_name = "{}.submitter_id".format(link)
-#             link_names.append(link_name)
-#
-#         tsv_cols = tsv_cols + link_names
-#
-#         pd.DataFrame(columns=tsv_cols)
-#
-#
-#
-# def mock_node_tsv(
-#     dd,
-#     node,
-#     count,
-#     parent_tsv=None,
-#     outdir=".",
-#     filename=None,
-#     links=None,
-#     project_id=None,
-#     excluded_props = [
-#         "id",
-#         "project_id",
-#         "created_datetime",
-#         "updated_datetime",
-#         "state"]
-#     ):
-#     """
-#     Create mock / simulated data in a submission TSV for a node in the data dictionary.
-#     Args:
-#         dd (dict): the Gen3 data dictionary you get with Gen3Submission.get_dictionary_all()
-#         node(str): the name of the node in the data dictionary
-#         count(int): the number of records / rows to create in the submission TSV
-#         parent_tsv(str): the filename / local path to the file containing the parent node submission TSV; if left blank, the function will not include link submitter_ids.
-#         outdir(str): the local directory to write simulated TSV data to
-#         filename(str): the filename to use, default is the name of the node
-#         links(list): a list of links to include in the submission TSV
-#         excluded_props(list): a list of properties in data dictionary to ignore / exclude from the TSV columns
-#     """
-#     # get the data dictionary and version number
-#     dd_version = dd["_settings"]["_dict_version"]
-#
-#     if filename is None:
-#         filename = "{}_mock_{}.tsv".format(node,dd_version)
-#
-#     data = {}
-#     data['type'] = [node] * count
-#     data['submitter_id'] = ["{}-{}".format(node,i+1) for i in range(count)]
-#
-#     props = list(dd[node]["properties"])
-#     props = list(set(props).difference(excluded_props))
-#
-#     # add only the desired links
-#     links = self.list_links(node, dd)
-#     link_targets = {i['name']:i['target_type'] for i in dd[node]['links']} # list of targets to filter out excluded nodes
-#     link_names = []
-#     for link in links:
-#         props.remove(link) if link in props else False # remove the links bc missing ".submitter_id", will add back below
-#         if link == "projects":
-#             link_name = "projects.code"
-#         else:
-#             target_type = link_targets[link]
-#             if target_type not in excluded_nodes:
-#                 link_name = "{}.submitter_id".format(link)
-#         link_names.append(link_name)
-#
-#     # add links to data
-#     for link_name in link_names:
-#         if link_name == 'projects.code' and project_id is not None:
-#             prog,proj = project_id.split("-",1)
-#             data[link_name] = [proj] * count
-#         elif parent_tsv is None:
-#             data[link_name] = [np.nan] * count
-#         else:
-#             pdf = pd.read_csv(parent_tsv,sep='\t',header=0)
-#             psids = list(set(pdf['submitter_id']))
-#             available_psids = cycle(psids)
-#             data[link_name] = [next(available_psids)for i in range(count)]
-#
-#     for prop in props:
-#
-#         if 'type' in dd[node]['properties'][prop]:
-#             prop_type = dd[node]['properties'][prop]['type'] # expected type
-#             if prop_type == 'array':
-#                 if 'items' in dd[node]['properties'][prop]:
-#                     array_type = dd[node]['properties'][prop]['items']
-#                     if 'type' in dd[node]['properties'][prop]['items']:
-#                         array_type = dd[node]['properties'][prop]['items']['type']
-#                 if array_type == "string":
-#                     data[prop] = ["test {}, test {}".format(prop,prop)] * count
-#                     # array_values = ["test {}, test {}".format(prop,prop)] * count
-#                     # data[prop] = ','.join(array_values)
-#                 elif array_type == "integer":
-#                     array_list = []
-#                     for i in range(count):
-#                         array_list.append(",".join(map(str,list(np.random.randint(low=0, high=10, size=(2))))))
-#                     data[prop] = array_list
-#                 elif array_type == "number":
-#                     array_list = []
-#                     for i in range(count):
-#                         one_array = list(np.random.uniform(low=0, high=10, size=(2)))
-#                         formatted_array = [ '%.2f' % elem for elem in one_array ]
-#                         array_list.append(",".join(map(str,formatted_array)))
-#                     data[prop] = array_list
-#                 elif array_type == "enum":
-#                     print("do something")
-#             elif prop_type == "string":
-#                 data[prop] = ["test " + prop] * count
-#             elif prop_type == "boolean":
-#                 available_types = cycle([True,False])
-#                 data[prop] = [next(available_types)for i in range(count)]
-#             elif prop_type == "integer":
-#                     data[prop] = list(np.random.randint(low=0, high=10, size=(count)))
-#             elif prop_type == "number":
-#                 data[prop] = [ '%.2f' % elem for elem in list(np.random.uniform(low=0, high=10, size=count))]
-#
-#         elif 'enum' in dd[node]['properties'][prop]:
-#             enums = dd[node]['properties'][prop]['enum']
-#             enum_values = ['a','b']
-#             available_enums = cycle(enum_values)
-#             data[prop] = [next(available_enums)for i in range(count)]
-#
-#
-#
-#     # create a dataframe and save as a TSV
-#     df = pd.DataFrame(data)
-#     output = "{}/{}".format(outdir,filename)
-#     df.to_csv(output,sep='\t',index=False)
-#
-#
-# exp.submit_file(project_id="DEV-test",filename=output)
+
+
+    def create_mock_files(self,
+        project_id="DEV-test",
+        count=3,
+        prefix="mock_data_file",
+        file_format="dcm",
+        outdir=".",
+        msg = "This is a mock data file for testing purposes. Delete me!",
+        write_tsv = True
+        ):
+        """
+        Create some mock data file objects to use in QA / mock ups.
+        """
+        prog,proj = project_id.split("-")
+        authz = ["/programs/{}/projects/{}".format(prog,proj)]
+        acl = [prog,proj]
+
+        mfiles = {'file_name':[],'md5sum':[],"file_size":[],"object_id":[],"storage_urls":[],"acl":[],"authz":[]}
+        for i in range(count):
+            file_name = "{}_{}.{}".format(prefix,i+1,file_format)
+            object_id = str(uuid.uuid4())
+            mfiles['file_name'].append(file_name)
+            mfiles['object_id'].append(object_id)
+            mfiles['authz'].append(authz)
+            mfiles['acl'].append(acl)
+
+
+            output = "{}/{}".format(outdir,file_name)
+            os.system("touch {}".format(output))
+            file_msg ="{} File {} of {}. {} with object_id {}.".format(msg,i+1,count,file_name,object_id)
+            cmd = 'echo "{}" > {}'.format(file_msg,file_name)
+            os.system(cmd)
+
+            with open(output, 'rb') as file_to_check:
+                file_contents = file_to_check.read()
+                #cmd = "!md5 mock_data_file_{}.{}".format(i+1,file_format))
+                md5 = hashlib.md5(file_contents).hexdigest() #check in shell: !md5 mock_data_file_3.dcm
+
+            mfiles['md5sum'].append(md5)
+            mfiles['file_size'].append(os.stat(output).st_size)
+            urls="s3://this-is-a-fake-url-for:{}".format(file_name)
+            mfiles['storage_urls'].append([urls])
+
+        return mfiles
+
+
+
+
+
+
+    def index_mock_files(self,mfiles):
+        """
+        Create indexd records for some fake / mock data files created by create_mock_files() func.
+        Args:
+            mfiles = {'file_name':[],'md5sum':[],"file_size":[],"object_id":[],"storage_urls":[],"acl":[],"authz":[]}
+        """
+        results = []
+        for i in range(len(mfiles['file_name'])):
+            print("Submitting {} to indexd at {}.".format(mfiles['file_name'][i],mfiles['object_id'][i]))
+            res = self.create_record(
+                    did=mfiles['object_id'][i],
+                    hashes={'md5':mfiles['md5sum'][i]},
+                    size=mfiles['file_size'][i],
+                    urls=mfiles['storage_urls'][i],
+                    file_name=mfiles['file_name'][i],
+                    acl=mfiles['acl'][i],
+                    authz=mfiles['authz'][i])
+            results.append(res)
+        return results
+
+    def create_mock_tsv(self,
+        dd,
+        node,
+        count,
+        parent_tsvs=None,
+        outdir=".",
+        filename=None,
+        links=None,
+        project_id=None,
+        excluded_props = [
+            "id",
+            "submitter_id",
+            "type",
+            "project_id",
+            "created_datetime",
+            "updated_datetime",
+            "state",
+            "file_state",
+            "error_type"],
+        file_props = [
+            "file_name",
+            "file_size",
+            "md5sum",
+            "object_id",
+            "storage_urls"],
+        mfiles=None,
+        submit_tsv=False
+        ):
+        """
+        Create mock / simulated data in a submission TSV for a node in the data dictionary.
+        Args:
+            dd (dict): the Gen3 data dictionary you get with Gen3Submission.get_dictionary_all()
+            node(str): the name of the node in the data dictionary
+            count(int): the number of records / rows to create in the submission TSV
+            parent_tsvs(dict): a dictionary of node names (keys) and filenames (values) containing the parent node submission TSV; if left blank, the function will not include link submitter_ids.
+            outdir(str): the local directory to write simulated TSV data to
+            filename(str): the filename to use, default is the name of the node
+            links(list): a list of links to include in the submission TSV
+            excluded_props(list): a list of properties in data dictionary to ignore / exclude from the TSV columns
+            mfiles(dict): a dictionary of mock data files created using func create_mock_files()
+            submit_tsv(boolean): if true, will use sdk to submit the file via sheepdog
+        """
+        ############################################################
+        ############################################################
+        # Use these settings for testing, comment out when actually running as function or in SDK.
+        ############################################################
+        # node = 'cr_series_file'
+        # count = 3
+        # outdir = "/Users/christopher/Documents/Notes/MIDRC/annotations/sample_data/DEV-test/script_tsvs"
+        # filename = "{}_mock_{}.tsv".format(node,dd_version) # override for testing, comment out
+        # links = self.list_links(node, dd)
+        # parent_tsvs = {link:"{}_mock_{}.tsv".format(link_targets[link],dd_version) for link in links}
+        # links = None # for testing comment this out later
+        ############################################################
+        ############################################################
+        ############################################################
+
+        # get the data dictionary and version number
+        dd_version = dd["_settings"]["_dict_version"]
+
+        data = {}
+        data['type'] = [node] * count
+        data['submitter_id'] = ["{}-{}".format(node,i+1) for i in range(count)]
+
+        props = list(dd[node]["properties"])
+        props = list(set(props).difference(excluded_props))
+
+        # build list of link_names to filter excluded nodes out of links
+        if links is None: # if user didn't specify the links to be used, use them all.
+            links = self.list_links(node, dd)
+            if 'subgroup' in dd[node]['links'][0]:
+                link_targets = {i['name']:i['target_type'] for i in dd[node]['links'][0]['subgroup']}
+            else:
+                link_targets = {i['name']:i['target_type'] for i in dd[node]['links']} #get targets to filter out excluded nodes
+
+        link_names = {}
+        for link in links:
+            props.remove(link) if link in props else False # remove the links bc missing ".submitter_id", will add back below
+            if link == "projects":
+                link_name = "projects.code"
+            else:
+                target_type = link_targets[link]
+                link_name = "{}.submitter_id".format(link)
+            link_names[link] = link_name
+
+        # add links to data
+        for link in link_names:
+            link_name = link_names[link]
+            if link_name == 'projects.code' and project_id is not None:
+                prog,proj = project_id.split("-",1)
+                data[link_name] = [proj] * count
+            elif parent_tsvs is None: #
+                data[link_name] = [np.nan] * count
+            else:
+                parent_tsv = parent_tsvs[link]
+                pdf = pd.read_csv(parent_tsv,sep='\t',header=0)
+                psids = list(set(pdf['submitter_id']))
+                available_psids = cycle(psids)
+                data[link_name] = [next(available_psids)for i in range(count)]
+
+        if mfiles is not None:
+            props = list(set(props).difference(file_props))
+            if len(mfiles['file_name']) != count:
+                print("The number of mock data files provided in 'mfiles' ({}) does not match the 'count' provided ({})!".format(len(mfiles['file_name']),count))
+            for file_prop in file_props:
+                if file_prop in mfiles:
+                    data[file_prop] = mfiles[file_prop]
+                else:
+                    print("File property '{}' is missing from mfiles! \n\t{}".format(file_prop,list(mfiles)))
+
+        for prop in props:
+            if prop == 'md5sum':
+                md5 = str(hashlib.md5(b"test").hexdigest())
+                data['md5sum'] = [md5] * count
+            elif prop == 'object_id':
+                object_id = str(uuid.uuid4())
+                data['object_id'] = [object_id] * count
+            elif 'type' in dd[node]['properties'][prop]:
+                prop_type = dd[node]['properties'][prop]['type'] # expected type
+                if prop_type == 'array':
+                    if 'items' in dd[node]['properties'][prop]:
+                        array_type = dd[node]['properties'][prop]['items']
+                        if 'type' in dd[node]['properties'][prop]['items']:
+                            array_type = dd[node]['properties'][prop]['items']['type']
+                    if array_type == "string":
+                        data[prop] = ["test {}, test {}".format(prop,prop)] * count
+                        # array_values = ["test {}, test {}".format(prop,prop)] * count
+                        # data[prop] = ','.join(array_values)
+                    elif array_type == "integer":
+                        array_list = []
+                        for i in range(count):
+                            array_list.append(",".join(map(str,list(np.random.randint(low=0, high=10, size=(2))))))
+                        data[prop] = array_list
+                    elif array_type == "number":
+                        array_list = []
+                        for i in range(count):
+                            one_array = list(np.random.uniform(low=0, high=10, size=(2)))
+                            formatted_array = [ '%.2f' % elem for elem in one_array ]
+                            array_list.append(",".join(map(str,formatted_array)))
+                        data[prop] = array_list
+                    elif array_type == "enum":
+                        print("do something")
+                elif prop_type == "string":
+                    data[prop] = ["test " + prop] * count
+                elif prop_type == "boolean":
+                    available_types = cycle([True,False])
+                    data[prop] = [next(available_types)for i in range(count)]
+                elif prop_type == "integer":
+                        data[prop] = list(np.random.randint(low=0, high=10, size=(count)))
+                elif prop_type == "number":
+                    data[prop] = [ '%.2f' % elem for elem in list(np.random.uniform(low=0, high=10, size=count))]
+
+            elif 'enum' in dd[node]['properties'][prop]:
+                enums = dd[node]['properties'][prop]['enum']
+                available_enums = cycle(enums)
+                #enum_values = ['a','b']
+                #available_enums = cycle(enum_values)
+                data[prop] = [next(available_enums)for i in range(count)]
+
+
+
+        # create a dataframe and save as a TSV
+        df = pd.DataFrame(data)
+
+        # save dataframe to TSV file
+        if filename is None:
+            filename = "{}_mock_{}.tsv".format(node,dd_version)
+        output = "{}/{}".format(outdir,filename)
+        df.to_csv(output,sep='\t',index=False)
+
+        if submit_tsv is True:
+            filename = "{}_mock_{}.tsv".format(node,dd_version)
+            output = "{}/{}".format(outdir,filename)
+            self.submit_file(project_id="DEV-test",filename=output)
+        return df
