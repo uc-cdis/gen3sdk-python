@@ -35,11 +35,23 @@ logging = get_logger("__name__")
 
 
 async def output_expanded_discovery_metadata(
-    auth, endpoint=None, limit=500, use_agg_mds=False
+    auth,
+    endpoint=None,
+    limit=500,
+    use_agg_mds=False,
+    guid_type="discovery_metadata",
+    output_format="tsv",
+    output_filename_suffix="",
 ):
     """
     fetch discovery metadata from a commons and output to {commons}-discovery-metadata.tsv
     """
+    if output_format != "tsv" and output_format != "json":
+        print(
+            f"Unsupported output file format {output_format}! Only tsv or json is allowed"
+        )
+        return
+
     if endpoint:
         mds = Gen3Metadata(
             auth_provider=auth,
@@ -52,14 +64,13 @@ async def output_expanded_discovery_metadata(
             service_location="mds/aggregate" if use_agg_mds else "mds",
         )
 
-    count = 0
     with tempfile.TemporaryDirectory() as metadata_cache_dir:
         all_fields = set()
         num_tags = 0
 
         for offset in range(0, limit, MAX_GUIDS_PER_REQUEST):
             partial_metadata = mds.query(
-                "_guid_type=discovery_metadata",
+                f"_guid_type={guid_type}",
                 return_full_metadata=True,
                 limit=min(limit, MAX_GUIDS_PER_REQUEST),
                 offset=offset,
@@ -80,7 +91,9 @@ async def output_expanded_discovery_metadata(
             if len(partial_metadata):
                 for guid, guid_metadata in partial_metadata.items():
                     with open(
-                        f"{metadata_cache_dir}/{guid.replace('/', '_')}", "w+"
+                        f"{metadata_cache_dir}/{guid.replace('/', '_')}",
+                        "w+",
+                        encoding="utf-8",
                     ) as cached_guid_file:
                         guid_discovery_metadata = guid_metadata["gen3_discovery"]
                         json.dump(guid_discovery_metadata, cached_guid_file)
@@ -91,45 +104,49 @@ async def output_expanded_discovery_metadata(
             else:
                 break
 
-        output_columns = (
-            ["guid"]
-            # "tags" is flattened to _tag_0 through _tag_n
-            + sorted(list(all_fields - set(["tags"])))
-            + [f"_tag_{n}" for n in range(num_tags)]
-        )
-        base_schema = {column: "" for column in output_columns}
-
-        output_filename = _metadata_file_from_auth(auth)
-        with open(
-            output_filename,
-            "w+",
-        ) as output_file:
-            writer = csv.DictWriter(
-                output_file,
-                **{**BASE_CSV_PARSER_SETTINGS, "fieldnames": output_columns},
+        output_filename = _create_metadata_output_filename(
+            auth, guid_type, output_filename_suffix
+        ) + (".tsv" if output_format == "tsv" else ".json")
+        if output_format == "tsv":
+            output_columns = (
+                ["guid"]
+                # "tags" is flattened to _tag_0 through _tag_n
+                + sorted(list(all_fields - set(["tags"])))
+                + [f"_tag_{n}" for n in range(num_tags)]
             )
-            writer.writeheader()
+            base_schema = {column: "" for column in output_columns}
+            with open(output_filename, "w+", encoding="utf-8") as output_file:
+                writer = csv.DictWriter(
+                    output_file,
+                    **{**BASE_CSV_PARSER_SETTINGS, "fieldnames": output_columns},
+                )
+                writer.writeheader()
 
-            for guid in sorted(os.listdir(metadata_cache_dir)):
-                with open(f"{metadata_cache_dir}/{guid}") as f:
-                    fetched_metadata = json.load(f)
-                    flattened_tags = {
-                        f"_tag_{tag_num}": f"{tag['category']}: {tag['name']}"
-                        for tag_num, tag in enumerate(fetched_metadata.pop("tags", []))
-                    }
-
-                    true_guid = guid
-                    if use_agg_mds:
-                        true_guid = guid.split("__")[1]
-                    output_metadata = sanitize_tsv_row(
-                        {
-                            **base_schema,
-                            **fetched_metadata,
-                            **flattened_tags,
-                            "guid": true_guid,
+                for guid in sorted(os.listdir(metadata_cache_dir)):
+                    with open(f"{metadata_cache_dir}/{guid}", encoding="utf-8") as f:
+                        fetched_metadata = json.load(f)
+                        flattened_tags = {
+                            f"_tag_{tag_num}": f"{tag['category']}: {tag['name']}"
+                            for tag_num, tag in enumerate(
+                                fetched_metadata.pop("tags", [])
+                            )
                         }
-                    )
-                    writer.writerow(output_metadata)
+
+                        true_guid = guid
+                        if use_agg_mds:
+                            true_guid = guid.split("__")[1]
+                        output_metadata = sanitize_tsv_row(
+                            {
+                                **base_schema,
+                                **fetched_metadata,
+                                **flattened_tags,
+                                "guid": true_guid,
+                            }
+                        )
+                        writer.writerow(output_metadata)
+        else:
+            with open(output_filename, "w+", encoding="utf-8") as output_file:
+                output_file.write(json.dumps(partial_metadata, indent=4))
 
         return output_filename
 
@@ -183,14 +200,16 @@ def combine_discovery_metadata(
             + os.path.basename(metadata_file_to_combine)
         )
         delimiter = get_delimiter_from_extension(metadata_file_to_combine)
-        with open(metadata_file_to_combine) as metadata_file:
+        with open(metadata_file_to_combine, encoding="utf-8") as metadata_file:
             reader = csv.DictReader(metadata_file, delimiter=delimiter)
 
             new_headers = []
             for header in reader.fieldnames:
                 new_headers.append(metadata_prefix + header)
 
-            with open(temporary_prefixed_filename, "w") as prefixed_metadata_file:
+            with open(
+                temporary_prefixed_filename, "w", encoding="utf-8"
+            ) as prefixed_metadata_file:
                 writer = csv.DictWriter(
                     prefixed_metadata_file, fieldnames=new_headers, delimiter=delimiter
                 )
@@ -283,7 +302,7 @@ def combine_discovery_metadata(
     # metadata to update in Discovery)
     with open(
         temporary_output_filename, "rt", encoding="utf-8-sig"
-    ) as input_file, open(output_filename, "w") as output_file:
+    ) as input_file, open(output_filename, "w", encoding="utf-8") as output_file:
         delimiter = get_delimiter_from_extension(temporary_output_filename)
         reader = csv.DictReader(input_file, delimiter=delimiter)
 
@@ -334,19 +353,36 @@ async def publish_discovery_metadata(
         mds = Gen3Metadata(auth_provider=auth)
 
     if not metadata_filename:
-        metadata_filename = _metadata_file_from_auth(auth)
+        metadata_filename = _create_metadata_output_filename(auth, guid_type) + ".tsv"
+
+    if not (
+        metadata_filename.endswith(".csv")
+        or metadata_filename.endswith(".tsv")
+        or metadata_filename.endswith(".json")
+    ):
+        logging.error(
+            f"Unsupported file type supplied {metadata_filename}! Only CSV/TSV/JSON are allowed."
+        )
+        return
+
+    is_json_metadata = False
+    if metadata_filename.endswith(".json"):
+        is_json_metadata = True
 
     delimiter = "," if metadata_filename.endswith(".csv") else "\t"
 
-    with open(metadata_filename) as metadata_file:
-        csv_parser_setting = {**BASE_CSV_PARSER_SETTINGS, "delimiter": delimiter}
-        if is_unregistered_metadata:
-            csv_parser_setting["quoting"] = csv.QUOTE_MINIMAL
-            csv_parser_setting["quotechar"] = '"'
-        metadata_reader = csv.DictReader(metadata_file, **{**csv_parser_setting})
-        tag_columns = [
-            column for column in metadata_reader.fieldnames if "_tag_" in column
-        ]
+    with open(metadata_filename, encoding="utf-8") as metadata_file:
+        if is_json_metadata:
+            metadata_reader = json.load(metadata_file)
+        else:
+            csv_parser_setting = {**BASE_CSV_PARSER_SETTINGS, "delimiter": delimiter}
+            if is_unregistered_metadata:
+                csv_parser_setting["quoting"] = csv.QUOTE_MINIMAL
+                csv_parser_setting["quotechar"] = '"'
+            metadata_reader = csv.DictReader(metadata_file, **{**csv_parser_setting})
+            tag_columns = [
+                column for column in metadata_reader.fieldnames if "_tag_" in column
+            ]
         pending_requests = []
 
         registered_metadata_guids = []
@@ -366,9 +402,18 @@ async def publish_discovery_metadata(
                 registered_metadata_guids = registered_metadata.keys()
 
         for metadata_line in metadata_reader:
-            discovery_metadata = {
-                key: _try_parse(value) for key, value in metadata_line.items()
-            }
+            discovery_metadata = {}
+            extra_metadata = {}
+            if is_json_metadata:
+                if "gen3_discovery" in metadata_line:
+                    discovery_metadata = metadata_line.pop("gen3_discovery")
+                    extra_metadata = metadata_line.pop("_guid_type")
+                else:
+                    discovery_metadata = metadata_line
+            else:
+                discovery_metadata = {
+                    key: _try_parse(value) for key, value in metadata_line.items()
+                }
 
             if guid_field is None:
                 guid = discovery_metadata.pop("guid")
@@ -433,6 +478,8 @@ async def publish_discovery_metadata(
             metadata = get_discovery_metadata(
                 provided_metadata=discovery_metadata, guid_type=new_guid_type
             )
+            if extra_metadata:
+                metadata = {**metadata, **extra_metadata}
 
             pending_requests += [mds.async_create(guid, metadata, overwrite=True)]
             if len(pending_requests) == MAX_CONCURRENT_REQUESTS:
@@ -508,7 +555,9 @@ def _try_parse(data):
     return ""
 
 
-def _metadata_file_from_auth(auth):
+def _create_metadata_output_filename(auth, guid_type, suffix=""):
     return (
-        "-".join(urlparse(auth.endpoint).netloc.split(".")) + "-discovery_metadata.tsv"
+        "-".join(urlparse(auth.endpoint).netloc.split("."))
+        + f"-{guid_type}"
+        + (f"-{suffix}" if suffix else "")
     )
