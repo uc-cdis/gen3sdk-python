@@ -44,7 +44,7 @@ async def output_expanded_discovery_metadata(
     output_filename_suffix="",
 ):
     """
-    fetch discovery metadata from a commons and output to {commons}-discovery-metadata.tsv
+    fetch discovery metadata from a commons and output to {commons}-{guid_type}.tsv or {commons}-{guid_type}.json
     """
     if output_format != "tsv" and output_format != "json":
         print(
@@ -348,7 +348,7 @@ async def publish_discovery_metadata(
     update_registered_metadata=True,
 ):
     """
-    Publish discovery metadata from a tsv file
+    Publish discovery metadata from a tsv or json file
     """
     if endpoint:
         mds = Gen3Metadata(auth_provider=auth, endpoint=endpoint)
