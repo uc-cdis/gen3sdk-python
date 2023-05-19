@@ -104,9 +104,12 @@ async def output_expanded_discovery_metadata(
             else:
                 break
 
+        output_filename_extension = ".tsv"
+        if output_format == "json":
+            output_filename_extension = ".json"
         output_filename = _create_metadata_output_filename(
-            auth, guid_type, output_filename_suffix
-        ) + (".tsv" if output_format == "tsv" else ".json")
+            auth, guid_type, output_filename_suffix, output_filename_extension
+        )
         if output_format == "tsv":
             output_columns = (
                 ["guid"]
@@ -353,7 +356,7 @@ async def publish_discovery_metadata(
         mds = Gen3Metadata(auth_provider=auth)
 
     if not metadata_filename:
-        metadata_filename = _create_metadata_output_filename(auth, guid_type) + ".tsv"
+        metadata_filename = _create_metadata_output_filename(auth, guid_type)
 
     if not (
         metadata_filename.endswith(".csv")
@@ -555,9 +558,10 @@ def _try_parse(data):
     return ""
 
 
-def _create_metadata_output_filename(auth, guid_type="", suffix=""):
+def _create_metadata_output_filename(auth, guid_type, suffix="", file_extension=".tsv"):
     return (
         "-".join(urlparse(auth.endpoint).netloc.split("."))
-        + (f"-{guid_type}" if guid_type else "")
+        + f"-{guid_type}"
         + (f"-{suffix}" if suffix else "")
+        + file_extension
     )

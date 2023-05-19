@@ -16,7 +16,9 @@ from gen3.tools.metadata.discovery import (
 
 @patch("gen3.tools.metadata.discovery._create_metadata_output_filename")
 @patch("gen3.metadata.Gen3Metadata.query")
-def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
+def test_discovery_read(
+    metadata_query_patch, metadata_file_patch, gen3_auth, guid_type="discovery_metadata"
+):
     guid1_discovery_metadata = {
         # this value should be written to the file exactly as shown
         "str_key": "str_val \n \t \\",
@@ -33,11 +35,11 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
 
     metadata_query_patch.side_effect = lambda *_, **__: {
         "guid1": {
-            "_guid_type": "discovery_metadata",
+            "_guid_type": guid_type,
             "gen3_discovery": guid1_discovery_metadata,
         },
         "guid2": {
-            "_guid_type": "discovery_metadata",
+            "_guid_type": guid_type,
             "gen3_discovery": guid2_discovery_metadata,
         },
     }
@@ -46,7 +48,9 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
         metadata_file_patch.side_effect = lambda *_, **__: outfile.name
         loop = asyncio.new_event_loop()
         loop.run_until_complete(
-            output_expanded_discovery_metadata(gen3_auth, endpoint="excommons.org")
+            output_expanded_discovery_metadata(
+                gen3_auth, endpoint="excommons.org", guid_type=guid_type
+            )
         )
         outfile.seek(0)
         csv_rows = list(csv.DictReader(outfile, **BASE_CSV_PARSER_SETTINGS))
@@ -77,7 +81,7 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
 
         # should also be able to handle empty discovery metadata
         metadata_query_patch.side_effect = lambda *_, **__: {
-            "guid1": {"_guid_type": "discovery_metadata", "gen3_discovery": {}}
+            "guid1": {"_guid_type": guid_type, "gen3_discovery": {}}
         }
 
         outfile.truncate(0)
@@ -92,7 +96,7 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
             "commons1": [
                 {
                     "guid1": {
-                        "_guid_type": "discovery_metadata",
+                        "_guid_type": guid_type,
                         "gen3_discovery": guid1_discovery_metadata,
                     }
                 }
@@ -100,7 +104,7 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
             "commons2": [
                 {
                     "guid2": {
-                        "_guid_type": "discovery_metadata",
+                        "_guid_type": guid_type,
                         "gen3_discovery": guid2_discovery_metadata,
                     }
                 }
