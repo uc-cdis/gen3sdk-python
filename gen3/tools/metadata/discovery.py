@@ -555,9 +555,9 @@ def _try_parse(data):
     return ""
 
 
-def _create_metadata_output_filename(auth, guid_type, suffix=""):
+def _create_metadata_output_filename(auth, guid_type="", suffix=""):
     return (
         "-".join(urlparse(auth.endpoint).netloc.split("."))
-        + f"-{guid_type}"
+        + (f"-{guid_type}" if guid_type else "")
         + (f"-{suffix}" if suffix else "")
     )
