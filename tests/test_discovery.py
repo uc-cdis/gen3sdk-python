@@ -14,7 +14,7 @@ from gen3.tools.metadata.discovery import (
 )
 
 
-@patch("gen3.tools.metadata.discovery._metadata_file_from_auth")
+@patch("gen3.tools.metadata.discovery._create_metadata_output_filename")
 @patch("gen3.metadata.Gen3Metadata.query")
 def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
     guid1_discovery_metadata = {
