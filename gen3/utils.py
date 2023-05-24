@@ -4,6 +4,8 @@ from jsonschema import Draft4Validator
 import sys
 import re
 import requests
+import random
+import string
 import os
 
 from urllib.parse import urlunsplit
@@ -23,6 +25,12 @@ SIZE_FORMAT = r"^[0-9]*$"
 ACL_FORMAT = r"^.*$"
 URL_FORMAT = r"^.*$"
 AUTHZ_FORMAT = r"^.*$"
+
+
+def get_random_alphanumeric(length):
+    # end up with roughly the same amount of numbers as letters
+    letters = string.ascii_lowercase + "".join([str(item) for item in range(0, 10)]) * 3
+    return "".join(random.choice(letters) for i in range(length))
 
 
 def make_folders_for_filename(filename, current_directory=None):
@@ -193,18 +201,48 @@ def log_backoff_giveup_except_on_no_retries(details):
         )
 
 
-def exception_do_not_retry(error):
-    def _is_status(code):
-        return (
-            str(getattr(error, "code", None)) == code
-            or str(getattr(error, "status", None)) == code
-            or str(getattr(error, "status_code", None)) == code
-            or str(getattr(getattr(error, "response", {}), "code", "")) == code
-            or str(getattr(getattr(error, "response", {}), "status", "")) == code
-            or str(getattr(getattr(error, "response", {}), "status_code", "")) == code
-        )
+def get_delimiter_from_extension(filename):
+    """
+    Return the file delimter based on the extension.
 
-    if _is_status("409") or _is_status("404"):
+    Args:
+        filename (str): file name with extension
+
+    Returns:
+        str: delimeter character, either \t or ,
+    """
+    file_ext = os.path.splitext(filename)
+    if file_ext[-1].lower() == ".tsv":
+        file_delimiter = "\t"
+    else:
+        # default, assume CSV
+        file_delimiter = ","
+    return file_delimiter
+
+
+def is_status_code(error, code):
+    """
+    Args:
+        error (object): Ideally a requests.Response, this safely checks for
+            known attributes where the status code might be
+        code (str): The status code you want to check for in the error. ex: 404
+
+    Returns:
+        bool: Whether or not the error object contains the status code specified
+    """
+    code = str(code)
+    return (
+        str(getattr(error, "code", None)) == code
+        or str(getattr(error, "status", None)) == code
+        or str(getattr(error, "status_code", None)) == code
+        or str(getattr(getattr(error, "response", {}), "code", "")) == code
+        or str(getattr(getattr(error, "response", {}), "status", "")) == code
+        or str(getattr(getattr(error, "response", {}), "status_code", "")) == code
+    )
+
+
+def exception_do_not_retry(error):
+    if is_status_code(error, "409") or is_status_code(error, "404"):
         return True
 
     return False

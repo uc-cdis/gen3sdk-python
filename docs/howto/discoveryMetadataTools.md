@@ -1,8 +1,10 @@
 ## Gen3 Discovery Page Metadata Tools
 
-TOC
+**Table of Contents**
+
 - [Overview](#overview)
-- [Combine Metadata with Current Discovery Metadata](#combine-metadata-with-current-discovery-metadata)
+- [DOIs in Gen3](#dois-in-gen3-discovery-metadata-and-page-for-visualizing-public-doi-metadata)
+- [dbGaP FHIR Metadata in Gen3 Discovery](#combine-dbgap-fhir-metadata-with-current-discovery-metadata)
 
 ### Overview
 
@@ -18,7 +20,330 @@ So you can choose to use the CLI or write your own Python script and use the SDK
 functions yourself. Generally this provides the most flexibility, at less
 of a convenience.
 
-### Combine Metadata with Current Discovery Metadata
+### DOIs in Gen3: Discovery Metadata and Page for Visualizing Public DOI Metadata
+
+Gen3's SDK supports minting DOIs from DataCite, storing DOI metadata in a Gen3 instance,
+and visualizing the DOI metadata in our Discovery Page to serve as a DOI "Landing Page".
+
+> **DOI?** A digital object identifier (DOI) is a persistent identifier or handle used to identify objects uniquely, standardized by the International Organization for Standardization (ISO). DOIs are in wide use mainly to identify academic, professional, and government information, such as journal articles, research reports, data sets, and official publications. However, they also have been used to identify other types of information resources, such as commercial videos.
+
+The general overview for how Gen3 supports DOIs is as follows:
+
+* Gen3 SDK/CLI used to gather Metadata from External Public Metadata Sources
+* Gen3 SDK/CLI used to do any conversions to DOI Metadata
+* Gen3 SDK/CLI communicates with DataCite API to mint DOI
+    * NOTE: the gathering of metadata, conversion to DOI fields, and final minting may or may not be a part of a regular data ingestion. It’s possible that this is used ad-hocly, as needed
+* Gen3 SDK/CLI persists metadata in Gen3
+* Persisted metadata in Gen3 exposed via Discovery Page
+* Discovery Page is used as the required DOI Landing Page
+
+> **What is DataCite?** In order to create a DOI, one must use a DOI registration service. In the US there are two: CrossRef and DataCite. We are focusing on DataCite, because that is what we were provided access to.
+
+#### Example Script: Manually Creating a Single DOI and Persisting the Metadata in Gen3
+
+Prerequisites:
+
+* Environment variable `DATACITE_USERNAME` set as a valid DataCite username for interacting with their API
+* Environment variable `DATACITE_PASSWORD` set as a valid DataCite password for interacting with their API
+
+This shows a full example of:
+
+* Setting up the necessary classes for interacting with Gen3 & Datacite
+* Getting the DOI metadata (ideally from some external source like a file or another API, but here we've hard-coded it)
+* Creating/Minting the DOI in DataCite
+* Persisting the DOI metadata into a Gen3 Discovery record in the metadata service
+
+```python
+import os
+from requests.auth import HTTPBasicAuth
+
+from cdislogging import get_logger
+
+from gen3.doi import (
+  DataCite,
+  DigitalObjectIdentifier,
+  DigitalObjectIdentifierCreator,
+  DigitalObjectIdentifierTitle,
+)
+from gen3.auth import Gen3Auth
+
+logging = get_logger("__name__", log_level="info")
+
+# This prefix should be provided by DataCite
+PREFIX = "10.12345"
+PUBLISHER = "Example"
+COMMONS_DISCOVERY_PAGE = "https://example.com/discovery"
+
+DOI_DISCLAIMER = ""
+DOI_ACCESS_INFORMATION = "You can find information about how to access this resource in the link below."
+DOI_ACCESS_INFORMATION_LINK = "https://example.com/more/info"
+DOI_CONTACT = "https://example.com/contact/"
+
+
+def test_manual_single_doi(publish_dois=False):
+  # Setup
+  gen3_auth = Gen3Auth()
+  datacite = DataCite(
+    api=DataCite.TEST_URL,
+    auth_provider=HTTPBasicAuth(
+      os.environ.get("DATACITE_USERNAME"),
+      os.environ.get("DATACITE_PASSWORD"),
+    ),
+  )
+
+  gen3_metadata_guid = "Example-Study-01"
+
+  # Get DOI metadata (ideally from some external source)
+  identifier = "10.82483/BDC-268Z-O151"
+  creators = [
+    DigitalObjectIdentifierCreator(
+      name="Bar, Foo",
+      name_type=DigitalObjectIdentifierCreator.NAME_TYPE_PERSON,
+    ).as_dict()
+  ]
+  titles = [DigitalObjectIdentifierTitle("Some Example Study in Gen3").as_dict()]
+  publisher = "Example Gen3 Sponsor"
+  publication_year = 2023
+  doi_type = "Dataset"
+  version = 1
+
+  doi_metadata = {
+    "identifier": identifier,
+    "creators": creators,
+    "titles": titles,
+    "publisher": publisher,
+    "publication_year": publication_year,
+    "doi_type": doi_type,
+    "version": version,
+  }
+
+  # Create/Mint the DOI in DataCite
+  doi = DigitalObjectIdentifier(root_url=COMMONS_DISCOVERY_PAGE, **doi_metadata)
+
+  if publish_dois:
+    logging.info(f"Publishing DOI `{identifier}`...")
+    doi.event = "publish"
+
+  # works for only new DOIs
+  # You can use this for updates: `datacite.update_doi(doi)`
+  response = datacite.create_doi(doi)
+  doi = DigitalObjectIdentifier.from_datacite_create_doi_response(response)
+
+  # Persist necessary DOI Metadata in Gen3 Discovery to support the landing page
+  metadata = datacite.persist_doi_metadata_in_gen3(
+    guid=gen3_metadata_guid,
+    doi=doi,
+    auth=gen3_auth,
+    additional_metadata={
+      "disclaimer": DOI_DISCLAIMER,
+      "access_information": DOI_ACCESS_INFORMATION,
+      "access_information_link": DOI_ACCESS_INFORMATION_LINK,
+      "contact": DOI_CONTACT,
+    },
+    prefix="doi_",
+  )
+  logging.debug(f"Gen3 Metadata for GUID `{gen3_metadata_guid}`: {metadata}")
+
+
+def main():
+  test_manual_single_doi()
+
+
+if __name__ == "__main__":
+  main()
+
+```
+
+#### Example Partial Discovery Page Configuration for DOIs
+
+This is portion of the Gen3 Data Portal configuration that pertains to
+the Discovery Page. The code provided shows an example of how to configure
+the visualization of the DOI metadata.
+
+In order to be compliant with Landing Pages, the URL you provide during minting
+needs to automatically display all this information. So if you have other tabs
+of non-DOI information, they cannot be the first focused tab upon resolving the
+DOI url.
+
+```json
+"discoveryConfig": {
+    // ...
+    "detailView": {
+      // ...
+      "tabs": [
+        {
+          "tabName": "DOI",
+          "groups": [
+              {
+                "header": "Dataset Information",
+                "fields": [
+                  {
+                    "type": "block",
+                    "label": "",
+                    "sourceField": "disclaimer",
+                    "default": ""
+                  },
+                  {
+                    "type": "text",
+                    "label": "Title:",
+                    "sourceField": "doi_titles",
+                    "default": "Not specified"
+                  },
+                  {
+                    "type": "link",
+                    "label": "DOI:",
+                    "sourceField": "doi_resolveable_link",
+                    "default": "None"
+                  },
+                  {
+                    "type": "text",
+                    "label": "Data available:",
+                    "sourceField": "doi_is_available",
+                    "default": "None"
+                  },
+                  {
+                    "type": "text",
+                    "label": "Citation:",
+                    "sourceField": "doi_citation",
+                    "default": "Not specified"
+                  },
+                  {
+                    "type": "link",
+                    "label": "Contact:",
+                    "sourceField": "doi_contact",
+                    "default": "Not specified"
+                  }
+                ]
+              },
+              {
+                "header": "How to Access the Data",
+                "fields": [
+                  {
+                    "type": "block",
+                    "label": "How to access the data:",
+                    "sourceField": "doi_access_information",
+                    "default": "Not specified"
+                  },
+                  {
+                    "type": "link",
+                    "label": "Data and access information:",
+                    "sourceField": "doi_access_information_link",
+                    "default": "Not specified"
+                  }
+                ]
+              },
+              {
+                "header": "Additional Information",
+                "fields": [
+                  {
+                    "type": "text",
+                    "label": "Publisher:",
+                    "sourceField": "doi_publisher",
+                    "default": "Not specified"
+                  },
+                  {
+                    "type": "text",
+                    "label": "Funded by:",
+                    "sourceField": "doi_fundingReferences",
+                    "default": "Not specified"
+                  },
+                  {
+                    "type": "text",
+                    "label": "Publication Year:",
+                    "sourceField": "doi_publication_year",
+                    "default": "Not specified"
+                  },
+                  {
+                    "type": "text",
+                    "label": "Resource Type:",
+                    "sourceField": "doi_resource_type",
+                    "default": "Not specified"
+                  },
+                  {
+                    "type": "text",
+                    "label": "Version:",
+                    "sourceField": "doi_version_information",
+                    "default": "Not specified"
+                  }
+                ]
+              },
+              {
+                "header": "Description",
+                "fields": [
+                  {
+                    "type": "block",
+                    "label": "Description:",
+                    "sourceField": "doi_descriptions",
+                    "default": "Not specified"
+                  }
+                ]
+              }
+          ]
+        },
+        // ...
+```
+
+#### Work in Progress. Script to automate dbGaP scraping for updating datasets and minting DOIs
+
+- TODO: Push DOI from submitted to registered
+
+See below for a full example of DOI metadata gathering, minting, and persisting
+into Gen3.
+
+```python
+import os
+from requests.auth import HTTPBasicAuth
+
+from cdislogging import get_logger
+
+from gen3.auth import Gen3Auth
+from gen3.discovery_dois import mint_dois_for_dbgap_discovery_datasets
+from gen3.utils import get_random_alphanumeric
+
+logging = get_logger("__name__", log_level="info")
+
+PREFIX = "10.12345"
+PUBLISHER = "Example"
+COMMONS_DISCOVERY_PAGE = "https://example.com/discovery"
+
+DOI_DISCLAIMER = ""
+DOI_ACCESS_INFORMATION = "You can find information about how to access this resource in the link below."
+DOI_ACCESS_INFORMATION_LINK = "https://example.com/more/info"
+DOI_CONTACT = "https://example.com/contact/"
+
+
+def get_doi_identifier():
+    return (
+        PREFIX + "/EXAMPLE-" + get_random_alphanumeric(4) + "-" + get_random_alphanumeric(4)
+    )
+
+
+def main():
+    auth = Gen3Auth()
+    dbgap_phsid_field = "dbgap_accession"
+
+    mint_dois_for_dbgap_discovery_datasets(
+        gen3_auth=auth,
+        datacite_auth=HTTPBasicAuth(
+            os.environ.get("DATACITE_USERNAME"),
+            os.environ.get("DATACITE_PASSWORD"),
+        ),
+        dbgap_phsid_field=dbgap_phsid_field,
+        get_doi_identifier_function=get_doi_identifier,
+        publisher=PUBLISHER,
+        commons_discovery_page=COMMONS_DISCOVERY_PAGE,
+        doi_disclaimer=DOI_DISCLAIMER,
+        doi_access_information=DOI_ACCESS_INFORMATION,
+        doi_access_information_link=DOI_ACCESS_INFORMATION_LINK,
+        doi_contact=DOI_CONTACT,
+    )
+
+if __name__ == "__main__":
+    main()
+
+```
+
+### Combine dbGaP FHIR Metadata with Current Discovery Metadata
 
 For CLI, see `gen3 discovery combine --help`.
 
@@ -42,7 +367,7 @@ from gen3.tools.metadata.discovery import (
     output_expanded_discovery_metadata,
     combine_discovery_metadata,
 )
-from gen3.nih import dbgapFHIR
+from gen3.external.nih.dbgap_fhir import dbgapFHIR
 from gen3.utils import get_or_create_event_loop_for_thread
 
 
