@@ -230,7 +230,10 @@ def merge_guids_into_metadata(
                     rows_to_add = data_from_indexing_manifest.get(key_id_from_row, {})
 
                     for new_row in rows_to_add:
-                        new_row.update(row)
+                        for key, value in row.items():
+                            # only replace if there's content
+                            if value:
+                                new_row.update({key: value})
                         append_row_to_file(
                             filename=output_filename,
                             row=new_row,
@@ -255,7 +258,10 @@ def merge_guids_into_metadata(
                     key_id_from_row = row.get(row_key, "").strip()
                     for new_row in data_from_indexing_manifest.get(key_id_from_row, {}):
                         if new_row.get("guid") == guid:
-                            new_row.update(row)
+                            for key, value in row.items():
+                                # only replace if there's content
+                                if value:
+                                    new_row.update({key: value})
                             append_row_to_file(
                                 filename=output_filename,
                                 row=new_row,

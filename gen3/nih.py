@@ -12,7 +12,7 @@ from fhirclient.models.fhirreference import FHIRReference
 from fhirclient.models.identifier import Identifier
 from fhirclient.models.meta import Meta
 
-from gen3.tools.metadata.discovery import sanitize_tsv_row
+from gen3.tools.metadata.discovery import sanitize_tsv_row, BASE_CSV_PARSER_SETTINGS
 from gen3.utils import DEFAULT_BACKOFF_SETTINGS
 
 logging = get_logger("__name__")
@@ -20,8 +20,8 @@ logging = get_logger("__name__")
 # For more details about this regex, see the function that uses it
 DBGAP_ACCESSION_REGEX = (
     "(?P<phsid>phs(?P<phsid_number>[0-9]+))"
-    "(.(?P<version>v(?P<version_number>[0-9]+))){0,1}"
     "(.(?P<participant_set>p(?P<participant_set_number>[0-9]+))){0,1}"
+    "(.(?P<version>v(?P<version_number>[0-9]+))){0,1}"
     "(.(?P<consent>c(?P<consent_number>[0-9]+)+)){0,1}"
 )
 
@@ -176,7 +176,7 @@ class dbgapFHIR(object):
         self.unnecessary_fields = unnecessary_fields or dbgapFHIR.UNNECESSARY_FIELDS
         self.disclaimer = disclaimer or dbgapFHIR.DISCLAIMER
 
-    def get_metadata_for_ids(self, phsids):
+    def get_metadata_for_ids(self, ids):
         """
         Return simplified FHIR metadata for each of the provided IDs.
 
@@ -186,35 +186,69 @@ class dbgapFHIR(object):
               information.
 
         Args:
-            phsids (List[str]): list of IDs to query FHIR for
+            ids (List[str]): list of IDs to query FHIR for
 
         Returns:
             Dict[dict]: metadata for each of the provided IDs (which
                         are the keys in the returned dict)
         """
+        logging.info("Getting dbGaP FHIR metadata...")
+        logging.debug("Provided ids for dbGaP FHIR metadata: {ids}")
+
         simplified_data = {}
 
+        original_phsid_to_standardized = {}
+
         standardized_phsids = []
-        for phsid in phsids:
+        for phsid in ids:
             phsid_parts = get_dbgap_accession_as_parts(phsid)
 
             # allow form of ONLY "phs000123", dbGaP FHIR API cannot handle
             # isolating a specific version
             standardized_phsid = phsid_parts["phsid"]
+
+            # we want the final returned value to include whatever format was
+            # used in the original call, so even though we are using the standardized
+            # phs against the API, we need to convert BACK to the original
+            # before returning. This dict maintains that mapping.
+            original_phsid_to_standardized[phsid] = standardized_phsid
+
             standardized_phsids.append(standardized_phsid)
 
         all_data = self.get_dbgap_fhir_objects_for_studies(standardized_phsids)
-        for study_id, study in all_data.items():
-            data = self.get_simplified_data_from_object(study)
+
+        standardized_phsids_data = {}
+        for phsid in ids:
+            standardized_phsid = original_phsid_to_standardized[phsid]
+
+            # it's possible we've already simplified the data for this phsid
+            # (ex: phs00007.p1.v1.c1 AND phs00007.p1.v1.c2 rely on data for the
+            #      overall study, phs00007. So there's no need to parse this twice )
+            #
+            # NOTE: This is because dbGaP has metadata at the STUDY level, not
+            #       consent group level (which is usually how we organize
+            #       datasets in Gen3)
+            if standardized_phsid in standardized_phsids_data:
+                data = standardized_phsids_data[standardized_phsid]
+            else:
+                # error should be logged by `get_dbgap_fhir_objects_for_studies`
+                # so just skip here
+                if not standardized_phsid in all_data:
+                    continue
+
+                data = self.get_simplified_data_from_object(
+                    all_data[standardized_phsid]
+                )
 
             # custom fields
             data["ResearchStudyURL"] = (
-                self.api.rstrip("/") + "/ResearchStudy/" + study_id
+                self.api.rstrip("/") + "/ResearchStudy/" + standardized_phsid
             )
             data["Disclaimer"] = self.disclaimer
 
-            logging.debug(f"simplified {study_id} study data: {data}")
-            simplified_data[study_id] = data
+            logging.debug(f"simplified {phsid} study data: {data}")
+            standardized_phsids_data[standardized_phsid] = data
+            simplified_data[phsid] = data
 
         return simplified_data
 
@@ -294,7 +328,12 @@ class dbgapFHIR(object):
                 headers.add(item)
 
         csv_writer = csv.DictWriter(
-            data_file, delimiter="\t", fieldnames=sorted(headers), extrasaction="ignore"
+            data_file,
+            **{
+                **BASE_CSV_PARSER_SETTINGS,
+                "fieldnames": sorted(headers),
+                "extrasaction": "ignore",
+            },
         )
         csv_writer.writeheader()
 
