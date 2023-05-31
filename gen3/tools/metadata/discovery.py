@@ -319,9 +319,12 @@ def combine_discovery_metadata(
 
         writer = csv.DictWriter(
             output_file,
-            delimiter=delimiter,
-            fieldnames=reader.fieldnames,
-            extrasaction="ignore",
+            **{
+                **BASE_CSV_PARSER_SETTINGS,
+                "delimiter": delimiter,
+                "fieldnames": reader.fieldnames,
+                "extrasaction": "ignore",
+            },
         )
         writer.writeheader()
 
