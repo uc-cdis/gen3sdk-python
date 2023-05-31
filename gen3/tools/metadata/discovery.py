@@ -148,8 +148,16 @@ async def output_expanded_discovery_metadata(
                         )
                         writer.writerow(output_metadata)
         else:
+            # output as JSON
+            output_metadata = []
+            for guid, metadata in partial_metadata.items():
+                true_guid = guid
+                if use_agg_mds:
+                    true_guid = guid.split("__")[1]
+                output_metadata.append({"guid": true_guid, **metadata})
+
             with open(output_filename, "w+", encoding="utf-8") as output_file:
-                output_file.write(json.dumps(partial_metadata, indent=4))
+                output_file.write(json.dumps(output_metadata, indent=4))
 
         return output_filename
 
@@ -409,8 +417,15 @@ async def publish_discovery_metadata(
             extra_metadata = {}
             if is_json_metadata:
                 if "gen3_discovery" in metadata_line:
+                    # likely to be a JSON dump from the output_expanded_discovery_metadata() function
                     discovery_metadata = metadata_line.pop("gen3_discovery")
-                    extra_metadata = metadata_line.pop("_guid_type")
+                    # remove unneeded fields
+                    try:
+                        del metadata_line["_guid_type"]
+                    except KeyError:
+                        pass
+                    extra_metadata = metadata_line
+                # no 'gen3_discovery' in JSON, treat entire JSON as discovery metadata
                 else:
                     discovery_metadata = metadata_line
             else:
@@ -422,6 +437,16 @@ async def publish_discovery_metadata(
                 guid = discovery_metadata.pop("guid")
             else:
                 guid = discovery_metadata[guid_field]
+
+            if not guid:
+                logging.warning(
+                    f"{metadata_line} has no GUID information and has been skipped."
+                )
+                continue
+
+            # remove unneeded fields
+            if extra_metadata:
+                extra_metadata.pop("guid", None)
 
             # when publishing unregistered metadata, skip those who are already
             # registered if both reset_unregistered_metadata and
