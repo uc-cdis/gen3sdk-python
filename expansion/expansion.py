@@ -4419,6 +4419,11 @@ class Gen3Expansion:
                             print(error)
                             errors.append(error)
 
+                    # to do: Check for min/max of number/int properties
+                    if 'minimum' in dd[node]["properties"][prop]: #
+                        min = dd[node]["properties"][prop]['minimum']
+                        #for each value of d, are any less than min or greater than max
+
                 elif 'enum' in dd[node]['properties'][prop]:
                     enums = dd[node]['properties'][prop]['enum']
                     vals = list(set(df[prop].dropna()))
@@ -4983,7 +4988,7 @@ class Gen3Expansion:
             dd (dict): the Gen3 data dictionary you get with Gen3Submission.get_dictionary_all()
             node(str): the name of the node in the data dictionary
             count(int): the number of records / rows to create in the submission TSV
-            parent_tsvs(dict): a dictionary of node names (keys) and filenames (values) containing the parent node submission TSV; if left blank, the function will not include link submitter_ids.
+            parent_tsvs(dict): a dictionary of node names (keys) and filenames (values) containing the parent node submission TSV; if left blank, the function will not include link submitter_ids; e.g., parent_tsvs = {'cases':'case_mock_1.1.4.tsv'}
             outdir(str): the local directory to write simulated TSV data to
             filename(str): the filename to use, default is the name of the node
             links(list): a list of links to include in the submission TSV
