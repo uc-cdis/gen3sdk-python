@@ -1,4 +1,4 @@
-import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy, re, operator, statistics, datetime
+import requests, json, fnmatch, os, os.path, sys, subprocess, glob, ntpath, copy, re, operator, statistics, datetime, hashlib, uuid
 import pandas as pd
 from os import path
 from pandas import json_normalize
@@ -9,6 +9,7 @@ from IPython.utils import io
 from itertools import cycle
 import random
 from random import randrange
+from pathlib import Path
 
 import numpy as np
 import scipy
@@ -5121,6 +5122,9 @@ class Gen3Expansion:
         # save dataframe to TSV file
         if filename is None:
             filename = "{}_mock_{}.tsv".format(node,dd_version)
+
+        Path(outdir).mkdir(parents=True, exist_ok=True)
+
         output = "{}/{}".format(outdir,filename)
         df.to_csv(output,sep='\t',index=False)
 
@@ -5129,3 +5133,101 @@ class Gen3Expansion:
             output = "{}/{}".format(outdir,filename)
             self.submit_file(project_id="DEV-test",filename=output)
         return df
+
+
+
+
+    def create_mock_project(self,
+        dd,
+        node_counts=None,
+        project_id=None,
+        outdir="mock_tsvs",
+        excluded_props = [
+            "id",
+            "submitter_id",
+            "type",
+            "project_id",
+            "created_datetime",
+            "updated_datetime",
+            "state",
+            "file_state",
+            "error_type"],
+        file_props = [
+            "file_name",
+            "file_size",
+            "md5sum",
+            "object_id",
+            "storage_urls"],
+        excluded_nodes=[],
+        submit_tsvs=False
+        ):
+        """
+
+        Create mock / simulated data project for a list of nodes in the data dictionary. Ignores program/project root nodes, so make sure those exist first. This is a wrapper for the func Gen3Expansion.create_mock_tsv()
+        Args:
+            dd (dict): the Gen3 data dictionary you get with Gen3Submission.get_dictionary_all().
+            node_counts(dict): node_ids as keys, values is number of records to create for that node.
+                For example: {"case":3,"imaging_study":6}
+            project_id(str): If no project_id is provided, using the generic 'DEV-test' project_id
+            outdir(str): the local directory to write simulated TSV data to.
+            excluded_props(list): a list of properties in data dictionary to ignore / exclude from TSVs.
+            file_props(list): a list of file_properties to be simulated; unlikely to change from default.
+            excluded_nodes(list): a list of nodes to not create mock TSVs for.
+            submit_tsvs(boolean): if true, will use sdk to submit the DataFrames via sheepdog
+        """
+        dd_version = dd["_settings"]["_dict_version"]
+        if project_id is None:
+            print("\tNo 'project_id' provided; using the generic 'DEV-test' as the project_id.")
+            project_id = "DEV-test"
+        prog,proj = project_id.split("-",1)
+
+        # for the create_mock_tsv() func, we need "node", "count" and "parent_tsvs".
+
+        # Build node_counts if not provided; this gets us "node" and "count"
+        node_counts=None
+        if node_counts is None:
+            node_order = self.get_submission_order()
+            node_counts = {}
+            for node in node_order:
+                node_id = node[0]
+                node_count = node[1]
+                print(node_id)
+                if node_id == "project" or node_id in excluded_nodes: # skip project node
+                    continue
+                else:
+                    node_counts[node_id] = node_count*node_count # get progressively larger counts as you go down in data model hierarchy
+            print("\tNo node_counts provided; using the following node_counts:\n\t{}".format(node_counts))
+
+        # Now build "parent_tsvs" for each node in "node_counts":
+        all_parent_tsvs = {}
+        for node in node_counts:
+            print(node)
+            parent_tsvs = {}
+            node_links = dd[node]['links'][0]
+            if 'subgroup' in node_links:
+                sublinks = node_links['subgroup']
+                link_targets = {i['name']:i['target_type'] for i in sublinks if i['target_type'] not in excluded_nodes}
+                if node_links['exclusive'] == True: # check if subgroup links are exclusive
+                    random_link = random.choice(list(link_targets.items())) # pick only one random link if exclusive
+                    link_targets = {random_link[0]:random_link[1]}
+            else:
+                link_targets = {i['name']:i['target_type'] for i in dd[node]['links'] if i['target_type'] not in excluded_nodes} #get targets to filter out excluded nodes
+
+            for link in link_targets:
+                parent_tsvs[link] = "{}/{}_mock_{}.tsv".format(outdir,link_targets[link],dd_version)
+            #print("\t\t{}".format(parent_tsvs))
+            all_parent_tsvs[node] = parent_tsvs
+
+        # Create the TSVs
+        for node in node_counts:
+            # Create the node TSV / DataFrame
+            df = self.create_mock_tsv(
+                dd=dd,
+                node=node,
+                count=node_counts[node],
+                parent_tsvs=all_parent_tsvs[node],
+                project_id=project_id,
+                outdir=outdir,
+            )
+            if submit_tsvs:
+                d = self.submit_df(project_id=project_id, df=df, chunk_size=250)
