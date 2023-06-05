@@ -1025,9 +1025,9 @@ class Gen3Expansion:
         try:
             nodes.remove("project")
         except:
-            print("No 'project' node in list of nodes.")
+            print("\n\nNo 'project' node in list of nodes.")
         for node in nodes:
-            print("\nDeleting node '{}' from project '{}'.".format(node, project_id))
+            print("\n\tDeleting node '{}' from project '{}'.".format(node, project_id))
             # data = self.delete_node(
             #     node=node, project_id=project_id, chunk_size=chunk_size
             # )
@@ -1041,8 +1041,9 @@ class Gen3Expansion:
                 print("{}".format(data))
             else:
                 print("Successfully deleted the project '{}'".format(project_id))
+                self.nuked()
         else:
-            print("Successfully deleted all nodes in the project '{}'.\nIf you'd like to delete thr project node itself, then add the flag 'nuke_project=True'.".format(project_id))
+            print("\n\nSuccessfully deleted all nodes in the project '{}'.\nIf you'd like to delete the project node itself, then add the flag 'nuke_project=True'.".format(project_id))
 
 
     # Analysis Functions
@@ -2683,7 +2684,7 @@ class Gen3Expansion:
 
         return records
 
-    def get_indexd(self, limit=1000, page=0, format="TSV", uploader=None, args=None):
+    def get_indexd(self, limit=1000, page=0, format="JSON", uploader=None, args=None):
         """get all the records in indexd
             api = "https://icgc.bionimbus.org/"
             args = lambda: None
@@ -2755,6 +2756,60 @@ class Gen3Expansion:
 
         return all_records
 
+    def delete_indexd_records(self,irecs):
+        """
+        Arguments:
+            irecs(list): A list of indexd records. Get with, e.g., function:
+                Gen3Expansion.get_indexd(uploader="cgmeyer@uchicagp.edu")
+        """
+        total,count = len(irecs),0
+        success,failure=[],[]
+        for irec in irecs:
+            count+=1
+            guid = irec['did']
+            rev = irec['rev']
+            index_url = "{}/index/index/{}?rev={}".format(self._endpoint,guid,rev)
+            access_token = self.get_token()
+            headers = {
+              'Content-Type': 'application/json',
+              'Authorization': 'bearer {}'.format(access_token)
+            }
+            response = requests.delete(index_url, headers=headers)
+            if response.status_code == 200:
+                success.append(guid)
+                print("{}/{} {}: Successfully deleted '{}'.".format(count,total,response.status_code,guid))
+            else:
+                failure.append(guid)
+                print("{}/{} {}: Failed to delete '{}'.".format(count,total,response.status_code,guid))
+        return {'success':success,'failure':failure}
+
+
+    def remove_uploader_from_indexd(self, irecs):
+        """
+        Arguments:
+            irecs(list): A list of indexd records. Get with, e.g., function:
+                Gen3Expansion.get_indexd(uploader="cgmeyer@uchicagp.edu")
+        """
+        total,count = len(irecs),0
+        success,failure=[],[]
+        for irec in irecs:
+            count+=1
+            guid = irec['did']
+            rev = irec['rev']
+            payload = {'uploader':None}
+            index_url = "{}/index/index/{}?rev={}".format(self._endpoint,guid,rev)
+            access_token = self.get_token()
+            headers = {
+              'Content-Type': 'application/json',
+              'Authorization': 'bearer {}'.format(access_token)
+            }
+            response = requests.put(index_url, headers=headers, json=payload)
+            if response.status_code == 200:
+                success.append(guid)
+            else:
+                failure.append(guid)
+            print("{}/{} {}: {}".format(count,total,response.status_code,response.text.encode('utf8')))
+        return {'success':success,'failure':failure}
 
     def get_urls(self, guids):
         # Get URLs for a list of GUIDs
@@ -3064,8 +3119,10 @@ class Gen3Expansion:
         if not isinstance(guids, list):
             raise Gen3Error("Please, supply GUIDs as a list.")
 
+        count,total = 0,len(guids)
+        deleted,failed = [],[]
         for guid in guids:
-
+            count+=1
             fence_url = "{}user/data/".format(self._endpoint)
 
             try:
@@ -3074,10 +3131,13 @@ class Gen3Expansion:
                 raise Gen3Error(e)
 
             if response.status_code == 204:
-                print("Successfully deleted GUID {}".format(guid))
+                print("({}/{}) Successfully deleted GUID {}".format(count,total,guid))
+                deleted.append(guid)
             else:
-                print("Error deleting GUID {}:".format(guid))
+                print("({}/{}) Error deleting GUID {}:".format(count,total,guid))
                 print(response.reason)
+                failed.append(guid)
+        return({'deleted':deleted,'failed':failed})
 
 
     # Data commons summary functions
@@ -5070,7 +5130,9 @@ class Gen3Expansion:
                     print("File property '{}' is missing from mfiles! \n\t{}".format(file_prop,list(mfiles)))
 
         for prop in props:
-            if prop == 'md5sum':
+            if prop == 'file_name':
+                data['file_name'] = [sid + ".mock_filename.txt" for sid in data['submitter_id']]
+            elif prop == 'md5sum':
                 md5s = []
                 for i in range(count):
                     md5 = str(hashlib.md5(b"test").hexdigest())
@@ -5100,12 +5162,12 @@ class Gen3Expansion:
                     elif array_type == "integer":
                         array_list = []
                         for i in range(count):
-                            array_list.append(",".join(map(str,list(np.random.randint(low=0, high=10, size=(2))))))
+                            array_list.append(",".join(map(str,list(np.random.randint(low=1, high=89, size=(2))))))
                         data[prop] = array_list
                     elif array_type == "number":
                         array_list = []
                         for i in range(count):
-                            one_array = list(np.random.uniform(low=0, high=10, size=(2)))
+                            one_array = list(np.random.uniform(low=1, high=89, size=(2)))
                             formatted_array = [ '%.2f' % elem for elem in one_array ]
                             array_list.append(",".join(map(str,formatted_array)))
                         data[prop] = array_list
@@ -5117,9 +5179,9 @@ class Gen3Expansion:
                     available_types = cycle([True,False])
                     data[prop] = [next(available_types)for i in range(count)]
                 elif prop_type == "integer":
-                        data[prop] = list(np.random.randint(low=0, high=10, size=(count)))
+                        data[prop] = list(np.random.randint(low=1, high=89, size=(count)))
                 elif prop_type == "number":
-                    data[prop] = [ '%.2f' % elem for elem in list(np.random.uniform(low=0, high=10, size=count))]
+                    data[prop] = [ '%.2f' % elem for elem in list(np.random.uniform(low=1, high=89, size=count))]
 
             elif 'enum' in dd[node]['properties'][prop]:
                 enums = dd[node]['properties'][prop]['enum']
@@ -5127,8 +5189,6 @@ class Gen3Expansion:
                 #enum_values = ['a','b']
                 #available_enums = cycle(enum_values)
                 data[prop] = [next(available_enums)for i in range(count)]
-
-
 
         # create a dataframe and save as a TSV
         df = pd.DataFrame(data)
@@ -5245,19 +5305,53 @@ class Gen3Expansion:
                     object_ids = []
                     for i in range(len(df)):
                         file_name = list(df['file_name'])[i]
+                        size = list(df['file_size'])[i]
+                        md5 = list(df['md5sum'])[i]
                         try:
-                            irec = self.create_blank_indexd_record(
-                                uploader="cgmeyer@uchicago.edu",
-                                file_name=file_name
-                            )
-                            if 'did' in irec:
-                                object_ids.append(irec['did'])
-                            else:
-                                print("No object_id in indexd response:\n\t{}".format(irec))
+                            irec = self.create_mock_indexd_record(
+                                file_name=file_name,
+                                md5=md5,
+                                size=size,
+                                project_id=project_id)
                         except:
-                            print("Couldn't create the indexd record for file:\n\t{}.".format(file_name))
+                            print("Couldn't create the indexd record for file {}:\n\t{}".format(file_name,irec))
+                        object_id = irec['did']
+                        object_ids.append(object_id)
                     df['object_id'] = object_ids
                 d = self.submit_df(project_id=project_id, df=df, chunk_size=250)
+
+
+    def create_mock_indexd_record(self,
+        file_name,
+        md5,
+        size,
+        project_id="DEV-test",
+        uploader="cgmeyer@uchicago.edu"):
+        """
+        Create a blank indexd record}
+        """
+        prog,proj = project_id.split("-",1)
+        iurl = "{}index/index".format(self._endpoint)
+        payload = {'form': 'object',
+            'file_name':file_name,
+            'hashes':{'md5':md5},
+            'size':size,
+            'authz':["/programs/{}/projects/{}".format(prog,proj)],
+            'acl':[prog,proj],
+            'urls':['s3://mock/bucket/{}'.format(file_name)],
+            #'uploader':uploader
+        }
+        try:
+            res = requests.post(
+                iurl,
+                headers={"content-type": "application/json"},
+                auth=self._auth_provider,
+                data=json.dumps(payload),
+            )
+        except:
+            print("\n\tError creating indexd record:\n{}\n{}\n".format(res,res.text))
+        data = res.json()
+        return data
 
     def create_blank_indexd_record(self, uploader="cgmeyer@uchicago.edu", file_name=None):
         """
@@ -5272,9 +5366,31 @@ class Gen3Expansion:
             data=json.dumps(payload),
         )
         try:
-            irec = res.json()
-            object_id = irec['did']
-            return object_id
+            data = res.json()
+            return data
         except:
-            print(res)
-            return res
+            print("\n\tNo json in indexd response:\n{}\n{}\n".format(res,res.text))
+            return res.text
+
+
+
+
+    def nuked(self,message="Deleted!"):
+        mushroom_cloud1 = """
+                 _.-^^---....,,--
+             _--                  --_
+            <                        >)
+        """
+        mushroom_cloud2 = """
+            |                         |
+             \._                   _./
+                ```--. . , ; .--'''
+                      | |   |
+                   .-=||  | |=-.
+                   `-=#$%&%$#=-'
+                      | ;  :|
+             _____.,-#%&$@%#&#~,._____
+        """
+        print(mushroom_cloud1)
+        print("\t\t{}".format(message))
+        print(mushroom_cloud2)
