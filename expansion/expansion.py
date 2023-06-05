@@ -1017,7 +1017,7 @@ class Gen3Expansion:
                         )
         return submission_order
 
-    def delete_project(self, project_id, root_node="project", chunk_size=200):
+    def delete_project(self, project_id, root_node="project", chunk_size=200, nuke_project=False):
         prog, proj = project_id.split("-", 1)
         submission_order = self.get_submission_order(root_node=root_node)
         delete_order = sorted(submission_order, key=lambda x: x[1], reverse=True)
@@ -1032,14 +1032,18 @@ class Gen3Expansion:
             #     node=node, project_id=project_id, chunk_size=chunk_size
             # )
             self.sub.delete_node(program=prog,project=proj,node_name=node)
-        try:
-            data = self.sub.delete_project(program=prog, project=proj)
-        except Exception as e:
-            print("Couldn't delete project '{}':\n\t{}".format(project_id, e))
-        if "Can not delete the project." in data:
-            print("{}".format(data))
+        if nuke_project is True:
+            try:
+                data = self.sub.delete_project(program=prog, project=proj)
+            except Exception as e:
+                print("Couldn't delete project '{}':\n\t{}".format(project_id, e))
+            if "Can not delete the project." in data:
+                print("{}".format(data))
+            else:
+                print("Successfully deleted the project '{}'".format(project_id))
         else:
-            print("Successfully deleted the project '{}'".format(project_id))
+            print("Successfully deleted all nodes in the project '{}'.\nIf you'd like to delete thr project node itself, then add the flag 'nuke_project=True'.".format(project_id))
+
 
     # Analysis Functions
     def property_counts_table(self, prop, df):
@@ -5067,11 +5071,21 @@ class Gen3Expansion:
 
         for prop in props:
             if prop == 'md5sum':
-                md5 = str(hashlib.md5(b"test").hexdigest())
-                data['md5sum'] = [md5] * count
+                md5s = []
+                for i in range(count):
+                    md5 = str(hashlib.md5(b"test").hexdigest())
+                    md5s.append(md5)
+                data['md5sum'] = md5s
             elif prop == 'object_id':
-                object_id = str(uuid.uuid4())
-                data['object_id'] = [object_id] * count
+                # add blank column to fill later upon submission (will create indexd records to get object_ids)
+                data['object_id'] = [np.nan] * count
+                # object_ids = []
+                # for i in range(count):
+                    # irec = index.create_blank(uploader="cgmeyer@uchicago.edu",file_name="thisisatest.filename")
+                    # object_ids.append(irec['did'])
+                # OR
+                #     object_ids.append(str(uuid.uuid4())) # guids will need to be created in indexd later for sheepdog submission to work
+                # data['object_id'] = object_ids
             elif 'type' in dd[node]['properties'][prop]:
                 prop_type = dd[node]['properties'][prop]['type'] # expected type
                 if prop_type == 'array':
@@ -5133,9 +5147,6 @@ class Gen3Expansion:
             output = "{}/{}".format(outdir,filename)
             self.submit_file(project_id="DEV-test",filename=output)
         return df
-
-
-
 
     def create_mock_project(self,
         dd,
@@ -5230,4 +5241,40 @@ class Gen3Expansion:
                 outdir=outdir,
             )
             if submit_tsvs:
+                if 'object_id' in df and df['object_id'].isnull().values.any():
+                    object_ids = []
+                    for i in range(len(df)):
+                        file_name = list(df['file_name'])[i]
+                        try:
+                            irec = self.create_blank_indexd_record(
+                                uploader="cgmeyer@uchicago.edu",
+                                file_name=file_name
+                            )
+                            if 'did' in irec:
+                                object_ids.append(irec['did'])
+                            else:
+                                print("No object_id in indexd response:\n\t{}".format(irec))
+                        except:
+                            print("Couldn't create the indexd record for file:\n\t{}.".format(file_name))
+                    df['object_id'] = object_ids
                 d = self.submit_df(project_id=project_id, df=df, chunk_size=250)
+
+    def create_blank_indexd_record(self, uploader="cgmeyer@uchicago.edu", file_name=None):
+        """
+        Create a blank indexd record}
+        """
+        iurl = "{}index/index/blank".format(self._endpoint)
+        payload = {"uploader": uploader, "file_name": file_name}
+        res = requests.post(
+            iurl,
+            headers={"content-type": "application/json"},
+            auth=self._auth_provider,
+            data=json.dumps(payload),
+        )
+        try:
+            irec = res.json()
+            object_id = irec['did']
+            return object_id
+        except:
+            print(res)
+            return res
