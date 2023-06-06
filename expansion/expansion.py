@@ -926,7 +926,9 @@ class Gen3Expansion:
         results["responses"] = responses
         results["errors"] = errors
         print("\tFinished record deletion script.")
-
+        if len(success) > 0:
+            print("Successfully deleted {} records.".format(len(success)))
+            self.nuked()
         return results
 
     def delete_node(self, node, project_id, chunk_size=200):
@@ -1043,6 +1045,7 @@ class Gen3Expansion:
                 print("Successfully deleted the project '{}'".format(project_id))
                 self.nuked()
         else:
+            self.nuked()
             print("\n\nSuccessfully deleted all nodes in the project '{}'.\nIf you'd like to delete the project node itself, then add the flag 'nuke_project=True'.".format(project_id))
 
 
@@ -2781,6 +2784,9 @@ class Gen3Expansion:
             else:
                 failure.append(guid)
                 print("{}/{} {}: Failed to delete '{}'.".format(count,total,response.status_code,guid))
+        if len(success) > 0:
+            print("Successfully deleted {} indexd records.".format(len(success)))
+            self.nuked()
         return {'success':success,'failure':failure}
 
 
@@ -3137,6 +3143,9 @@ class Gen3Expansion:
                 print("({}/{}) Error deleting GUID {}:".format(count,total,guid))
                 print(response.reason)
                 failed.append(guid)
+        if len(deleted) > 0:
+            print("Successfully deleted {} uploaded files.".format(len(deleted)))
+            self.nuked()
         return({'deleted':deleted,'failed':failed})
 
 
@@ -4101,7 +4110,9 @@ class Gen3Expansion:
             else:
                 failed.append(guid)
                 print("({}/{}) FAILED to delete '{}' from MDS.".format(count, total, guid))
-
+        if len(deleted) > 0:
+            print("Successfully deleted {} metadata records.".format(len(deleted)))
+            self.nuked()
         return {"deleted":deleted,"failed":failed}
 
 
@@ -5045,7 +5056,9 @@ class Gen3Expansion:
             "object_id",
             "storage_urls"],
         mfiles=None,
-        submit_tsv=False
+        submit_tsv=False,
+        minimum=1,
+        maximum=20
         ):
         """
         Create mock / simulated data in a submission TSV for a node in the data dictionary.
@@ -5060,22 +5073,25 @@ class Gen3Expansion:
             excluded_props(list): a list of properties in data dictionary to ignore / exclude from the TSV columns
             mfiles(dict): a dictionary of mock data files created using func create_mock_files()
             submit_tsv(boolean): if true, will use sdk to submit the file via sheepdog
-        """
+
         ############################################################
         ############################################################
         # Use these settings for testing, comment out when actually running as function or in SDK.
         ############################################################
-        # node = 'cr_series_file'
-        # count = 3
-        # outdir = "/Users/christopher/Documents/Notes/MIDRC/annotations/sample_data/DEV-test/script_tsvs"
-        # filename = "{}_mock_{}.tsv".format(node,dd_version) # override for testing, comment out
-        # links = self.list_links(node, dd)
-        # parent_tsvs = {link:"{}_mock_{}.tsv".format(link_targets[link],dd_version) for link in links}
-        # links = None # for testing comment this out later
-        ############################################################
-        ############################################################
-        ############################################################
+        dd = sub.get_dictionary_all()
+        dd_version = dd["_settings"]["_dict_version"]
+        node = 'cr_series_file'
+        count = 3
+        outdir = "/Users/christopher/Documents/Notes/MIDRC/annotations/sample_data/DEV-test/script_tsvs"
+        filename = "{}_mock_{}.tsv".format(node,dd_version) # override for testing, comment out
+        links = self.list_links(node, dd)
 
+        parent_tsvs = {link:"{}/{}_mock_{}.tsv".format(outdir,link_targets[link],dd_version) for link in links}
+        links = None # for testing comment this out later
+        ############################################################
+        ############################################################
+        ############################################################
+        """
         # get the data dictionary and version number
         dd_version = dd["_settings"]["_dict_version"]
 
@@ -5155,6 +5171,10 @@ class Gen3Expansion:
                         array_type = dd[node]['properties'][prop]['items']
                         if 'type' in dd[node]['properties'][prop]['items']:
                             array_type = dd[node]['properties'][prop]['items']['type']
+                        if 'minimum' in dd[node]['properties'][prop]['items']:
+                            minimum = dd[node]['properties'][prop]['items']['minimum']
+                        if 'maximum' in dd[node]['properties'][prop]['items']:
+                            maximum = dd[node]['properties'][prop]['items']['maximum']
                     if array_type == "string":
                         data[prop] = ["test {}, test {}".format(prop,prop)] * count
                         # array_values = ["test {}, test {}".format(prop,prop)] * count
@@ -5179,9 +5199,17 @@ class Gen3Expansion:
                     available_types = cycle([True,False])
                     data[prop] = [next(available_types)for i in range(count)]
                 elif prop_type == "integer":
-                        data[prop] = list(np.random.randint(low=1, high=89, size=(count)))
+                    if 'minimum' in dd[node]['properties'][prop]:
+                        minimum = dd[node]['properties'][prop]['minimum']
+                    if 'maximum' in dd[node]['properties'][prop]:
+                        maximum = dd[node]['properties'][prop]['maximum']
+                    data[prop] = list(np.random.randint(low=minimum, high=maximum, size=(count)))
                 elif prop_type == "number":
-                    data[prop] = [ '%.2f' % elem for elem in list(np.random.uniform(low=1, high=89, size=count))]
+                    if 'minimum' in dd[node]['properties'][prop]:
+                        minimum = dd[node]['properties'][prop]['minimum']
+                    if 'maximum' in dd[node]['properties'][prop]:
+                        maximum = dd[node]['properties'][prop]['maximum']
+                    data[prop] = [ '%.2f' % elem for elem in list(np.random.uniform(low=minimum, high=maximum, size=count))]
 
             elif 'enum' in dd[node]['properties'][prop]:
                 enums = dd[node]['properties'][prop]['enum']
