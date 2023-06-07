@@ -45,7 +45,17 @@ async def output_expanded_discovery_metadata(
 ):
     """
     fetch discovery metadata from a commons and output to {commons}-{guid_type}.tsv or {commons}-{guid_type}.json
+
+    Args:
+        auth (Gen3Auth): a Gen3Auth object
+        endpoint (str): HOSTNAME of a Gen3 environment, defaults to None
+        limit (int): max number of records in one operation, defaults to 500
+        use_agg_mds (bool): whether to use AggMDS during export, defaults to False
+        guid_type (str): intended GUID type for query, defaults to discovery_metadata
+        output_format (str): format of output file (can only be either tsv or json), defaults to tsv
+        output_filename_suffix (str): additional suffix for the output file name, defaults to ""
     """
+
     if output_format != "tsv" and output_format != "json":
         logging.error(
             f"Unsupported output file format {output_format}! Only tsv or json is allowed"
@@ -361,6 +371,17 @@ async def publish_discovery_metadata(
 ):
     """
     Publish discovery metadata from a tsv or json file
+
+    Args:
+        auth (Gen3Auth): a Gen3Auth object
+        metadata_filename (str): the file path of the local metadata file to be published, must be in either JSON or TSV format
+        endpoint (str): HOSTNAME of a Gen3 environment, defaults to None
+        omit_empty_values (bool): whether to exclude fields with empty values from the published discovery metadata, defaults to False
+        guid_type (str): intended GUID type for publishing, defaults to discovery_metadata
+        guid_field (str): specify a field from the metadata that will be used as GUIDs, if not specified, will try to find a field named "guid" from the metadata, if that field doesn't exists in a certain metadata record, that record will be skipped from publishing, defaults to None
+        is_unregistered_metadata (bool): (HEAL only) whether to publish metadata as unregistered study metadata, defaults to False
+        reset_unregistered_metadata (bool): (HEAL only) whether to reset existing study metadata back to unregistered study metadata if they exists in the local file, defaults to False
+        update_registered_metadata (bool): (HEAL only) whether to update existing study metadata with new values if they exists in the local file, defaults to True
     """
     if endpoint:
         mds = Gen3Metadata(auth_provider=auth, endpoint=endpoint)
