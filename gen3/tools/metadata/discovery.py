@@ -379,9 +379,9 @@ async def publish_discovery_metadata(
         omit_empty_values (bool): whether to exclude fields with empty values from the published discovery metadata, defaults to False
         guid_type (str): intended GUID type for publishing, defaults to discovery_metadata
         guid_field (str): specify a field from the metadata that will be used as GUIDs, if not specified, will try to find a field named "guid" from the metadata, if that field doesn't exists in a certain metadata record, that record will be skipped from publishing, defaults to None
-        is_unregistered_metadata (bool): (HEAL only) whether to publish metadata as unregistered study metadata, defaults to False
-        reset_unregistered_metadata (bool): (HEAL only) whether to reset existing study metadata back to unregistered study metadata if they exists in the local file, defaults to False
-        update_registered_metadata (bool): (HEAL only) whether to update existing study metadata with new values if they exists in the local file, defaults to True
+        is_unregistered_metadata (bool): (for use by "study registration" feature only) whether to publish metadata as unregistered study metadata, defaults to False
+        reset_unregistered_metadata (bool): (for use by "study registration" feature only) whether to reset existing study metadata back to unregistered study metadata if they exists in the local file, defaults to False
+        update_registered_metadata (bool): (for use by "study registration" feature only) whether to update existing study metadata with new values if they exists in the local file, defaults to True
     """
     if endpoint:
         mds = Gen3Metadata(auth_provider=auth, endpoint=endpoint)
