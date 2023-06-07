@@ -23,7 +23,7 @@ def discovery():
     "--default-file",
     "use_default_file",
     is_flag=True,
-    help="Publishes {commons}-discovery_metadata.tsv from current directory",
+    help="Publishes {commons}-{guid_type}.tsv from current directory",
     show_default=True,
 )
 @click.option(
@@ -43,15 +43,25 @@ def discovery():
     ),
     show_default=True,
 )
+@click.option(
+    "--guid_field",
+    "guid_field",
+    help=(
+        'The column / field name within the metadata that will be used as GUIDs, if not specified, will try to find a column \ field named "guid" from the metadata.'
+        "If that field doesn't exists in a certain metadata record, that record will be skipped from publishing."
+    ),
+    default=None,
+    show_default=True,
+)
 @click.pass_context
-def discovery_publish(ctx, file, use_default_file, omit_empty, guid_type):
+def discovery_publish(ctx, file, use_default_file, omit_empty, guid_type, guid_field):
     """
-    Run a discovery metadata ingestion on a given metadata TSV file with guid column.
-    If [FILE] is omitted and --default-file not set, prompts for TSV file name.
+    Run a discovery metadata ingestion on a given metadata TSV / JSON file with guid column / field.
+    If [FILE] is omitted and --default-file not set, prompts for TSV / JSON file name.
     """
     auth = ctx.obj["auth_factory"].get()
     if not file and not use_default_file:
-        file = click.prompt("Enter discovery metadata TSV file to publish")
+        file = click.prompt("Enter discovery metadata TSV / JSON file to publish")
 
     loop = get_or_create_event_loop_for_thread()
     endpoint = ctx.obj.get("endpoint")
@@ -62,6 +72,7 @@ def discovery_publish(ctx, file, use_default_file, omit_empty, guid_type):
             endpoint=endpoint,
             omit_empty_values=omit_empty,
             guid_type=guid_type,
+            guid_field=guid_field,
         )
     )
 
@@ -80,18 +91,46 @@ def discovery_publish(ctx, file, use_default_file, omit_empty, guid_type):
     help="use aggregate metadata service instead of the metadata service",
     show_default=True,
 )
+@click.option(
+    "--guid_type",
+    "guid_type",
+    help="value of intended GUID type for query",
+    default="discovery_metadata",
+    show_default=True,
+)
+@click.option(
+    "--output_format",
+    "output_format",
+    help="format of output file (can only be either tsv or json)",
+    default="tsv",
+    show_default=True,
+)
+@click.option(
+    "--output_filename_suffix",
+    "output_filename_suffix",
+    help="additional suffix for the output file name",
+    default="",
+    show_default=True,
+)
 @click.pass_context
-def discovery_read(ctx, limit, agg):
+def discovery_read(ctx, limit, agg, guid_type, output_format, output_filename_suffix):
     """
-    Download the metadata used to populate a commons' discovery page into a TSV.
-    Outputs the TSV filename with format {commons-url}-discovery_metadata.tsv
+    Download the metadata used to populate a commons' discovery page into a TSV or JSON file.
+    Outputs the TSV / JSON filename with format {commons-url}-{guid_type}.tsv/.json
+    If "output_filename_suffix" exists, file name will be something like {commons-url}-{guid_type}-{output_filename_suffix}
     """
     auth = ctx.obj["auth_factory"].get()
     loop = get_or_create_event_loop_for_thread()
     endpoint = ctx.obj.get("endpoint")
     output_file = loop.run_until_complete(
         output_expanded_discovery_metadata(
-            auth, endpoint=endpoint, limit=limit, use_agg_mds=agg
+            auth,
+            endpoint=endpoint,
+            limit=limit,
+            use_agg_mds=agg,
+            guid_type=guid_type,
+            output_format=output_format,
+            output_filename_suffix=output_filename_suffix,
         )
     )
 
