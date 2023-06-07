@@ -23,7 +23,7 @@ functions yourself. Generally this provides the most flexibility, at less
 of a convenience.
 
 ### Export Discovery Metadata into File
-Gen3's SDK can be used to export discovery metadata from a certain Gen3 environment into a file by using the `output_expanded_discovery_metadata()` function. By default this function will query for metadata with `guid_type=discovery_metadata` for the dump, and export the metadata into a TSV file. User can also specified a different `guid_type` values for this operation, and/or choose to export the metadata into a JSON file. When using TSV format, some certain fields from metadata will be flattened or "jsonified" so that each metadata record can be fitted into one row.
+Gen3's SDK can be used to export discovery metadata from a certain Gen3 environment into a file by using the `output_expanded_discovery_metadata()` function. By default this function will query for metadata with `guid_type=discovery_metadata` for the dump, and export the metadata into a TSV file. User can also specify a different `guid_type` values for this operation, and/or choose to export the metadata into a JSON file. When using TSV format, some certain fields from metadata will be flattened or "jsonified" so that each metadata record can be fitted into one row.
 
 Function args:
 * `auth`: a Gen3Auth object, required
