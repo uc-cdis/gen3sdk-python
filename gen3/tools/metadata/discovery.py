@@ -47,10 +47,10 @@ async def output_expanded_discovery_metadata(
     fetch discovery metadata from a commons and output to {commons}-{guid_type}.tsv or {commons}-{guid_type}.json
     """
     if output_format != "tsv" and output_format != "json":
-        print(
+        logging.error(
             f"Unsupported output file format {output_format}! Only tsv or json is allowed"
         )
-        return
+        raise ValueError(f"Unsupported output file format {output_format}")
 
     if endpoint:
         mds = Gen3Metadata(
@@ -104,13 +104,11 @@ async def output_expanded_discovery_metadata(
             else:
                 break
 
-        output_filename_extension = ".tsv"
-        if output_format == "json":
-            output_filename_extension = ".json"
-        output_filename = _create_metadata_output_filename(
-            auth, guid_type, output_filename_suffix, output_filename_extension
-        )
+        # output as TSV
         if output_format == "tsv":
+            output_filename = _create_metadata_output_filename(
+                auth, guid_type, output_filename_suffix, ".tsv"
+            )
             output_columns = (
                 ["guid"]
                 # "tags" is flattened to _tag_0 through _tag_n
@@ -149,6 +147,9 @@ async def output_expanded_discovery_metadata(
                         writer.writerow(output_metadata)
         else:
             # output as JSON
+            output_filename = _create_metadata_output_filename(
+                auth, guid_type, output_filename_suffix, ".json"
+            )
             output_metadata = []
             for guid, metadata in partial_metadata.items():
                 true_guid = guid
@@ -377,7 +378,7 @@ async def publish_discovery_metadata(
         logging.error(
             f"Unsupported file type supplied {metadata_filename}! Only CSV/TSV/JSON are allowed."
         )
-        return
+        raise ValueError(f"Unsupported file type supplied {metadata_filename}")
 
     is_json_metadata = False
     if metadata_filename.endswith(".json"):
