@@ -13,10 +13,18 @@ from fhirclient.models.meta import Meta
 
 from gen3.external import ExternalMetadataSourceInterface
 from gen3.external.nih.utils import get_dbgap_accession_as_parts
-from gen3.tools.metadata.discovery import sanitize_tsv_row
+from gen3.tools.metadata.discovery import sanitize_tsv_row, BASE_CSV_PARSER_SETTINGS
 from gen3.utils import DEFAULT_BACKOFF_SETTINGS
 
 logging = get_logger("__name__")
+
+# For more details about this regex, see the function that uses it
+DBGAP_ACCESSION_REGEX = (
+    "(?P<phsid>phs(?P<phsid_number>[0-9]+))"
+    "(.(?P<participant_set>p(?P<participant_set_number>[0-9]+))){0,1}"
+    "(.(?P<version>v(?P<version_number>[0-9]+))){0,1}"
+    "(.(?P<consent>c(?P<consent_number>[0-9]+)+)){0,1}"
+)
 
 
 class dbgapFHIR(ExternalMetadataSourceInterface):
@@ -323,7 +331,12 @@ class dbgapFHIR(ExternalMetadataSourceInterface):
                 headers.add(item)
 
         csv_writer = csv.DictWriter(
-            data_file, delimiter="\t", fieldnames=sorted(headers), extrasaction="ignore"
+            data_file,
+            **{
+                **BASE_CSV_PARSER_SETTINGS,
+                "fieldnames": sorted(headers),
+                "extrasaction": "ignore",
+            },
         )
         csv_writer.writeheader()
 

@@ -3,6 +3,8 @@
 **Table of Contents**
 
 - [Overview](#overview)
+- [Export Discovery Metadata into File](#export-discovery-metadata-from-file)
+- [Publish Discovery Metadata from File]()
 - [DOIs in Gen3](#dois-in-gen3-discovery-metadata-and-page-for-visualizing-public-doi-metadata)
 - [dbGaP FHIR Metadata in Gen3 Discovery](#combine-dbgap-fhir-metadata-with-current-discovery-metadata)
 
@@ -19,6 +21,48 @@ Like other CLI functions, the CLI code mostly just wraps an SDK function call.
 So you can choose to use the CLI or write your own Python script and use the SDK
 functions yourself. Generally this provides the most flexibility, at less
 of a convenience.
+
+### Export Discovery Metadata into File
+Gen3's SDK can be used to export discovery metadata from a certain Gen3 environment into a file by using the `output_expanded_discovery_metadata()` function. By default this function will query for metadata with `guid_type=discovery_metadata` for the dump, and export the metadata into a TSV file. User can also specify a different `guid_type` values for this operation, and/or choose to export the metadata into a JSON file. When using TSV format, some certain fields from metadata will be flattened or "jsonified" so that each metadata record can be fitted into one row.
+
+Example of usage:
+```python
+from gen3.tools.metadata.discovery import (
+    output_expanded_discovery_metadata,
+)
+from gen3.utils import get_or_create_event_loop_for_thread
+from gen3.auth import Gen3Auth
+
+if __name__ == "__main__":
+    auth = Gen3Auth()
+    loop = get_or_create_event_loop_for_thread()
+    loop.run_until_complete(
+        output_expanded_discovery_metadata(
+            auth, endpoint="GEN3_ENV_HOSTNAME", output_format="json"
+        )
+    )
+```
+
+### Publish Discovery Metadata from File
+Gen3's SDK can also be used to publish discovery metadata onto a target Gen3 environment from a file by using the `publish_discovery_metadata()` function. Ideally the metadata file should be originated from a metadata dump obtained by using the `output_expanded_discovery_metadata()` function.
+
+Example of usage:
+```python
+from gen3.tools.metadata.discovery import (
+    publish_discovery_metadata,
+)
+from gen3.utils import get_or_create_event_loop_for_thread
+from gen3.auth import Gen3Auth
+
+if __name__ == "__main__":
+    auth = Gen3Auth()
+    loop = get_or_create_event_loop_for_thread()
+    loop.run_until_complete(
+        publish_discovery_metadata(
+            auth, "./metadata.tsv", endpoint=HOSTNAME, guid_field="_hdp_uid"
+        )
+    )
+```
 
 ### DOIs in Gen3: Discovery Metadata and Page for Visualizing Public DOI Metadata
 

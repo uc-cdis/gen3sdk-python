@@ -14,9 +14,11 @@ from gen3.tools.metadata.discovery import (
 )
 
 
-@patch("gen3.tools.metadata.discovery._metadata_file_from_auth")
+@patch("gen3.tools.metadata.discovery._create_metadata_output_filename")
 @patch("gen3.metadata.Gen3Metadata.query")
-def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
+def test_discovery_read(
+    metadata_query_patch, metadata_file_patch, gen3_auth, guid_type="discovery_metadata"
+):
     guid1_discovery_metadata = {
         # this value should be written to the file exactly as shown
         "str_key": "str_val \n \t \\",
@@ -33,20 +35,23 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
 
     metadata_query_patch.side_effect = lambda *_, **__: {
         "guid1": {
-            "_guid_type": "discovery_metadata",
+            "_guid_type": guid_type,
             "gen3_discovery": guid1_discovery_metadata,
         },
         "guid2": {
-            "_guid_type": "discovery_metadata",
+            "_guid_type": guid_type,
             "gen3_discovery": guid2_discovery_metadata,
         },
     }
 
+    # TSV output tests
     with tempfile.NamedTemporaryFile(suffix=".csv", mode="a+") as outfile:
         metadata_file_patch.side_effect = lambda *_, **__: outfile.name
         loop = asyncio.new_event_loop()
         loop.run_until_complete(
-            output_expanded_discovery_metadata(gen3_auth, endpoint="excommons.org")
+            output_expanded_discovery_metadata(
+                gen3_auth, endpoint="excommons.org", guid_type=guid_type
+            )
         )
         outfile.seek(0)
         csv_rows = list(csv.DictReader(outfile, **BASE_CSV_PARSER_SETTINGS))
@@ -63,7 +68,7 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
         assert metadata_keys - metadata_columns == set(["tags"])
         assert metadata_columns - metadata_keys == set(["_tag_0", "_tag_1", "guid"])
 
-        # output should jsonify all dicts/lists, leave everthing else the same
+        # output should jsonify all dicts/lists, leave everything else the same
         assert guid1_row["listval"] == json.dumps(guid1_discovery_metadata["listval"])
         assert guid1_row["dictval"] == json.dumps(guid1_discovery_metadata["dictval"])
         assert guid2_row["other_key"] == guid2_discovery_metadata["other_key"]
@@ -77,7 +82,7 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
 
         # should also be able to handle empty discovery metadata
         metadata_query_patch.side_effect = lambda *_, **__: {
-            "guid1": {"_guid_type": "discovery_metadata", "gen3_discovery": {}}
+            "guid1": {"_guid_type": guid_type, "gen3_discovery": {}}
         }
 
         outfile.truncate(0)
@@ -92,7 +97,7 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
             "commons1": [
                 {
                     "guid1": {
-                        "_guid_type": "discovery_metadata",
+                        "_guid_type": guid_type,
                         "gen3_discovery": guid1_discovery_metadata,
                     }
                 }
@@ -100,7 +105,7 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
             "commons2": [
                 {
                     "guid2": {
-                        "_guid_type": "discovery_metadata",
+                        "_guid_type": guid_type,
                         "gen3_discovery": guid2_discovery_metadata,
                     }
                 }
@@ -118,6 +123,89 @@ def test_discovery_read(metadata_query_patch, metadata_file_patch, gen3_auth):
 
         # agg mds should parse identical to single-commons mds
         assert agg_csv_rows == csv_rows
+
+    # JSON output tests
+    metadata_query_patch.side_effect = lambda *_, **__: {
+        "guid1": {
+            "_guid_type": guid_type,
+            "gen3_discovery": guid1_discovery_metadata,
+        },
+        "guid2": {
+            "_guid_type": guid_type,
+            "gen3_discovery": guid2_discovery_metadata,
+        },
+    }
+    with tempfile.NamedTemporaryFile(suffix=".json", mode="a+") as outfile:
+        expected_output = [
+            {
+                "guid": "guid1",
+                "_guid_type": guid_type,
+                "gen3_discovery": guid1_discovery_metadata,
+            },
+            {
+                "guid": "guid2",
+                "_guid_type": guid_type,
+                "gen3_discovery": guid2_discovery_metadata,
+            },
+        ]
+        metadata_file_patch.side_effect = lambda *_, **__: outfile.name
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(
+            output_expanded_discovery_metadata(
+                gen3_auth,
+                endpoint="excommons.org",
+                guid_type=guid_type,
+                output_format="json",
+            )
+        )
+        outfile.seek(0)
+        assert json.load(outfile) == expected_output
+
+        # test discovering data from aggregate MDS
+        metadata_query_patch.side_effect = lambda *_, **__: {
+            "commons1": [
+                {
+                    "guid1": {
+                        "_guid_type": guid_type,
+                        "gen3_discovery": guid1_discovery_metadata,
+                    }
+                }
+            ],
+            "commons2": [
+                {
+                    "guid2": {
+                        "_guid_type": guid_type,
+                        "gen3_discovery": guid2_discovery_metadata,
+                    }
+                }
+            ],
+        }
+
+        outfile.truncate(0)
+        loop.run_until_complete(
+            output_expanded_discovery_metadata(
+                gen3_auth,
+                endpoint="excommons.org",
+                use_agg_mds=True,
+                output_format="json",
+            )
+        )
+        outfile.seek(0)
+
+        # agg mds should parse identical to single-commons mds
+        assert json.load(outfile) == expected_output
+
+        # illegal output_format value
+        with pytest.raises(ValueError):
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(
+                output_expanded_discovery_metadata(
+                    gen3_auth,
+                    endpoint="excommons.org",
+                    guid_type=guid_type,
+                    output_format="blah",
+                )
+            )
 
 
 @patch("gen3.metadata.Gen3Metadata.async_create")
