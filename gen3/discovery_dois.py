@@ -138,87 +138,110 @@ def mint_dois_for_dbgap_discovery_datasets(
                     f"Conflicting DOI identifier generated. {identifier} already exists in DataCite."
                 )
 
-            # writes metadata to a record
-            guid = current_discovery_doi_id_to_guid[doi_id]
-
-            if use_doi_in_landing_page_url:
-                doi = DigitalObjectIdentifier(
-                    identifier=identifier,
-                    root_url=commons_discovery_page,
-                    **doi_metadata,
-                )
-            else:
-                url = commons_discovery_page.rstrip("/") + f"/{guid}"
-                doi = DigitalObjectIdentifier(
-                    identifier=identifier,
-                    url=url,
-                    **doi_metadata,
-                )
-
-            if publish_dois:
-                logging.info(f"Publishing DOI `{identifier}`...")
-                doi.event = "publish"
-
-            # takes either a DOI object, or an ID and will query the MDS
-            response = datacite.create_doi(doi)
-            doi = DigitalObjectIdentifier.from_datacite_create_doi_response(response)
-
-            metadata = datacite.persist_doi_metadata_in_gen3(
-                guid=guid,
-                doi=doi,
-                auth=gen3_auth,
-                additional_metadata={
-                    "disclaimer": doi_disclaimer,
-                    "access_information": doi_access_information,
-                    "access_information_link": doi_access_information_link,
-                    "contact": doi_contact,
-                },
-                prefix=doi_metadata_field_prefix,
+            # note that doi_identifiers is updated within this function
+            _create_or_update_doi_and_persist(
+                update=False,
+                datacite=datacite,
+                current_discovery_doi_id_to_guid=current_discovery_doi_id_to_guid,
+                doi_id=doi_id,
+                use_doi_in_landing_page_url=use_doi_in_landing_page_url,
+                identifier=identifier,
+                commons_discovery_page=commons_discovery_page,
+                doi_metadata=doi_metadata,
+                publish_dois=publish_dois,
+                gen3_auth=gen3_auth,
+                doi_disclaimer=doi_disclaimer,
+                doi_access_information=doi_access_information,
+                doi_access_information_link=doi_access_information_link,
+                doi_contact=doi_contact,
+                doi_metadata_field_prefix=doi_metadata_field_prefix,
+                doi_identifiers=doi_identifiers,
             )
-
-            doi_identifiers[identifier] = metadata
         else:
-            # writes metadata to a record
-            guid = current_discovery_doi_id_to_guid[doi_id]
-
-            # the DOI already exists for existing metadata, update as necessary
-            if use_doi_in_landing_page_url:
-                doi = DigitalObjectIdentifier(
-                    identifier=identifier,
-                    root_url=commons_discovery_page,
-                    **doi_metadata,
-                )
-            else:
-                url = commons_discovery_page.rstrip("/") + f"/{guid}"
-                doi = DigitalObjectIdentifier(
-                    identifier=identifier,
-                    url=url,
-                    **doi_metadata,
-                )
-
-            if publish_dois:
-                logging.info(f"Publishing DOI `{identifier}`...")
-                doi.event = "publish"
-
-            response = datacite.update_doi(doi)
-            doi = DigitalObjectIdentifier.from_datacite_create_doi_response(response)
-
-            metadata = datacite.persist_doi_metadata_in_gen3(
-                guid=guid,
-                doi=doi,
-                auth=gen3_auth,
-                additional_metadata={
-                    "disclaimer": doi_disclaimer,
-                    "access_information": doi_access_information,
-                    "access_information_link": doi_access_information_link,
-                    "contact": doi_contact,
-                },
-                prefix=doi_metadata_field_prefix,
+            _create_or_update_doi_and_persist(
+                update=True,
+                datacite=datacite,
+                current_discovery_doi_id_to_guid=current_discovery_doi_id_to_guid,
+                doi_id=doi_id,
+                use_doi_in_landing_page_url=use_doi_in_landing_page_url,
+                identifier=identifier,
+                commons_discovery_page=commons_discovery_page,
+                doi_metadata=doi_metadata,
+                publish_dois=publish_dois,
+                gen3_auth=gen3_auth,
+                doi_disclaimer=doi_disclaimer,
+                doi_access_information=doi_access_information,
+                doi_access_information_link=doi_access_information_link,
+                doi_contact=doi_contact,
+                doi_metadata_field_prefix=doi_metadata_field_prefix,
+                doi_identifiers=doi_identifiers,
             )
-
-            doi_identifiers[identifier] = metadata
 
     return doi_identifiers
+
+
+def _create_or_update_doi_and_persist(
+    update,
+    datacite,
+    current_discovery_doi_id_to_guid,
+    doi_id,
+    use_doi_in_landing_page_url,
+    identifier,
+    commons_discovery_page,
+    doi_metadata,
+    publish_dois,
+    gen3_auth,
+    doi_disclaimer,
+    doi_access_information,
+    doi_access_information_link,
+    doi_contact,
+    doi_metadata_field_prefix,
+    doi_identifiers,
+):
+    # writes metadata to a record
+    guid = current_discovery_doi_id_to_guid[doi_id]
+
+    # the DOI already exists for existing metadata, update as necessary
+    if use_doi_in_landing_page_url:
+        doi = DigitalObjectIdentifier(
+            identifier=identifier,
+            root_url=commons_discovery_page,
+            **doi_metadata,
+        )
+    else:
+        url = commons_discovery_page.rstrip("/") + f"/{guid}"
+        doi = DigitalObjectIdentifier(
+            identifier=identifier,
+            url=url,
+            **doi_metadata,
+        )
+
+    if publish_dois:
+        logging.info(f"Publishing DOI `{identifier}`...")
+        doi.event = "publish"
+
+    # takes either a DOI object, or an ID and will query the MDS
+    if update:
+        response = datacite.update_doi(doi)
+    else:
+        response = datacite.create_doi(doi)
+
+    doi = DigitalObjectIdentifier.from_datacite_create_doi_response(response)
+
+    metadata = datacite.persist_doi_metadata_in_gen3(
+        guid=guid,
+        doi=doi,
+        auth=gen3_auth,
+        additional_metadata={
+            "disclaimer": doi_disclaimer,
+            "access_information": doi_access_information,
+            "access_information_link": doi_access_information_link,
+            "contact": doi_contact,
+        },
+        prefix=doi_metadata_field_prefix,
+    )
+
+    doi_identifiers[identifier] = metadata
 
 
 def get_phsid_to_guid_mapping(dbgap_phsid_field, auth):
