@@ -512,12 +512,13 @@ class Gen3Auth(AuthBase):
                     else:
                         logging.debug("Could not find matching idp from local WTS.")
                 except Exception as e:
+                    logging.debug(
+                        "Exception occured when making network call to local WTS."
+                    )
                     if not self._external_wts_host:
                         raise e
                     else:
-                        logging.debug(
-                            "Could not complete network call to local WTS /external_oidc/, but since external WTS host exists, continuing on.."
-                        )
+                        logging.debug("Since external WTS host exists, continuing on..")
                         pass
 
             if self._wts_idp and self._wts_idp != "local":
