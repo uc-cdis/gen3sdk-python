@@ -281,7 +281,7 @@ class Gen3Auth(AuthBase):
                     )
                 ):
                     try:
-                        print("Use WTS and set external WTS host url..")
+                        logging.debug("Use WTS and set external WTS host url..")
                         self._use_wts = True
                         self._external_wts_host = (
                             endpoint_from_token(self._refresh_token["api_key"])
