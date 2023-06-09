@@ -281,7 +281,9 @@ class Gen3Auth(AuthBase):
                     )
                 ):
                     try:
-                        logging.debug("Use WTS and set external WTS host url..")
+                        logging.debug(
+                            "Switch to using WTS and set external WTS host url.."
+                        )
                         self._use_wts = True
                         self._external_wts_host = (
                             endpoint_from_token(self._refresh_token["api_key"])
@@ -481,41 +483,57 @@ class Gen3Auth(AuthBase):
         in the given namespace.  If idp is not set, then default to "local"
         """
         # attempt to get a token from the workspace-token-service
+        logging.debug("getting access token from wts..")
         auth_url = get_wts_endpoint(self._wts_namespace) + "/token/"
 
-        if self._use_wts and (
-            self.endpoint or self._wts_idp and self._wts_idp != "local"
-        ):
+        # If non "local" idp value exists, append to auth url
+        # If user specified endpoint value, then first attempt to determine idp value.
+        if self.endpoint or (self._wts_idp and self._wts_idp != "local"):
             # If user supplied endpoint value and not idp, figure out the idp value
             if self.endpoint:
                 logging.debug(
-                    "Use Local WTS to figure out idp name for the supplied endpoint"
+                    "First try to use the local WTS to figure out idp name for the supplied endpoint.."
                 )
-                provider_List = get_wts_idps(self._wts_namespace)
-                matchProviders = list(
-                    filter(
-                        lambda provider: provider["base_url"] == endpoint,
-                        provider_List["providers"],
+                try:
+                    provider_List = get_wts_idps(self._wts_namespace)
+                    matchProviders = list(
+                        filter(
+                            lambda provider: provider["base_url"] == endpoint,
+                            provider_List["providers"],
+                        )
                     )
-                )
-                if len(matchProviders) == 1:
-                    self._wts_idp = matchProviders[0]["idp"]
-                else:
-                    logging.debug("Could not find matching idp from local WTS")
+                    if len(matchProviders) == 1:
+                        logging.debug("Found matching idp from local WTS.")
+                        self._wts_idp = matchProviders[0]["idp"]
+                    elif len(matchProviders) > 1:
+                        raise ValueError(
+                            "Multiple idps matched with endpoint value provided."
+                        )
+                    else:
+                        logging.debug("Could not find matching idp from local WTS.")
+                except Exception as e:
+                    if not self._external_wts_host:
+                        raise e
+                    else:
+                        logging.debug(
+                            "Could not complete network call to local WTS /external_oidc/, but since external WTS host exists, continuing on.."
+                        )
+                        pass
 
             if self._wts_idp and self._wts_idp != "local":
                 auth_url += "?idp={}".format(self._wts_idp)
 
         # If endpoint value exists, only get WTS token if idp value has been successfully determined
         # Otherwise skip to querying external WTS
+        # This is to prevent local WTS from supplying an incorrect token to user
         if (
             not self._external_wts_host
             or not self.endpoint
             or (self.endpoint and self._wts_idp != "local")
         ):
             try:
-                print("Try to get access token from local WTS..")
-                print(f"{auth_url=}")
+                logging.debug("Try to get access token from local WTS..")
+                logging.debug(f"{auth_url=}")
                 resp = requests.get(auth_url)
                 if (resp and resp.status_code == 200) or (not self._external_wts_host):
                     return _handle_access_token_response(resp, "token")
@@ -524,13 +542,12 @@ class Gen3Auth(AuthBase):
                     raise e
                 else:
                     # Try to obtain token from external wts
-                    logging.debug(
-                        "Could get obtain token from Local WTS. Querying external WTS host.."
-                    )
+                    logging.debug("Could get obtain token from Local WTS.")
                     pass
 
         # local workspace wts call failed, try using a network call
         # First get access token with WTS host
+        logging.debug("Trying to get access token from external WTS Host..")
         wts_token = get_access_token_with_key(self._refresh_token)
         auth_url = self._external_wts_host + "token/"
 
@@ -595,7 +612,7 @@ class Gen3Auth(AuthBase):
                     + idp_list
                     + "Query /wts/external_oidc/ for more information."
                 )
-
+        logging.debug("Finally getting access token..")
         auth_url += "?idp={}".format(self._wts_idp)
         header = {"Authorization": "Bearer " + wts_token}
         resp = requests.get(auth_url, headers=header)
