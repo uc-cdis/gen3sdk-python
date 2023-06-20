@@ -1,0 +1,301 @@
+import csv
+import json
+import tempfile
+import asyncio
+import os
+import requests.exceptions
+from cdislogging import get_logger
+from urllib.parse import urlparse
+
+from gen3.metadata import Gen3Metadata
+
+from gen3.tools.metadata.discovery import (
+    MAX_GUIDS_PER_REQUEST,
+    MAX_CONCURRENT_REQUESTS,
+    BASE_CSV_PARSER_SETTINGS,
+    _create_metadata_output_filename,
+    _try_parse,
+    get_discovery_metadata,
+    sanitize_tsv_row,
+)
+
+logging = get_logger("__name__")
+
+
+async def output_discovery_objects(
+    auth,
+    dataset_guids=None,
+    endpoint=None,
+    limit=500,
+    use_agg_mds=False,
+    guid_type="discovery_metadata",
+    only_object_guids=False,
+    output_format="tsv",
+    output_filename_suffix="",
+):
+    """
+    fetch discovery objects data from a commons and output to {commons}-discovery_objects.tsv or {commons}-discovery_objects.json
+
+    Args:
+        auth (Gen3Auth): a Gen3Auth object
+        endpoint (str): HOSTNAME of a Gen3 environment, defaults to None
+        limit (int): max number of records in one operation, defaults to 500
+        use_agg_mds (bool): whether to use AggMDS during export, defaults to False
+        guid_type (str): intended GUID type for query, defaults to discovery_metadata
+        only_objects_guids (bool): whether to output guids to command line such that they can be piped to another command
+        output_format (str): format of output file (can only be either tsv or json), defaults to tsv
+        output_filename_suffix (str): additional suffix for the output file name, defaults to ""
+    """
+
+    if output_format != "tsv" and output_format != "json":
+        logging.error(
+            f"Unsupported output file format {output_format}! Only tsv or json is allowed"
+        )
+        raise ValueError(f"Unsupported output file format {output_format}")
+
+    if endpoint:
+        mds = Gen3Metadata(
+            auth_provider=auth,
+            endpoint=endpoint,
+            service_location="mds/aggregate" if use_agg_mds else "mds",
+        )
+    else:
+        mds = Gen3Metadata(
+            auth_provider=auth,
+            service_location="mds/aggregate" if use_agg_mds else "mds",
+        )
+
+    with tempfile.TemporaryDirectory() as metadata_cache_dir:
+        all_fields = set()
+        num_tags = 0
+
+        for offset in range(0, limit, MAX_GUIDS_PER_REQUEST):
+            partial_metadata = mds.query(
+                f"_guid_type={guid_type}",
+                return_full_metadata=True,
+                limit=min(limit, MAX_GUIDS_PER_REQUEST),
+                offset=offset,
+                use_agg_mds=use_agg_mds,
+            )
+
+            # if agg MDS we will flatten the results as they are in "common" : dict format
+            # However this can result in duplicates as the aggregate mds is namespaced to
+            # handle this, therefore prefix the commons in front of the guid
+            if use_agg_mds:
+                partial_metadata = {
+                    f"{c}__{i}": d
+                    for c, y in partial_metadata.items()
+                    for x in y
+                    for i, d in x.items()
+                }
+
+            if len(partial_metadata):
+                for guid, guid_metadata in partial_metadata.items():
+                    with open(
+                        f"{metadata_cache_dir}/{guid.replace('/', '_')}",
+                        "w+",
+                        encoding="utf-8",
+                    ) as cached_guid_file:
+                        guid_discovery_metadata = guid_metadata["gen3_discovery"]
+                        json.dump(guid_discovery_metadata, cached_guid_file)
+                        all_fields |= set(guid_discovery_metadata.keys())
+                        num_tags = max(
+                            num_tags, len(guid_discovery_metadata.get("tags", []))
+                        )
+            else:
+                break
+
+        # output to command line
+        if only_object_guids:
+            for guid in sorted(os.listdir(metadata_cache_dir)):
+                if (not dataset_guids) or (guid in dataset_guids):
+                    with open(f"{metadata_cache_dir}/{guid}", encoding="utf-8") as f:
+                        fetched_metadata = json.load(f)
+                        curr_objects = fetched_metadata["objects"]
+                        for obj in curr_objects:
+                            print(obj["guid"])
+            return
+
+        # output as TSV
+        elif output_format == "tsv":
+            output_filename = _create_discovery_objects_filename(
+                auth, output_filename_suffix, ".tsv"
+            )
+            object_fields = {"dataset_guid"}
+            all_objects = []
+
+            for guid in sorted(os.listdir(metadata_cache_dir)):
+                if (not dataset_guids) or (guid in dataset_guids):
+                    with open(f"{metadata_cache_dir}/{guid}", encoding="utf-8") as f:
+                        fetched_metadata = json.load(f)
+                        curr_objects = fetched_metadata["objects"]
+                        for obj in curr_objects:
+                            object_fields |= set(obj.keys())
+                            obj["dataset_guid"] = guid
+                        all_objects += curr_objects
+            object_fields.remove("guid")
+            object_fields = sorted(object_fields)
+            object_fields.insert(0, "guid")
+
+            with open(output_filename, "w+", encoding="utf-8") as output_file:
+                writer = csv.DictWriter(
+                    output_file,
+                    **{**BASE_CSV_PARSER_SETTINGS, "fieldnames": object_fields},
+                )
+                writer.writeheader()
+                for obj in all_objects:
+                    output_metadata = sanitize_tsv_row(obj)
+                    writer.writerow(output_metadata)
+
+        else:
+            # output as JSON
+            output_filename = _create_discovery_objects_filename(
+                auth, output_filename_suffix, ".json"
+            )
+            output_metadata = []
+            for guid in dataset_guids:
+                true_guid = guid
+                if use_agg_mds:
+                    true_guid = guid.split("__")[1]
+                metadata = partial_metadata[guid]["gen3_discovery"]["objects"]
+                for obj in metadata:
+                    output_metadata.append({"dataset_guid": true_guid, **obj})
+
+            with open(output_filename, "w+", encoding="utf-8") as output_file:
+                output_file.write(json.dumps(output_metadata, indent=4))
+
+        return output_filename
+
+
+async def publish_discovery_object_metadata(
+    auth,
+    metadata_filename,
+    endpoint=None,
+    guid_type="discovery_metadata",
+    overwrite=False,
+):
+    """
+    Publish discovery objects from a tsv file
+
+    Args:
+        auth (Gen3Auth): a Gen3Auth object
+        metadata_filename (str): the file path of the local objects file to be published, must be in TSV format
+        endpoint (str): HOSTNAME of a Gen3 environment, defaults to None
+        guid_type (str): intended GUID type for publishing, defaults to discovery_metadata
+        overwrite (bool): whether to allow replacing objects to a dataset_guid instead of appending
+    """
+    if endpoint:
+        mds = Gen3Metadata(auth_provider=auth, endpoint=endpoint)
+    else:
+        mds = Gen3Metadata(auth_provider=auth)
+
+    if not metadata_filename.endswith(".tsv"):
+        logging.error(
+            f"Unsupported file type supplied {metadata_filename}! Only TSV are allowed."
+        )
+        raise ValueError(f"Unsupported file type supplied {metadata_filename}")
+
+    delimiter = "\t"
+    with open(metadata_filename, encoding="utf-8") as metadata_file:
+        csv_parser_setting = {**BASE_CSV_PARSER_SETTINGS, "delimiter": delimiter}
+        metadata_reader = csv.DictReader(metadata_file, **{**csv_parser_setting})
+        pending_requests = []
+        dataset_dict = {}
+
+        for obj_line in metadata_reader:
+            # if required fields are missing, display error
+            required_fields = ["dataset_guid", "guid", "display_name"]
+            missing_fields = []
+            for field in required_fields:
+                if not obj_line[field]:
+                    missing_fields.append(field)
+            if missing_fields:
+                logging.error(f"Missing required field/s {missing_fields}.")
+                raise ValueError(f"Required field/s missing: {missing_fields}")
+
+            dataset_guid = obj_line.pop("dataset_guid")
+            if dataset_guid not in dataset_dict:
+                dataset_dict[dataset_guid] = {"objects": []}
+            dataset_dict[dataset_guid]["objects"].append(obj_line)
+
+        for dataset_guid in dataset_dict.keys():
+            # if dataset_guid already exists, update (noting the use of --overwrite), if it doesn’t already exist, create it
+            try:
+                curr_dataset_metadata = mds.get(dataset_guid)
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 404:
+                    curr_dataset_metadata = get_discovery_metadata(
+                        provided_metadata={}, guid_type=guid_type
+                    )
+                else:
+                    raise
+
+            # allow replacing instead of appending
+            if overwrite or not (
+                "objects" in curr_dataset_metadata["gen3_discovery"].keys()
+            ):
+                curr_dataset_metadata["gen3_discovery"]["objects"] = dataset_dict[
+                    dataset_guid
+                ]["objects"]
+            else:
+                curr_dataset_metadata["gen3_discovery"]["objects"] += dataset_dict[
+                    dataset_guid
+                ]["objects"]
+
+            pending_requests += [
+                mds.async_create(dataset_guid, curr_dataset_metadata, overwrite=True)
+            ]
+            if len(pending_requests) == MAX_CONCURRENT_REQUESTS:
+                await asyncio.gather(*pending_requests)
+                pending_requests = []
+        await asyncio.gather(*pending_requests)
+
+
+def try_delete_discovery_objects(auth, delete_args):
+    mds = Gen3Metadata(auth_provider=auth)
+    for arg in delete_args:
+        # delete objects from tsv file
+        if arg[-4:] == ".tsv":
+            dataset_dict = {}
+            # read object guids to delete into a dict, batch deletes by dataset guid for efficiency
+            with open(arg, encoding="utf-8") as tsv:
+                tsv_reader = csv.DictReader(tsv, delimiter="\t")
+                for row in tsv_reader:
+                    dataset_guid = row["dataset_guid"]
+                    guid = row["guid"]
+                    dataset_dict.setdefault(dataset_guid, set()).add(guid)
+            for dataset_guid, objects_to_delete in dataset_dict.items():
+                try:
+                    metadata = mds.get(dataset_guid)
+                    if "objects" in metadata["gen3_discovery"].keys():
+                        curr_objects = metadata["gen3_discovery"]["objects"]
+                        curr_objects = [
+                            obj
+                            for obj in curr_objects
+                            if (obj["guid"] not in objects_to_delete)
+                        ]
+                        metadata["gen3_discovery"]["objects"] = curr_objects
+                        mds.create(dataset_guid, metadata, overwrite=True)
+                except requests.exceptions.HTTPError as e:
+                    logging.warning(e)
+        else:
+            # delete all objects from dataset_guid
+            try:
+                metadata = mds.get(arg)
+                if metadata["_guid_type"] == "discovery_metadata":
+                    if "objects" in metadata["gen3_discovery"].keys():
+                        metadata["gen3_discovery"]["objects"] = []
+                        mds.create(arg, metadata, overwrite=True)
+                else:
+                    logging.warning(f"{guid} is not discovery metadata. Skipping.")
+            except requests.exceptions.HTTPError as e:
+                logging.warning(e)
+
+
+def _create_discovery_objects_filename(auth, suffix="", file_extension=".tsv"):
+    return (
+        "-".join(urlparse(auth.endpoint).netloc.split("."))
+        + "-discovery_objects"
+        + (f"-{suffix}" if suffix else "")
+        + file_extension
+    )

@@ -8,6 +8,11 @@ from gen3.tools.metadata.discovery import (
     try_delete_discovery_guid,
     combine_discovery_metadata,
 )
+from gen3.tools.metadata.discovery_objects import (
+    output_discovery_objects,
+    publish_discovery_object_metadata,
+    try_delete_discovery_objects,
+)
 from gen3.utils import get_or_create_event_loop_for_thread
 
 
@@ -232,3 +237,117 @@ discovery.add_command(discovery_read, name="read")
 discovery.add_command(discovery_read_and_combine, name="combine")
 discovery.add_command(discovery_publish, name="publish")
 discovery.add_command(discovery_delete, name="delete")
+
+
+@discovery.group()
+def objects():
+    """For ingesting dataset-level raw files"""
+    pass
+
+
+@click.command(help="Outputs a TSV with populated information.")
+@click.argument(
+    "dataset_guids",
+    nargs=-1,
+)
+@click.option(
+    "--only-object-guids",
+    help="""
+    Output can be piped into another command
+    """,
+    is_flag=True,
+)
+@click.option(
+    "--template",
+    help="""
+    Output a file that can be easily hand-modified and then published
+    """,
+    is_flag=True,
+)
+@click.option(
+    "--output_format",
+    help="format of output file (can only be either tsv or json)",
+    default="tsv",
+    show_default=True,
+)
+@click.pass_context
+def discovery_objects_read(
+    ctx, dataset_guids, only_object_guids, template, output_format
+):
+    auth = ctx.obj["auth_factory"].get()
+    loop = get_or_create_event_loop_for_thread()
+    endpoint = ctx.obj.get("endpoint")
+    output_file = loop.run_until_complete(
+        output_discovery_objects(
+            auth,
+            dataset_guids=dataset_guids,
+            endpoint=endpoint,
+            output_format=output_format,
+            only_object_guids=only_object_guids,
+        )
+    )
+
+    if not only_object_guids:
+        click.echo(output_file)
+
+
+@click.command(
+    help="Takes a TSV as input. If dataset_guid already exists, update, if it doesn’t already exist, create it"
+)
+@click.argument(
+    "file",
+    required=True,
+)
+@click.option(
+    "--overwrite",
+    help="""
+    Output can be piped into another command
+    """,
+    is_flag=True,
+)
+@click.pass_context
+def discovery_objects_publish(
+    ctx,
+    file,
+    overwrite,
+):
+    auth = ctx.obj["auth_factory"].get()
+
+    loop = get_or_create_event_loop_for_thread()
+    endpoint = ctx.obj.get("endpoint")
+    loop.run_until_complete(
+        publish_discovery_object_metadata(
+            auth,
+            file,
+            endpoint=endpoint,
+            overwrite=overwrite,
+        )
+    )
+
+
+@click.command(
+    help="Delete objects related to datasets in TSV file or list of dataset_guids"
+)
+@click.argument(
+    "delete_args",
+    required=True,
+    nargs=-1,
+)
+@click.pass_context
+def discovery_objects_delete(
+    ctx,
+    delete_args,
+):
+    """for arg in guids:
+    if arg[-4:] == ".tsv":
+        with open(arg, encoding="utf-8") as tsv:
+            tsv_reader = csv.DictReader(tsv, delimiter="\t")
+            for row in tsv_reader:
+                print(row)"""
+    auth = ctx.obj["auth_factory"].get()
+    try_delete_discovery_objects(auth, delete_args)
+
+
+objects.add_command(discovery_objects_read, name="read")
+objects.add_command(discovery_objects_publish, name="publish")
+objects.add_command(discovery_objects_delete, name="delete")
