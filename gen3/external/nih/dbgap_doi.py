@@ -82,7 +82,7 @@ class dbgapDOI(ExternalMetadataSourceInterface):
                         are the keys in the returned dict)
         """
         logging.info("Getting dbGaP DOI metadata...")
-        logging.debug("Provided ids for dbGaP DOI metadata: {ids}")
+        logging.debug(f"Provided ids for dbGaP DOI metadata: {ids}")
 
         dbgap_study_registration = dbgapStudyRegistration()
         dbgap_fhir = dbgapFHIR()
