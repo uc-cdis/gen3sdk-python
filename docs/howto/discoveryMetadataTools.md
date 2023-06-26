@@ -128,7 +128,7 @@ def test_manual_single_doi(publish_dois=False):
   # Setup
   gen3_auth = Gen3Auth()
   datacite = DataCite(
-    api=DataCite.TEST_URL,
+    use_prod=False,
     auth_provider=HTTPBasicAuth(
       os.environ.get("DATACITE_USERNAME"),
       os.environ.get("DATACITE_PASSWORD"),
@@ -371,14 +371,17 @@ DOI url.
         // ...
 ```
 
-#### Automate DOI creation for dbGaP Datasets
+#### Automate DOI creation for Datasets
 
-Automates the pulling of current datasets from Discovery, getting dbGaP identifiers,
-scraping various dbGaP APIs for DOI related metadata, and then going through
+Automates the pulling of current datasets from Discovery, getting identifiers,
+scraping various APIs for DOI related metadata, and then going through
 the DOI creation loop to mint the DOI in Datacite and persist the metadata back in
 Gen3.
 
-See below for a full example
+See below for a full example using the dbGaP `DbgapMetadataInterface`.
+
+More interfaces may exist in the future for doing this by querying non-dbGaP
+sources.
 
 ```python
 import os
@@ -387,7 +390,7 @@ from requests.auth import HTTPBasicAuth
 from cdislogging import get_logger
 
 from gen3.auth import Gen3Auth
-from gen3.discovery_dois import mint_dois_for_dbgap_discovery_datasets
+from gen3.discovery_dois import mint_dois_for_discovery_datasets, DbgapMetadataInterface
 from gen3.utils import get_random_alphanumeric
 
 logging = get_logger("__name__", log_level="info")
@@ -403,21 +406,22 @@ DOI_CONTACT = "https://example.com/contact/"
 
 def mint_discovery_dois():
     auth = Gen3Auth()
-    dbgap_phsid_field = "dbgap_accession"
+    metadata_field_for_doi_identifier = "dbgap_accession"
 
     # When this is True, you CANNOT REVERT THIS ACTION. A published DOI
     # cannot be deleted. It is recommended to test with "Draft" state DOIs first
     # (which is the default when publish_dois is not True).
     publish_dois = False
 
-    mint_dois_for_dbgap_discovery_datasets(
+    mint_dois_for_discovery_datasets(
         gen3_auth=auth,
         datacite_auth=HTTPBasicAuth(
             os.environ.get("DATACITE_USERNAME"),
             os.environ.get("DATACITE_PASSWORD"),
         ),
-        dbgap_phsid_field=dbgap_phsid_field,
+        metadata_field_for_doi_identifier=metadata_field_for_doi_identifier,
         get_doi_identifier_function=get_doi_identifier,
+        metadata_interface=DbgapMetadataInterface,
         publisher=PUBLISHER,
         commons_discovery_page=COMMONS_DISCOVERY_PAGE,
         doi_disclaimer=DOI_DISCLAIMER,

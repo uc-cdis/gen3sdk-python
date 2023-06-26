@@ -45,7 +45,7 @@ class DataCite(object):
         datacite = DataCite(
             auth_provider=HTTPBasicAuth(
                 os.environ["DATACITE_USERNAME"], os.environ["DATACITE_PASSWORD"]
-            )
+            ), use_prod=True
         )
 
         doi = DigitalObjectIdentifer(
@@ -84,9 +84,29 @@ class DataCite(object):
     PRODUCTION_URL = "https://api.datacite.org"
     TEST_URL = "https://api.test.datacite.org"
 
-    def __init__(self, api=PRODUCTION_URL, auth_provider=None):
+    def __init__(
+        self,
+        api=None,
+        auth_provider=None,
+        use_prod=False,
+    ):
+        """
+        Initiatilize.
+
+        Args:
+            api (str, optional): Override API with provided URL. Will ignore
+                `use_prod` if this is provided
+            auth_provider (Gen3Auth, optional): A Gen3Auth class instance or compatible interface
+            use_prod (bool, optional): Default False. Whether or not to use the
+                production Datacite URL.
+        """
         self._auth_provider = auth_provider
-        self.api = api
+        if api:
+            self.api = api
+        elif use_prod:
+            self.api = DataCite.PRODUCTION_URL
+        else:
+            self.api = DataCite.TEST_URL
 
     def create_doi(self, doi):
         """
@@ -476,6 +496,8 @@ class DigitalObjectIdentifier(object):
                 publicly available
             doi_type (str, optional): a description of the resource (free-format text)
             url (str, optional): the web address of the landing page for the resource
+            root_url (str, optional): the root url for the landing page, must be used
+                in combination with `identifier` to form a final landing page url
             event (str, optional): what event to issue against the DOI
                 Event field logic per DataCite API:
                     publish - Triggers a state move from draft or registered to findable

@@ -1,3 +1,8 @@
+"""
+Classes and functions for interacting with Gen3's Discovery Metadata and configured
+external sources to obtain DOI metadata and mint real DOIs using Datacite's API.
+"""
+
 import csv
 
 from cdislogging import get_logger
@@ -17,20 +22,116 @@ from gen3.utils import (
 logging = get_logger("__name__")
 
 
-def mint_dois_for_dbgap_discovery_datasets(
+class GetMetadataInterface(object):
+    """
+    Abstract base class acting as interface for customized metadata retrievers.
+
+    This is intended to be used to create an instance for use in the
+    `mint_dois_for_discovery_datasets` function. See /docs for examples on
+    Discovery DOI Metadata usage.
+
+    To use, implement a new class and inherit from this and implement the single
+    `get_doi_metadata` function. See `DbgapMetadataInterface` for an example.
+    """
+
+    def __init__(
+        self,
+        doi_publisher,
+        current_discovery_doi_id_to_guid,
+        all_discovery_metadata,
+    ):
+        """
+        `current_discovery_doi_id_to_guid` should be populated already with the
+        `metadata_field_for_doi_identifier` value as the keys and the Metadata GUID
+        as the values. In other words, it should map the proposed DOI to the
+        existing metadata GUID.
+
+        Args:
+            doi_publisher (str): The DOI Publisher that should be added as the
+                'Publisher' in the DOI Metadata.
+            current_discovery_doi_id_to_guid (Dict): Mapping of the proposed DOI to the
+                existing metadata GUID.
+            all_discovery_metadata (Dict): all the current discovery metadata
+                as a dictionary with metadata GUID as the key.
+        """
+        self.doi_publisher = doi_publisher
+        self.current_discovery_doi_id_to_guid = current_discovery_doi_id_to_guid
+        self.all_discovery_metadata = all_discovery_metadata
+
+        is_valid = True
+        if not self.doi_publisher:
+            logging.error("`doi_publisher` was not provided and is required")
+            is_valid = False
+
+        if not self.current_discovery_doi_id_to_guid:
+            logging.error(
+                "`current_discovery_doi_id_to_guid` was not provided and is required"
+            )
+            is_valid = False
+
+        if not self.all_discovery_metadata:
+            logging.error("`all_discovery_metadata` was not provided and is required")
+            is_valid = False
+
+        if not is_valid:
+            raise Exception(
+                "Unable to initialize object without provided fields. "
+                "Please see previous logged errors"
+            )
+
+        super(GetMetadataInterface, self).__init__()
+
+    def get_doi_metadata(self):
+        """
+        Return DOI metadata for each of the DOIs listed in `current_discovery_doi_id_to_guid`
+        (optionally utilize the existing Discovery Metadata GUIDs and/or other
+        Discovery Metadata in `all_discovery_metadata` to make the necessary API
+        calls to get the DOI metadata).
+
+        Returns:
+                Dict[dict]: metadata for each of the provided IDs (which
+                            are the keys in the returned dict)
+        """
+        raise NotImplementedError()
+
+
+class DbgapMetadataInterface(GetMetadataInterface):
+    def get_doi_metadata(self):
+        """
+        Return dbGaP metadata.
+        """
+        studies = self.current_discovery_doi_id_to_guid.keys()
+
+        # there's a separate DOI class for dbGaP as a wrapper around various
+        # different APIs we need to call. Whereas if there are API sources that have
+        # all available data, you could write a more generic SomeClass.as_gen3_metadata()
+        #
+        # NOTE: The final DOI does NOT include the required field `url` (because generating
+        #       that requires knowledge of the final DOI identifier).
+        #       So if you're using this, you need to ensure the DigitalObjectIdentifier
+        #       object you create with this metadata is supplied with the right landing page URL (or
+        #       you can ask it to generate one based on a root url provided).
+        dbgap_doi = dbgapDOI(publisher=self.doi_publisher)
+
+        return dbgap_doi.get_metadata_for_ids(ids=studies)
+
+
+def mint_dois_for_discovery_datasets(
     gen3_auth,
     datacite_auth,
-    dbgap_phsid_field,
     get_doi_identifier_function,
-    publisher,
+    metadata_interface,
+    doi_publisher,
     commons_discovery_page,
     doi_disclaimer,
     doi_access_information,
     doi_access_information_link,
     doi_contact,
+    metadata_field_for_doi_identifier="guid",
     use_doi_in_landing_page_url=False,
     doi_metadata_field_prefix="doi_",
-    datacite_api=DataCite.TEST_URL,
+    datacite_use_prod=False,
+    datacite_api=None,
     publish_dois=False,
 ):
     """
@@ -39,8 +140,9 @@ def mint_dois_for_dbgap_discovery_datasets(
 
     This will:
         - Get all Discovery Page records based on the provided `gen3_auth`
-        - Query dbGaP APIs based on the phsid obtained from the
-          field specified by `dbgap_phsid_field`
+        - Use `metadata_interface` to use class for a particular
+          DOI metadata retreival (such as retrieving DOI metadata for dbGaP
+          studies)
         - Request an identifier for missing records by using the provided
           `get_doi_identifier_function`
         - Send request(s) to DataCite's API to mint/update DOI's
@@ -60,12 +162,18 @@ def mint_dois_for_dbgap_discovery_datasets(
 
             WARNING: DO NOT HARD-CODE SECRETS OR PASSWORDS IN YOUR CODE. USE
                      ENVIRONMENT VARIABLES OR PULL FROM AN EXTERNAL SOURCE.
-        dbgap_phsid_field (str): Field in current Discovery Metadata where phsid is
+        metadata_field_for_doi_identifier (str): Field in current Discovery Metadata
+            where the alternate ID is that you want to use as the DOI
+            (this could be a dbGaP ID or anything else that is GLOBALLY UNIQUE)
+            If you want to use the "guid" itself, you shouldn't need to change this.
         get_doi_identifier_function (Function): A function to call to get a valid DOI identifier
             This DOES need to include the required prefix. For example,
             the function should return something like: "10.12345/This-is-custom-123" and randomize
             output on every call to get a new ID.
-        publisher (str): Who/what to list as the DOI Publisher (required field)
+        metadata_interface(gen3.discovery_dois.GetMetadataInterface CLASS, NOT INSTANCE):
+            GetMetadataInterface child class name. Must implement the interface.
+            For example: `DbgapMetadataInterface`
+        doi_publisher (str): Who/what to list as the DOI Publisher (required field)
         commons_discovery_page (str): URL for Discovery Page root. Usually something
             like: "https://example.com/discovery"
         doi_disclaimer (str): Disclaimer to add to all records (this only ends
@@ -77,42 +185,43 @@ def mint_dois_for_dbgap_discovery_datasets(
             provides an option for text and a link out.
         doi_contact (str): Required DOI metadata, who to contact with questions
             about the DOI. This could be an email, link to contact form, etc.
+        use_doi_in_landing_page_url (bool, optional): Whether or not to use
+            the actual DOI in the landing page URL (derived from `commons_discovery_page`).
+            If this is False, the existing GUID is used instead.
+            If you want to make the URL contain the real DOI and
+            create a way to alias Discovery so `/discovery/GUID` and `/discovery/DOI`
+            go to the same place, that's cool too. But that feature wasn't
+            available at the time this code was written, so keep this False until
+            then.
         doi_metadata_field_prefix (str, optional): What to prepend to Gen3 metadata
             fields related to DOIs
-        datacite_api (str, optional): The Datacite API to send DOI mint requests to.
-            Defaults to their Test API. You can provide `None` to default to production, or
-            provide whatever Datacite API you have.
+        datacite_use_prod (bool, optional): Default `False`. Whether or not to use
+            the production Datacite API.
+        datacite_api (str, optional): Provide to override the Datacite API to
+            send DOI mint requests to. Providing this ignores `datacite_use_prod`
         publish_dois (bool, optional): Whether or not to fully publish the DOIs
             created.
 
             WARNING: Setting this as True is NOT REVERSABLE once this function
                      completes. This makes the DOIs PERMENANTLY SEARCHABLE.
-
-    Returns:
-        Dict: mapping from DOI identifier to final Gen3 Metadata
     """
     (
         current_discovery_doi_id_to_guid,
         all_discovery_metadata,
-    ) = get_phsid_to_guid_mapping(auth=gen3_auth, dbgap_phsid_field=dbgap_phsid_field)
+    ) = get_doi_identifier_to_guid_mapping(
+        auth=gen3_auth,
+        metadata_field_for_doi_identifier=metadata_field_for_doi_identifier,
+    )
 
-    studies = current_discovery_doi_id_to_guid.keys()
-
-    # there's a separate DOI class for dbGaP as a wrapper around various
-    # different APIs we need to call. Whereas if there are API sources that have
-    # all available data, you could write a more generic SomeClass.as_gen3_metadata()
-    #
-    # NOTE: The final DOI does NOT include the required field `url` (because generating
-    #       that requires knowledge of the final DOI identifier).
-    #       So if you're using this, you need to ensure the DigitalObjectIdentifier
-    #       object you create with this metadata is supplied with the right landing page URL (or
-    #       you can ask it to generate one based on a root url provided).
-    dbgap_doi = dbgapDOI(publisher=publisher)
-
-    all_doi_data = dbgap_doi.get_metadata_for_ids(ids=studies)
+    all_doi_data = metadata_interface(
+        doi_publisher=doi_publisher,
+        current_discovery_doi_id_to_guid=current_discovery_doi_id_to_guid,
+        all_discovery_metadata=all_discovery_metadata,
+    ).get_doi_metadata()
 
     datacite = DataCite(
         api=datacite_api,
+        use_prod=datacite_use_prod,
         auth_provider=datacite_auth,
     )
 
@@ -244,17 +353,20 @@ def _create_or_update_doi_and_persist(
     doi_identifiers[identifier] = metadata
 
 
-def get_phsid_to_guid_mapping(dbgap_phsid_field, auth):
+def get_doi_identifier_to_guid_mapping(metadata_field_for_doi_identifier, auth):
     """
-    Return mapping from phsid in current Discovery Metadata to Metadata GUID
-    (uses the provided field to find the phsid).
+    Return mapping from the proposed DOI (e.g. alternate ID in current Discovery Metadata)
+    to Metadata GUID. This function uses the provided `metadata_field_for_doi_identifier`
+    to find the actual value in the Discovery Metadata).
 
     Args:
-        dbgap_phsid_field (str): Field in current Discovery Metadata where phsid is
+        metadata_field_for_doi_identifier (str): Field in current Discovery Metadata
+            where the alternate ID is (this could be a dbGaP ID or anything else
+            that is GLOBALLY UNIQUE)
         auth (Gen3Auth): Gen3 auth or tuple with basic auth name and password
 
     Returns:
-        (phsid_to_guid Dict, all_discovery_metadata Dict): mapping from phsid to
+        (doi_identifier_to_guid Dict, all_discovery_metadata Dict): mapping from alternate_id to
             guid & all the discovery metadata
     """
     loop = get_or_create_event_loop_for_thread()
@@ -262,7 +374,7 @@ def get_phsid_to_guid_mapping(dbgap_phsid_field, auth):
         output_expanded_discovery_metadata(auth, endpoint=auth.endpoint)
     )
 
-    phsid_to_guid = {}
+    doi_identifier_to_guid = {}
     all_discovery_metadata = {}
     with open(output_filename) as metadata_file:
         csv_parser_setting = {
@@ -271,12 +383,14 @@ def get_phsid_to_guid_mapping(dbgap_phsid_field, auth):
         }
         metadata_reader = csv.DictReader(metadata_file, **{**csv_parser_setting})
         for row in metadata_reader:
-            if row.get(dbgap_phsid_field):
-                phsid_to_guid[row.get(dbgap_phsid_field)] = row["guid"]
+            if row.get(metadata_field_for_doi_identifier):
+                doi_identifier_to_guid[
+                    row.get(metadata_field_for_doi_identifier)
+                ] = row["guid"]
                 all_discovery_metadata[row["guid"]] = row
             else:
                 logging.warning(
-                    f"Could not find field {dbgap_phsid_field} on row: {row}. Skipping..."
+                    f"Could not find field {metadata_field_for_doi_identifier} on row: {row}. Skipping..."
                 )
 
-    return phsid_to_guid, all_discovery_metadata
+    return doi_identifier_to_guid, all_discovery_metadata
