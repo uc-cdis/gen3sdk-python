@@ -19,6 +19,7 @@ DOI_ACCESS_INFORMATION_LINK = "DOI_ACCESS_INFORMATION_LINK"
 DOI_CONTACT = "DOI_CONTACT"
 
 
+@pytest.mark.parametrize("exclude_datasets", [["guid_W"], ["alternate_id_0"]])
 @pytest.mark.parametrize("does_datacite_have_dois_minted_already", [True, False])
 @patch("gen3.discovery_dois._raise_exception_on_collision")
 @patch("gen3.discovery_dois.DataCite.persist_doi_metadata_in_gen3")
@@ -35,6 +36,7 @@ def test_mint_discovery_dois_first_time(
     mock_raise_exception_on_collision,
     does_datacite_have_dois_minted_already,
     gen3_auth,
+    exclude_datasets,
 ):
     """
     Test that the right call to Datacite's API (create/update) happens and
@@ -42,10 +44,12 @@ def test_mint_discovery_dois_first_time(
     existing Discovery Metadata. The discovery metadata have alternate ids and
     a mocked external metadata interface.
 
-    There are 3 existing discovery metadata GUIDs:
+    There are 4 existing discovery metadata GUIDs:
 
-        guid_X: no DOI
-        guid_Y: no DOI
+        guid_W: We will specifically request to exclude this one. tests will use
+                the GUID and the alternate ID to exclude
+        guid_X: no DOI yet, need one minted
+        guid_Y: no DOI yet, need one minted
         guid_Z: Has existing DOI minted and identified in `doi_identifier` in metadata
     """
     mock_get_alternate_id_to_guid_mapping.side_effect = (
@@ -90,6 +94,7 @@ def test_mint_discovery_dois_first_time(
         doi_contact=DOI_CONTACT,
         publish_dois=False,
         datacite_use_prod=False,
+        exclude_datasets=exclude_datasets,
     )
 
     if does_datacite_have_dois_minted_already:
@@ -145,11 +150,16 @@ def mock_function_get_alternate_id_to_guid_mapping(
 ):
     assert metadata_field_for_alternate_id == METADATA_FIELD_FOR_ALTERNATE_ID
     current_discovery_alternate_id_to_guid = {
+        "alternate_id_0": "guid_W",
         "alternate_id_A": "guid_X",
         "alternate_id_B": "guid_Y",
         "alternate_id_C": "guid_Z",
     }
     all_discovery_metadata = {
+        "guid_W": {
+            METADATA_FIELD_FOR_ALTERNATE_ID: "alternate_id_0",
+            "descriptions": "barW",
+        },
         "guid_X": {
             METADATA_FIELD_FOR_ALTERNATE_ID: "alternate_id_A",
             "descriptions": "barX",

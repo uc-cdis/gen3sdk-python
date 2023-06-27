@@ -406,7 +406,15 @@ DOI_CONTACT = "https://example.com/contact/"
 
 def mint_discovery_dois():
     auth = Gen3Auth()
+
+    # this alternate ID is some globally unique ID other than the GUID that
+    # will be needed to get DOI metadata (like the phsid for dbGaP)
     metadata_field_for_alternate_id = "dbgap_accession"
+
+    # you can choose to exclude certain Discovery Metadata datasets based on
+    # their GUID or alternate ID (this means they won't get additional DOI metadata
+    # or have DOIs minted, they'll be skipped)
+    exclude_datasets=["MetadataGUID_to_exclude", "AlternateID_to_exclude", "..."]
 
     # When this is True, you CANNOT REVERT THIS ACTION. A published DOI
     # cannot be deleted. It is recommended to test with "Draft" state DOIs first
@@ -430,6 +438,7 @@ def mint_discovery_dois():
         doi_contact=DOI_CONTACT,
         publish_dois=publish_dois,
         datacite_use_prod=False,
+        exclude_datasets=["MetadataGUID_to_exclude", "AlternateID_to_exclude", "..."]
     )
 
 

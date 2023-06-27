@@ -39,6 +39,7 @@ class GetMetadataInterface(object):
         doi_publisher,
         current_discovery_alternate_id_to_guid,
         all_discovery_metadata,
+        exclude_datasets=None,
     ):
         """
         `current_discovery_alternate_id_to_guid` should be populated already with the
@@ -53,12 +54,20 @@ class GetMetadataInterface(object):
                 existing metadata GUID.
             all_discovery_metadata (Dict): all the current discovery metadata
                 as a dictionary with metadata GUID as the key.
+            exclude_datasets (list[str], optional): List of datasets to ignore from Discovery Metadata
+                (don't attempt to read DOI Metadata or mint DOIs for these). The strings in the
+                list can be either the alternate IDs (from the specified `metadata_field_for_alternate_id`)
+                or they can be the Metadata GUIDs (or a mix).
         """
         self.doi_publisher = doi_publisher
         self.current_discovery_alternate_id_to_guid = (
             current_discovery_alternate_id_to_guid
         )
         self.all_discovery_metadata = all_discovery_metadata
+        self.exclude_datasets = exclude_datasets or []
+
+        if self.exclude_datasets:
+            logging.debug(f"Excluding datasets: {exclude_datasets}")
 
         is_valid = True
         if not self.doi_publisher:
@@ -102,7 +111,11 @@ class DbgapMetadataInterface(GetMetadataInterface):
         """
         Return dbGaP metadata.
         """
-        studies = self.current_discovery_alternate_id_to_guid.keys()
+        studies = [
+            study
+            for study, guid in self.current_discovery_alternate_id_to_guid.items()
+            if study not in self.exclude_datasets and guid not in self.exclude_datasets
+        ]
 
         # there's a separate DOI class for dbGaP as a wrapper around various
         # different APIs we need to call. Whereas if there are API sources that have
@@ -129,6 +142,7 @@ def mint_dois_for_discovery_datasets(
     doi_access_information,
     doi_access_information_link,
     doi_contact,
+    exclude_datasets=None,
     metadata_field_for_alternate_id="guid",
     use_doi_in_landing_page_url=False,
     doi_metadata_field_prefix="doi_",
@@ -164,15 +178,11 @@ def mint_dois_for_discovery_datasets(
 
             WARNING: DO NOT HARD-CODE SECRETS OR PASSWORDS IN YOUR CODE. USE
                      ENVIRONMENT VARIABLES OR PULL FROM AN EXTERNAL SOURCE.
-        metadata_field_for_alternate_id (str): Field in current Discovery Metadata
-            where the alternate ID is that you want to use
-            (this could be a dbGaP ID or anything else that is GLOBALLY UNIQUE)
-            If you want to use the "guid" itself, you shouldn't need to change this.
         get_doi_identifier_function (Function): A function to call to get a valid DOI identifier
             This DOES need to include the required prefix. For example,
             the function should return something like: "10.12345/This-is-custom-123" and randomize
             output on every call to get a new ID.
-        metadata_interface(gen3.discovery_dois.GetMetadataInterface CLASS, NOT INSTANCE):
+        metadata_interface (gen3.discovery_dois.GetMetadataInterface CLASS, NOT INSTANCE):
             GetMetadataInterface child class name. Must implement the interface.
             For example: `DbgapMetadataInterface`
         doi_publisher (str): Who/what to list as the DOI Publisher (required field)
@@ -187,6 +197,14 @@ def mint_dois_for_discovery_datasets(
             provides an option for text and a link out.
         doi_contact (str): Required DOI metadata, who to contact with questions
             about the DOI. This could be an email, link to contact form, etc.
+        exclude_datasets (list[str], optional): List of datasets to ignore from Discovery Metadata
+            (don't attempt to read DOI Metadata or mint DOIs for these). The strings in the
+            list can be either the alternate IDs (from the specified `metadata_field_for_alternate_id`)
+            or they can be the Metadata GUIDs (or a mix).
+        metadata_field_for_alternate_id (str): Field in current Discovery Metadata
+            where the alternate ID is that you want to use
+            (this could be a dbGaP ID or anything else that is GLOBALLY UNIQUE)
+            If you want to use the "guid" itself, you shouldn't need to change this.
         use_doi_in_landing_page_url (bool, optional): Whether or not to use
             the actual DOI in the landing page URL (derived from `commons_discovery_page`).
             If this is False, the existing GUID is used instead.
@@ -207,6 +225,8 @@ def mint_dois_for_discovery_datasets(
             WARNING: Setting this as True is NOT REVERSABLE once this function
                      completes. This makes the DOIs PERMENANTLY SEARCHABLE.
     """
+    exclude_datasets = exclude_datasets or []
+
     (
         current_discovery_alternate_id_to_guid,
         all_discovery_metadata,
@@ -219,6 +239,7 @@ def mint_dois_for_discovery_datasets(
         doi_publisher=doi_publisher,
         current_discovery_alternate_id_to_guid=current_discovery_alternate_id_to_guid,
         all_discovery_metadata=all_discovery_metadata,
+        exclude_datasets=exclude_datasets,
     ).get_doi_metadata()
 
     datacite = DataCite(
@@ -230,6 +251,18 @@ def mint_dois_for_discovery_datasets(
     doi_identifiers = {}
 
     for alternate_id, doi_metadata in all_doi_data.items():
+        if (
+            alternate_id in exclude_datasets
+            or current_discovery_alternate_id_to_guid[alternate_id] in exclude_datasets
+        ):
+            logging.info(
+                f"Metadata was found, but we're excluding {metadata_field_for_alternate_id} "
+                f"`{alternate_id}` (Metadata GUID: "
+                f"`{current_discovery_alternate_id_to_guid[alternate_id]}`). "
+                f"No DOI metadata will be retrieved and no DOI will be minted."
+            )
+            continue
+
         # check if the Discovery metadata thinks an existing DOI has been minted
         # (e.g. see if there's a DOI listed in the metadata)
         existing_identifier = all_discovery_metadata.get(
