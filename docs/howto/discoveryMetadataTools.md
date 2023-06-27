@@ -406,7 +406,7 @@ DOI_CONTACT = "https://example.com/contact/"
 
 def mint_discovery_dois():
     auth = Gen3Auth()
-    metadata_field_for_doi_identifier = "dbgap_accession"
+    metadata_field_for_alternate_id = "dbgap_accession"
 
     # When this is True, you CANNOT REVERT THIS ACTION. A published DOI
     # cannot be deleted. It is recommended to test with "Draft" state DOIs first
@@ -419,16 +419,17 @@ def mint_discovery_dois():
             os.environ.get("DATACITE_USERNAME"),
             os.environ.get("DATACITE_PASSWORD"),
         ),
-        metadata_field_for_doi_identifier=metadata_field_for_doi_identifier,
+        metadata_field_for_alternate_id=metadata_field_for_alternate_id,
         get_doi_identifier_function=get_doi_identifier,
         metadata_interface=DbgapMetadataInterface,
-        publisher=PUBLISHER,
+        doi_publisher=PUBLISHER,
         commons_discovery_page=COMMONS_DISCOVERY_PAGE,
         doi_disclaimer=DOI_DISCLAIMER,
         doi_access_information=DOI_ACCESS_INFORMATION,
         doi_access_information_link=DOI_ACCESS_INFORMATION_LINK,
         doi_contact=DOI_CONTACT,
         publish_dois=publish_dois,
+        datacite_use_prod=False,
     )
 
 

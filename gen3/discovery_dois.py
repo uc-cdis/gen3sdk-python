@@ -37,25 +37,27 @@ class GetMetadataInterface(object):
     def __init__(
         self,
         doi_publisher,
-        current_discovery_doi_id_to_guid,
+        current_discovery_alternate_id_to_guid,
         all_discovery_metadata,
     ):
         """
-        `current_discovery_doi_id_to_guid` should be populated already with the
-        `metadata_field_for_doi_identifier` value as the keys and the Metadata GUID
+        `current_discovery_alternate_id_to_guid` should be populated already with the
+        `metadata_field_for_alternate_id` value as the keys and the Metadata GUID
         as the values. In other words, it should map the proposed DOI to the
         existing metadata GUID.
 
         Args:
             doi_publisher (str): The DOI Publisher that should be added as the
                 'Publisher' in the DOI Metadata.
-            current_discovery_doi_id_to_guid (Dict): Mapping of the proposed DOI to the
+            current_discovery_alternate_id_to_guid (Dict): Mapping of the proposed DOI to the
                 existing metadata GUID.
             all_discovery_metadata (Dict): all the current discovery metadata
                 as a dictionary with metadata GUID as the key.
         """
         self.doi_publisher = doi_publisher
-        self.current_discovery_doi_id_to_guid = current_discovery_doi_id_to_guid
+        self.current_discovery_alternate_id_to_guid = (
+            current_discovery_alternate_id_to_guid
+        )
         self.all_discovery_metadata = all_discovery_metadata
 
         is_valid = True
@@ -63,9 +65,9 @@ class GetMetadataInterface(object):
             logging.error("`doi_publisher` was not provided and is required")
             is_valid = False
 
-        if not self.current_discovery_doi_id_to_guid:
+        if not self.current_discovery_alternate_id_to_guid:
             logging.error(
-                "`current_discovery_doi_id_to_guid` was not provided and is required"
+                "`current_discovery_alternate_id_to_guid` was not provided and is required"
             )
             is_valid = False
 
@@ -83,7 +85,7 @@ class GetMetadataInterface(object):
 
     def get_doi_metadata(self):
         """
-        Return DOI metadata for each of the DOIs listed in `current_discovery_doi_id_to_guid`
+        Return DOI metadata for each of the DOIs listed in `current_discovery_alternate_id_to_guid`
         (optionally utilize the existing Discovery Metadata GUIDs and/or other
         Discovery Metadata in `all_discovery_metadata` to make the necessary API
         calls to get the DOI metadata).
@@ -100,7 +102,7 @@ class DbgapMetadataInterface(GetMetadataInterface):
         """
         Return dbGaP metadata.
         """
-        studies = self.current_discovery_doi_id_to_guid.keys()
+        studies = self.current_discovery_alternate_id_to_guid.keys()
 
         # there's a separate DOI class for dbGaP as a wrapper around various
         # different APIs we need to call. Whereas if there are API sources that have
@@ -127,7 +129,7 @@ def mint_dois_for_discovery_datasets(
     doi_access_information,
     doi_access_information_link,
     doi_contact,
-    metadata_field_for_doi_identifier="guid",
+    metadata_field_for_alternate_id="guid",
     use_doi_in_landing_page_url=False,
     doi_metadata_field_prefix="doi_",
     datacite_use_prod=False,
@@ -162,8 +164,8 @@ def mint_dois_for_discovery_datasets(
 
             WARNING: DO NOT HARD-CODE SECRETS OR PASSWORDS IN YOUR CODE. USE
                      ENVIRONMENT VARIABLES OR PULL FROM AN EXTERNAL SOURCE.
-        metadata_field_for_doi_identifier (str): Field in current Discovery Metadata
-            where the alternate ID is that you want to use as the DOI
+        metadata_field_for_alternate_id (str): Field in current Discovery Metadata
+            where the alternate ID is that you want to use
             (this could be a dbGaP ID or anything else that is GLOBALLY UNIQUE)
             If you want to use the "guid" itself, you shouldn't need to change this.
         get_doi_identifier_function (Function): A function to call to get a valid DOI identifier
@@ -206,16 +208,16 @@ def mint_dois_for_discovery_datasets(
                      completes. This makes the DOIs PERMENANTLY SEARCHABLE.
     """
     (
-        current_discovery_doi_id_to_guid,
+        current_discovery_alternate_id_to_guid,
         all_discovery_metadata,
-    ) = get_doi_identifier_to_guid_mapping(
+    ) = get_alternate_id_to_guid_mapping(
         auth=gen3_auth,
-        metadata_field_for_doi_identifier=metadata_field_for_doi_identifier,
+        metadata_field_for_alternate_id=metadata_field_for_alternate_id,
     )
 
     all_doi_data = metadata_interface(
         doi_publisher=doi_publisher,
-        current_discovery_doi_id_to_guid=current_discovery_doi_id_to_guid,
+        current_discovery_alternate_id_to_guid=current_discovery_alternate_id_to_guid,
         all_discovery_metadata=all_discovery_metadata,
     ).get_doi_metadata()
 
@@ -227,10 +229,12 @@ def mint_dois_for_discovery_datasets(
 
     doi_identifiers = {}
 
-    for doi_id, doi_metadata in all_doi_data.items():
+    for alternate_id, doi_metadata in all_doi_data.items():
+        # check if the Discovery metadata thinks an existing DOI has been minted
+        # (e.g. see if there's a DOI listed in the metadata)
         existing_identifier = all_discovery_metadata.get(
-            doi_metadata_field_prefix + "identifier"
-        )
+            current_discovery_alternate_id_to_guid[alternate_id], {}
+        ).get(doi_metadata_field_prefix + "identifier")
 
         if existing_identifier:
             existing_doi_response = datacite.read_doi(existing_identifier)
@@ -241,18 +245,14 @@ def mint_dois_for_discovery_datasets(
             existing_identifier and not is_status_code(existing_doi_response, 200)
         ):
             identifier = existing_identifier or get_doi_identifier_function()
-            existing_doi_for_new_id = datacite.read_doi(identifier)
-            if existing_doi_for_new_id:
-                raise Exception(
-                    f"Conflicting DOI identifier generated. {identifier} already exists in DataCite."
-                )
+            _raise_exception_on_collision(datacite, identifier)
 
             # note that doi_identifiers is updated within this function
             _create_or_update_doi_and_persist(
                 update=False,
                 datacite=datacite,
-                current_discovery_doi_id_to_guid=current_discovery_doi_id_to_guid,
-                doi_id=doi_id,
+                current_discovery_alternate_id_to_guid=current_discovery_alternate_id_to_guid,
+                alternate_id=alternate_id,
                 use_doi_in_landing_page_url=use_doi_in_landing_page_url,
                 identifier=identifier,
                 commons_discovery_page=commons_discovery_page,
@@ -270,10 +270,10 @@ def mint_dois_for_discovery_datasets(
             _create_or_update_doi_and_persist(
                 update=True,
                 datacite=datacite,
-                current_discovery_doi_id_to_guid=current_discovery_doi_id_to_guid,
-                doi_id=doi_id,
+                current_discovery_alternate_id_to_guid=current_discovery_alternate_id_to_guid,
+                alternate_id=alternate_id,
                 use_doi_in_landing_page_url=use_doi_in_landing_page_url,
-                identifier=identifier,
+                identifier=existing_identifier,
                 commons_discovery_page=commons_discovery_page,
                 doi_metadata=doi_metadata,
                 publish_dois=publish_dois,
@@ -292,8 +292,8 @@ def mint_dois_for_discovery_datasets(
 def _create_or_update_doi_and_persist(
     update,
     datacite,
-    current_discovery_doi_id_to_guid,
-    doi_id,
+    current_discovery_alternate_id_to_guid,
+    alternate_id,
     use_doi_in_landing_page_url,
     identifier,
     commons_discovery_page,
@@ -308,7 +308,7 @@ def _create_or_update_doi_and_persist(
     doi_identifiers,
 ):
     # writes metadata to a record
-    guid = current_discovery_doi_id_to_guid[doi_id]
+    guid = current_discovery_alternate_id_to_guid[alternate_id]
 
     # the DOI already exists for existing metadata, update as necessary
     if use_doi_in_landing_page_url:
@@ -353,20 +353,28 @@ def _create_or_update_doi_and_persist(
     doi_identifiers[identifier] = metadata
 
 
-def get_doi_identifier_to_guid_mapping(metadata_field_for_doi_identifier, auth):
+def _raise_exception_on_collision(datacite, identifier):
+    existing_doi_for_new_id = datacite.read_doi(identifier)
+    if existing_doi_for_new_id:
+        raise Exception(
+            f"Conflicting DOI identifier generated. {identifier} already exists in DataCite."
+        )
+
+
+def get_alternate_id_to_guid_mapping(metadata_field_for_alternate_id, auth):
     """
-    Return mapping from the proposed DOI (e.g. alternate ID in current Discovery Metadata)
-    to Metadata GUID. This function uses the provided `metadata_field_for_doi_identifier`
+    Return mapping from the alternate ID in current Discovery Metadata
+    to Metadata GUID. This function uses the provided `metadata_field_for_alternate_id`
     to find the actual value in the Discovery Metadata).
 
     Args:
-        metadata_field_for_doi_identifier (str): Field in current Discovery Metadata
+        metadata_field_for_alternate_id (str): Field in current Discovery Metadata
             where the alternate ID is (this could be a dbGaP ID or anything else
             that is GLOBALLY UNIQUE)
         auth (Gen3Auth): Gen3 auth or tuple with basic auth name and password
 
     Returns:
-        (doi_identifier_to_guid Dict, all_discovery_metadata Dict): mapping from alternate_id to
+        (alternate_id_to_guid Dict, all_discovery_metadata Dict): mapping from alternate_id to
             guid & all the discovery metadata
     """
     loop = get_or_create_event_loop_for_thread()
@@ -374,7 +382,7 @@ def get_doi_identifier_to_guid_mapping(metadata_field_for_doi_identifier, auth):
         output_expanded_discovery_metadata(auth, endpoint=auth.endpoint)
     )
 
-    doi_identifier_to_guid = {}
+    alternate_id_to_guid = {}
     all_discovery_metadata = {}
     with open(output_filename) as metadata_file:
         csv_parser_setting = {
@@ -383,14 +391,14 @@ def get_doi_identifier_to_guid_mapping(metadata_field_for_doi_identifier, auth):
         }
         metadata_reader = csv.DictReader(metadata_file, **{**csv_parser_setting})
         for row in metadata_reader:
-            if row.get(metadata_field_for_doi_identifier):
-                doi_identifier_to_guid[
-                    row.get(metadata_field_for_doi_identifier)
-                ] = row["guid"]
+            if row.get(metadata_field_for_alternate_id):
+                alternate_id_to_guid[row.get(metadata_field_for_alternate_id)] = row[
+                    "guid"
+                ]
                 all_discovery_metadata[row["guid"]] = row
             else:
                 logging.warning(
-                    f"Could not find field {metadata_field_for_doi_identifier} on row: {row}. Skipping..."
+                    f"Could not find field {metadata_field_for_alternate_id} on row: {row}. Skipping..."
                 )
 
-    return doi_identifier_to_guid, all_discovery_metadata
+    return alternate_id_to_guid, all_discovery_metadata
