@@ -228,7 +228,7 @@ DOI url.
             "doi_creators",
             "doi_publisher",
             "doi_identifier",
-            "doi_identifiers",
+            "doi_alternateIdentifiers",
             "doi_contributors",
             "doi_descriptions",
             "doi_publication_year",
@@ -250,7 +250,7 @@ DOI url.
                   {
                     "type": "block",
                     "label": "",
-                    "sourceField": "disclaimer",
+                    "sourceField": "doi_disclaimer",
                     "default": ""
                   },
                   {

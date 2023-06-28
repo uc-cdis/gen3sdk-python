@@ -5,6 +5,7 @@ from gen3.doi import (
     DigitalObjectIdentifierFundingReference,
     DigitalObjectIdentifierDescription,
     DigitalObjectIdentifierTitle,
+    DigitalObjectIdenfitierAlternateID,
 )
 from gen3.external import ExternalMetadataSourceInterface
 from gen3.external.nih.dbgap_study_registration import dbgapStudyRegistration
@@ -139,9 +140,9 @@ class dbgapDOI(ExternalMetadataSourceInterface):
             doi_metadata["descriptions"] = dbgapDOI._get_doi_descriptions(
                 phsid, dbgap_fhir_metadata
             )
-            doi_metadata["identifiers"] = dbgapDOI._get_doi_identifiers(
-                phsid, dbgap_fhir_metadata
-            )
+            doi_metadata[
+                "alternateIdentifiers"
+            ] = dbgapDOI._get_doi_alternate_identifiers(phsid, dbgap_fhir_metadata)
             doi_metadata["fundingReferences"] = dbgapDOI._get_doi_funding(
                 phsid, dbgap_fhir_metadata
             )
@@ -285,9 +286,16 @@ class dbgapDOI(ExternalMetadataSourceInterface):
         return result
 
     @staticmethod
-    def _get_doi_identifiers(phsid, dbgap_fhir_metadata):
-        # NOTE: This is a list in dbgap FHIR
-        return dbgap_fhir_metadata.get(phsid, {}).get("Identifier")
+    def _get_doi_alternate_identifiers(phsid, dbgap_fhir_metadata):
+        result = []
+
+        for alternate_id in dbgap_fhir_metadata.get(phsid, {}).get("Identifier"):
+            alternate_id_obj = DigitalObjectIdenfitierAlternateID(
+                alternate_id=alternate_id, alternate_id_type="dbGaP"
+            )
+            result.append(alternate_id_obj.as_dict())
+
+        return result
 
     @staticmethod
     def _get_doi_funding(phsid, dbgap_fhir_metadata):

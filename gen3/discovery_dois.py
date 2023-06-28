@@ -351,7 +351,7 @@ def _create_or_update_doi_and_persist(
             **doi_metadata,
         )
     else:
-        url = commons_discovery_page.rstrip("/") + f"/{guid}"
+        url = commons_discovery_page.rstrip("/") + f"/{guid}/"
         doi = DigitalObjectIdentifier(
             identifier=identifier,
             url=url,
@@ -369,6 +369,8 @@ def _create_or_update_doi_and_persist(
         response = datacite.create_doi(doi)
 
     doi = DigitalObjectIdentifier.from_datacite_create_doi_response(response)
+
+    # TODO: update `is_available` in `additional_metadata`?
 
     metadata = datacite.persist_doi_metadata_in_gen3(
         guid=guid,

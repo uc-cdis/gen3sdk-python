@@ -5,6 +5,7 @@ minting the DOIs.
 For collecting DOI Metadata, other classes (outside of the ones in this module)
 can interact with different APIs to gather the necessary metadata.
 """
+import backoff
 import requests
 import os
 
@@ -15,8 +16,8 @@ from gen3.metadata import Gen3Metadata
 from gen3.utils import (
     raise_for_status_and_print_error,
     is_status_code,
+    DEFAULT_BACKOFF_SETTINGS,
 )
-
 
 logging = get_logger("__name__")
 
@@ -108,6 +109,7 @@ class DataCite(object):
         else:
             self.api = DataCite.TEST_URL
 
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def create_doi(self, doi):
         """
         Create DOI provided via DataCite's API
@@ -132,6 +134,7 @@ class DataCite(object):
 
         return response
 
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def read_doi(self, identifier):
         """
         Get DOI provided by DataCite's API.
@@ -157,6 +160,7 @@ class DataCite(object):
 
         return response
 
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def update_doi(self, doi):
         """
         Update DOI provided via DataCite's API
@@ -182,6 +186,7 @@ class DataCite(object):
 
         return response
 
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def delete_doi(self, identifier):
         """
         Delete DOI provided via DataCite's API
@@ -436,6 +441,7 @@ class DigitalObjectIdentifier(object):
         "relatedIdentifiers",
         "geoLocations",
         "language",
+        "alternateIdentifiers",
         "identifiers",
         "sizes",
         "formats",
@@ -574,7 +580,7 @@ class DigitalObjectIdentifier(object):
             )
 
     def _get_url_from_root(self):
-        return self.root_url.rstrip("/") + f"/{self.identifier}"
+        return self.root_url.rstrip("/") + f"/{self.identifier}/"
 
     def as_gen3_metadata(self, prefix=""):
         """
@@ -615,13 +621,45 @@ class DigitalObjectIdentifier(object):
                         for item in value
                     ]
                 )
+            elif key == "alternateIdentifiers":
+                # sometimes this is a list and sometimes is an object depending
+                # on which Datacite API you hit (PUT/POST/DELETE). Handle both
+                if type(value) == list:
+                    value = ", ".join(
+                        [
+                            item.get("alternateIdentifier")
+                            + f" ({item.get('alternateIdentifierType')})"
+                            for item in value
+                        ]
+                    )
+                else:
+                    value = (
+                        value.get("alternateIdentifier")
+                        + f" ({value.get('alternateIdentifierType')})"
+                    )
+
+                data[prefix + key] = value
             elif key == "identifiers":
-                data[prefix + key] = ", ".join(value)
+                # sometimes this is a list and sometimes is an object depending
+                # on which Datacite API you hit (PUT/POST/DELETE). Handle both
+                if type(value) == list:
+                    value = ", ".join(
+                        [
+                            item.get("identifier") + f" ({item.get('identifierType')})"
+                            for item in value
+                        ]
+                    )
+                else:
+                    value = (
+                        value.get("identifier") + f" ({value.get('identifierType')})"
+                    )
+
+                data[prefix + key] = value
             elif key == "fundingReferences":
                 # sometimes this is a list and sometimes is an object depending
                 # on which Datacite API you hit (PUT/POST/DELETE). Handle both
                 if type(value) == list:
-                    value = ",".join([funder.get("funderName") for funder in value])
+                    value = ", ".join([funder.get("funderName") for funder in value])
                 else:
                     value = value.get("funderName")
 
@@ -949,6 +987,52 @@ class DigitalObjectIdentifierDescription(object):
         data = {
             "description": f"{self.description}",
             "descriptionType": f"{self.description_type}",
+        }
+
+        return data
+
+
+class DigitalObjectIdenfitierAlternateID(object):
+    """
+    From the DataCite Metadata Schema V 4.4:
+
+    11 alternateIdentifier 0-n An identifier other than the
+      primary Identifier applied to the
+      resource being registered. This
+      may be any alphanumeric string
+      which is unique within its
+      domain of issue. May be used for
+      local identifiers. The
+      AlternateIdentifier should be an
+      additional identifier for the same
+      instance of the resource (i.e.,
+      same location, same file).
+      Free text
+      ***
+      Example:
+      E-GEOD-34814
+
+    11.a alternateIdentifierType
+      1 The type of the
+      AlternateIdentifier
+      Free text
+      ***
+      If alternateIdentifier is used,
+      alternateIdentifierType is
+      mandatory. For the above
+      example, the
+      alternateIdentifierType would
+      be "A local accession number"
+    """
+
+    def __init__(self, alternate_id, alternate_id_type):
+        self.alternate_id = alternate_id
+        self.alternate_id_type = alternate_id_type
+
+    def as_dict(self):
+        data = {
+            "alternateIdentifier": f"{self.alternate_id}",
+            "alternateIdentifierType": f"{self.alternate_id_type}",
         }
 
         return data
