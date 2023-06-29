@@ -245,7 +245,12 @@ def objects():
     pass
 
 
-@click.command(help="Outputs a TSV with populated information.")
+@click.command(
+    help="""
+    Outputs a TSV with populated information. [DATASET_GUIDS] argument is
+    a variable number of datasets, e.g. 'phs000001.v1.p1.c1 phs000002.v1.p1.c1'
+    """
+)
 @click.argument(
     "dataset_guids",
     nargs=-1,
@@ -253,6 +258,11 @@ def objects():
 @click.option(
     "--only-object-guids",
     help="""
+    Outputs object guids to the command line in the following format:
+        drs://dg.4503:943200c3-271d-4a04-a2b6-040272239a64
+        drs://dg.4503:58818753-e8b9-4225-99bd-635a36ac41d9
+        drs://dg.4503:72a9051e-5afa-4eb1-8faf-2fb28369f99b
+        drs://dg.4503:034e406d-f8f1-4ee8-bbb3-3818473174a6
     Output can be piped into another command
     """,
     is_flag=True,
@@ -260,7 +270,8 @@ def objects():
 @click.option(
     "--template",
     help="""
-    Output a file that can be easily hand-modified and then published
+    Output a TSV with required columns for `publish`. Will NOT contain any actual existing values for datasets or objects.
+    If you want the full output of what's in the commons, don't supply this flag.
     """,
     is_flag=True,
 )
@@ -282,6 +293,7 @@ def discovery_objects_read(
             auth,
             dataset_guids=dataset_guids,
             endpoint=endpoint,
+            template=template,
             output_format=output_format,
             only_object_guids=only_object_guids,
         )
@@ -292,7 +304,12 @@ def discovery_objects_read(
 
 
 @click.command(
-    help="Takes a TSV as input. If dataset_guid already exists, update, if it doesn’t already exist, create it"
+    help="""
+    Takes a TSV as input and writes objects guids to the 'objects' field of a dataset.
+    If dataset_guid already exists, update, if it doesn't already exist, create it.
+    Use 'discovery objects read --template' to get a TSV with the minimum required columns
+    to publish.
+    """
 )
 @click.argument(
     "file",
@@ -301,7 +318,7 @@ def discovery_objects_read(
 @click.option(
     "--overwrite",
     help="""
-    Output can be piped into another command
+    Replaces all guids in the 'objects' field of a dataset instead of appending (which is the deafualt)
     """,
     is_flag=True,
 )
