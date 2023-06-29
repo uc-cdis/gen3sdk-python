@@ -75,44 +75,14 @@ async def output_expanded_discovery_metadata(
         )
 
     with tempfile.TemporaryDirectory() as metadata_cache_dir:
-        all_fields = set()
-        num_tags = 0
-
-        for offset in range(0, limit, MAX_GUIDS_PER_REQUEST):
-            partial_metadata = mds.query(
-                f"_guid_type={guid_type}",
-                return_full_metadata=True,
-                limit=min(limit, MAX_GUIDS_PER_REQUEST),
-                offset=offset,
-                use_agg_mds=use_agg_mds,
-            )
-
-            # if agg MDS we will flatten the results as they are in "common" : dict format
-            # However this can result in duplicates as the aggregate mds is namespaced to
-            # handle this, therefore prefix the commons in front of the guid
-            if use_agg_mds:
-                partial_metadata = {
-                    f"{c}__{i}": d
-                    for c, y in partial_metadata.items()
-                    for x in y
-                    for i, d in x.items()
-                }
-
-            if len(partial_metadata):
-                for guid, guid_metadata in partial_metadata.items():
-                    with open(
-                        f"{metadata_cache_dir}/{guid.replace('/', '_')}",
-                        "w+",
-                        encoding="utf-8",
-                    ) as cached_guid_file:
-                        guid_discovery_metadata = guid_metadata["gen3_discovery"]
-                        json.dump(guid_discovery_metadata, cached_guid_file)
-                        all_fields |= set(guid_discovery_metadata.keys())
-                        num_tags = max(
-                            num_tags, len(guid_discovery_metadata.get("tags", []))
-                        )
-            else:
-                break
+        partial_metadata, all_fields, num_tags = _read_mds_into_cache(
+            limit,
+            MAX_GUIDS_PER_REQUEST,
+            mds,
+            guid_type,
+            use_agg_mds,
+            metadata_cache_dir,
+        )
 
         # output as TSV
         if output_format == "tsv":
@@ -171,6 +141,50 @@ async def output_expanded_discovery_metadata(
                 output_file.write(json.dumps(output_metadata, indent=4))
 
         return output_filename
+
+
+def _read_mds_into_cache(
+    limit, MAX_GUIDS_PER_REQUEST, mds, guid_type, use_agg_mds, metadata_cache_dir
+):
+    all_fields = set()
+    num_tags = 0
+
+    for offset in range(0, limit, MAX_GUIDS_PER_REQUEST):
+        partial_metadata = mds.query(
+            f"_guid_type={guid_type}",
+            return_full_metadata=True,
+            limit=min(limit, MAX_GUIDS_PER_REQUEST),
+            offset=offset,
+            use_agg_mds=use_agg_mds,
+        )
+
+        # if agg MDS we will flatten the results as they are in "common" : dict format
+        # However this can result in duplicates as the aggregate mds is namespaced to
+        # handle this, therefore prefix the commons in front of the guid
+        if use_agg_mds:
+            partial_metadata = {
+                f"{c}__{i}": d
+                for c, y in partial_metadata.items()
+                for x in y
+                for i, d in x.items()
+            }
+
+        if len(partial_metadata):
+            for guid, guid_metadata in partial_metadata.items():
+                with open(
+                    f"{metadata_cache_dir}/{guid.replace('/', '_')}",
+                    "w+",
+                    encoding="utf-8",
+                ) as cached_guid_file:
+                    guid_discovery_metadata = guid_metadata["gen3_discovery"]
+                    json.dump(guid_discovery_metadata, cached_guid_file)
+                    all_fields |= set(guid_discovery_metadata.keys())
+                    num_tags = max(
+                        num_tags, len(guid_discovery_metadata.get("tags", []))
+                    )
+        else:
+            break
+    return (partial_metadata, all_fields, num_tags)
 
 
 def combine_discovery_metadata(
