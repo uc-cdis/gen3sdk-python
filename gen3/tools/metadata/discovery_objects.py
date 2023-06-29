@@ -14,6 +14,7 @@ from gen3.tools.metadata.discovery import (
     MAX_CONCURRENT_REQUESTS,
     BASE_CSV_PARSER_SETTINGS,
     _create_metadata_output_filename,
+    _read_mds_into_cache,
     _try_parse,
     get_discovery_metadata,
     sanitize_tsv_row,
@@ -30,6 +31,7 @@ async def output_discovery_objects(
     use_agg_mds=False,
     guid_type="discovery_metadata",
     only_object_guids=False,
+    template=False,
     output_format="tsv",
     output_filename_suffix="",
 ):
@@ -46,6 +48,16 @@ async def output_discovery_objects(
         output_format (str): format of output file (can only be either tsv or json), defaults to tsv
         output_filename_suffix (str): additional suffix for the output file name, defaults to ""
     """
+    if template:
+        output_filename = _create_discovery_objects_filename(auth, "TEMPLATE", ".tsv")
+        object_fields = ["guid", "dataset_guid", "display_name"]
+        with open(output_filename, "w+", encoding="utf-8") as output_file:
+            writer = csv.DictWriter(
+                output_file,
+                **{**BASE_CSV_PARSER_SETTINGS, "fieldnames": object_fields},
+            )
+            writer.writeheader()
+        return output_filename
 
     if output_format != "tsv" and output_format != "json":
         logging.error(
@@ -66,44 +78,14 @@ async def output_discovery_objects(
         )
 
     with tempfile.TemporaryDirectory() as metadata_cache_dir:
-        all_fields = set()
-        num_tags = 0
-
-        for offset in range(0, limit, MAX_GUIDS_PER_REQUEST):
-            partial_metadata = mds.query(
-                f"_guid_type={guid_type}",
-                return_full_metadata=True,
-                limit=min(limit, MAX_GUIDS_PER_REQUEST),
-                offset=offset,
-                use_agg_mds=use_agg_mds,
-            )
-
-            # if agg MDS we will flatten the results as they are in "common" : dict format
-            # However this can result in duplicates as the aggregate mds is namespaced to
-            # handle this, therefore prefix the commons in front of the guid
-            if use_agg_mds:
-                partial_metadata = {
-                    f"{c}__{i}": d
-                    for c, y in partial_metadata.items()
-                    for x in y
-                    for i, d in x.items()
-                }
-
-            if len(partial_metadata):
-                for guid, guid_metadata in partial_metadata.items():
-                    with open(
-                        f"{metadata_cache_dir}/{guid.replace('/', '_')}",
-                        "w+",
-                        encoding="utf-8",
-                    ) as cached_guid_file:
-                        guid_discovery_metadata = guid_metadata["gen3_discovery"]
-                        json.dump(guid_discovery_metadata, cached_guid_file)
-                        all_fields |= set(guid_discovery_metadata.keys())
-                        num_tags = max(
-                            num_tags, len(guid_discovery_metadata.get("tags", []))
-                        )
-            else:
-                break
+        partial_metadata, all_fields, num_tags = _read_mds_into_cache(
+            limit,
+            MAX_GUIDS_PER_REQUEST,
+            mds,
+            guid_type,
+            use_agg_mds,
+            metadata_cache_dir,
+        )
 
         # output to command line
         if only_object_guids:
@@ -121,14 +103,18 @@ async def output_discovery_objects(
             output_filename = _create_discovery_objects_filename(
                 auth, output_filename_suffix, ".tsv"
             )
-            object_fields = {"dataset_guid"}
+            object_fields = {"dataset_guid", "guid", "display_name"}
             all_objects = []
 
             for guid in sorted(os.listdir(metadata_cache_dir)):
                 if (not dataset_guids) or (guid in dataset_guids):
                     with open(f"{metadata_cache_dir}/{guid}", encoding="utf-8") as f:
                         fetched_metadata = json.load(f)
-                        curr_objects = fetched_metadata["objects"]
+                        curr_objects = (
+                            fetched_metadata["objects"]
+                            if ("objects" in fetched_metadata.keys())
+                            else []
+                        )
                         for obj in curr_objects:
                             object_fields |= set(obj.keys())
                             obj["dataset_guid"] = guid
@@ -153,6 +139,7 @@ async def output_discovery_objects(
                 auth, output_filename_suffix, ".json"
             )
             output_metadata = []
+            dataset_guids = dataset_guids if dataset_guids else partial_metadata.keys()
             for guid in dataset_guids:
                 true_guid = guid
                 if use_agg_mds:
