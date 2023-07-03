@@ -14,11 +14,13 @@ from gen3.tools.metadata.discovery import (
     MAX_CONCURRENT_REQUESTS,
     BASE_CSV_PARSER_SETTINGS,
     _create_metadata_output_filename,
-    _read_mds_into_cache,
+    read_mds_into_cache,
     _try_parse,
     get_discovery_metadata,
     sanitize_tsv_row,
 )
+
+REQUIRED_OBJECT_FIELDS = {"dataset_guid", "guid", "display_name"}
 
 logging = get_logger("__name__")
 
@@ -40,11 +42,13 @@ async def output_discovery_objects(
 
     Args:
         auth (Gen3Auth): a Gen3Auth object
+        dataset_guids (list of str): a list of datasets to read objects from
         endpoint (str): HOSTNAME of a Gen3 environment, defaults to None
         limit (int): max number of records in one operation, defaults to 500
         use_agg_mds (bool): whether to use AggMDS during export, defaults to False
         guid_type (str): intended GUID type for query, defaults to discovery_metadata
         only_objects_guids (bool): whether to output guids to command line such that they can be piped to another command
+        template (bool): whether to output a file with just required headers, to be filled out and then published
         output_format (str): format of output file (can only be either tsv or json), defaults to tsv
         output_filename_suffix (str): additional suffix for the output file name, defaults to ""
     """
@@ -78,7 +82,7 @@ async def output_discovery_objects(
         )
 
     with tempfile.TemporaryDirectory() as metadata_cache_dir:
-        partial_metadata, all_fields, num_tags = _read_mds_into_cache(
+        partial_metadata, all_fields, num_tags = read_mds_into_cache(
             limit,
             MAX_GUIDS_PER_REQUEST,
             mds,
@@ -89,21 +93,24 @@ async def output_discovery_objects(
 
         # output to command line
         if only_object_guids:
+            return_objects = []
             for guid in sorted(os.listdir(metadata_cache_dir)):
                 if (not dataset_guids) or (guid in dataset_guids):
                     with open(f"{metadata_cache_dir}/{guid}", encoding="utf-8") as f:
                         fetched_metadata = json.load(f)
-                        curr_objects = fetched_metadata["objects"]
-                        for obj in curr_objects:
-                            print(obj["guid"])
-            return
+                        return_objects += (
+                            fetched_metadata["objects"]
+                            if "objects" in fetched_metadata.keys()
+                            else []
+                        )
+            return return_objects
 
         # output as TSV
         elif output_format == "tsv":
             output_filename = _create_discovery_objects_filename(
                 auth, output_filename_suffix, ".tsv"
             )
-            object_fields = {"dataset_guid", "guid", "display_name"}
+            object_fields = REQUIRED_OBJECT_FIELDS.copy()
             all_objects = []
 
             for guid in sorted(os.listdir(metadata_cache_dir)):
@@ -162,7 +169,7 @@ async def publish_discovery_object_metadata(
     overwrite=False,
 ):
     """
-    Publish discovery objects from a tsv file
+    Publish discovery objects from a TSV file
 
     Args:
         auth (Gen3Auth): a Gen3Auth object
@@ -191,14 +198,14 @@ async def publish_discovery_object_metadata(
 
         for obj_line in metadata_reader:
             # if required fields are missing, display error
-            required_fields = ["dataset_guid", "guid", "display_name"]
+            required_fields = list(REQUIRED_OBJECT_FIELDS)
             missing_fields = []
             for field in required_fields:
                 if not obj_line[field]:
                     missing_fields.append(field)
             if missing_fields:
-                logging.error(f"Missing required field/s {missing_fields}.")
-                raise ValueError(f"Required field/s missing: {missing_fields}")
+                logging.error(f"Missing required field(s) {missing_fields}.")
+                raise ValueError(f"Required field(s) missing: {missing_fields}")
 
             dataset_guid = obj_line.pop("dataset_guid")
             if dataset_guid not in dataset_dict:
@@ -239,10 +246,17 @@ async def publish_discovery_object_metadata(
 
 
 def try_delete_discovery_objects(auth, delete_args):
+    """
+    Delete discovery objects from a TSV file of objects, or all objects from one or more datasets
+
+    Args:
+        auth (Gen3Auth): a Gen3Auth object
+        delete_args (list of str): a TSV file of objects, or a list of datasets
+    """
     mds = Gen3Metadata(auth_provider=auth)
     for arg in delete_args:
         # delete objects from tsv file
-        if arg[-4:] == ".tsv":
+        if arg[-4:].lower() == ".tsv":
             dataset_dict = {}
             # read object guids to delete into a dict, batch deletes by dataset guid for efficiency
             with open(arg, encoding="utf-8") as tsv:

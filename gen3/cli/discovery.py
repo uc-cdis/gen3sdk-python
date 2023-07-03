@@ -241,7 +241,7 @@ discovery.add_command(discovery_delete, name="delete")
 
 @discovery.group()
 def objects():
-    """For ingesting dataset-level raw files"""
+    """For ingesting dataset-level files"""
     pass
 
 
@@ -288,7 +288,7 @@ def discovery_objects_read(
     auth = ctx.obj["auth_factory"].get()
     loop = get_or_create_event_loop_for_thread()
     endpoint = ctx.obj.get("endpoint")
-    output_file = loop.run_until_complete(
+    output = loop.run_until_complete(
         output_discovery_objects(
             auth,
             dataset_guids=dataset_guids,
@@ -298,14 +298,18 @@ def discovery_objects_read(
             only_object_guids=only_object_guids,
         )
     )
-
     if not only_object_guids:
-        click.echo(output_file)
+        click.echo(output)
+    else:
+        for obj in output:
+            click.echo(obj["guid"])
 
 
 @click.command(
     help="""
-    Takes a TSV as input and writes objects guids to the 'objects' field of a dataset.
+    Takes a TSV as input and writes the specified objects GUIDs and defined metadata into Gen3's
+    Metadata API, under a Discovery Metadata record for the dataset. The specified content from
+    the TSV goes into an 'objects' block of the dataset's metadata.
     If dataset_guid already exists, update, if it doesn't already exist, create it.
     Use 'discovery objects read --template' to get a TSV with the minimum required columns
     to publish.
@@ -318,7 +322,7 @@ def discovery_objects_read(
 @click.option(
     "--overwrite",
     help="""
-    Replaces all guids in the 'objects' field of a dataset instead of appending (which is the deafualt)
+    Replaces all guids in the 'objects' field of a dataset instead of appending (which is the default)
     """,
     is_flag=True,
 )
@@ -355,12 +359,6 @@ def discovery_objects_delete(
     ctx,
     delete_args,
 ):
-    """for arg in guids:
-    if arg[-4:] == ".tsv":
-        with open(arg, encoding="utf-8") as tsv:
-            tsv_reader = csv.DictReader(tsv, delimiter="\t")
-            for row in tsv_reader:
-                print(row)"""
     auth = ctx.obj["auth_factory"].get()
     try_delete_discovery_objects(auth, delete_args)
 

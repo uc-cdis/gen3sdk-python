@@ -75,7 +75,7 @@ async def output_expanded_discovery_metadata(
         )
 
     with tempfile.TemporaryDirectory() as metadata_cache_dir:
-        partial_metadata, all_fields, num_tags = _read_mds_into_cache(
+        partial_metadata, all_fields, num_tags = read_mds_into_cache(
             limit,
             MAX_GUIDS_PER_REQUEST,
             mds,
@@ -143,7 +143,7 @@ async def output_expanded_discovery_metadata(
         return output_filename
 
 
-def _read_mds_into_cache(
+def read_mds_into_cache(
     limit, MAX_GUIDS_PER_REQUEST, mds, guid_type, use_agg_mds, metadata_cache_dir
 ):
     all_fields = set()
