@@ -243,52 +243,52 @@ async def publish_discovery_object_metadata(
         await asyncio.gather(*pending_requests)
 
 
-def try_delete_discovery_objects(auth, delete_args):
+def try_delete_discovery_objects_from_dict(auth, delete_objs):
     """
-    Delete discovery objects from a TSV file of objects, or all objects from one or more datasets
+    Delete discovery objects from a dictionary with schema {<dataset_guid>: [<object_guid1>, <object_guid2>, ...]}
 
     Args:
         auth (Gen3Auth): a Gen3Auth object
-        delete_args (list of str): a TSV file of objects, or a list of datasets
+        delete_args (dict): a dict of dataset_guid keys with a list of object_guid values
+    """
+    mds = Gen3Metadata(auth_provider=auth)
+    for dataset_guid, objects_to_delete in delete_objs.items():
+        try:
+            metadata = mds.get(dataset_guid)
+            if "objects" in metadata["gen3_discovery"].keys():
+                curr_objects = metadata["gen3_discovery"]["objects"]
+                curr_objects = [
+                    obj
+                    for obj in curr_objects
+                    if (obj["guid"] not in objects_to_delete)
+                ]
+                metadata["gen3_discovery"]["objects"] = curr_objects
+                mds.create(dataset_guid, metadata, overwrite=True)
+        except requests.exceptions.HTTPError as e:
+            logging.warning(e)
+
+
+def try_delete_discovery_objects(auth, delete_args):
+    """
+    Delete all discovery objects from one or more datasets
+
+    Args:
+        auth (Gen3Auth): a Gen3Auth object
+        delete_args (tuple of str): a tuple of datasets
     """
     mds = Gen3Metadata(auth_provider=auth)
     for arg in delete_args:
-        # delete objects from tsv file
-        if arg[-4:].lower() == ".tsv":
-            dataset_dict = {}
-            # read object guids to delete into a dict, batch deletes by dataset guid for efficiency
-            with open(arg, encoding="utf-8") as tsv:
-                tsv_reader = csv.DictReader(tsv, delimiter="\t")
-                for row in tsv_reader:
-                    dataset_guid = row["dataset_guid"]
-                    guid = row["guid"]
-                    dataset_dict.setdefault(dataset_guid, set()).add(guid)
-            for dataset_guid, objects_to_delete in dataset_dict.items():
-                try:
-                    metadata = mds.get(dataset_guid)
-                    if "objects" in metadata["gen3_discovery"].keys():
-                        curr_objects = metadata["gen3_discovery"]["objects"]
-                        curr_objects = [
-                            obj
-                            for obj in curr_objects
-                            if (obj["guid"] not in objects_to_delete)
-                        ]
-                        metadata["gen3_discovery"]["objects"] = curr_objects
-                        mds.create(dataset_guid, metadata, overwrite=True)
-                except requests.exceptions.HTTPError as e:
-                    logging.warning(e)
-        else:
-            # delete all objects from dataset_guid
-            try:
-                metadata = mds.get(arg)
-                if metadata["_guid_type"] == "discovery_metadata":
-                    if "objects" in metadata["gen3_discovery"].keys():
-                        metadata["gen3_discovery"]["objects"] = []
-                        mds.create(arg, metadata, overwrite=True)
-                else:
-                    logging.warning(f"{guid} is not discovery metadata. Skipping.")
-            except requests.exceptions.HTTPError as e:
-                logging.warning(e)
+        # delete all objects from dataset_guid
+        try:
+            metadata = mds.get(arg)
+            if metadata["_guid_type"] == "discovery_metadata":
+                if "objects" in metadata["gen3_discovery"].keys():
+                    metadata["gen3_discovery"]["objects"] = []
+                    mds.create(arg, metadata, overwrite=True)
+            else:
+                logging.warning(f"{guid} is not discovery metadata. Skipping.")
+        except requests.exceptions.HTTPError as e:
+            logging.warning(e)
 
 
 def _create_discovery_objects_filename(auth, suffix="", file_extension=".tsv"):

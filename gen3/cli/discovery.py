@@ -12,6 +12,7 @@ from gen3.tools.metadata.discovery_objects import (
     output_discovery_objects,
     publish_discovery_object_metadata,
     try_delete_discovery_objects,
+    try_delete_discovery_objects_from_dict,
 )
 from gen3.utils import get_or_create_event_loop_for_thread
 
@@ -351,16 +352,32 @@ def discovery_objects_publish(
 )
 @click.argument(
     "delete_args",
-    required=True,
     nargs=-1,
+)
+@click.option(
+    "--file",
+    help="""
+    Delete objects from a file
+    """,
+    type=click.File("r"),
 )
 @click.pass_context
 def discovery_objects_delete(
     ctx,
     delete_args,
+    file,
 ):
     auth = ctx.obj["auth_factory"].get()
-    try_delete_discovery_objects(auth, delete_args)
+    if delete_args:
+        try_delete_discovery_objects(auth, delete_args)
+    if file:
+        delete_objs = {}
+        tsv_reader = csv.DictReader(file, delimiter="\t")
+        for row in tsv_reader:
+            dataset_guid = row["dataset_guid"]
+            guid = row["guid"]
+            delete_objs.setdefault(dataset_guid, set()).add(guid)
+        try_delete_discovery_objects_from_dict(auth, delete_objs)
 
 
 objects.add_command(discovery_objects_read, name="read")
