@@ -13,9 +13,7 @@ from gen3.tools.metadata.discovery import (
     MAX_GUIDS_PER_REQUEST,
     MAX_CONCURRENT_REQUESTS,
     BASE_CSV_PARSER_SETTINGS,
-    _create_metadata_output_filename,
     read_mds_into_cache,
-    _try_parse,
     get_discovery_metadata,
     sanitize_tsv_row,
 )
