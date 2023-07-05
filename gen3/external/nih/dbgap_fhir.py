@@ -3,7 +3,6 @@ import collections
 import copy
 import csv
 import time
-import re  # sorry. But trust me, it makes things a bit cleaner
 
 from cdislogging import get_logger
 import fhirclient.models.researchstudy as researchstudy
@@ -12,28 +11,24 @@ from fhirclient.models.fhirreference import FHIRReference
 from fhirclient.models.identifier import Identifier
 from fhirclient.models.meta import Meta
 
+from gen3.external import ExternalMetadataSourceInterface
+from gen3.external.nih.utils import get_dbgap_accession_as_parts
 from gen3.tools.metadata.discovery import sanitize_tsv_row, BASE_CSV_PARSER_SETTINGS
 from gen3.utils import DEFAULT_BACKOFF_SETTINGS
 
 logging = get_logger("__name__")
 
-# For more details about this regex, see the function that uses it
-DBGAP_ACCESSION_REGEX = (
-    "(?P<phsid>phs(?P<phsid_number>[0-9]+))"
-    "(.(?P<participant_set>p(?P<participant_set_number>[0-9]+))){0,1}"
-    "(.(?P<version>v(?P<version_number>[0-9]+))){0,1}"
-    "(.(?P<consent>c(?P<consent_number>[0-9]+)+)){0,1}"
-)
 
-
-class dbgapFHIR(object):
+class dbgapFHIR(ExternalMetadataSourceInterface):
     """
-    Class for interacting with Database for Genotypes and Phenotypes (dbGaP) FHIR API.
+    Class for interacting with National Center for
+    Biotechnology Information (NCBI)'s database of Genotypes and Phenotypes (dbGaP)
+    FHIR API
 
     Example Usage:
 
         ```
-        from gen3 import dbgapFHIR
+        from gen3.external.nih.dbgap_fhir import dbgapFHIR
 
 
         def main():
@@ -43,7 +38,7 @@ class dbgapFHIR(object):
                 "phs000179.v1.p1.c1",
             ]
             dbgapfhir = dbgapFHIR()
-            simplified_data = dbgapfhir.get_metadata_for_ids(phsids=studies)
+            simplified_data = dbgapfhir.get_metadata_for_ids(ids=studies)
 
             file_name = "data_file.tsv"
             dbgapFHIR.write_data_to_file(simplified_data, file_name)
@@ -162,12 +157,12 @@ class dbgapFHIR(object):
             auth_provider (None, optional): Description
             fhir_app_id (str, optional): name of app_id to pass into the FHIR client library
         """
+        super(dbgapFHIR, self).__init__(api, auth_provider)
+
         fhir_client_settings = {
             "app_id": fhir_app_id,
             "api_base": api,
         }
-        self._auth_provider = auth_provider
-        self.api = api
         self.fhir_client = client.FHIRClient(settings=fhir_client_settings)
         self.suspected_single_item_list_fields = (
             suspected_single_item_list_fields
@@ -252,19 +247,19 @@ class dbgapFHIR(object):
 
         return simplified_data
 
-    def get_dbgap_fhir_objects_for_studies(self, phsids):
+    def get_dbgap_fhir_objects_for_studies(self, ids):
         """
         Return FHIR Objects
 
         Args:
-            phsids (List[str]): list of IDs to query FHIR for
+            ids (List[str]): list of IDs to query FHIR for
 
         Returns:
             Dict[fhirclient.models.ResearchStudy]: FHIR objects for each of the
                 provided IDs (which are the keys in the returned dict)
         """
         all_data = {}
-        for study_id in phsids:
+        for study_id in ids:
             try:
                 study = self._get_dbgap_fhir_objects_for_study(study_id)
             except Exception as exc:
@@ -295,13 +290,13 @@ class dbgapFHIR(object):
         },
     )
     def _get_dbgap_fhir_objects_for_study(self, phsid):
-        logging.info(f"getting {phsid} from dbGaP FHIR API...")
+        logging.info(f"Getting {phsid} from dbGaP FHIR API...")
         study = None
 
         try:
             study = researchstudy.ResearchStudy.read(phsid, self.fhir_client.server)
         except Exception as exc:
-            logging.warning(f"unable to get {phsid}, skipping. Error: {exc}")
+            logging.warning(f"Unable to get {phsid}, skipping. Error: {exc}")
             raise
 
         return study
@@ -318,7 +313,7 @@ class dbgapFHIR(object):
             all_data (Dict[Dict]): study metadata
             file_name (str): output file name
         """
-        logging.info(f"beginning to write data to file: {file_name}")
+        logging.info(f"Beginning to write data to file: {file_name}")
         data_file = open(file_name, "w")
 
         headers = set()
@@ -341,7 +336,7 @@ class dbgapFHIR(object):
             # Writing data of CSV file
             csv_writer.writerow(sanitize_tsv_row(study_data))
 
-        logging.info(f"done writing data to file: {file_name}")
+        logging.info(f"Done writing data to file: {file_name}")
 
     def get_simplified_data_from_object(self, fhir_object):
         """
@@ -498,7 +493,9 @@ class dbgapFHIR(object):
                 output.append(simple_representation)
         # elif ... add any more FHIR objects we can simplify and parse here
         else:
-            logging.warning(f"could not parse FHIR object to simple text, ignoring")
+            logging.debug(
+                f"could not parse FHIR object `{fhir_object}` to simple text, ignoring"
+            )
 
         return output
 
@@ -572,70 +569,3 @@ class dbgapFHIR(object):
 
             if key != capitalized_key:
                 del all_data[key]
-
-
-def get_dbgap_accession_as_parts(phsid):
-    """
-    Return a dictionary containing the various parts of the provided
-    dbGaP Accession (AKA phsid).
-
-    Uses a regex to match an assession number that has information in forms like:
-      phs000123.c1
-      phs000123.v3.p1.c3
-      phs000123.c3
-      phs000123.v3.p4.c1
-      phs000123
-
-    This separates out each part of the accession with named groups and includes
-    parts that include only the numbered value (which is needed in some NIH APIs)
-
-    A "picture" is worth a 1000 words:
-
-    Example for `phs000123.c1`:
-      Named groups
-      phsid                   phs000123
-      phsid_number            000123
-      version                 None
-      version_number          None
-      participant_set         None
-      participant_set_number  None
-      consent                 c1
-      consent_number          1
-
-    Args:
-        phsid (str): The dbGaP Accession (AKA phsid)
-
-    Returns:
-        dict[str]: A standardized dictionary (you can always expect these keys)
-                   with the values parsed from the provided dbGaP Accession
-                   Example if provided `phs000123.c1`: {
-                        "phsid": "phs000123",
-                        "phsid_number": "000123",
-                        "version": "",
-                        "version_number": "",
-                        "participant_set": "",
-                        "participant_set_number": "",
-                        "consent": "c1",
-                        "consent_number": "1",
-                    }
-
-                    NOTE: the "*_number" fields are still represented as strings.
-                    NOTE2: the regex groups that return None will be represented
-                           as empty strings (for easier upstream str concat-ing)
-    """
-    access_number_matcher = re.compile(DBGAP_ACCESSION_REGEX)
-    raw_phs_match = access_number_matcher.match(phsid)
-    phs_match = {}
-
-    if raw_phs_match:
-        phs_match = raw_phs_match.groupdict()
-
-    standardized_phs_match = {}
-    for key, value in phs_match.items():
-        if value is None:
-            standardized_phs_match[key] = ""
-            continue
-
-        standardized_phs_match[key] = value
-
-    return standardized_phs_match

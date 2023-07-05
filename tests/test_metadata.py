@@ -525,14 +525,14 @@ def test_aliases_creation(
         nonlocal current_metadata
 
         if f"/metadata/{guid}/aliases" in url:
-            if kwargs.get("merge"):
+            if "merge=True" in url:
                 current_aliases = current_aliases + kwargs.get("json", {}).get(
                     "aliases", []
                 )
             else:
                 current_aliases = kwargs.get("json", {}).get("aliases", [])
         else:
-            if kwargs.get("merge"):
+            if "merge=True" in url:
                 current_metadata.update(kwargs.get("json", {}))
             else:
                 current_metadata = kwargs.get("json", {})

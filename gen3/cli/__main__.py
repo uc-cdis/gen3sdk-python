@@ -34,18 +34,18 @@ class AuthFactory:
     "--auth",
     "auth_config",
     default=os.getenv("GEN3_API_KEY", None),
-    help="""authentication source:
-    "idp://wts/<idp>" is an identity provider in a Gen3 workspace,
-    "accesstoken:///<token>" is an access token,
-    otherwise a path to an api key or basename of key under ~/.gen3/;
-    default value is "credentials" if ~/.gen3/credentials.json exists, otherwise "idp://wts/local"
+    help="""authentication source, by default expects an API key in "~/.gen3/credentials.json".
+    Has special support for token service: "idp://wts/<idp>", and raw access tokens
+    "accesstoken:///<token>",
+    otherwise a path to an API key or basename of key under ~/.gen3/ can be used.
+    Default value is "credentials" if ~/.gen3/credentials.json exists, otherwise "idp://wts/local"
     """,
 )
 @click.option(
     "--endpoint",
     "endpoint",
     default=os.getenv("GEN3_ENDPOINT", "default"),
-    help="commons hostname - optional if API Key given",
+    help="commons hostname - optional if API Key given in `auth`",
 )
 @click.option(
     "-v",
