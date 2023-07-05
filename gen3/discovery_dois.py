@@ -157,7 +157,7 @@ def mint_dois_for_discovery_datasets(
     This will:
         - Get all Discovery Page records based on the provided `gen3_auth`
         - Use `metadata_interface` to use class for a particular
-          DOI metadata retreival (such as retrieving DOI metadata for dbGaP
+          DOI metadata retrieval (such as retrieving DOI metadata for dbGaP
           studies)
         - Request an identifier for missing records by using the provided
           `get_doi_identifier_function`
