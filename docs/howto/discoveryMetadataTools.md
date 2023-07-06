@@ -128,7 +128,7 @@ def test_manual_single_doi(publish_dois=False):
   # Setup
   gen3_auth = Gen3Auth()
   datacite = DataCite(
-    api=DataCite.TEST_URL,
+    use_prod=False,
     auth_provider=HTTPBasicAuth(
       os.environ.get("DATACITE_USERNAME"),
       os.environ.get("DATACITE_PASSWORD"),
@@ -162,7 +162,11 @@ def test_manual_single_doi(publish_dois=False):
   }
 
   # Create/Mint the DOI in DataCite
-  doi = DigitalObjectIdentifier(root_url=COMMONS_DISCOVERY_PAGE, **doi_metadata)
+  # The default url generated is "root_url" + identifier
+  # If your Discovery metadata records don't use the DOI as the GUID,
+  # you may need to supply the URL yourself like below
+  url = COMMONS_DISCOVERY_PAGE.rstrip("/") + f"/{gen3_metadata_guid}"
+  doi = DigitalObjectIdentifier(url=url, **doi_metadata)
 
   if publish_dois:
     logging.info(f"Publishing DOI `{identifier}`...")
@@ -212,6 +216,28 @@ DOI url.
 ```json
 "discoveryConfig": {
     // ...
+    "features": {
+      // ...
+      "search": {
+        "searchBar": {
+          "enabled": true,
+          "searchableTextFields": [
+            "doi_titles",
+            "doi_version_information",
+            "doi_citation",
+            "doi_creators",
+            "doi_publisher",
+            "doi_identifier",
+            "doi_alternateIdentifiers",
+            "doi_contributors",
+            "doi_descriptions",
+            "doi_publication_year",
+            "doi_resolveable_link",
+            "doi_fundingReferences",
+            "doi_relatedIdentifiers"
+          ]
+        },
+    // ...
     "detailView": {
       // ...
       "tabs": [
@@ -224,7 +250,7 @@ DOI url.
                   {
                     "type": "block",
                     "label": "",
-                    "sourceField": "disclaimer",
+                    "sourceField": "doi_disclaimer",
                     "default": ""
                   },
                   {
@@ -244,6 +270,12 @@ DOI url.
                     "label": "Data available:",
                     "sourceField": "doi_is_available",
                     "default": "None"
+                  },
+                  {
+                    "type": "text",
+                    "label": "Creators:",
+                    "sourceField": "doi_creators",
+                    "default": "Not specified"
                   },
                   {
                     "type": "text",
@@ -308,6 +340,18 @@ DOI url.
                     "label": "Version:",
                     "sourceField": "doi_version_information",
                     "default": "Not specified"
+                  },
+                  {
+                    "type": "text",
+                    "label": "Contributors:",
+                    "sourceField": "doi_contributors",
+                    "default": "Not specified"
+                  },
+                  {
+                    "type": "text",
+                    "label": "Related Identifiers:",
+                    "sourceField": "doi_relatedIdentifiers",
+                    "default": "Not specified"
                   }
                 ]
               },
@@ -327,12 +371,17 @@ DOI url.
         // ...
 ```
 
-#### Work in Progress. Script to automate dbGaP scraping for updating datasets and minting DOIs
+#### Automate DOI creation for Datasets
 
-- TODO: Push DOI from submitted to registered
+Automates the pulling of current datasets from Discovery, getting identifiers,
+scraping various APIs for DOI related metadata, and then going through
+the DOI creation loop to mint the DOI in Datacite and persist the metadata back in
+Gen3.
 
-See below for a full example of DOI metadata gathering, minting, and persisting
-into Gen3.
+See below for a full example using the dbGaP `DbgapMetadataInterface`.
+
+More interfaces may exist in the future for doing this by querying non-dbGaP
+sources.
 
 ```python
 import os
@@ -341,7 +390,7 @@ from requests.auth import HTTPBasicAuth
 from cdislogging import get_logger
 
 from gen3.auth import Gen3Auth
-from gen3.discovery_dois import mint_dois_for_dbgap_discovery_datasets
+from gen3.discovery_dois import mint_dois_for_discovery_datasets, DbgapMetadataInterface
 from gen3.utils import get_random_alphanumeric
 
 logging = get_logger("__name__", log_level="info")
@@ -355,6 +404,43 @@ DOI_ACCESS_INFORMATION = "You can find information about how to access this reso
 DOI_ACCESS_INFORMATION_LINK = "https://example.com/more/info"
 DOI_CONTACT = "https://example.com/contact/"
 
+def mint_discovery_dois():
+    auth = Gen3Auth()
+
+    # this alternate ID is some globally unique ID other than the GUID that
+    # will be needed to get DOI metadata (like the phsid for dbGaP)
+    metadata_field_for_alternate_id = "dbgap_accession"
+
+    # you can choose to exclude certain Discovery Metadata datasets based on
+    # their GUID or alternate ID (this means they won't get additional DOI metadata
+    # or have DOIs minted, they'll be skipped)
+    exclude_datasets=["MetadataGUID_to_exclude", "AlternateID_to_exclude", "..."]
+
+    # When this is True, you CANNOT REVERT THIS ACTION. A published DOI
+    # cannot be deleted. It is recommended to test with "Draft" state DOIs first
+    # (which is the default when publish_dois is not True).
+    publish_dois = False
+
+    mint_dois_for_discovery_datasets(
+        gen3_auth=auth,
+        datacite_auth=HTTPBasicAuth(
+            os.environ.get("DATACITE_USERNAME"),
+            os.environ.get("DATACITE_PASSWORD"),
+        ),
+        metadata_field_for_alternate_id=metadata_field_for_alternate_id,
+        get_doi_identifier_function=get_doi_identifier,
+        metadata_interface=DbgapMetadataInterface,
+        doi_publisher=PUBLISHER,
+        commons_discovery_page=COMMONS_DISCOVERY_PAGE,
+        doi_disclaimer=DOI_DISCLAIMER,
+        doi_access_information=DOI_ACCESS_INFORMATION,
+        doi_access_information_link=DOI_ACCESS_INFORMATION_LINK,
+        doi_contact=DOI_CONTACT,
+        publish_dois=publish_dois,
+        datacite_use_prod=False,
+        exclude_datasets=["MetadataGUID_to_exclude", "AlternateID_to_exclude", "..."]
+    )
+
 
 def get_doi_identifier():
     return (
@@ -363,24 +449,8 @@ def get_doi_identifier():
 
 
 def main():
-    auth = Gen3Auth()
-    dbgap_phsid_field = "dbgap_accession"
+    mint_discovery_dois()
 
-    mint_dois_for_dbgap_discovery_datasets(
-        gen3_auth=auth,
-        datacite_auth=HTTPBasicAuth(
-            os.environ.get("DATACITE_USERNAME"),
-            os.environ.get("DATACITE_PASSWORD"),
-        ),
-        dbgap_phsid_field=dbgap_phsid_field,
-        get_doi_identifier_function=get_doi_identifier,
-        publisher=PUBLISHER,
-        commons_discovery_page=COMMONS_DISCOVERY_PAGE,
-        doi_disclaimer=DOI_DISCLAIMER,
-        doi_access_information=DOI_ACCESS_INFORMATION,
-        doi_access_information_link=DOI_ACCESS_INFORMATION_LINK,
-        doi_contact=DOI_CONTACT,
-    )
 
 if __name__ == "__main__":
     main()

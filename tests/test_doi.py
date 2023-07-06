@@ -425,7 +425,7 @@ def test_doi_metadata_persist(
             "doi_publisher": "Example Gen3 Sponsor",
             "doi_publication_year": 2023,
             "doi_resource_type": "Dataset",
-            "doi_url": f"foobar/{identifier}",
+            "doi_url": f"foobar/{identifier}/",
             "doi_version": 1,
             "doi_is_available": "Yes",
             "doi_disclaimer": "disclaimer 1",

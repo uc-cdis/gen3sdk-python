@@ -5,6 +5,7 @@ minting the DOIs.
 For collecting DOI Metadata, other classes (outside of the ones in this module)
 can interact with different APIs to gather the necessary metadata.
 """
+import backoff
 import requests
 import os
 
@@ -15,8 +16,8 @@ from gen3.metadata import Gen3Metadata
 from gen3.utils import (
     raise_for_status_and_print_error,
     is_status_code,
+    DEFAULT_BACKOFF_SETTINGS,
 )
-
 
 logging = get_logger("__name__")
 
@@ -45,7 +46,7 @@ class DataCite(object):
         datacite = DataCite(
             auth_provider=HTTPBasicAuth(
                 os.environ["DATACITE_USERNAME"], os.environ["DATACITE_PASSWORD"]
-            )
+            ), use_prod=True
         )
 
         doi = DigitalObjectIdentifer(
@@ -84,10 +85,31 @@ class DataCite(object):
     PRODUCTION_URL = "https://api.datacite.org"
     TEST_URL = "https://api.test.datacite.org"
 
-    def __init__(self, api=PRODUCTION_URL, auth_provider=None):
-        self._auth_provider = auth_provider
-        self.api = api
+    def __init__(
+        self,
+        api=None,
+        auth_provider=None,
+        use_prod=False,
+    ):
+        """
+        Initiatilize.
 
+        Args:
+            api (str, optional): Override API with provided URL. Will ignore
+                `use_prod` if this is provided
+            auth_provider (Gen3Auth, optional): A Gen3Auth class instance or compatible interface
+            use_prod (bool, optional): Default False. Whether or not to use the
+                production Datacite URL.
+        """
+        self._auth_provider = auth_provider
+        if api:
+            self.api = api
+        elif use_prod:
+            self.api = DataCite.PRODUCTION_URL
+        else:
+            self.api = DataCite.TEST_URL
+
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def create_doi(self, doi):
         """
         Create DOI provided via DataCite's API
@@ -112,6 +134,7 @@ class DataCite(object):
 
         return response
 
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def read_doi(self, identifier):
         """
         Get DOI provided by DataCite's API.
@@ -137,6 +160,7 @@ class DataCite(object):
 
         return response
 
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def update_doi(self, doi):
         """
         Update DOI provided via DataCite's API
@@ -162,6 +186,7 @@ class DataCite(object):
 
         return response
 
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def delete_doi(self, identifier):
         """
         Delete DOI provided via DataCite's API
@@ -316,9 +341,9 @@ class DataCite(object):
 
             metadata_service.update(guid=guid, metadata=metadata, aliases=[identifier])
 
-            logging.info(f"Updated existing record for {guid}.")
+            logging.info(f"Updated existing Gen3 metadata record for {guid}.")
             logging.debug(
-                f"Updated existing record metadata for {guid}: {existing_record}"
+                f"Updated existing Gen3 metadata record for {guid}: {existing_record}"
             )
         except requests.exceptions.HTTPError as exc:
             if is_status_code(exc, "404"):
@@ -416,6 +441,7 @@ class DigitalObjectIdentifier(object):
         "relatedIdentifiers",
         "geoLocations",
         "language",
+        "alternateIdentifiers",
         "identifiers",
         "sizes",
         "formats",
@@ -476,6 +502,8 @@ class DigitalObjectIdentifier(object):
                 publicly available
             doi_type (str, optional): a description of the resource (free-format text)
             url (str, optional): the web address of the landing page for the resource
+            root_url (str, optional): the root url for the landing page, must be used
+                in combination with `identifier` to form a final landing page url
             event (str, optional): what event to issue against the DOI
                 Event field logic per DataCite API:
                     publish - Triggers a state move from draft or registered to findable
@@ -552,7 +580,7 @@ class DigitalObjectIdentifier(object):
             )
 
     def _get_url_from_root(self):
-        return self.root_url.rstrip("/") + f"/{self.identifier}"
+        return self.root_url.rstrip("/") + f"/{self.identifier}/"
 
     def as_gen3_metadata(self, prefix=""):
         """
@@ -569,7 +597,7 @@ class DigitalObjectIdentifier(object):
                 DataCite.DOI_RESOLVER.rstrip("/") + "/" + self.identifier
             )
         if self.creators:
-            data[prefix + "creators"] = "& ".join(
+            data[prefix + "creators"] = " & ".join(
                 [item["name"] for item in self.creators]
             )
         if self.titles:
@@ -585,7 +613,7 @@ class DigitalObjectIdentifier(object):
 
         for key, value in self.optional_fields.items():
             if key == "contributors":
-                data[prefix + key] = "& ".join([item["name"] for item in value])
+                data[prefix + key] = " & ".join([item["name"] for item in value])
             elif key == "descriptions":
                 data[prefix + key] = "\n\n".join(
                     [
@@ -593,13 +621,45 @@ class DigitalObjectIdentifier(object):
                         for item in value
                     ]
                 )
+            elif key == "alternateIdentifiers":
+                # sometimes this is a list and sometimes is an object depending
+                # on which Datacite API you hit (PUT/POST/DELETE). Handle both
+                if type(value) == list:
+                    value = ", ".join(
+                        [
+                            item.get("alternateIdentifier")
+                            + f" ({item.get('alternateIdentifierType')})"
+                            for item in value
+                        ]
+                    )
+                else:
+                    value = (
+                        value.get("alternateIdentifier")
+                        + f" ({value.get('alternateIdentifierType')})"
+                    )
+
+                data[prefix + key] = value
             elif key == "identifiers":
-                data[prefix + key] = ", ".join(value)
+                # sometimes this is a list and sometimes is an object depending
+                # on which Datacite API you hit (PUT/POST/DELETE). Handle both
+                if type(value) == list:
+                    value = ", ".join(
+                        [
+                            item.get("identifier") + f" ({item.get('identifierType')})"
+                            for item in value
+                        ]
+                    )
+                else:
+                    value = (
+                        value.get("identifier") + f" ({value.get('identifierType')})"
+                    )
+
+                data[prefix + key] = value
             elif key == "fundingReferences":
                 # sometimes this is a list and sometimes is an object depending
                 # on which Datacite API you hit (PUT/POST/DELETE). Handle both
                 if type(value) == list:
-                    value = ",".join([funder.get("funderName") for funder in value])
+                    value = ", ".join([funder.get("funderName") for funder in value])
                 else:
                     value = value.get("funderName")
 
@@ -927,6 +987,52 @@ class DigitalObjectIdentifierDescription(object):
         data = {
             "description": f"{self.description}",
             "descriptionType": f"{self.description_type}",
+        }
+
+        return data
+
+
+class DigitalObjectIdenfitierAlternateID(object):
+    """
+    From the DataCite Metadata Schema V 4.4:
+
+    11 alternateIdentifier 0-n An identifier other than the
+      primary Identifier applied to the
+      resource being registered. This
+      may be any alphanumeric string
+      which is unique within its
+      domain of issue. May be used for
+      local identifiers. The
+      AlternateIdentifier should be an
+      additional identifier for the same
+      instance of the resource (i.e.,
+      same location, same file).
+      Free text
+      ***
+      Example:
+      E-GEOD-34814
+
+    11.a alternateIdentifierType
+      1 The type of the
+      AlternateIdentifier
+      Free text
+      ***
+      If alternateIdentifier is used,
+      alternateIdentifierType is
+      mandatory. For the above
+      example, the
+      alternateIdentifierType would
+      be "A local accession number"
+    """
+
+    def __init__(self, alternate_id, alternate_id_type):
+        self.alternate_id = alternate_id
+        self.alternate_id_type = alternate_id_type
+
+    def as_dict(self):
+        data = {
+            "alternateIdentifier": f"{self.alternate_id}",
+            "alternateIdentifierType": f"{self.alternate_id_type}",
         }
 
         return data

@@ -9,7 +9,7 @@ logging = get_logger("__name__")
 @click.option("--profile", help="name of the profile to name for this credentials")
 @click.option("--cred", help="path to the credentials.json")
 def configure(profile, cred):
-    """Command to configure multiple profiles with corresponding credentials
+    """[unfinished] Commands to configure multiple profiles with corresponding credentials
 
     ./gen3 configure --profile=<profile-name> --cred=<path-to-credential/cred.json>
     """

@@ -11,7 +11,7 @@ from requests.auth import HTTPBasicAuth
 from unittest.mock import MagicMock, patch
 
 try:
-    from gen3.nih import dbgapFHIR
+    from gen3.external.nih.dbgap_fhir import dbgapFHIR
 except ModuleNotFoundError as exc:
     raise ModuleNotFoundError(
         "Missing some modules for optional external API parsing. Ensure you've "
