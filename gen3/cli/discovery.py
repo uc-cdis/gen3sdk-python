@@ -13,6 +13,7 @@ from gen3.tools.metadata.discovery_objects import (
     publish_discovery_object_metadata,
     try_delete_discovery_objects,
     try_delete_discovery_objects_from_dict,
+    is_valid_object_manifest,
 )
 from gen3.utils import get_or_create_event_loop_for_thread
 
@@ -371,13 +372,16 @@ def discovery_objects_delete(
     if delete_args:
         try_delete_discovery_objects(auth, delete_args)
     if file:
-        delete_objs = {}
-        tsv_reader = csv.DictReader(file, delimiter="\t")
-        for row in tsv_reader:
-            dataset_guid = row["dataset_guid"]
-            guid = row["guid"]
-            delete_objs.setdefault(dataset_guid, set()).add(guid)
-        try_delete_discovery_objects_from_dict(auth, delete_objs)
+        if is_valid_object_manifest(file.name):
+            delete_objs = {}
+            tsv_reader = csv.DictReader(file, delimiter="\t")
+            for row in tsv_reader:
+                dataset_guid = row["dataset_guid"]
+                guid = row["guid"]
+                delete_objs.setdefault(dataset_guid, set()).add(guid)
+            try_delete_discovery_objects_from_dict(auth, delete_objs)
+        else:
+            click.echo("Invalid objects file")
 
 
 objects.add_command(discovery_objects_read, name="read")

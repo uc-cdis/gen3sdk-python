@@ -176,6 +176,8 @@ async def publish_discovery_object_metadata(
         guid_type (str): intended GUID type for publishing, defaults to discovery_metadata
         overwrite (bool): whether to allow replacing objects to a dataset_guid instead of appending
     """
+    if not is_valid_object_manifest(metadata_filename):
+        raise ValueError(f"Invalid objects file supplied {metadata_filename}")
     if endpoint:
         mds = Gen3Metadata(auth_provider=auth, endpoint=endpoint)
     else:
@@ -289,6 +291,21 @@ def try_delete_discovery_objects(auth, delete_args):
                 logging.warning(f"{guid} is not discovery metadata. Skipping.")
         except requests.exceptions.HTTPError as e:
             logging.warning(e)
+
+
+def is_valid_object_manifest(filename):
+    """
+    Checks a file for required object fields, used for publishing or deleting discovery objects
+
+    Args:
+        filename (str): the file to perform validation on
+    """
+    delimiter = "\t"
+    with open(filename, encoding="utf-8") as object_manifest:
+        csv_parser_setting = {**BASE_CSV_PARSER_SETTINGS, "delimiter": delimiter}
+        objects_reader = csv.DictReader(object_manifest, **{**csv_parser_setting})
+        columns = set(objects_reader.fieldnames)
+    return REQUIRED_OBJECT_FIELDS.issubset(columns)
 
 
 def _create_discovery_objects_filename(auth, suffix="", file_extension=".tsv"):
