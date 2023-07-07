@@ -144,16 +144,27 @@ async def output_expanded_discovery_metadata(
 
 
 def read_mds_into_cache(
-    limit, MAX_GUIDS_PER_REQUEST, mds, guid_type, use_agg_mds, metadata_cache_dir
+    limit, max_guids_per_request, mds, guid_type, use_agg_mds, metadata_cache_dir
 ):
+    """
+    Queries an mds instance for all metadata of a guid_type, and writes the data for each guid to a file in metadata_cache_dir
+
+    Args:
+        limit (int): max number of records in one operation
+        max_guids_per_request (int): max number records for one request to mds
+        mds (Gen3Metadata): an instance of Gen3Metadata for an endpoint
+        guid_type (str): intended GUID type for query, defaults to discovery_metadata
+        use_agg_mds (bool): whether to use AggMDS during export, defaults to False
+        metadata_cache_dir (TemporaryDirectory): the temporary directory to write the mds query results to
+    """
     all_fields = set()
     num_tags = 0
 
-    for offset in range(0, limit, MAX_GUIDS_PER_REQUEST):
+    for offset in range(0, limit, max_guids_per_request):
         partial_metadata = mds.query(
             f"_guid_type={guid_type}",
             return_full_metadata=True,
-            limit=min(limit, MAX_GUIDS_PER_REQUEST),
+            limit=min(limit, max_guids_per_request),
             offset=offset,
             use_agg_mds=use_agg_mds,
         )

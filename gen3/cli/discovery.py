@@ -287,6 +287,13 @@ def objects():
 def discovery_objects_read(
     ctx, dataset_guids, only_object_guids, template, output_format
 ):
+    """
+    Download the discovery objects from dataset(s) from a commons into TSV file.
+    Outputs the TSV / JSON filename with format {commons-url}-discovery_objects.tsv
+    If --only-object-guids is set, output object guids to the command line.
+    If the --template option is set, output a TSV with just the required columns with
+    format {commons-url}-discovery_objects-TEMPLATE.tsv
+    """
     auth = ctx.obj["auth_factory"].get()
     loop = get_or_create_event_loop_for_thread()
     endpoint = ctx.obj.get("endpoint")
@@ -334,6 +341,10 @@ def discovery_objects_publish(
     file,
     overwrite,
 ):
+    """
+    Run a discovery objects ingestion on a given metadata TSV file. If --overwrite is set, objects for
+    each dataset are replaced instead of appeding by default.
+    """
     auth = ctx.obj["auth_factory"].get()
 
     loop = get_or_create_event_loop_for_thread()
@@ -368,6 +379,9 @@ def discovery_objects_delete(
     delete_args,
     file,
 ):
+    """
+    Delete all discovery objects for the provided guid(s), or from the the file provided by the --file option.
+    """
     auth = ctx.obj["auth_factory"].get()
     if delete_args:
         try_delete_discovery_objects(auth, delete_args)
