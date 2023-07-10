@@ -4,9 +4,10 @@
 
 - [Overview](#overview)
 - [Export Discovery Metadata into File](#export-discovery-metadata-from-file)
-- [Publish Discovery Metadata from File]()
+- [Publish Discovery Metadata from File](#publish-discovery-metadata-from-file)
 - [DOIs in Gen3](#dois-in-gen3-discovery-metadata-and-page-for-visualizing-public-doi-metadata)
 - [dbGaP FHIR Metadata in Gen3 Discovery](#combine-dbgap-fhir-metadata-with-current-discovery-metadata)
+- [Publish Discovery Metadata Objects from File](#publish-discovery-metadata-objects-from-file)
 
 ### Overview
 
