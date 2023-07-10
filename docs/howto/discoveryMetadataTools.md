@@ -530,3 +530,34 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+
+### Publish Discovery Metadata Objects from File
+Gen3's SDK can be used to ingest data objects related to datasets in Gen3 environment from a file by using the `publish_discovery_object_metadata()` function. To obtain a file of existing metadata objects, use the `output_discovery_objects()` function. By default new objects published from a file are appended to a dataset in a Gen3 environment. If object guids from a file already exist for a dataset in the Gen3 environment, objects are updated. If the `overwrite` option is `True`, all current metadata objects related to a dataset are instead replaced.
+
+Example of usage:
+```python
+from gen3.tools.metadata.discovery_objects import (
+    publish_discovery_object_metadata,
+)
+from gen3.utils import get_or_create_event_loop_for_thread
+from gen3.auth import Gen3Auth
+
+if __name__ == "__main__":
+    auth = Gen3Auth()
+    loop = get_or_create_event_loop_for_thread()
+    output_filename = loop.run_until_complete(
+        output_discovery_objects(
+            auth,
+            endpoint=HOSTNAME,
+            output_format="tsv",
+        )
+    )
+    loop.run_until_complete(
+        publish_discovery_metadata(
+            auth,
+            "./metadata_objects.tsv",
+            endpoint=HOSTNAME,
+            overwrite=False,
+        )
+    )
+```
