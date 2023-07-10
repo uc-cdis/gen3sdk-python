@@ -4,9 +4,10 @@
 
 - [Overview](#overview)
 - [Export Discovery Metadata into File](#export-discovery-metadata-from-file)
-- [Publish Discovery Metadata from File]()
+- [Publish Discovery Metadata from File](#publish-discovery-metadata-from-file)
 - [DOIs in Gen3](#dois-in-gen3-discovery-metadata-and-page-for-visualizing-public-doi-metadata)
 - [dbGaP FHIR Metadata in Gen3 Discovery](#combine-dbgap-fhir-metadata-with-current-discovery-metadata)
+- [Publish Discovery Metadata Objects from File](#publish-discovery-metadata-objects-from-file)
 
 ### Overview
 
@@ -529,4 +530,56 @@ def main():
 
 if __name__ == "__main__":
     main()
+```
+
+### Publish Discovery Metadata Objects from File
+Gen3's SDK can be used to ingest data objects related to datasets in Gen3 environment from a file by using the `publish_discovery_object_metadata()` function. To obtain a file of existing metadata objects, use the `output_discovery_objects()` function. By default new objects published from a file are appended to a dataset in a Gen3 environment. If object guids from a file already exist for a dataset in the Gen3 environment, objects are updated. If the `overwrite` option is `True`, all current metadata objects related to a dataset are instead replaced. You can also use this functionality from the CLI. See `gen3 discovery objects --help`
+
+Example of usage:
+```python
+"""
+Example script showing reading Discovery Objects Metadata and then
+publishing it back, just to demonstrate the functions.
+
+Before running this, ensure your ~/.gen3/credentials.json contains
+an API key for a Gen3 instance to interact with and/or adjust the
+Gen3Auth logic to provide auth in another way
+"""
+from cdislogging import get_logger
+
+from gen3.tools.metadata.discovery_objects import (
+    publish_discovery_object_metadata,
+    output_discovery_objects,
+)
+from gen3.utils import get_or_create_event_loop_for_thread
+from gen3.auth import Gen3Auth
+
+logging = get_logger("__name__")
+
+if __name__ == "__main__":
+    auth = Gen3Auth()
+    loop = get_or_create_event_loop_for_thread()
+    logging.info(f"Reading discovery objects metadata from: {auth.endpoint}...")
+    output_filename = loop.run_until_complete(
+        output_discovery_objects(
+            auth,
+            output_format="tsv",
+        )
+    )
+    logging.info(f"Output discovery objects metadata: {output_filename}")
+
+    # Here you can modify the file by hand or in code and then publish to update
+    # Alternatively, you can skip the read above and just provide a file with
+    # the object metadata you want to publish
+
+    logging.info(
+        f"publishing discovery object metadata to: {auth.endpoint} from file: {output_filename}"
+    )
+    loop.run_until_complete(
+        publish_discovery_object_metadata(
+            auth,
+            output_filename,
+            overwrite=False,
+        )
+    )
 ```
