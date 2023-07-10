@@ -19,6 +19,7 @@ from gen3.tools.metadata.discovery import (
 )
 
 REQUIRED_OBJECT_FIELDS = {"dataset_guid", "guid", "display_name"}
+OPTIONAL_OBJECT_FIELDS = {"description", "type"}
 
 logging = get_logger("__name__")
 
@@ -52,7 +53,14 @@ async def output_discovery_objects(
     """
     if template:
         output_filename = _create_discovery_objects_filename(auth, "TEMPLATE", ".tsv")
-        object_fields = ["guid", "dataset_guid", "display_name"]
+        object_fields = list(REQUIRED_OBJECT_FIELDS)
+        object_fields.remove("dataset_guid")
+        object_fields.remove("guid")
+        object_fields = (
+            ["dataset_guid", "guid"]
+            + object_fields
+            + sorted(list(OPTIONAL_OBJECT_FIELDS))
+        )
         with open(output_filename, "w+", encoding="utf-8") as output_file:
             writer = csv.DictWriter(
                 output_file,
@@ -61,7 +69,7 @@ async def output_discovery_objects(
             writer.writeheader()
         return output_filename
 
-    if output_format != "tsv" and output_format != "json":
+    if output_format.lower() != "tsv" and output_format != "json":
         logging.error(
             f"Unsupported output file format {output_format}! Only tsv or json is allowed"
         )
@@ -125,8 +133,10 @@ async def output_discovery_objects(
                             obj["dataset_guid"] = guid
                         all_objects += curr_objects
             object_fields.remove("guid")
+            object_fields.remove("dataset_guid")
+            object_fields.remove("display_name")
             object_fields = sorted(object_fields)
-            object_fields.insert(0, "guid")
+            object_fields = ["dataset_guid", "guid", "display_name"] + object_fields
 
             with open(output_filename, "w+", encoding="utf-8") as output_file:
                 writer = csv.DictWriter(
@@ -149,7 +159,11 @@ async def output_discovery_objects(
                 true_guid = guid
                 if use_agg_mds:
                     true_guid = guid.split("__")[1]
-                metadata = partial_metadata[guid]["gen3_discovery"]["objects"]
+                metadata = (
+                    partial_metadata[guid]["gen3_discovery"]["objects"]
+                    if "objects" in partial_metadata[guid]["gen3_discovery"].keys()
+                    else []
+                )
                 for obj in metadata:
                     output_metadata.append({"dataset_guid": true_guid, **obj})
 
@@ -232,9 +246,16 @@ async def publish_discovery_object_metadata(
                     dataset_guid
                 ]["objects"]
             else:
-                curr_dataset_metadata["gen3_discovery"]["objects"] += dataset_dict[
-                    dataset_guid
-                ]["objects"]
+                curr_dataset_dict = {
+                    curr_obj["guid"]: curr_obj
+                    for curr_obj in curr_dataset_metadata["gen3_discovery"]["objects"]
+                }
+                for new_obj in dataset_dict[dataset_guid]["objects"]:
+                    curr_dataset_dict[new_obj["guid"]] = new_obj
+
+                curr_dataset_metadata["gen3_discovery"]["objects"] = list(
+                    curr_dataset_dict.values()
+                )
 
             pending_requests += [
                 mds.async_create(dataset_guid, curr_dataset_metadata, overwrite=True)
@@ -242,6 +263,7 @@ async def publish_discovery_object_metadata(
             if len(pending_requests) == MAX_CONCURRENT_REQUESTS:
                 await asyncio.gather(*pending_requests)
                 pending_requests = []
+            logging.info(f"Updated objects for Discovery Dataset: {dataset_guid}")
         await asyncio.gather(*pending_requests)
 
 
@@ -251,7 +273,7 @@ def try_delete_discovery_objects_from_dict(auth, delete_objs):
 
     Args:
         auth (Gen3Auth): a Gen3Auth object
-        delete_args (dict): a dict of dataset_guid keys with a list of object_guid values
+        delete_objs (dict): a dict of dataset_guid keys with a list of object_guid values
     """
     mds = Gen3Metadata(auth_provider=auth)
     for dataset_guid, objects_to_delete in delete_objs.items():
@@ -266,20 +288,21 @@ def try_delete_discovery_objects_from_dict(auth, delete_objs):
                 ]
                 metadata["gen3_discovery"]["objects"] = curr_objects
                 mds.create(dataset_guid, metadata, overwrite=True)
+                logging.info(f"Deleted objects for Discovery Dataset: {dataset_guid}")
         except requests.exceptions.HTTPError as e:
             logging.warning(e)
 
 
-def try_delete_discovery_objects(auth, delete_args):
+def try_delete_discovery_objects(auth, guids):
     """
     Delete all discovery objects from one or more datasets
 
     Args:
         auth (Gen3Auth): a Gen3Auth object
-        delete_args (tuple of str): a tuple of datasets
+        guids (tuple of str): a tuple of datasets
     """
     mds = Gen3Metadata(auth_provider=auth)
-    for arg in delete_args:
+    for arg in guids:
         # delete all objects from dataset_guid
         try:
             metadata = mds.get(arg)
@@ -287,6 +310,7 @@ def try_delete_discovery_objects(auth, delete_args):
                 if "objects" in metadata["gen3_discovery"].keys():
                     metadata["gen3_discovery"]["objects"] = []
                     mds.create(arg, metadata, overwrite=True)
+                    logging.info(f"Deleted objects for Discovery Dataset: {arg}")
             else:
                 logging.warning(f"{guid} is not discovery metadata. Skipping.")
         except requests.exceptions.HTTPError as e:
@@ -305,6 +329,10 @@ def is_valid_object_manifest(filename):
         csv_parser_setting = {**BASE_CSV_PARSER_SETTINGS, "delimiter": delimiter}
         objects_reader = csv.DictReader(object_manifest, **{**csv_parser_setting})
         columns = set(objects_reader.fieldnames)
+        required_fields = REQUIRED_OBJECT_FIELDS.copy()
+        missing_columns = required_fields - columns
+        if missing_columns:
+            logging.error(f"Missing required column(s) {missing_columns}.")
     return REQUIRED_OBJECT_FIELDS.issubset(columns)
 
 

@@ -9,6 +9,7 @@ from gen3.tools.metadata.discovery_objects import (
     output_discovery_objects,
     BASE_CSV_PARSER_SETTINGS,
     REQUIRED_OBJECT_FIELDS,
+    OPTIONAL_OBJECT_FIELDS,
 )
 
 
@@ -150,7 +151,7 @@ def test_discovery_objects_read_template(
 ):
     """
     Test that when reading discovery objects with the template option, the resulting output
-    has just the required columns and no object rows.
+    has just the template columns and no object rows.
     """
     guid1_discovery_metadata = MOCK_METADATA_1
     guid2_discovery_metadata = MOCK_METADATA_2
@@ -171,7 +172,9 @@ def test_discovery_objects_read_template(
             )
         )
         tsv_reader3 = csv.DictReader(outfile, **BASE_CSV_PARSER_SETTINGS)
-        assert set(tsv_reader3.fieldnames) == REQUIRED_OBJECT_FIELDS
+        assert set(tsv_reader3.fieldnames) == REQUIRED_OBJECT_FIELDS.union(
+            OPTIONAL_OBJECT_FIELDS
+        )
         tsv_rows3 = list(tsv_reader3)
         assert len(tsv_rows3) == 0
 

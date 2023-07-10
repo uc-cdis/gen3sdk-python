@@ -185,7 +185,7 @@ class Gen3Auth(AuthBase):
         client_credentials=None,
         client_scopes=None,
     ):
-        logging.debug("Initatializing auth..")
+        logging.debug("Initializing auth..")
         self.endpoint = remove_trailing_whitespace_and_slashes_in_url(endpoint)
         # note - `_refresh_token` is not actually a JWT refresh token - it's a
         #  gen3 api key with a token as the "api_key" property

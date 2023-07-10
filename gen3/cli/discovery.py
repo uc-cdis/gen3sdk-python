@@ -66,6 +66,12 @@ def discovery_publish(ctx, file, use_default_file, omit_empty, guid_type, guid_f
     Run a discovery metadata ingestion on a given metadata TSV / JSON file with guid column / field.
     If [FILE] is omitted and --default-file not set, prompts for TSV / JSON file name.
     """
+    if is_valid_object_manifest(file):
+        click.confirm(
+            "It appears like you are attempting to publish from a discovery objects file. Are you sure you want proceed with publishing?",
+            abort=True,
+        )
+
     auth = ctx.obj["auth_factory"].get()
     if not file and not use_default_file:
         file = click.prompt("Enter discovery metadata TSV / JSON file to publish")
@@ -363,7 +369,7 @@ def discovery_objects_publish(
     help="Delete objects related to datasets in TSV file or list of dataset_guids"
 )
 @click.argument(
-    "delete_args",
+    "guids",
     nargs=-1,
 )
 @click.option(
@@ -376,15 +382,16 @@ def discovery_objects_publish(
 @click.pass_context
 def discovery_objects_delete(
     ctx,
-    delete_args,
+    guids,
     file,
 ):
     """
     Delete all discovery objects for the provided guid(s), or from the the file provided by the --file option.
+    [GUIDS] argument is a variable number of dataset GUIDs, e.g. 'phs000001.v1.p1.c1 phs000002.v1.p1.c1'
     """
     auth = ctx.obj["auth_factory"].get()
-    if delete_args:
-        try_delete_discovery_objects(auth, delete_args)
+    if guids:
+        try_delete_discovery_objects(auth, guids)
     if file:
         if is_valid_object_manifest(file.name):
             delete_objs = {}
