@@ -537,6 +537,16 @@ Gen3's SDK can be used to ingest data objects related to datasets in Gen3 enviro
 
 Example of usage:
 ```python
+"""
+Example script showing reading Discovery Objects Metadata and then
+publishing it back, just to demonstrate the functions.
+
+Before running this, ensure your ~/.gen3/credentials.json contains
+an API key for a Gen3 instance to interact with and/or adjust the
+Gen3Auth logic to provide auth in another way
+"""
+from cdislogging import get_logger
+
 from gen3.tools.metadata.discovery_objects import (
     publish_discovery_object_metadata,
     output_discovery_objects,
@@ -544,21 +554,31 @@ from gen3.tools.metadata.discovery_objects import (
 from gen3.utils import get_or_create_event_loop_for_thread
 from gen3.auth import Gen3Auth
 
+logging = get_logger("__name__")
+
 if __name__ == "__main__":
     auth = Gen3Auth()
     loop = get_or_create_event_loop_for_thread()
+    logging.info(f"Reading discovery objects metadata from: {auth.endpoint}...")
     output_filename = loop.run_until_complete(
         output_discovery_objects(
             auth,
-            endpoint=HOSTNAME,
             output_format="tsv",
         )
+    )
+    logging.info(f"Output discovery objects metadata: {output_filename}")
+
+    # Here you can modify the file by hand or in code and then publish to update
+    # Alternatively, you can skip the read above and just provide a file with
+    # the object metadata you want to publish
+
+    logging.info(
+        f"publishing discovery object metadata to: {auth.endpoint} from file: {output_filename}"
     )
     loop.run_until_complete(
         publish_discovery_object_metadata(
             auth,
-            "./metadata_objects.tsv",
-            endpoint=HOSTNAME,
+            output_filename,
             overwrite=False,
         )
     )
