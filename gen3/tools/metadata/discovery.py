@@ -435,6 +435,7 @@ async def publish_discovery_metadata(
     with open(metadata_filename, encoding="utf-8") as metadata_file:
         if is_json_metadata:
             metadata_reader = json.load(metadata_file)
+            tag_columns = []
         else:
             csv_parser_setting = {**BASE_CSV_PARSER_SETTINGS, "delimiter": delimiter}
             if is_unregistered_metadata:
