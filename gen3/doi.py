@@ -272,9 +272,9 @@ class DataCite(object):
                 )
             # `Creator (PublicationYear). Title. Version. Publisher. ResourceType. Identifier`
             metadata[prefix + "citation"] = (
-                f"{', '.join([creator.get('name') for creator in doi.creators])} "
+                f"{'& '.join([creator.get('name') for creator in doi.creators])} "
                 f"({doi.publication_year}). "
-                f"{', '.join([titles.get('title') for titles in doi.titles])} "
+                f"{'& '.join([titles.get('title') for titles in doi.titles])} "
                 f"{str(doi.optional_fields.get('version', '1'))}. "
                 f"{doi.publisher}. {doi.doi_type}. {doi.identifier}"
             )
