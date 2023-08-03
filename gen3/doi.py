@@ -593,7 +593,7 @@ class DigitalObjectIdentifier(object):
 
         if self.identifier:
             data[prefix + "identifier"] = self.identifier
-            data[prefix + "resolveable_link"] = (
+            data[prefix + "resolvable_link"] = (
                 DataCite.DOI_RESOLVER.rstrip("/") + "/" + self.identifier
             )
         if self.creators:

@@ -419,7 +419,7 @@ def test_doi_metadata_persist(
         "_guid_type": "discovery_metadata",
         "gen3_discovery": {
             "doi_identifier": identifier,
-            "doi_resolveable_link": f"https://doi.org/{identifier}",
+            "doi_resolvable_link": f"https://doi.org/{identifier}",
             "doi_creators": "Bar, Foo",
             "doi_titles": "Some Example Study in Gen3",
             "doi_publisher": "Example Gen3 Sponsor",
