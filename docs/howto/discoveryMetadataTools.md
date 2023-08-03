@@ -233,7 +233,7 @@ DOI url.
             "doi_contributors",
             "doi_descriptions",
             "doi_publication_year",
-            "doi_resolveable_link",
+            "doi_resolvable_link",
             "doi_fundingReferences",
             "doi_relatedIdentifiers"
           ]
@@ -263,7 +263,7 @@ DOI url.
                   {
                     "type": "link",
                     "label": "DOI:",
-                    "sourceField": "doi_resolveable_link",
+                    "sourceField": "doi_resolvable_link",
                     "default": "None"
                   },
                   {
