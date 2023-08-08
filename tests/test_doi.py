@@ -21,13 +21,13 @@ from gen3.doi import (
 
 
 @pytest.mark.parametrize(
-    "expect_failure,doi_type,prefix,identifier,creators,titles,publisher,publication_year,descriptions",
+    "expect_failure,doi_type_general,doi_type,prefix,identifier,creators,titles,publisher,publication_year,descriptions",
     [
         # everything normal
         (
             False,
             "Dataset",
-            "10.12345",
+            "Dataset Record" "10.12345",
             "ID1234",
             ["test"],
             ["test title"],
@@ -187,6 +187,7 @@ def test_create_doi(
     expect_failure,
     prefix,
     identifier,
+    doi_type_general,
     doi_type,
     creators,
     titles,
@@ -211,6 +212,7 @@ def test_create_doi(
                 titles=titles,
                 publisher=publisher,
                 publication_year=publication_year,
+                doi_type_general=doi_type_general,
                 doi_type=doi_type,
                 url="https://example.com",
                 version="0.1",
@@ -225,6 +227,7 @@ def test_create_doi(
             titles=titles,
             publisher=publisher,
             publication_year=publication_year,
+            doi_type_general=doi_type_general,
             doi_type=doi_type,
             url="https://example.com",
             version="0.1",
@@ -263,7 +266,11 @@ def test_create_doi(
             assert title in data_in_request.get("titles")
         assert data_in_request.get("publisher") == publisher
         assert data_in_request.get("publicationYear") == publication_year
-        assert data_in_request.get("types", {}).get("resourceTypeGeneral") == doi_type
+        assert (
+            data_in_request.get("types", {}).get("resourceTypeGeneral")
+            == doi_type_general
+        )
+        assert data_in_request.get("types", {}).get("resourceType") == doi_type
         for description in descriptions:
             assert description in data_in_request.get("descriptions")
 
@@ -329,7 +336,8 @@ def test_doi_metadata_persist(
     titles = [DigitalObjectIdentifierTitle("Some Example Study in Gen3").as_dict()]
     publisher = "Example Gen3 Sponsor"
     publication_year = 2023
-    doi_type = "Dataset"
+    doi_type_general = "Dataset"
+    doi_type = "Dataset Record"
     version = 1
 
     doi_metadata = {
@@ -338,6 +346,7 @@ def test_doi_metadata_persist(
         "titles": titles,
         "publisher": publisher,
         "publication_year": publication_year,
+        "doi_type_general": doi_type_general,
         "doi_type": doi_type,
         "version": version,
     }

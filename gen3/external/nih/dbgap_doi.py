@@ -120,7 +120,7 @@ class dbgapDOI(ExternalMetadataSourceInterface):
             doi_metadata["publication_year"] = dbgapDOI._get_doi_publication_year(
                 phsid, dbgap_fhir_metadata
             )
-            doi_metadata["doi_type"] = "Dataset"
+            doi_metadata["doi_type_general"] = "Dataset"
 
             # publisher is provided
             doi_metadata["publisher"] = self.publisher
