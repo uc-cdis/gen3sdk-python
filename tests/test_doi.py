@@ -27,7 +27,8 @@ from gen3.doi import (
         (
             False,
             "Dataset",
-            "Dataset Record" "10.12345",
+            "Dataset Record",
+            "10.12345",
             "ID1234",
             ["test"],
             ["test title"],
