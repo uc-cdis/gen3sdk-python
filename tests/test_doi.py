@@ -27,7 +27,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
-            "Dataset Record",
+            None,
             "10.12345",
             "ID1234",
             ["test"],
@@ -40,6 +40,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test"],
@@ -52,6 +53,20 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
+            "10.12345",
+            "ID1234",
+            ["test"],
+            ["test title"],
+            "test",
+            2000,
+            ["this is a test description"],
+        ),
+        # providing both DOI Type General and DOI Type
+        (
+            False,
+            "Other",
+            "Study Record",
             "10.12345",
             "ID1234",
             ["test"],
@@ -64,6 +79,7 @@ from gen3.doi import (
         (
             True,
             "Not a valid doi type",
+            None,
             "10.12345",
             "ID1234",
             ["test"],
@@ -78,6 +94,7 @@ from gen3.doi import (
             "Dataset",
             None,
             None,
+            None,
             ["test"],
             ["test title"],
             "test",
@@ -88,6 +105,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test", "!@#$% ^&*|\\O({@[< >?;:]})", "Name. MIDDLE Last"],
@@ -100,6 +118,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test"],
@@ -112,6 +131,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test"],
@@ -124,6 +144,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test"],
@@ -136,6 +157,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test"],
@@ -148,6 +170,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test", "test2", "test3"],
@@ -160,6 +183,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test"],
@@ -172,6 +196,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test"],
@@ -338,7 +363,7 @@ def test_doi_metadata_persist(
     publisher = "Example Gen3 Sponsor"
     publication_year = 2023
     doi_type_general = "Dataset"
-    doi_type = "Dataset Record"
+    doi_type = ""
     version = 1
 
     doi_metadata = {
@@ -434,7 +459,7 @@ def test_doi_metadata_persist(
             "doi_titles": "Some Example Study in Gen3",
             "doi_publisher": "Example Gen3 Sponsor",
             "doi_publication_year": 2023,
-            "doi_resource_type": "Dataset",
+            "doi_resource_type_general": "Dataset",
             "doi_url": f"foobar/{identifier}/",
             "doi_version": 1,
             "doi_is_available": "Yes",
