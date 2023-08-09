@@ -21,12 +21,13 @@ from gen3.doi import (
 
 
 @pytest.mark.parametrize(
-    "expect_failure,doi_type,prefix,identifier,creators,titles,publisher,publication_year,descriptions",
+    "expect_failure,doi_type_general,doi_type,prefix,identifier,creators,titles,publisher,publication_year,descriptions",
     [
         # everything normal
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test"],
@@ -39,6 +40,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test"],
@@ -51,6 +53,20 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
+            "10.12345",
+            "ID1234",
+            ["test"],
+            ["test title"],
+            "test",
+            2000,
+            ["this is a test description"],
+        ),
+        # providing both DOI Type General and DOI Type
+        (
+            False,
+            "Other",
+            "Study Record",
             "10.12345",
             "ID1234",
             ["test"],
@@ -63,6 +79,7 @@ from gen3.doi import (
         (
             True,
             "Not a valid doi type",
+            None,
             "10.12345",
             "ID1234",
             ["test"],
@@ -77,6 +94,7 @@ from gen3.doi import (
             "Dataset",
             None,
             None,
+            None,
             ["test"],
             ["test title"],
             "test",
@@ -87,6 +105,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test", "!@#$% ^&*|\\O({@[< >?;:]})", "Name. MIDDLE Last"],
@@ -99,6 +118,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test"],
@@ -111,6 +131,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test"],
@@ -123,6 +144,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test"],
@@ -135,6 +157,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test"],
@@ -147,6 +170,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test", "test2", "test3"],
@@ -159,6 +183,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test"],
@@ -171,6 +196,7 @@ from gen3.doi import (
         (
             False,
             "Dataset",
+            None,
             "10.12345",
             "ID1234",
             ["test"],
@@ -187,6 +213,7 @@ def test_create_doi(
     expect_failure,
     prefix,
     identifier,
+    doi_type_general,
     doi_type,
     creators,
     titles,
@@ -211,6 +238,7 @@ def test_create_doi(
                 titles=titles,
                 publisher=publisher,
                 publication_year=publication_year,
+                doi_type_general=doi_type_general,
                 doi_type=doi_type,
                 url="https://example.com",
                 version="0.1",
@@ -225,6 +253,7 @@ def test_create_doi(
             titles=titles,
             publisher=publisher,
             publication_year=publication_year,
+            doi_type_general=doi_type_general,
             doi_type=doi_type,
             url="https://example.com",
             version="0.1",
@@ -263,7 +292,11 @@ def test_create_doi(
             assert title in data_in_request.get("titles")
         assert data_in_request.get("publisher") == publisher
         assert data_in_request.get("publicationYear") == publication_year
-        assert data_in_request.get("types", {}).get("resourceTypeGeneral") == doi_type
+        assert (
+            data_in_request.get("types", {}).get("resourceTypeGeneral")
+            == doi_type_general
+        )
+        assert data_in_request.get("types", {}).get("resourceType") == doi_type
         for description in descriptions:
             assert description in data_in_request.get("descriptions")
 
@@ -329,7 +362,8 @@ def test_doi_metadata_persist(
     titles = [DigitalObjectIdentifierTitle("Some Example Study in Gen3").as_dict()]
     publisher = "Example Gen3 Sponsor"
     publication_year = 2023
-    doi_type = "Dataset"
+    doi_type_general = "Dataset"
+    doi_type = ""
     version = 1
 
     doi_metadata = {
@@ -338,6 +372,7 @@ def test_doi_metadata_persist(
         "titles": titles,
         "publisher": publisher,
         "publication_year": publication_year,
+        "doi_type_general": doi_type_general,
         "doi_type": doi_type,
         "version": version,
     }
@@ -424,7 +459,7 @@ def test_doi_metadata_persist(
             "doi_titles": "Some Example Study in Gen3",
             "doi_publisher": "Example Gen3 Sponsor",
             "doi_publication_year": 2023,
-            "doi_resource_type": "Dataset",
+            "doi_resource_type_general": "Dataset",
             "doi_url": f"foobar/{identifier}/",
             "doi_version": 1,
             "doi_is_available": "Yes",

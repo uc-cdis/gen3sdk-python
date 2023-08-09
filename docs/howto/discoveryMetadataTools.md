@@ -149,7 +149,7 @@ def test_manual_single_doi(publish_dois=False):
   titles = [DigitalObjectIdentifierTitle("Some Example Study in Gen3").as_dict()]
   publisher = "Example Gen3 Sponsor"
   publication_year = 2023
-  doi_type = "Dataset"
+  doi_type_general = "Dataset"
   version = 1
 
   doi_metadata = {
@@ -158,7 +158,7 @@ def test_manual_single_doi(publish_dois=False):
     "titles": titles,
     "publisher": publisher,
     "publication_year": publication_year,
-    "doi_type": doi_type,
+    "doi_type_general": doi_type_general,
     "version": version,
   }
 

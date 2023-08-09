@@ -56,7 +56,8 @@ class DataCite(object):
             titles=["test"],
             publisher="test",
             publication_year=2023,
-            doi_type="Dataset",
+            doi_type_general="Other",
+            doi_type="Study Record",
             url="https://example.com",
             version="0.1",
             descriptions=[{"description": "this is a test resource"}],
@@ -276,7 +277,7 @@ class DataCite(object):
                 f"({doi.publication_year}). "
                 f"{'& '.join([titles.get('title') for titles in doi.titles])} "
                 f"{str(doi.optional_fields.get('version', '1'))}. "
-                f"{doi.publisher}. {doi.doi_type}. {doi.identifier}"
+                f"{doi.publisher}. {doi.doi_type_general}. {doi.identifier}"
             )
         if additional_metadata.get("citation"):
             del additional_metadata["citation"]
@@ -292,7 +293,7 @@ class DataCite(object):
                 )
             metadata[
                 prefix + "version_information"
-            ] = f"This is version {doi.optional_fields.get('version', '1')} of this {doi.doi_type}."
+            ] = f"This is version {doi.optional_fields.get('version', '1')} of this {doi.doi_type_general}."
         if additional_metadata.get("version_information"):
             del additional_metadata["version_information"]
 
@@ -460,6 +461,7 @@ class DigitalObjectIdentifier(object):
         titles=None,
         publisher=None,
         publication_year=None,
+        doi_type_general=None,
         doi_type=None,
         url=None,
         root_url=None,
@@ -500,6 +502,7 @@ class DigitalObjectIdentifier(object):
                 Contributor/contributorType/ hostingInstitution for the code repository.
             publication_year (int, optional): the year the data or resource was or will be made
                 publicly available
+            doi_type_general (str, optional): a description of the general type of a resource. (controlled list values, see https://support.datacite.org/docs/datacite-metadata-schema-v44-mandatory-properties#10a-resourcetypegeneral)
             doi_type (str, optional): a description of the resource (free-format text)
             url (str, optional): the web address of the landing page for the resource
             root_url (str, optional): the root url for the landing page, must be used
@@ -517,7 +520,10 @@ class DigitalObjectIdentifier(object):
         self.titles = titles or []
         self.publisher = publisher
         self.publication_year = publication_year
-        self.doi_type = doi_type or DigitalObjectIdentifier.DEFAULT_DOI_TYPE
+        self.doi_type_general = (
+            doi_type_general or DigitalObjectIdentifier.DEFAULT_DOI_TYPE
+        )
+        self.doi_type = doi_type
         self.url = url
         self.root_url = root_url
         self.event = event
@@ -573,10 +579,13 @@ class DigitalObjectIdentifier(object):
 
             self.url = self._get_url_from_root()
 
-        if doi_type and doi_type not in DigitalObjectIdentifier.RESOURCE_GENERAL_TYPES:
-            logging.error(f"{doi_type} is not an accepted resourceTypeGeneral")
+        if (
+            doi_type_general
+            and doi_type_general not in DigitalObjectIdentifier.RESOURCE_GENERAL_TYPES
+        ):
+            logging.error(f"{doi_type_general} is not an accepted resourceTypeGeneral")
             raise DataCiteDOIValidationError(
-                f"{doi_type} is not an accepted resourceTypeGeneral"
+                f"{doi_type_general} is not an accepted resourceTypeGeneral"
             )
 
     def _get_url_from_root(self):
@@ -606,6 +615,8 @@ class DigitalObjectIdentifier(object):
             data[prefix + "publisher"] = self.publisher
         if self.publication_year:
             data[prefix + "publication_year"] = self.publication_year
+        if self.doi_type_general:
+            data[prefix + "resource_type_general"] = self.doi_type_general
         if self.doi_type:
             data[prefix + "resource_type"] = self.doi_type
         if self.url:
@@ -688,8 +699,14 @@ class DigitalObjectIdentifier(object):
             data["data"]["attributes"]["publisher"] = self.publisher
         if self.publication_year:
             data["data"]["attributes"]["publicationYear"] = self.publication_year
+        if self.doi_type_general:
+            data["data"]["attributes"]["types"] = {
+                "resourceTypeGeneral": self.doi_type_general
+            }
+        else:
+            data["data"]["attributes"]["types"] = {}
         if self.doi_type:
-            data["data"]["attributes"]["types"] = {"resourceTypeGeneral": self.doi_type}
+            data["data"]["attributes"]["types"].update({"resourceType": self.doi_type})
         if self.url:
             data["data"]["attributes"]["url"] = self.url
         if self.event:
@@ -979,7 +996,7 @@ class DigitalObjectIdentifierDescription(object):
                 f"Provided description_type '{description_type}' is NOT in {allowed_types}. "
                 f"Defaulting to '{DigitalObjectIdentifierDescription.TYPE_ABSTRACT}'."
             )
-            description_type = DigitalObjectIdentifierDescription.NAME_TYPE_PERSON
+            description_type = DigitalObjectIdentifierDescription.TYPE_ABSTRACT
 
         self.description_type = description_type
 
