@@ -67,6 +67,12 @@ You should see something like:
 Datafile05_T.csv    : 100%|████████████████████████████████████████████████████████████████████████| 3.72M/3.72M [00:01<00:00, 1.92MiB/s]
 ```
 
+To download a list of files, you can use the `drs-pull objects` command:
+
+```
+gen3 --endpoint my-commons.org --auth <path to API key> drs-pull objects dg.XXTS/181af989-5d66-4139-91e7-69f4570ccd41 dg.XX22/221af922-2222-2239-22e7-62f4570cc222
+```
+
 ### Listing Files and Access
 
 #### List Contents
@@ -93,6 +99,7 @@ BIG_DataCollection.5.2.1.7695.1700.100392922143281268049004312967/1.3.6.1.4.1.14
     ├── BIG_Datafile.177741488444741406265552879434.dcm#1592595549340161    527.66 KB test.datacommons4.io 09/19/2020, 09:12:09
     └── BIG_Datafile.193538014659307853778370216921.dcm#1592595549438034    527.66 KB test.datacommons4.io 09/18/2020, 14:48:53
 ```
+
 #### List Access
 Given a manifest or DRS object id, you can query the access rights for that object's host commons, or in the case of a manifest all of the host commons
 
