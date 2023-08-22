@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 from gen3.auth import Gen3Auth
 from gen3.discovery_dois import mint_dois_for_discovery_datasets, GetMetadataInterface
 from gen3.utils import get_random_alphanumeric
+from gen3.doi import DigitalObjectIdentifier
 
 PREFIX = "10.12345"
 PUBLISHER = "Example"
@@ -27,7 +28,9 @@ DOI_CONTACT = "DOI_CONTACT"
 @patch("gen3.doi.requests.get")
 @patch("gen3.doi.requests.post")
 @patch("gen3.doi.requests.put")
+@patch("gen3.doi.DigitalObjectIdentifier")
 def test_mint_discovery_dois_first_time(
+    mock_digital_object_identifier,
     update_doi_requests_mock,
     create_doi_requests_mock,
     get_doi_requests_mock,
@@ -112,6 +115,7 @@ def test_mint_discovery_dois_first_time(
 
     # check that persist is called with the right stuff
     assert mock_persist_doi_metadata_in_gen3.call_count == 3
+    assert mock_digital_object_identifier.call_count == 3
     calls = {
         call.kwargs.get("guid"): call.kwargs
         for call in mock_persist_doi_metadata_in_gen3.call_args_list

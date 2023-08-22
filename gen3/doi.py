@@ -750,6 +750,10 @@ class DigitalObjectIdentifier(object):
             publisher=raw_attributes.get("publisher"),
             publication_year=raw_attributes.get("publicationYear"),
             url=raw_attributes.get("url"),
+            doi_type=raw_attributes.get("types", {}).get("resourceType", None),
+            doi_type_general=raw_attributes.get("types", {}).get(
+                "resourceTypeGeneral", None
+            ),
             **attributes,
         )
 
