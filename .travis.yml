@@ -13,7 +13,7 @@ jobs:
   - python: 3.10
 before_install:
 - pip install --upgrade pip
-# temp downgrading poetry from 1.6.x+ until https://github.com/orgs/python-poetry/discussions/8345 has been answered
+# cannot update poetry to 1.6.x+ until we can update urllib3 >= 2.0.0, see https://github.com/orgs/python-poetry/discussions/8345
 - pip install poetry==1.5.1
 - which poetry
 - poetry --version
