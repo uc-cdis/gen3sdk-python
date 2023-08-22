@@ -1,4 +1,6 @@
 import click
+import json
+
 from cdislogging import get_logger
 
 from gen3.tools.download.drs_download import (
@@ -94,7 +96,6 @@ def download_manifest(
 
 @click.command()
 @click.argument("object_id")
-@click.argument("output-dir", default=".")
 @click.option(
     "--no-progress",
     is_flag=True,
@@ -111,6 +112,11 @@ def download_manifest(
     "--delete-unpacked-packages",
     is_flag=True,
     help="delete package files after unpacking them",
+    show_default=True,
+)
+@click.option(
+    "--output-dir",
+    default=".",
     show_default=True,
 )
 @click.pass_context
@@ -159,12 +165,17 @@ def download_object(
         logger.info("All objects downloaded successfully.")
     else:
         logger.error(f"One or more objects have failed to be downloaded. Details:")
-        click.echo(results)
+
+    click.echo(json.dumps(results))
 
 
 @click.command()
 @click.argument("object_ids", nargs=-1)
-@click.argument("output-dir", default=".")
+@click.option(
+    "--output-dir",
+    default=".",
+    show_default=True,
+)
 @click.option(
     "--no-progress",
     is_flag=True,
@@ -186,8 +197,8 @@ def download_object(
 @click.pass_context
 def download_objects(
     ctx,
-    object_ids: list,
     output_dir: str,
+    object_ids: list,
     no_progress: bool,
     no_unpack_packages: bool,
     delete_unpacked_packages: bool,
@@ -207,6 +218,7 @@ def download_objects(
     }
 
     logger.info(f"GA4GH DRS Object Streaming Starting...")
+    logger.debug(f"object_ids: {object_ids}")
     for object_id in object_ids:
         res = download_drs_object(
             ctx.obj["endpoint"],
@@ -229,7 +241,8 @@ def download_objects(
         logger.info("All objects downloaded successfully.")
     else:
         logger.error(f"One or more objects have failed to be downloaded. Details:")
-        click.echo(results)
+
+    click.echo(json.dumps(results))
 
 
 @click.group()
