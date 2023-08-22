@@ -101,7 +101,7 @@ def main(
         click.echo(pkg_resources.get_distribution("gen3").version)
     if silent:
         # we still need to define the logger, the log_level here doesn't
-        # really matter b/c we immedietely disable all logging
+        # really matter b/c we immediately disable all logging
         logger = cdislogging.get_logger(
             __name__, format=gen3.LOG_FORMAT, log_level="debug"
         )
