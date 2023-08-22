@@ -34,13 +34,13 @@ humanfriendly ="*"
 python-dateutil = "*"
 aiofiles = "^0.8.0"
 pandas = "^1.4.2"
-urllib3 = "<2.0.0"
 httpx = "*"
 xmltodict = "^0.13.0"
 
 # A list of all of the optional dependencies, some of which are included in the
 # below `extras`. They can be opted into by apps.
 fhirclient = { version = "*", optional = true }
+pyyaml = "5.3.1"
 
 [tool.poetry.extras]
 fhir = ["fhirclient"]

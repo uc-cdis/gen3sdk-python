@@ -14,7 +14,8 @@ jobs:
 before_install:
 - pip install --upgrade pip
 # cannot update poetry to 1.6.x+ until we can update urllib3 >= 2.0.0, see https://github.com/orgs/python-poetry/discussions/8345
-- pip install poetry==1.5.1
+- pip install --upgrade urllib3
+- pip install poetry
 - which poetry
 - poetry --version
 install:
