@@ -7,7 +7,7 @@ from gen3.tools.download.drs_download import (
     list_files_in_drs_manifest,
     list_drs_object,
     download_files_in_drs_manifest,
-    download_drs_object,
+    download_drs_objects,
     list_access_in_drs_manifest,
 )
 
@@ -136,10 +136,10 @@ def download_object(
 
     """
     logger.info(f"GA4GH DRS Object Streaming Starting...")
-    res = download_drs_object(
+    res = download_drs_objects(
         ctx.obj["endpoint"],
         ctx.obj["auth_factory"].get(),
-        object_id,
+        [object_id],
         output_dir,
         no_progress,
         not no_unpack_packages,
@@ -219,23 +219,22 @@ def download_objects(
 
     logger.info(f"GA4GH DRS Object Streaming Starting...")
     logger.debug(f"object_ids: {object_ids}")
-    for object_id in object_ids:
-        res = download_drs_object(
-            ctx.obj["endpoint"],
-            ctx.obj["auth_factory"].get(),
-            object_id,
-            output_dir,
-            no_progress,
-            not no_unpack_packages,
-            delete_unpacked_packages,
-        )
-        for drs_object_id in res:
-            if drs_object_id in res and res[drs_object_id].status == "downloaded":
-                results["succeeded"].append(drs_object_id)
-            else:
-                logger.error(f"Object {drs_object_id} download failed.")
-                success = False
-                results["failed"].append(drs_object_id)
+    res = download_drs_objects(
+        ctx.obj["endpoint"],
+        ctx.obj["auth_factory"].get(),
+        object_ids,
+        output_dir,
+        no_progress,
+        not no_unpack_packages,
+        delete_unpacked_packages,
+    )
+    for drs_object_id in res:
+        if drs_object_id in res and res[drs_object_id].status == "downloaded":
+            results["succeeded"].append(drs_object_id)
+        else:
+            logger.error(f"Object {drs_object_id} download failed.")
+            success = False
+            results["failed"].append(drs_object_id)
 
     if success:
         logger.info("All objects downloaded successfully.")
