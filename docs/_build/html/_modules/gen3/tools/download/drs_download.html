@@ -1211,7 +1211,7 @@
 <span class="k">def</span> <span class="nf">_download_obj</span><span class="p">(</span>
     <span class="n">hostname</span><span class="p">,</span>
     <span class="n">auth</span><span class="p">,</span>
-    <span class="n">object_id</span><span class="p">,</span>
+    <span class="n">object_ids</span><span class="p">,</span>
     <span class="n">output_dir</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span>
     <span class="n">show_progress</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="n">unpack_packages</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
@@ -1222,7 +1222,7 @@
 <span class="sd">    Args:</span>
 <span class="sd">        hostname (str): hostname of Gen3 commons to use for access and WTS</span>
 <span class="sd">        auth: Gen3 Auth instance</span>
-<span class="sd">        object_id (str): DRS object id</span>
+<span class="sd">        object_ids (List[str]): DRS object id</span>
 <span class="sd">        output_dir: directory to save downloaded files to</span>
 <span class="sd">        show_progress: show progress bar</span>
 <span class="sd">        unpack_packages (bool): set to False to disable the unpacking of downloaded packages</span>
@@ -1237,7 +1237,7 @@
         <span class="n">logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unable to authenticate your credentials with </span><span class="si">{</span><span class="n">hostname</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">None</span>
 
-    <span class="n">object_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">Downloadable</span><span class="p">(</span><span class="n">object_id</span><span class="o">=</span><span class="n">object_id</span><span class="p">)]</span>
+    <span class="n">object_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">Downloadable</span><span class="p">(</span><span class="n">object_id</span><span class="o">=</span><span class="n">object_id</span><span class="p">)</span> <span class="k">for</span> <span class="n">object_id</span> <span class="ow">in</span> <span class="n">object_ids</span><span class="p">]</span>
     <span class="n">downloader</span> <span class="o">=</span> <span class="n">DownloadManager</span><span class="p">(</span>
         <span class="n">hostname</span><span class="o">=</span><span class="n">hostname</span><span class="p">,</span>
         <span class="n">auth</span><span class="o">=</span><span class="n">auth</span><span class="p">,</span>
@@ -1430,12 +1430,10 @@
 
 
 
-<div class="viewcode-block" id="download_drs_object">
-<a class="viewcode-back" href="../../../../tools/drs_pull.html#gen3.tools.download.drs_download.download_drs_object">[docs]</a>
-<span class="k">def</span> <span class="nf">download_drs_object</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">download_drs_objects</span><span class="p">(</span>
     <span class="n">hostname</span><span class="p">,</span>
     <span class="n">auth</span><span class="p">,</span>
-    <span class="n">object_id</span><span class="p">,</span>
+    <span class="n">object_ids</span><span class="p">,</span>
     <span class="n">output_dir</span><span class="p">,</span>
     <span class="n">show_progress</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">unpack_packages</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
@@ -1446,7 +1444,7 @@
 <span class="sd">    Args:</span>
 <span class="sd">        hostname (str): hostname of Gen3 commons to use for access and WTS</span>
 <span class="sd">        auth: Gen3 Auth instance</span>
-<span class="sd">        object_id (str): DRS object id</span>
+<span class="sd">        object_ids (List[str]): DRS object ids</span>
 <span class="sd">        output_dir: directory to save downloaded files to</span>
 <span class="sd">        unpack_packages (bool): set to False to disable the unpacking of downloaded packages</span>
 <span class="sd">        delete_unpacked_packages (bool): set to True to delete package files after unpacking them</span>
@@ -1457,13 +1455,12 @@
     <span class="k">return</span> <span class="n">_download_obj</span><span class="p">(</span>
         <span class="n">hostname</span><span class="p">,</span>
         <span class="n">auth</span><span class="p">,</span>
-        <span class="n">object_id</span><span class="p">,</span>
+        <span class="n">object_ids</span><span class="p">,</span>
         <span class="n">output_dir</span><span class="p">,</span>
         <span class="n">show_progress</span><span class="p">,</span>
         <span class="n">unpack_packages</span><span class="p">,</span>
         <span class="n">delete_unpacked_packages</span><span class="p">,</span>
-    <span class="p">)</span></div>
-
+    <span class="p">)</span>
 
 
 <div class="viewcode-block" id="list_access_in_drs_manifest">
