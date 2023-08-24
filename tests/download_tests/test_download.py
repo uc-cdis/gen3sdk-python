@@ -287,7 +287,6 @@ def test_get_external_wts_oidc(wts_oidc, hostname):
 
 def test_download_file_from_url_failures(download_dir):
     with requests_mock.Mocker() as m:
-
         m.get(
             url=f"https://test.commons1.io/ga4gh/drs/v1/objects/blah/access/s3",
             headers={"content-length": "10"},
@@ -536,7 +535,7 @@ def test_download_objects(
                 results = _download_obj(
                     hostname,
                     auth,
-                    "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e",
+                    ["dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e"],
                     download_dir.join("_download_obj"),
                 )
                 for id, item in results.items():
@@ -640,7 +639,7 @@ def test_download_objects(
         results = _download_obj(
             hostname,
             auth,
-            "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e",
+            ["dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e"],
             download_dir.join("_download_obj"),
         )
         assert results is None
@@ -844,7 +843,6 @@ def test_list_no_auth(
     manifest_file,
     expected,
 ):
-
     test_key = {
         "api_key": "whatever."  # pragma: allowlist secret
         + base64.urlsafe_b64encode(
@@ -899,7 +897,6 @@ def test_unpackage_objects(
     download_test_files,
     hostname,
 ):
-
     exp = time.time() + 300
     test_key = {
         "api_key": "whatever."  # pragma: allowlist secret

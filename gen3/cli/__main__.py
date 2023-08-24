@@ -1,6 +1,7 @@
 import click
 import os
 import sys
+import logging
 
 import cdislogging
 import pkg_resources
@@ -69,6 +70,13 @@ class AuthFactory:
     help="only show ERROR logs",
 )
 @click.option(
+    "--silent",
+    "silent",
+    is_flag=True,
+    default=False,
+    help="don't show ANY logs",
+)
+@click.option(
     "--version",
     help="Show Gen3 Version",
 )
@@ -80,6 +88,7 @@ def main(
     verbose_logs,
     very_verbose_logs,
     only_error_logs,
+    silent,
     version,
 ):
     """Gen3 Command Line Interface"""
@@ -90,7 +99,15 @@ def main(
 
     if version:
         click.echo(pkg_resources.get_distribution("gen3").version)
-    if very_verbose_logs:
+    if silent:
+        # we still need to define the logger, the log_level here doesn't
+        # really matter b/c we immediately disable all logging
+        logger = cdislogging.get_logger(
+            __name__, format=gen3.LOG_FORMAT, log_level="debug"
+        )
+        # disables all logging
+        logging.disable(logging.CRITICAL)
+    elif very_verbose_logs:
         logger = cdislogging.get_logger(
             __name__, format=gen3.LOG_FORMAT, log_level="debug"
         )
