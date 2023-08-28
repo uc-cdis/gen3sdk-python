@@ -111,7 +111,6 @@ def merge_bucket_manifests(
         records_from_file, _ = get_and_verify_fileinfos_from_manifest(
             manifest, include_additional_columns=True
         )
-        # records_with_no_guid = []
         for record in records_from_file:
             # simple case where this is the first time we've seen this hash
             headers.update(record.keys())
