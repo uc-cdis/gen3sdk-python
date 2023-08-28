@@ -149,8 +149,8 @@ def merge_bucket_manifests(
                     )
                     all_rows[record[MD5_STANDARD_KEY]] = updated_records.values()
 
-        # for the entries where there was no GUID specified, we will add that metadata
-        # to all previous records
+    # for the entries where there was no GUID specified, we will add that metadata
+    # to all previous records
     for record in records_with_no_guid:
         updated_records = _get_updated_records(
             record=record,
