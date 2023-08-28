@@ -106,17 +106,24 @@ def merge_bucket_manifests(
 
     headers = set()
     all_rows = {}
+    records_with_no_guid = []
     for manifest in files:
         records_from_file, _ = get_and_verify_fileinfos_from_manifest(
             manifest, include_additional_columns=True
         )
-        records_with_no_guid = []
+        # records_with_no_guid = []
         for record in records_from_file:
             # simple case where this is the first time we've seen this hash
             headers.update(record.keys())
             if record[MD5_STANDARD_KEY] not in all_rows:
                 record_to_write = copy.deepcopy(record)
                 all_rows[record_to_write[MD5_STANDARD_KEY]] = [record_to_write]
+
+                new_guid = record.get(GUID_STANDARD_KEY)
+                if not new_guid:
+                    # since there's no guid specified to differentiate this from other
+                    # entries, we will add metadata to all records later
+                    records_with_no_guid.append(record)
             else:
                 # if the hash already exists, we need to try and update existing
                 # entries with any new data (and ensure we don't add duplicates)
@@ -145,34 +152,33 @@ def merge_bucket_manifests(
 
         # for the entries where there was no GUID specified, we will add that metadata
         # to all previous records
-        for record in records_with_no_guid:
-            updated_records = _get_updated_records(
-                record=record,
-                existing_records=all_rows.get(record[MD5_STANDARD_KEY], []),
-                continue_after_error=continue_after_error,
-                allow_mult_guids_per_hash=allow_mult_guids_per_hash,
-                columns_with_arrays=columns_with_arrays,
-            )
-            # it's possible a record without a GUID got added if it was the FIRST
-            # instance of that md5, so we just need to make sure that it's removed
-            # if there was another GUID provided later on
-            #
-            # this also handles the edge case where there were multiple rows for the md5
-            # and NO guid was provided (e.g. we want a single combined row of updated values)
-            any_guid_provided = [
-                record.get(GUID_STANDARD_KEY)
+    for record in records_with_no_guid:
+        updated_records = _get_updated_records(
+            record=record,
+            existing_records=all_rows.get(record[MD5_STANDARD_KEY], []),
+            continue_after_error=continue_after_error,
+            allow_mult_guids_per_hash=allow_mult_guids_per_hash,
+            columns_with_arrays=columns_with_arrays,
+        )
+        # it's possible a record without a GUID got added if it was the FIRST
+        # instance of that md5, so we just need to make sure that it's removed
+        # if there was another GUID provided later on
+        #
+        # this also handles the edge case where there were multiple rows for the md5
+        # and NO guid was provided (e.g. we want a single combined row of updated values)
+        any_guid_provided = [
+            record.get(GUID_STANDARD_KEY)
+            for record in updated_records.values()
+            if record.get(GUID_STANDARD_KEY)
+        ]
+        if not any_guid_provided:
+            all_rows[record[MD5_STANDARD_KEY]] = updated_records.values()
+        else:
+            all_rows[record[MD5_STANDARD_KEY]] = [
+                record
                 for record in updated_records.values()
                 if record.get(GUID_STANDARD_KEY)
             ]
-            if not any_guid_provided:
-                all_rows[record[MD5_STANDARD_KEY]] = updated_records.values()
-            else:
-                all_rows[record[MD5_STANDARD_KEY]] = [
-                    record
-                    for record in updated_records.values()
-                    if record.get(GUID_STANDARD_KEY)
-                ]
-
     _create_output_file(
         output_manifest, headers, all_rows, output_manifest_file_delimiter
     )
