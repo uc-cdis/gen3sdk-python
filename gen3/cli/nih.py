@@ -95,7 +95,7 @@ def get_child_studies(studies):
            }
         gen3 nih dbgap-study-registration get-child-studies phs002076 phs002793
          > {
-              "phs002076.v2.p1": "phs002077.v2.p1",
+              "phs002076.v2.p1": ["phs002077.v2.p1"],
               "phs002793.v2.p1": ["phs002795.v1.p1", "phs002796.v1.p1", "phs002797.v1.p1", "phs002798.v1.p1"]
             }
     """
