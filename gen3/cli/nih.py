@@ -18,8 +18,11 @@ def dbgap_study_registration():
 
 
 @dbgap_study_registration.command(name="get-metadata")
-@click.argument("study_name")
-def get_child_studies(study_name):
+@click.argument(
+    "studies",
+    nargs=-1,
+)
+def get_child_studies(studies):
     """
     Retrieve the study metadata associated with the provided study names.
 
@@ -28,9 +31,9 @@ def get_child_studies(study_name):
     NOTE: If no version is provided, then the latest version for a study will be used.
 
     Args:
-        study_name (str): A space-separated list of study names in which to get metadata for.
+        studies (str): A space-separated list of study names in which to get metadata for.
     Example:
-        gen3 nih dbgap-study-registration get-metadata "phs002793"
+        gen3 nih dbgap-study-registration get-metadata phs002793 phs002794 phs002795
         > {
             "phs002793.v2.p1": {
                 "@uid": "48490",
@@ -58,17 +61,20 @@ def get_child_studies(study_name):
             }
         }
     """
-    result = dbgapStudyRegistration().get_metadata_for_ids(study_name.split(" "))
+    result = dbgapStudyRegistration().get_metadata_for_ids(studies)
 
     if not result:
-        click.echo(f"No study found for {study_name}")
+        click.echo(f"No study found for {studies}")
     else:
         click.echo(f"{json.dumps(result, indent=4)}")
 
 
 @dbgap_study_registration.command(name="get-child-studies")
-@click.argument("study_name")
-def get_child_studies(study_name):
+@click.argument(
+    "studies",
+    nargs=-1,
+)
+def get_child_studies(studies):
     """
     Retrieve the child studies associated with the provided study names.
 
@@ -78,19 +84,19 @@ def get_child_studies(study_name):
     NOTE: If no version is provided, then the latest version for a study will be used.
 
     Args:
-        study_name (str): A space-separated list of parent study names for which to fetch child studies.
+        studies (str): A space-separated list of parent study names for which to fetch child studies.
     Example:
-        gen3 nih dbgap-study-registration get-child-studies "phs002793"
+        gen3 nih dbgap-study-registration get-child-studies phs002793
         > phs002793.v2.p1: phs002795.v1.p1 phs002796.v1.p1 phs002797.v1.p1 phs002798.v1.p1 phs002794.v2.p1
 
-        gen3 nih dbgap-study-registration get-child-studies "phs002076 phs002793"
+        gen3 nih dbgap-study-registration get-child-studies phs002076 phs002793
          > phs002076.v2.p1: phs002077.v2.p1
            phs002793.v2.p1: phs002795.v1.p1 phs002796.v1.p1 phs002797.v1.p1 phs002798.v1.p1 phs002794.v2.p1
     """
-    result = dbgapStudyRegistration().get_child_studies_for_ids(study_name.split(" "))
+    result = dbgapStudyRegistration().get_child_studies_for_ids(studies)
 
     if not result:
-        click.echo(f"No child studies found for {study_name}")
+        click.echo(f"No child studies found for {studies}")
     else:
         for parent, children in result.items():
             click.echo(f"{parent}: {' '.join(children)}")
