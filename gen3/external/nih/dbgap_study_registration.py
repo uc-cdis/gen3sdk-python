@@ -86,7 +86,6 @@ class dbgapStudyRegistration(ExternalMetadataSourceInterface):
                 )
 
             logging.debug(f"GET: {request_url}")
-            print(f"{request_url}")
             raw_xml_response = requests.get(request_url)
             logging.debug(
                 f"Got XML response: {raw_xml_response.text}, converting to JSON..."

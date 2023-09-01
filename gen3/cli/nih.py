@@ -3,6 +3,9 @@ import json
 import click
 
 from gen3.external.nih.dbgap_study_registration import dbgapStudyRegistration
+from cdislogging import get_logger
+
+logger = get_logger("__name__")
 
 
 @click.group()
@@ -64,7 +67,7 @@ def get_child_studies(studies):
     result = dbgapStudyRegistration().get_metadata_for_ids(studies)
 
     if not result:
-        click.echo(f"No study found for {studies}")
+        logger.info(f"No study found for {studies}")
     else:
         click.echo(f"{json.dumps(result, indent=4)}")
 
@@ -87,16 +90,18 @@ def get_child_studies(studies):
         studies (str): A space-separated list of parent study names for which to fetch child studies.
     Example:
         gen3 nih dbgap-study-registration get-child-studies phs002793
-        > phs002793.v2.p1: phs002795.v1.p1 phs002796.v1.p1 phs002797.v1.p1 phs002798.v1.p1 phs002794.v2.p1
-
+        > {
+              "phs002793.v2.p1": ["phs002795.v1.p1", "phs002796.v1.p1", "phs002797.v1.p1", "phs002798.v1.p1"]
+           }
         gen3 nih dbgap-study-registration get-child-studies phs002076 phs002793
-         > phs002076.v2.p1: phs002077.v2.p1
-           phs002793.v2.p1: phs002795.v1.p1 phs002796.v1.p1 phs002797.v1.p1 phs002798.v1.p1 phs002794.v2.p1
+         > {
+              "phs002076.v2.p1": "phs002077.v2.p1",
+              "phs002793.v2.p1": ["phs002795.v1.p1", "phs002796.v1.p1", "phs002797.v1.p1", "phs002798.v1.p1"]
+            }
     """
     result = dbgapStudyRegistration().get_child_studies_for_ids(studies)
 
     if not result:
-        click.echo(f"No child studies found for {studies}")
+        logger.info(f"No child studies found for {studies}")
     else:
-        for parent, children in result.items():
-            click.echo(f"{parent}: {' '.join(children)}")
+        click.echo(f"{json.dumps(result, indent=4)}")
