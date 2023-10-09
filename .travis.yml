@@ -21,7 +21,7 @@ install:
 - poetry install -vv --all-extras --no-interaction
 - poetry show -vv
 script:
-- poetry run pytest -vv ./tests
+- echo Unit testing done in GH Actions
 before_deploy:
 - poetry config repositories.testpypi https://test.pypi.org/legacy/
 - poetry config pypi-token.testpypi $PYPI_API_TOKEN
