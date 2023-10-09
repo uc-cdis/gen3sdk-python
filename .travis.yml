@@ -10,11 +10,11 @@ jobs:
   - python: 3.10
 before_install:
 - pip install --upgrade pip
-- pip install poetry
+- curl -sSL https://install.python-poetry.org | python -
 - which poetry
 - poetry --version
 install:
-- poetry install -vv --all-extras --no-interaction
+- poetry install -vv --all-extras --no-interaction --no-cache
 - poetry show -vv
 script:
 - echo Unit testing is now done in GH Actions, this just pushing to pypi as necessary
