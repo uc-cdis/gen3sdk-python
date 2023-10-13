@@ -1,8 +1,6 @@
 on:
   pull_request:
-    types:
-      # only on new commits
-      - synchronize
+    types: [opened, synchronize]
   issue_comment:
     types: [created, edited]
 
