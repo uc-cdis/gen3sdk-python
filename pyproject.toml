@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "gen3"
 homepage = "https://gen3.org/"
-version = "4.21.0"
+version = "4.21.1"
 description = "Gen3 CLI and Python SDK"
 authors = ["Center for Translational Data Science at the University of Chicago <support@datacommons.io>"]
 license = "Apache-2.0"
@@ -27,14 +27,15 @@ backoff = "*"
 cdislogging = "^1.1.0"
 click = "*"
 jsonschema = "*"
-dataclasses-json = "*"
+# FIXME updating to >=0.6.0 breaks a few tests
+dataclasses-json = "<=0.5.9"
 pypfb = "<1.0.0"
 tqdm = "^4.61.2"
 humanfriendly ="*"
 python-dateutil = "*"
 aiofiles = "^0.8.0"
-pandas = "^1.4.2"
-urllib3 = "<2.0.0"
+pandas = ">=1.4.2"
+urllib3 = ">2.0.0"
 httpx = "*"
 xmltodict = "^0.13.0"
 
@@ -51,6 +52,9 @@ pytest-cov = "*"
 requests-mock = "*"
 cdisutilstest = { git = "https://github.com/uc-cdis/cdisutils-test.git", tag = "1.0.0" }
 indexd = { git = "https://github.com/uc-cdis/indexd.git", tag = "3.5.0" }
+# indexd has a version of flask that doesn't specify the werkzeug version, so we get 
+# 3.0.0 which breaks things. Force sub-dep version here for now
+werkzeug = "<3.0.0"
 
 [tool.poetry.scripts]
 gen3 = "gen3.cli.__main__:main"

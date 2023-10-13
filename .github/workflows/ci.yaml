@@ -1,10 +1,23 @@
-name: Build docs
+name: CI
 
 on:
+  push:
   pull_request:
-    branches: [ master ]
+    types: [opened, reopened]
 
 jobs:
+  Security:
+    name: Security Pipeline
+    uses: uc-cdis/.github/.github/workflows/securitypipeline.yaml@master
+    with:
+       python-poetry: 'false'
+    secrets: inherit  # pragma: allowlist secret
+  UnitTest:
+    name: Python Unit Test
+    uses: uc-cdis/.github/.github/workflows/python_unit_test.yaml@master
+    with:
+        python-version: '3.9'
+
   build_docs:
     runs-on: ubuntu-latest
 

@@ -1,27 +1,23 @@
+dist: jammy
 language: python
 python:
-- 3.6
-- 3.7
 - 3.8
 - 3.9
 - 3.10
 jobs:
   allow_failures:
-  - python: 3.6
-  - python: 3.7
   - python: 3.8
   - python: 3.10
 before_install:
 - pip install --upgrade pip
-# cannot update poetry to 1.6.x+ until we can update urllib3 >= 2.0.0, see https://github.com/orgs/python-poetry/discussions/8345
-- pip install poetry==1.5.1
+- curl -sSL https://install.python-poetry.org | python -
 - which poetry
 - poetry --version
 install:
-- poetry install -vv --all-extras --no-interaction
+- poetry install -vv --all-extras --no-interaction --no-cache
 - poetry show -vv
 script:
-- poetry run pytest -vv ./tests
+- echo Unit testing is now done in GH Actions, this just pushing to pypi as necessary
 before_deploy:
 - poetry config repositories.testpypi https://test.pypi.org/legacy/
 - poetry config pypi-token.testpypi $PYPI_API_TOKEN
