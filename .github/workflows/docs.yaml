@@ -1,9 +1,11 @@
 name: Docs
 
 on:
-  # DON't run on pushes to master and only on pull requests
+  # DON'T run on pushed commits to master, ONLY on new commits on pull requests
   pull_request:
-    types: [opened, reopened]
+    types:
+      # only on new commits
+      - synchronize
 
 jobs:
   build_docs:
