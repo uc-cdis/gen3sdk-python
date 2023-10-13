@@ -1,4 +1,4 @@
-name: CI
+name: Docs
 
 on:
   # DON't run on pushes to master and only on pull requests
