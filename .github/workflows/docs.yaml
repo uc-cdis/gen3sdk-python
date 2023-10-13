@@ -8,7 +8,6 @@ on:
 jobs:
   build_docs:
     runs-on: ubuntu-latest'
-    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
 
     steps:
     - uses: actions/checkout@v2
