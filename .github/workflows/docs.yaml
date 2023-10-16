@@ -1,0 +1,54 @@
+name: Docs
+
+on:
+  # DON'T run on pushed commits to master, ONLY on new commits on pull requests
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  build_docs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        ref: ${{github.event.pull_request.head.ref}}
+        repository: ${{github.event.pull_request.head.repo.full_name}}
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.9
+    - uses: actions/cache@preview
+      with:
+        path: ~/.cache/pypoetry/virtualenvs
+        key: ${{ runner.os }}-poetry-${{ hashFiles(format('{0}{1}', github.workspace, '/poetry.lock')) }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
+    - name: Install dependencies
+      run: |
+        pip install poetry
+        poetry config virtualenvs.create false
+        poetry install -vv --all-extras --no-interaction
+        poetry show -vv
+
+        # install sphinx from PyPI (as of 03/16/21 python3-sphinx is broken)
+        # sudo apt-get install python3-sphinx
+        pip install sphinx
+        pip uninstall -y asyncio
+        pip list
+        cd
+    - name: Build docs
+      run: |
+        sphinx-build --version
+        export PYTHONPATH="${PYTHONPATH}:${{ env.pythonLocation }}/lib/python3.9/site-packages"
+        cd docs
+        poetry run make html
+        cd ..
+
+    - uses: stefanzweifel/git-auto-commit-action@v4.8.0
+      with:
+        commit_message: Apply automatic documentation changes
+
+        # Optional name of the branch the commit should be pushed to
+        # Required if Action is used in Workflow listening to the `pull_request` event
+        branch: ${{ github.head_ref }}
