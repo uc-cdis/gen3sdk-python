@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "gen3"
 homepage = "https://gen3.org/"
-version = "4.21.1"
+version = "4.21.2"
 description = "Gen3 CLI and Python SDK"
 authors = ["Center for Translational Data Science at the University of Chicago <support@datacommons.io>"]
 license = "Apache-2.0"
@@ -18,7 +18,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.9, <4"
 requests = "*"
 indexclient = "*"
 drsclient = "^0.2.2"
@@ -29,7 +29,7 @@ click = "*"
 jsonschema = "*"
 # FIXME updating to >=0.6.0 breaks a few tests
 dataclasses-json = "<=0.5.9"
-pypfb = "<1.0.0"
+pypfb = ">=0.5.27"
 tqdm = "^4.61.2"
 humanfriendly ="*"
 python-dateutil = "*"
@@ -38,6 +38,7 @@ pandas = ">=1.4.2"
 urllib3 = ">2.0.0"
 httpx = "*"
 xmltodict = "^0.13.0"
+pyyaml = ">=6.0.1"
 
 # A list of all of the optional dependencies, some of which are included in the
 # below `extras`. They can be opted into by apps.
