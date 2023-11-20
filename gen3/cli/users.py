@@ -21,7 +21,6 @@ def users():
     pass
 
 
-# for command in users_cli.main.commands:
 for command in users_cli.main.commands:
     users.add_command(users_cli.main.get_command(ctx=None, cmd_name=command))
 
