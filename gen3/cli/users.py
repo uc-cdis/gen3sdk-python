@@ -1,17 +1,8 @@
 import click
 
-# Temp for local import
-# import sys
-# sys.path.append('../')
-# import gen3users.gen3users.main as users_cli
-
-# Use this after gen3users merge
 from gen3users import main as users_cli
 
-# import gen3users as users_cli
 
-
-# Do we need these?
 try:
     from importlib.metadata import entry_points
 except ImportError:
