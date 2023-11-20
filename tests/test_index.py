@@ -229,3 +229,52 @@ def test_blank(gen3_index):
     # delete the record
     drec = gen3_index.delete_record(updatedblank["did"])
     assert drec._deleted
+
+
+def test_desc_and_content_dates(gen3_index):
+    """
+    Tests that records can be created, updated and retrieved when description, content_created_date and content_updated_date fields are provided.
+    """
+    expected_description = "a description"
+    expected_content_created_date = "2023-03-14T17:02:54"
+    expected_content_updated_date = "2023-03-15T17:11:00"
+    hashes = {"md5": "374c12456782738abcfe387492837483"}
+    record = gen3_index.create_record(
+        hashes=hashes,
+        size=0,
+        description=expected_description,
+        content_created_date=expected_content_created_date,
+        content_updated_date=expected_content_updated_date,
+    )
+    newly_created_record = gen3_index.get_record(record["did"])
+    assert expected_description == newly_created_record["description"]
+    assert expected_content_created_date == newly_created_record["content_created_date"]
+    assert expected_content_updated_date == newly_created_record["content_updated_date"]
+
+    expected_description = "new description"
+    expected_content_created_date = "2023-04-14T17:02:54"
+    expected_content_updated_date = "2023-04-15T17:11:00"
+    record = gen3_index.update_record(
+        record["did"],
+        description=expected_description,
+        content_created_date=expected_content_created_date,
+        content_updated_date=expected_content_updated_date,
+    )
+    updated_record = gen3_index.get_record(record["did"])
+    assert expected_description == updated_record["description"]
+    assert expected_content_created_date == updated_record["content_created_date"]
+    assert expected_content_updated_date == updated_record["content_updated_date"]
+
+    new_version = gen3_index.create_new_version(
+        updated_record["did"],
+        hashes=hashes,
+        size=0,
+        description="new version description",
+        content_created_date="2023-04-28T17:02:54",
+        content_updated_date="2023-04-30T17:11:00",
+    )
+
+    version_record = gen3_index.get_record(new_version["did"])
+    assert version_record["description"] == new_version["description"]
+    assert version_record["content_created_date"] == new_version["content_created_date"]
+    assert version_record["content_updated_date"] == new_version["content_updated_date"]
