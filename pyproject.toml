@@ -29,7 +29,7 @@ click = "*"
 jsonschema = "*"
 # FIXME updating to >=0.6.0 breaks a few tests
 dataclasses-json = "<=0.5.9"
-pypfb = { git = "https://github.com/uc-cdis/pypfb", tag="0.5.27"}
+pypfb = { git = "https://github.com/uc-cdis/pypfb", branch="fix/importlib_metadata-3.6.0"}
 tqdm = "^4.61.2"
 humanfriendly ="*"
 python-dateutil = "*"
