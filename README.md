@@ -9,7 +9,6 @@ The docs here contain general descriptions of the different pieces of the SDK an
 
 * [Detailed API Documentation](https://uc-cdis.github.io/gen3sdk-python/_build/html/index.html)
 
-
 ## Table of Contents
 
 - [Gen3 SDK for Python](#gen3-sdk-for-python)
