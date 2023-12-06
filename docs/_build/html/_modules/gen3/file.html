@@ -1,18 +1,15 @@
-
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="../../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>gen3.file &#8212; Gen3 SDK  documentation</title>
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css" />
-    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-    <script src="../../_static/jquery.js"></script>
-    <script src="../../_static/underscore.js"></script>
-    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-    <script src="../../_static/doctools.js"></script>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=4f649999" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=039e1c02" />
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
    
@@ -34,14 +31,33 @@
   <h1>Source code for gen3.file</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">asyncio</span>
+<span class="kn">import</span> <span class="nn">aiohttp</span>
+<span class="kn">import</span> <span class="nn">aiofiles</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">from</span> <span class="nn">types</span> <span class="kn">import</span> <span class="n">SimpleNamespace</span> <span class="k">as</span> <span class="n">Namespace</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">from</span> <span class="nn">cdislogging</span> <span class="kn">import</span> <span class="n">get_logger</span>
+
+<span class="kn">from</span> <span class="nn">gen3.index</span> <span class="kn">import</span> <span class="n">Gen3Index</span>
+<span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">,</span> <span class="n">raise_for_status_and_print_error</span>
+<span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">parse_qsl</span><span class="p">,</span> <span class="n">urlencode</span><span class="p">,</span> <span class="n">urlparse</span><span class="p">,</span> <span class="n">urlunparse</span>
+
+<span class="n">logging</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="s2">&quot;__name__&quot;</span><span class="p">)</span>
 
 
-<span class="k">class</span> <span class="nc">Gen3FileError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
-    <span class="k">pass</span>
+<span class="n">MAX_RETRIES</span> <span class="o">=</span> <span class="mi">3</span>
 
 
-<div class="viewcode-block" id="Gen3File"><a class="viewcode-back" href="../../file.html#gen3.file.Gen3File">[docs]</a><span class="k">class</span> <span class="nc">Gen3File</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;For interacting with Gen3 file management features.</span>
+<div class="viewcode-block" id="Gen3File">
+<a class="viewcode-back" href="../../file.html#gen3.file.Gen3File">[docs]</a>
+<span class="k">class</span> <span class="nc">Gen3File</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;For interacting with Gen3 file management features.</span>
 
 <span class="sd">    A class for interacting with the Gen3 file download services.</span>
 <span class="sd">    Supports getting presigned urls right now.</span>
@@ -62,9 +78,12 @@
         <span class="c1"># auth_provider legacy interface required endpoint as 1st arg</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span> <span class="o">=</span> <span class="n">auth_provider</span> <span class="ow">or</span> <span class="n">endpoint</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">endpoint</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unsuccessful_downloads</span> <span class="o">=</span> <span class="p">[]</span>
 
-<div class="viewcode-block" id="Gen3File.get_presigned_url"><a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.get_presigned_url">[docs]</a>    <span class="k">def</span> <span class="nf">get_presigned_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Generates a presigned URL for a file.</span>
+<div class="viewcode-block" id="Gen3File.get_presigned_url">
+<a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.get_presigned_url">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_presigned_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generates a presigned URL for a file.</span>
 
 <span class="sd">        Retrieves a presigned url for a file giving access to a file for a limited time.</span>
 
@@ -80,16 +99,19 @@
         <span class="n">api_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/user/data/download/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">guid</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">protocol</span><span class="p">:</span>
             <span class="n">api_url</span> <span class="o">+=</span> <span class="s2">&quot;?protocol=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">protocol</span><span class="p">)</span>
-        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">resp</span><span class="p">)</span>
 
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
         <span class="k">except</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">output</span>
-        <span class="k">return</span> <span class="n">data</span></div>
+            <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">text</span></div>
 
-<div class="viewcode-block" id="Gen3File.delete_file"><a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.delete_file">[docs]</a>    <span class="k">def</span> <span class="nf">delete_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Gen3File.delete_file">
+<a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.delete_file">[docs]</a>
+    <span class="k">def</span> <span class="nf">delete_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        This method is DEPRECATED. Use delete_file_locations() instead.</span>
 <span class="sd">        Delete all locations of a stored data file and remove its record from indexd</span>
 
@@ -104,8 +126,11 @@
 
         <span class="k">return</span> <span class="n">output</span></div>
 
-<div class="viewcode-block" id="Gen3File.delete_file_locations"><a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.delete_file_locations">[docs]</a>    <span class="k">def</span> <span class="nf">delete_file_locations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Gen3File.delete_file_locations">
+<a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.delete_file_locations">[docs]</a>
+    <span class="k">def</span> <span class="nf">delete_file_locations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Delete all locations of a stored data file and remove its record from indexd</span>
 
 <span class="sd">        Args:</span>
@@ -118,8 +143,13 @@
 
         <span class="k">return</span> <span class="n">output</span></div>
 
-<div class="viewcode-block" id="Gen3File.upload_file"><a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.upload_file">[docs]</a>    <span class="k">def</span> <span class="nf">upload_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">authz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">expires_in</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Gen3File.upload_file">
+<a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.upload_file">[docs]</a>
+    <span class="k">def</span> <span class="nf">upload_file</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">authz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">expires_in</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bucket</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get a presigned url for a file to upload</span>
 
 <span class="sd">        Args:</span>
@@ -130,6 +160,9 @@
 <span class="sd">            expires_in (int): Amount in seconds that the signed url will expire from datetime.utcnow().</span>
 <span class="sd">                Be sure to use a positive integer.</span>
 <span class="sd">                This value will also be treated as &lt;= MAX_PRESIGNED_URL_TTL in the fence configuration.</span>
+<span class="sd">            bucket (str): Bucket to upload to. The bucket must be configured in the Fence instance&#39;s</span>
+<span class="sd">                `ALLOWED_DATA_UPLOAD_BUCKETS` setting. If not specified, Fence defaults to the</span>
+<span class="sd">                `DATA_UPLOAD_BUCKET` setting.</span>
 <span class="sd">        Returns:</span>
 <span class="sd">            Document: json representation for the file upload</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -143,17 +176,141 @@
             <span class="n">body</span><span class="p">[</span><span class="s2">&quot;expires_in&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">expires_in</span>
         <span class="k">if</span> <span class="n">file_name</span><span class="p">:</span>
             <span class="n">body</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">file_name</span>
+        <span class="k">if</span> <span class="n">bucket</span><span class="p">:</span>
+            <span class="n">body</span><span class="p">[</span><span class="s2">&quot;bucket&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">bucket</span>
 
         <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Content-Type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">}</span>
-        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
             <span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">body</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span>
-        <span class="p">)</span><span class="o">.</span><span class="n">text</span>
+        <span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">resp</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
         <span class="k">except</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">output</span>
+            <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">text</span>
 
-        <span class="k">return</span> <span class="n">data</span></div></div>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_ensure_dirpath_exists</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Utility to create a directory if missing.</span>
+<span class="sd">        Returns the path so that the call can be inlined in another call</span>
+<span class="sd">        Args:</span>
+<span class="sd">            path (Path): path to create</span>
+<span class="sd">        Returns</span>
+<span class="sd">            path of created directory</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">path</span>
+        <span class="n">out_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">path</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">out_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="n">out_path</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">out_path</span>
+
+<div class="viewcode-block" id="Gen3File.download_single">
+<a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.download_single">[docs]</a>
+    <span class="k">def</span> <span class="nf">download_single</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">object_id</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Download a single file using its GUID.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            object_id (str): The file&#39;s unique ID</span>
+<span class="sd">            path (str): Path to store the downloaded file at</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_presigned_url</span><span class="p">(</span><span class="n">object_id</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unable to get a presigned URL for download: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">],</span> <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Response code: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">&gt;=</span> <span class="mi">500</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">MAX_RETRIES</span><span class="p">):</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Retrying now...&quot;</span><span class="p">)</span>
+                    <span class="c1"># NOTE could be updated with exponential backoff</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">],</span> <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span>
+                        <span class="k">break</span>
+                <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;Response status not 200, try again later&quot;</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+
+        <span class="n">total_size_in_bytes</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-length&quot;</span><span class="p">))</span>
+        <span class="n">total_downloaded</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">index</span> <span class="o">=</span> <span class="n">Gen3Index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="n">record</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">get_record</span><span class="p">(</span><span class="n">object_id</span><span class="p">)</span>
+
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">]</span>
+
+        <span class="n">out_path</span> <span class="o">=</span> <span class="n">Gen3File</span><span class="o">.</span><span class="n">_ensure_dirpath_exists</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_path</span><span class="p">,</span> <span class="n">filename</span><span class="p">),</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">iter_content</span><span class="p">(</span><span class="mi">4096</span><span class="p">):</span>
+                <span class="n">total_downloaded</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">total_size_in_bytes</span> <span class="o">==</span> <span class="n">total_downloaded</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2"> downloaded successfully&quot;</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2"> not downloaded successfully&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="Gen3File.upload_file_to_guid">
+<a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.upload_file_to_guid">[docs]</a>
+    <span class="k">def</span> <span class="nf">upload_file_to_guid</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">expires_in</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bucket</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get a presigned url for a file to upload to the specified existing GUID</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            file_name (str): file_name to use for upload</span>
+<span class="sd">            protocol (str): Storage protocol to use for upload: &quot;s3&quot;, &quot;az&quot;.</span>
+<span class="sd">                If this isn&#39;t set, the default will be &quot;s3&quot;</span>
+<span class="sd">            expires_in (int): Amount in seconds that the signed url will expire from datetime.utcnow().</span>
+<span class="sd">                Be sure to use a positive integer.</span>
+<span class="sd">                This value will also be treated as &lt;= MAX_PRESIGNED_URL_TTL in the fence configuration.</span>
+<span class="sd">            bucket (str): Bucket to upload to. The bucket must be configured in the Fence instance&#39;s</span>
+<span class="sd">                `ALLOWED_DATA_UPLOAD_BUCKETS` setting. If not specified, Fence defaults to the</span>
+<span class="sd">                `DATA_UPLOAD_BUCKET` setting.</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Document: json representation for the file upload</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="si">}</span><span class="s2">/user/data/upload/</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">protocol</span><span class="p">:</span>
+            <span class="n">params</span><span class="p">[</span><span class="s2">&quot;protocol&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">protocol</span>
+        <span class="k">if</span> <span class="n">expires_in</span><span class="p">:</span>
+            <span class="n">params</span><span class="p">[</span><span class="s2">&quot;expires_in&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">expires_in</span>
+        <span class="k">if</span> <span class="n">file_name</span><span class="p">:</span>
+            <span class="n">params</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">file_name</span>
+        <span class="k">if</span> <span class="n">bucket</span><span class="p">:</span>
+            <span class="n">params</span><span class="p">[</span><span class="s2">&quot;bucket&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">bucket</span>
+
+        <span class="n">url_parts</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">urlparse</span><span class="p">(</span><span class="n">url</span><span class="p">))</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">parse_qsl</span><span class="p">(</span><span class="n">url_parts</span><span class="p">[</span><span class="mi">4</span><span class="p">]))</span>
+        <span class="n">query</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">url_parts</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">urlencode</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">urlunparse</span><span class="p">(</span><span class="n">url_parts</span><span class="p">)</span>
+
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">resp</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+</div>
+
 </pre></div>
 
           </div>

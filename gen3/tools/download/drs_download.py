@@ -47,7 +47,7 @@ DEFAULT_EXPIRE: timedelta = timedelta(hours=1)
 # package formats we handle for unpacking
 PACKAGE_EXTENSIONS = [".zip"]
 
-logger = get_logger("drs-pull", log_level="warning")
+logger = get_logger("__name__")
 
 
 @dataclass_json(letter_case=LetterCase.SNAKE)
@@ -613,7 +613,6 @@ def parse_drs_identifier(drs_candidate: str) -> Tuple[str, str, str]:
     matches = re.findall(drs_regex, drs_candidate, re.UNICODE)
 
     if len(matches) == 1:  # this could be a hostname DRS id
-
         hostname_regex = (
             r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*"
             r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$"
@@ -734,7 +733,7 @@ def get_download_url_using_drs(
         logger.critical(f"Was unable to download: {object_id}. Timeout Error.")
     except requests.exceptions.HTTPError as exc:
         logger.critical(
-            f"HTTP Error ({exc.response.status_code}): requesting download url from {access_method}"
+            f"HTTP Error ({exc.response.status_code}) when requesting download url from {access_method}"
         )
     return None
 
@@ -1050,8 +1049,14 @@ class DownloadManager:
 
                     if delete_unpacked_packages:
                         filepath.unlink()
-
-            completed[entry.object_id].status = "downloaded" if res else "error"
+            if res:
+                completed[entry.object_id].status = "downloaded"
+                logger.debug(
+                    f"object {entry.object_id} has been successfully downloaded."
+                )
+            else:
+                completed[entry.object_id].status = "error"
+                logger.debug(f"object {entry.object_id} has failed to be downloaded.")
             completed[entry.object_id].end_time = datetime.now(timezone.utc)
 
         return completed
@@ -1133,7 +1138,7 @@ def _download(
 def _download_obj(
     hostname,
     auth,
-    object_id,
+    object_ids,
     output_dir=".",
     show_progress=False,
     unpack_packages=True,
@@ -1144,7 +1149,7 @@ def _download_obj(
     Args:
         hostname (str): hostname of Gen3 commons to use for access and WTS
         auth: Gen3 Auth instance
-        object_id (str): DRS object id
+        object_ids (List[str]): DRS object id
         output_dir: directory to save downloaded files to
         show_progress: show progress bar
         unpack_packages (bool): set to False to disable the unpacking of downloaded packages
@@ -1159,7 +1164,7 @@ def _download_obj(
         logger.critical(f"Unable to authenticate your credentials with {hostname}")
         return None
 
-    object_list = [Downloadable(object_id=object_id)]
+    object_list = [Downloadable(object_id=object_id) for object_id in object_ids]
     downloader = DownloadManager(
         hostname=hostname,
         auth=auth,
@@ -1343,10 +1348,10 @@ def download_files_in_drs_manifest(
     )
 
 
-def download_drs_object(
+def download_drs_objects(
     hostname,
     auth,
-    object_id,
+    object_ids,
     output_dir,
     show_progress=True,
     unpack_packages=True,
@@ -1357,7 +1362,7 @@ def download_drs_object(
     Args:
         hostname (str): hostname of Gen3 commons to use for access and WTS
         auth: Gen3 Auth instance
-        object_id (str): DRS object id
+        object_ids (List[str]): DRS object ids
         output_dir: directory to save downloaded files to
         unpack_packages (bool): set to False to disable the unpacking of downloaded packages
         delete_unpacked_packages (bool): set to True to delete package files after unpacking them
@@ -1365,10 +1370,10 @@ def download_drs_object(
     Returns:
         List of DownloadStatus objects for the DRS object
     """
-    _download_obj(
+    return _download_obj(
         hostname,
         auth,
-        object_id,
+        object_ids,
         output_dir,
         show_progress,
         unpack_packages,

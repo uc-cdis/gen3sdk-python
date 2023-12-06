@@ -29,7 +29,7 @@ def test_get_presigned_url(gen3_file, supported_protocol):
 
     with patch("gen3.file.requests") as mock_request:
         mock_request.status_code = 200
-        mock_request.get().text = json.dumps({"url": sample_presigned_url})
+        mock_request.get().json = lambda: {"url": sample_presigned_url}
         res = gen3_file.get_presigned_url(guid="123", protocol=supported_protocol)
         assert "url" in res
         assert res["url"] == sample_presigned_url
@@ -66,7 +66,7 @@ def test_get_presigned_url_no_api_key(gen3_file, supported_protocol):
 
     with patch("gen3.file.requests") as mock_request:
         mock_request.status_code = 401
-        mock_request.get().text = "Failed"
+        mock_request.get().json = lambda: "Failed"
         res = gen3_file.get_presigned_url(guid="123", protocol=supported_protocol)
         assert res == "Failed"
 
@@ -85,7 +85,7 @@ def test_get_presigned_url_wrong_api_key(gen3_file, supported_protocol):
 
     with patch("gen3.file.requests") as mock_request:
         mock_request.status_code = 401
-        mock_request.get().text = "Failed"
+        mock_request.get().json = lambda: "Failed"
         res = gen3_file.get_presigned_url(guid="123", protocol=supported_protocol)
         assert res == "Failed"
 

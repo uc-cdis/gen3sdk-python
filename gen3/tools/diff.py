@@ -53,28 +53,22 @@ def manifest_diff(
 
     files.sort()
 
-    try:
-        content = _precheck_manifests(
-            allow_additional_columns=allow_additional_columns,
-            files=files,
-            key_column=key_column,
-        )
+    content = _precheck_manifests(
+        allow_additional_columns=allow_additional_columns,
+        files=files,
+        key_column=key_column,
+    )
 
-        diff_content = _compare_manifest_columns(
-            allow_additional_columns=allow_additional_columns,
-            manifest_content=content,
-        )
+    diff_content = _compare_manifest_columns(
+        allow_additional_columns=allow_additional_columns,
+        manifest_content=content,
+    )
 
-        _write_csv(
-            output_manifest_file_delimiter=output_manifest_file_delimiter,
-            output_manifest=output_manifest,
-            diff_content=diff_content,
-        )
-    except Exception as e:
-        exc_info = sys.exc_info()
-        traceback.print_exception(*exc_info)
-        logging.error("Detail {}", e)
-        return None
+    _write_csv(
+        output_manifest_file_delimiter=output_manifest_file_delimiter,
+        output_manifest=output_manifest,
+        diff_content=diff_content,
+    )
 
 
 def _precheck_manifests(
@@ -111,7 +105,7 @@ def _precheck_manifests(
     logging.info(f"Prechecking manifest files: {files}")
 
     if not len(files) == 2:
-        raise Exception("Must take difference of two files")
+        raise Exception("Must take difference of two files, check dir for hidden files")
 
     tsv_files = [file_name for file_name in files if ".tsv" in file_name.lower()]
     csv_files = [file_name for file_name in files if ".csv" in file_name.lower()]
@@ -120,7 +114,7 @@ def _precheck_manifests(
     elif len(csv_files) == len(files):
         file_delimiter = ","
     else:
-        raise Exception("Not all files have the same extension type")
+        raise ValueError("Not all files have the same extension type")
 
     headers = []
     manifest_content = []
@@ -140,6 +134,9 @@ def _precheck_manifests(
 
             content = {}
             for row in csv_reader:
+                for column in row:
+                    if column == "acl":
+                        row[column] = str(sorted(eval(row[column])))
                 content[row[key_column]] = row
 
             manifest_content.append(content)

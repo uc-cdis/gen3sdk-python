@@ -1,18 +1,15 @@
-
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="../../../../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>gen3.tools.indexing.download_manifest &#8212; Gen3 SDK  documentation</title>
-    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../../../../_static/alabaster.css" />
-    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
-    <script src="../../../../_static/jquery.js"></script>
-    <script src="../../../../_static/underscore.js"></script>
-    <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-    <script src="../../../../_static/doctools.js"></script>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=4f649999" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/alabaster.css?v=039e1c02" />
+    <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="../../../../genindex.html" />
     <link rel="search" title="Search" href="../../../../search.html" />
    
@@ -92,14 +89,17 @@
 <span class="n">logging</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="s2">&quot;__name__&quot;</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="async_download_object_manifest"><a class="viewcode-back" href="../../../../tools/indexing.html#gen3.tools.indexing.download_manifest.async_download_object_manifest">[docs]</a><span class="k">async</span> <span class="k">def</span> <span class="nf">async_download_object_manifest</span><span class="p">(</span>
+<div class="viewcode-block" id="async_download_object_manifest">
+<a class="viewcode-back" href="../../../../tools/indexing.html#gen3.tools.indexing.download_manifest.async_download_object_manifest">[docs]</a>
+<span class="k">async</span> <span class="k">def</span> <span class="nf">async_download_object_manifest</span><span class="p">(</span>
     <span class="n">commons_url</span><span class="p">,</span>
     <span class="n">output_filename</span><span class="o">=</span><span class="s2">&quot;object-manifest.csv&quot;</span><span class="p">,</span>
     <span class="n">num_processes</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
     <span class="n">max_concurrent_requests</span><span class="o">=</span><span class="n">MAX_CONCURRENT_REQUESTS</span><span class="p">,</span>
     <span class="n">input_manifest</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">python_subprocess_command</span><span class="o">=</span><span class="s2">&quot;python&quot;</span><span class="p">,</span>
 <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Download all file object records into a manifest csv</span>
 
 <span class="sd">    Args:</span>
@@ -113,6 +113,10 @@
 <span class="sd">        input_manifest (str): Input file. Read available object data from objects in this</span>
 <span class="sd">            file instead of reading everything in indexd. This will attempt to query</span>
 <span class="sd">            indexd for only the records identified in this manifest.</span>
+<span class="sd">        python_subprocess_command (str, optional): Command used to execute a</span>
+<span class="sd">            python process. By default you should not need to change this, but</span>
+<span class="sd">            if you are running something like MacOS and only installed Python 3.x</span>
+<span class="sd">            you may need to specify &quot;python3&quot;.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
     <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;start time: </span><span class="si">{</span><span class="n">start_time</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -142,6 +146,7 @@
         <span class="n">num_processes</span><span class="p">,</span>
         <span class="n">max_concurrent_requests</span><span class="p">,</span>
         <span class="n">input_manifest</span><span class="p">,</span>
+        <span class="n">python_subprocess_command</span><span class="p">,</span>
     <span class="p">)</span>
 
     <span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
@@ -149,10 +154,16 @@
     <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;run time: </span><span class="si">{</span><span class="n">end_time</span><span class="o">-</span><span class="n">start_time</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
 
+
 <span class="k">async</span> <span class="k">def</span> <span class="nf">_write_all_index_records_to_file</span><span class="p">(</span>
-    <span class="n">commons_url</span><span class="p">,</span> <span class="n">output_filename</span><span class="p">,</span> <span class="n">num_processes</span><span class="p">,</span> <span class="n">max_concurrent_requests</span><span class="p">,</span> <span class="n">input_manifest</span>
+    <span class="n">commons_url</span><span class="p">,</span>
+    <span class="n">output_filename</span><span class="p">,</span>
+    <span class="n">num_processes</span><span class="p">,</span>
+    <span class="n">max_concurrent_requests</span><span class="p">,</span>
+    <span class="n">input_manifest</span><span class="p">,</span>
+    <span class="n">python_subprocess_command</span><span class="p">,</span>
 <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Spins up number of processes provided to parse indexd records and eventually</span>
 <span class="sd">    write to a single output file manifest.</span>
 
@@ -223,7 +234,6 @@
         <span class="n">input_record_chunks</span> <span class="o">=</span> <span class="p">(</span>
             <span class="s2">&quot;|||&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">,</span> <span class="n">record_chunks</span><span class="p">[</span><span class="n">x</span><span class="p">]))</span> <span class="k">if</span> <span class="n">record_chunks</span> <span class="k">else</span> <span class="s2">&quot;|||&quot;</span>
         <span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">input_record_chunks</span><span class="p">)</span>
 
         <span class="c1"># write record_checksum chunks to temporary files since the size can overload</span>
         <span class="c1"># command line arguments</span>
@@ -236,7 +246,7 @@
 
         <span class="c1"># call the cli function below and pass in chunks of pages for each process</span>
         <span class="n">command</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;python </span><span class="si">{</span><span class="n">CURRENT_DIR</span><span class="si">}</span><span class="s2">/download_manifest.py --commons_url &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">python_subprocess_command</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">CURRENT_DIR</span><span class="si">}</span><span class="s2">/download_manifest.py --commons_url &quot;</span>
             <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">commons_url</span><span class="si">}</span><span class="s2"> --pages </span><span class="si">{</span><span class="n">pages</span><span class="si">}</span><span class="s2"> --input-record-chunks-file </span><span class="si">{</span><span class="n">input_records_chunk_filename</span><span class="si">}</span><span class="s2"> &quot;</span>
             <span class="sa">f</span><span class="s2">&quot;--num_processes </span><span class="si">{</span><span class="n">num_processes</span><span class="si">}</span><span class="s2"> --max_concurrent_requests </span><span class="si">{</span><span class="n">max_concurrent_requests</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="p">)</span>
@@ -304,7 +314,7 @@
 <span class="k">def</span> <span class="nf">write_page_records_to_files</span><span class="p">(</span>
     <span class="n">commons_url</span><span class="p">,</span> <span class="n">pages</span><span class="p">,</span> <span class="n">input_record_chunks_file</span><span class="p">,</span> <span class="n">num_processes</span><span class="p">,</span> <span class="n">max_concurrent_requests</span>
 <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Command line interface function for requesting a number of</span>
 <span class="sd">    records from indexd and writing to a file in that process. num_processes</span>
 <span class="sd">    is only used to calculate how many open connections this process should request.</span>
@@ -370,7 +380,7 @@
 <span class="k">async</span> <span class="k">def</span> <span class="nf">_get_records_and_write_to_file</span><span class="p">(</span>
     <span class="n">commons_url</span><span class="p">,</span> <span class="n">pages</span><span class="p">,</span> <span class="n">input_record_chunks</span><span class="p">,</span> <span class="n">num_processes</span><span class="p">,</span> <span class="n">max_concurrent_requests</span>
 <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Getting indexd records and writing to a file. This function</span>
 <span class="sd">    creates semaphores to limit the number of concurrent http connections that</span>
 <span class="sd">    get opened to send requests to indexd.</span>
@@ -419,7 +429,7 @@
 <span class="k">async</span> <span class="k">def</span> <span class="nf">_put_records_from_input_manifest_in_queue</span><span class="p">(</span>
     <span class="n">input_record</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">lock</span><span class="p">,</span> <span class="n">queue</span>
 <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Gets a semaphore then requests records for the given input_record and</span>
 <span class="sd">    puts them in a queue.</span>
 
@@ -451,7 +461,7 @@
 
 
 <span class="k">async</span> <span class="k">def</span> <span class="nf">_put_records_from_page_in_queue</span><span class="p">(</span><span class="n">page</span><span class="p">,</span> <span class="n">commons_url</span><span class="p">,</span> <span class="n">lock</span><span class="p">,</span> <span class="n">queue</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Gets a semaphore then requests records for the given page and</span>
 <span class="sd">    puts them in a queue.</span>
 
@@ -476,7 +486,7 @@
 
 
 <span class="k">async</span> <span class="k">def</span> <span class="nf">_parse_from_queue</span><span class="p">(</span><span class="n">queue</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Read from the queue and write to a file</span>
 
 <span class="sd">    Args:</span>

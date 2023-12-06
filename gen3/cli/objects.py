@@ -75,9 +75,23 @@ def crosswalk():
     type=click.Path(writable=True),
     show_default=True,
 )
+@click.option(
+    "--python-subprocess-command",
+    "python_subprocess_command",
+    help="Command used to execute a python process. By default you should not need "
+    "to change this, but if you are running something like MacOS and only "
+    "installed Python 3.x you may need to specify 'python3'",
+    default="python",
+    show_default=True,
+)
 @click.pass_context
 def objects_manifest_read(
-    ctx, output_file, num_processes, max_concurrent_requests, input_manifest
+    ctx,
+    output_file,
+    num_processes,
+    max_concurrent_requests,
+    input_manifest,
+    python_subprocess_command,
 ):
     auth = ctx.obj["auth_factory"].get()
     loop = get_or_create_event_loop_for_thread()
@@ -89,6 +103,7 @@ def objects_manifest_read(
             num_processes=num_processes,
             max_concurrent_requests=max_concurrent_requests,
             input_manifest=input_manifest,
+            python_subprocess_command=python_subprocess_command,
         )
     )
     click.echo(output_file)
@@ -283,6 +298,7 @@ def objects_manifest_publish(
     append_urls,
     manifest_file_delimiter,
     out_manifest_file,
+    force_metadata_columns_even_if_empty,
 ):
     auth = ctx.obj["auth_factory"].get()
     loop = get_or_create_event_loop_for_thread()
@@ -379,7 +395,7 @@ manifest.add_command(objects_manifest_delete_all_guids, name="delete-all-guids")
     \tA file path to a CSV containing mapping identifiers. Has a specialized
     \tcolumn naming format. Column names MUST be pipe-delimited and contain:\n
     \t\tcommons url | identifier type | identifier name\n
-
+    
     \tYou can have any number of columns for mapping.\n
     """
     )

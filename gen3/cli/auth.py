@@ -72,7 +72,7 @@ def wts_list():
 
 @click.group()
 def auth():
-    """Gen3 sdk auth commands"""
+    """Commands for authentication and authorization"""
     pass
 
 

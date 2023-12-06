@@ -1,18 +1,15 @@
-
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="../../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>gen3.auth &#8212; Gen3 SDK  documentation</title>
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css" />
-    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-    <script src="../../_static/jquery.js"></script>
-    <script src="../../_static/underscore.js"></script>
-    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-    <script src="../../_static/doctools.js"></script>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=4f649999" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=039e1c02" />
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
    
@@ -59,7 +56,7 @@
 
 
 <span class="k">def</span> <span class="nf">decode_token</span><span class="p">(</span><span class="n">token_str</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    jq -r &#39;.api_key&#39; &lt; ~/.gen3/qa-covid19.planx-pla.net.json | awk -F . &#39;{ print $2 }&#39; | base64 --decode | jq -r .</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">tokenParts</span> <span class="o">=</span> <span class="n">token_str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
@@ -72,7 +69,7 @@
 
 
 <span class="k">def</span> <span class="nf">endpoint_from_token</span><span class="p">(</span><span class="n">token_str</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Extract the endpoint from a JWT issue (&quot;iss&quot; property)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">info</span> <span class="o">=</span> <span class="n">decode_token</span><span class="p">(</span><span class="n">token_str</span><span class="p">)</span>
@@ -80,11 +77,11 @@
     <span class="n">endpoint</span> <span class="o">=</span> <span class="n">urlparts</span><span class="o">.</span><span class="n">scheme</span> <span class="o">+</span> <span class="s2">&quot;://&quot;</span> <span class="o">+</span> <span class="n">urlparts</span><span class="o">.</span><span class="n">hostname</span>
     <span class="k">if</span> <span class="n">urlparts</span><span class="o">.</span><span class="n">port</span><span class="p">:</span>
         <span class="n">endpoint</span> <span class="o">+=</span> <span class="s2">&quot;:&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">urlparts</span><span class="o">.</span><span class="n">port</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">endpoint</span>
+    <span class="k">return</span> <span class="n">remove_trailing_whitespace_and_slashes_in_url</span><span class="p">(</span><span class="n">endpoint</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_handle_access_token_response</span><span class="p">(</span><span class="n">resp</span><span class="p">,</span> <span class="n">token_key</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Shared helper for both get_access_token_with_key and get_access_token_from_wts</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">err_msg</span> <span class="o">=</span> <span class="s2">&quot;Failed to get an access token from </span><span class="si">{}</span><span class="s2">:</span><span class="se">\n</span><span class="si">{}</span><span class="s2">&quot;</span>
@@ -100,7 +97,7 @@
 
 
 <span class="k">def</span> <span class="nf">get_access_token_with_key</span><span class="p">(</span><span class="n">api_key</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Try to fetch an access token given the api key</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">endpoint</span> <span class="o">=</span> <span class="n">endpoint_from_token</span><span class="p">(</span><span class="n">api_key</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">])</span>
@@ -109,6 +106,22 @@
     <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">auth_url</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">api_key</span><span class="p">)</span>
     <span class="n">token_key</span> <span class="o">=</span> <span class="s2">&quot;access_token&quot;</span>
     <span class="k">return</span> <span class="n">_handle_access_token_response</span><span class="p">(</span><span class="n">resp</span><span class="p">,</span> <span class="n">token_key</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">get_access_token_with_client_credentials</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">client_credentials</span><span class="p">,</span> <span class="n">scopes</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Try to get an access token from Fence using client credentials</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        endpoint (str): URL of the Gen3 instance to get an access token for</span>
+<span class="sd">        client_credentials ((str, str) tuple): (client ID, client secret) tuple</span>
+<span class="sd">        scopes (str): space-delimited list of scopes to request</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">endpoint</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;endpoint&#39; must be specified when using client credentials&quot;</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">endpoint</span><span class="si">}</span><span class="s2">/user/oauth2/token?grant_type=client_credentials&amp;scope=</span><span class="si">{</span><span class="n">scopes</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="n">client_credentials</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_handle_access_token_response</span><span class="p">(</span><span class="n">resp</span><span class="p">,</span> <span class="s2">&quot;access_token&quot;</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">get_wts_endpoint</span><span class="p">(</span><span class="n">namespace</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;NAMESPACE&quot;</span><span class="p">,</span> <span class="s2">&quot;default&quot;</span><span class="p">)):</span>
@@ -128,7 +141,7 @@
 
 
 <span class="k">def</span> <span class="nf">get_token_cache_file_name</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Compute the path to the access-token cache file&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the path to the access-token cache file&quot;&quot;&quot;</span>
     <span class="n">cache_folder</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/.cache/gen3/&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s2">&quot;~&quot;</span><span class="p">))</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">cache_folder</span><span class="p">):</span>
         <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">cache_folder</span><span class="p">)</span>
@@ -139,8 +152,10 @@
     <span class="k">return</span> <span class="n">cache_prefix</span> <span class="o">+</span> <span class="n">m</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
 
 
-<div class="viewcode-block" id="Gen3Auth"><a class="viewcode-back" href="../../auth.html#gen3.auth.Gen3Auth">[docs]</a><span class="k">class</span> <span class="nc">Gen3Auth</span><span class="p">(</span><span class="n">AuthBase</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Gen3 auth helper class for use with requests auth.</span>
+<div class="viewcode-block" id="Gen3Auth">
+<a class="viewcode-back" href="../../auth.html#gen3.auth.Gen3Auth">[docs]</a>
+<span class="k">class</span> <span class="nc">Gen3Auth</span><span class="p">(</span><span class="n">AuthBase</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Gen3 auth helper class for use with requests auth.</span>
 
 <span class="sd">    Implements requests.auth.AuthBase in order to support JWT authentication.</span>
 <span class="sd">    Generates access tokens from the provided refresh token file or string.</span>
@@ -155,6 +170,10 @@
 <span class="sd">        refresh_token (str, opt): The JSON web token. Optional if working in a Gen3 Workspace.</span>
 <span class="sd">        idp (str, opt): If working in a Gen3 Workspace, the IDP to use can be specified -</span>
 <span class="sd">                &quot;local&quot; indicates the local environment fence idp</span>
+<span class="sd">        client_credentials (tuple, opt): The (client_id, client_secret) credentials for an OIDC client</span>
+<span class="sd">                that has the &#39;client_credentials&#39; grant, allowing it to obtain access tokens.</span>
+<span class="sd">        client_scopes (str, opt): Space-separated list of scopes requested for access tokens obtained from client</span>
+<span class="sd">                credentials. Default: &quot;user data openid&quot;</span>
 
 <span class="sd">    Examples:</span>
 <span class="sd">        This generates the Gen3Auth class pointed at the sandbox commons while</span>
@@ -175,13 +194,33 @@
 <span class="sd">        than pass the refresh_file argument to the Gen3Auth</span>
 <span class="sd">        constructor.</span>
 
+<span class="sd">        If working with an OIDC client that has the &#39;client_credentials&#39; grant, allowing it to obtain</span>
+<span class="sd">        access tokens, provide the client ID and secret:</span>
+
+<span class="sd">        Note: client secrets should never be hardcoded!</span>
+
+<span class="sd">        &gt;&gt;&gt; auth = Gen3Auth(</span>
+<span class="sd">            endpoint=&quot;https://datacommons.example&quot;,</span>
+<span class="sd">            client_credentials=(&quot;client ID&quot;, os.environ[&quot;GEN3_OIDC_CLIENT_CREDS_SECRET&quot;])</span>
+<span class="sd">        )</span>
+
 <span class="sd">        If working in a Gen3 Workspace, initialize as follows:</span>
 
 <span class="sd">        &gt;&gt;&gt; auth = Gen3Auth()</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">refresh_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">refresh_token</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">idp</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="c1"># note - this is not actually a JWT refresh token - it&#39;s a</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">endpoint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">refresh_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">refresh_token</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">idp</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">client_credentials</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">client_scopes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Initializing auth..&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">=</span> <span class="n">remove_trailing_whitespace_and_slashes_in_url</span><span class="p">(</span><span class="n">endpoint</span><span class="p">)</span>
+        <span class="c1"># note - `_refresh_token` is not actually a JWT refresh token - it&#39;s a</span>
         <span class="c1">#  gen3 api key with a token as the &quot;api_key&quot; property</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span> <span class="o">=</span> <span class="n">refresh_token</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span> <span class="o">=</span> <span class="kc">None</span>
@@ -191,6 +230,13 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_use_wts</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_external_wts_host</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_file</span> <span class="o">=</span> <span class="n">refresh_file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_client_credentials</span> <span class="o">=</span> <span class="n">client_credentials</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client_credentials</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_client_scopes</span> <span class="o">=</span> <span class="n">client_scopes</span> <span class="ow">or</span> <span class="s2">&quot;user data openid&quot;</span>
+        <span class="k">elif</span> <span class="n">client_scopes</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;&#39;client_scopes&#39; cannot be specified without &#39;client_credentials&#39;&quot;</span>
+            <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">refresh_file</span> <span class="ow">and</span> <span class="n">refresh_token</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -227,6 +273,15 @@
                     <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Unable to find refresh_file&quot;</span><span class="p">)</span>
                     <span class="n">refresh_file</span> <span class="o">=</span> <span class="kc">None</span>
 
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client_credentials</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">endpoint</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;&#39;endpoint&#39; must be specified when &#39;_client_credentials&#39; is specified&quot;</span>
+                <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span> <span class="o">=</span> <span class="n">get_access_token_with_client_credentials</span><span class="p">(</span>
+                <span class="n">endpoint</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client_credentials</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client_scopes</span>
+            <span class="p">)</span>
+
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span><span class="p">:</span>
             <span class="c1"># at this point - refresh_file either exists or is None</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">refresh_file</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">refresh_token</span><span class="p">:</span>
@@ -254,32 +309,35 @@
                 <span class="k">if</span> <span class="n">idp</span> <span class="ow">or</span> <span class="p">(</span>
                     <span class="n">endpoint</span>
                     <span class="ow">and</span> <span class="p">(</span>
-                        <span class="ow">not</span> <span class="n">endpoint</span>
+                        <span class="ow">not</span> <span class="n">endpoint</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
                         <span class="o">==</span> <span class="n">endpoint_from_token</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">])</span>
                     <span class="p">)</span>
                 <span class="p">):</span>
                     <span class="k">try</span><span class="p">:</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                            <span class="s2">&quot;Switch to using WTS and set external WTS host url..&quot;</span>
+                        <span class="p">)</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">_use_wts</span> <span class="o">=</span> <span class="kc">True</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">_external_wts_host</span> <span class="o">=</span> <span class="p">(</span>
                             <span class="n">endpoint_from_token</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">])</span>
                             <span class="o">+</span> <span class="s2">&quot;/wts/&quot;</span>
                         <span class="p">)</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">get_access_token</span><span class="p">(</span>
-                            <span class="n">remove_trailing_whitespace_and_slashes_in_url</span><span class="p">(</span><span class="n">endpoint</span><span class="p">)</span>
-                        <span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">get_access_token</span><span class="p">()</span>
                     <span class="k">except</span> <span class="n">Gen3AuthError</span> <span class="k">as</span> <span class="n">g</span><span class="p">:</span>
                         <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
                             <span class="s2">&quot;Could not obtain access token from WTS service.&quot;</span>
                         <span class="p">)</span>
                         <span class="k">raise</span> <span class="n">g</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">=</span> <span class="n">endpoint_from_token</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">=</span> <span class="n">endpoint_from_token</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">=</span> <span class="n">endpoint_from_token</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">=</span> <span class="n">endpoint_from_token</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">])</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">_token_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Wrapper to fix intermittent errors when the token is being refreshed</span>
 <span class="sd">        and `_access_token_info` == None</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -288,7 +346,7 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token_info</span>
 
     <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Adds authorization header to the request</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Adds authorization header to the request</span>
 
 <span class="sd">        This gets called by the python.requests package on outbound requests</span>
 <span class="sd">        so that authentication can be added.</span>
@@ -302,7 +360,7 @@
         <span class="k">return</span> <span class="n">request</span>
 
     <span class="k">def</span> <span class="nf">_handle_401</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Handles failed requests when authorization failed.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Handles failed requests when authorization failed.</span>
 
 <span class="sd">        This gets called after a failed request when an HTTP 401 error</span>
 <span class="sd">        occurs. This then tries to refresh the access token in the event</span>
@@ -330,27 +388,37 @@
 
         <span class="k">return</span> <span class="n">_response</span>
 
-<div class="viewcode-block" id="Gen3Auth.refresh_access_token"><a class="viewcode-back" href="../../auth.html#gen3.auth.Gen3Auth.refresh_access_token">[docs]</a>    <span class="k">def</span> <span class="nf">refresh_access_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Get a new access token&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Gen3Auth.refresh_access_token">
+<a class="viewcode-back" href="../../auth.html#gen3.auth.Gen3Auth.refresh_access_token">[docs]</a>
+    <span class="k">def</span> <span class="nf">refresh_access_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get a new access token&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_wts</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_access_token_from_wts</span><span class="p">(</span><span class="n">endpoint</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client_credentials</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span> <span class="o">=</span> <span class="n">get_access_token_with_client_credentials</span><span class="p">(</span>
+                <span class="n">endpoint</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client_credentials</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client_scopes</span>
+            <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span> <span class="o">=</span> <span class="n">get_access_token_with_key</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_access_token_info</span> <span class="o">=</span> <span class="n">decode_token</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span><span class="p">)</span>
+
+        <span class="n">cache_file</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_wts</span><span class="p">:</span>
             <span class="n">cache_file</span> <span class="o">=</span> <span class="n">get_token_cache_file_name</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_file</span><span class="p">:</span>
-                <span class="n">cache_file</span> <span class="o">=</span> <span class="n">get_token_cache_file_name</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_file</span><span class="p">:</span>
+            <span class="n">cache_file</span> <span class="o">=</span> <span class="n">get_token_cache_file_name</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">])</span>
 
-        <span class="k">try</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_write_to_file</span><span class="p">(</span><span class="n">cache_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Unable to write access token to cache file. Exceeded number of retries.&quot;</span>
-            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">cache_file</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_write_to_file</span><span class="p">(</span><span class="n">cache_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Unable to write access token to cache file. Exceeded number of retries. Details: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span></div>
+
 
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span>
         <span class="n">wait_gen</span><span class="o">=</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="n">exception</span><span class="o">=</span><span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span>
@@ -371,8 +439,10 @@
             <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
             <span class="k">raise</span> <span class="n">e</span>
 
-<div class="viewcode-block" id="Gen3Auth.get_access_token"><a class="viewcode-back" href="../../auth.html#gen3.auth.Gen3Auth.get_access_token">[docs]</a>    <span class="k">def</span> <span class="nf">get_access_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Get the access token - auto refresh if within 5 minutes of expiration&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Gen3Auth.get_access_token">
+<a class="viewcode-back" href="../../auth.html#gen3.auth.Gen3Auth.get_access_token">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_access_token</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the access token - auto refresh if within 5 minutes of expiration&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_wts</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
                 <span class="n">cache_file</span> <span class="o">=</span> <span class="n">get_token_cache_file_name</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span><span class="p">)</span>
@@ -398,12 +468,15 @@
             <span class="ow">or</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">+</span> <span class="mi">300</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token_info</span><span class="p">[</span><span class="s2">&quot;exp&quot;</span><span class="p">]</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="n">need_new_token</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">refresh_access_token</span><span class="p">(</span><span class="n">endpoint</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">refresh_access_token</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;endpoint&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">)</span>
         <span class="c1"># use cache</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span></div>
 
+
     <span class="k">def</span> <span class="nf">_get_auth_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Returns the Authorization header value for the request</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the Authorization header value for the request</span>
 
 <span class="sd">        This gets called when added the Authorization header to the request.</span>
 <span class="sd">        This fetches the access token from the refresh token if the access token is missing.</span>
@@ -411,8 +484,10 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="s2">&quot;bearer &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_access_token</span><span class="p">()</span>
 
-<div class="viewcode-block" id="Gen3Auth.curl"><a class="viewcode-back" href="../../auth.html#gen3.auth.Gen3Auth.curl">[docs]</a>    <span class="k">def</span> <span class="nf">curl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Gen3Auth.curl">
+<a class="viewcode-back" href="../../auth.html#gen3.auth.Gen3Auth.curl">[docs]</a>
+    <span class="k">def</span> <span class="nf">curl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Curl the given endpoint - ex: gen3 curl /user/user.  Return requests.Response</span>
 
 <span class="sd">        Args:</span>
@@ -443,29 +518,81 @@
             <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Invalid request type: &quot;</span> <span class="o">+</span> <span class="n">request</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">output</span></div>
 
-<div class="viewcode-block" id="Gen3Auth.get_access_token_from_wts"><a class="viewcode-back" href="../../auth.html#gen3.auth.Gen3Auth.get_access_token_from_wts">[docs]</a>    <span class="k">def</span> <span class="nf">get_access_token_from_wts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Gen3Auth.get_access_token_from_wts">
+<a class="viewcode-back" href="../../auth.html#gen3.auth.Gen3Auth.get_access_token_from_wts">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_access_token_from_wts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Try to fetch an access token for the given idp from the wts</span>
 <span class="sd">        in the given namespace.  If idp is not set, then default to &quot;local&quot;</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># attempt to get a token from the workspace-token-service</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;getting access token from wts..&quot;</span><span class="p">)</span>
         <span class="n">auth_url</span> <span class="o">=</span> <span class="n">get_wts_endpoint</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wts_namespace</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;/token/&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span> <span class="o">!=</span> <span class="s2">&quot;local&quot;</span><span class="p">:</span>
-            <span class="n">auth_url</span> <span class="o">+=</span> <span class="s2">&quot;?idp=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span><span class="p">)</span>
 
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">auth_url</span><span class="p">)</span>
-            <span class="k">if</span> <span class="p">(</span><span class="n">resp</span> <span class="ow">and</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_external_wts_host</span><span class="p">):</span>
-                <span class="k">return</span> <span class="n">_handle_access_token_response</span><span class="p">(</span><span class="n">resp</span><span class="p">,</span> <span class="s2">&quot;token&quot;</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_external_wts_host</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">e</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="c1"># Try to obtain token from external wts</span>
-                <span class="k">pass</span>
+        <span class="c1"># If non &quot;local&quot; idp value exists, append to auth url</span>
+        <span class="c1"># If user specified endpoint value, then first attempt to determine idp value.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="ow">or</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span> <span class="o">!=</span> <span class="s2">&quot;local&quot;</span><span class="p">):</span>
+            <span class="c1"># If user supplied endpoint value and not idp, figure out the idp value</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="s2">&quot;First try to use the local WTS to figure out idp name for the supplied endpoint..&quot;</span>
+                <span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">provider_List</span> <span class="o">=</span> <span class="n">get_wts_idps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wts_namespace</span><span class="p">)</span>
+                    <span class="n">matchProviders</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+                        <span class="nb">filter</span><span class="p">(</span>
+                            <span class="k">lambda</span> <span class="n">provider</span><span class="p">:</span> <span class="n">provider</span><span class="p">[</span><span class="s2">&quot;base_url&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">endpoint</span><span class="p">,</span>
+                            <span class="n">provider_List</span><span class="p">[</span><span class="s2">&quot;providers&quot;</span><span class="p">],</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">matchProviders</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Found matching idp from local WTS.&quot;</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span> <span class="o">=</span> <span class="n">matchProviders</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;idp&quot;</span><span class="p">]</span>
+                    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">matchProviders</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                            <span class="s2">&quot;Multiple idps matched with endpoint value provided.&quot;</span>
+                        <span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Could not find matching idp from local WTS.&quot;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                        <span class="s2">&quot;Exception occured when making network call to local WTS.&quot;</span>
+                    <span class="p">)</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_external_wts_host</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">e</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Since external WTS host exists, continuing on..&quot;</span><span class="p">)</span>
+                        <span class="k">pass</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span> <span class="o">!=</span> <span class="s2">&quot;local&quot;</span><span class="p">:</span>
+                <span class="n">auth_url</span> <span class="o">+=</span> <span class="s2">&quot;?idp=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span><span class="p">)</span>
+
+        <span class="c1"># If endpoint value exists, only get WTS token if idp value has been successfully determined</span>
+        <span class="c1"># Otherwise skip to querying external WTS</span>
+        <span class="c1"># This is to prevent local WTS from supplying an incorrect token to user</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_external_wts_host</span>
+            <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span>
+            <span class="ow">or</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span> <span class="o">!=</span> <span class="s2">&quot;local&quot;</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Try to get access token from local WTS..&quot;</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">auth_url</span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">auth_url</span><span class="p">)</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">resp</span> <span class="ow">and</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_external_wts_host</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="n">_handle_access_token_response</span><span class="p">(</span><span class="n">resp</span><span class="p">,</span> <span class="s2">&quot;token&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_external_wts_host</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">e</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Try to obtain token from external wts</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Could get obtain token from Local WTS.&quot;</span><span class="p">)</span>
+                    <span class="k">pass</span>
 
         <span class="c1"># local workspace wts call failed, try using a network call</span>
         <span class="c1"># First get access token with WTS host</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Trying to get access token from external WTS Host..&quot;</span><span class="p">)</span>
         <span class="n">wts_token</span> <span class="o">=</span> <span class="n">get_access_token_with_key</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">)</span>
         <span class="n">auth_url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_external_wts_host</span> <span class="o">+</span> <span class="s2">&quot;token/&quot;</span>
 
@@ -486,9 +613,14 @@
                     <span class="n">provider_List</span><span class="p">[</span><span class="s2">&quot;providers&quot;</span><span class="p">],</span>
                 <span class="p">)</span>
             <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                <span class="s2">&quot;Unable to generate matching identity providers (no IdP or endpoint provided)&quot;</span>
+            <span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">matchProviders</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span> <span class="o">=</span> <span class="n">matchProviders</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;idp&quot;</span><span class="p">]</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Succesfully determined idp value: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">idp_list</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2"> &quot;</span>
 
@@ -525,14 +657,16 @@
                     <span class="o">+</span> <span class="n">idp_list</span>
                     <span class="o">+</span> <span class="s2">&quot;Query /wts/external_oidc/ for more information.&quot;</span>
                 <span class="p">)</span>
-
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Finally getting access token..&quot;</span><span class="p">)</span>
         <span class="n">auth_url</span> <span class="o">+=</span> <span class="s2">&quot;?idp=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span><span class="p">)</span>
         <span class="n">header</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="s2">&quot;Bearer &quot;</span> <span class="o">+</span> <span class="n">wts_token</span><span class="p">}</span>
         <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">auth_url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">header</span><span class="p">)</span>
         <span class="n">err_msg</span> <span class="o">=</span> <span class="s2">&quot;Please make sure the target commons is connected on your profile page and that connection has not expired.&quot;</span>
         <span class="k">if</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">_handle_access_token_response</span><span class="p">(</span><span class="n">resp</span><span class="p">,</span> <span class="s2">&quot;token&quot;</span><span class="p">)</span></div></div>
+        <span class="k">return</span> <span class="n">_handle_access_token_response</span><span class="p">(</span><span class="n">resp</span><span class="p">,</span> <span class="s2">&quot;token&quot;</span><span class="p">)</span></div>
+</div>
+
 </pre></div>
 
           </div>

@@ -1,19 +1,16 @@
-
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="./">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>Gen3 Jobs Class &#8212; Gen3 SDK  documentation</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-    <script src="_static/jquery.js"></script>
-    <script src="_static/underscore.js"></script>
-    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-    <script src="_static/doctools.js"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=4f649999" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=039e1c02" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Gen3 Metadata Class" href="metadata.html" />
@@ -35,10 +32,10 @@
           <div class="body" role="main">
             
   <section id="gen3-jobs-class">
-<h1>Gen3 Jobs Class<a class="headerlink" href="#gen3-jobs-class" title="Permalink to this heading">¶</a></h1>
+<h1>Gen3 Jobs Class<a class="headerlink" href="#gen3-jobs-class" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="gen3.jobs.Gen3Jobs">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.jobs.</span></span><span class="sig-name descname"><span class="pre">Gen3Jobs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">endpoint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth_provider</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service_location</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'job'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.jobs.</span></span><span class="sig-name descname"><span class="pre">Gen3Jobs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">endpoint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth_provider</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service_location</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'job'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>A class for interacting with the Gen3’s Job Dispatching Service(s).</p>
 <p class="rubric">Examples</p>
@@ -50,7 +47,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.jobs.Gen3Jobs.async_run_job_and_wait">
-<em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">async_run_job_and_wait</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">job_input</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.async_run_job_and_wait"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.async_run_job_and_wait" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">async_run_job_and_wait</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">job_input</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.async_run_job_and_wait"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.async_run_job_and_wait" title="Link to this definition">¶</a></dt>
 <dd><p>Asynchronous function to create a job, wait for output, and return. Will
 sleep in a linear delay until the job is done, starting with 1 second.</p>
 <dl class="field-list simple">
@@ -72,7 +69,7 @@ sleep in a linear delay until the job is done, starting with 1 second.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.jobs.Gen3Jobs.create_job">
-<span class="sig-name descname"><span class="pre">create_job</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">job_input</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.create_job"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.create_job" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">create_job</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">job_input</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.create_job"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.create_job" title="Link to this definition">¶</a></dt>
 <dd><p>Create a job with given name and input</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -92,19 +89,19 @@ sleep in a linear delay until the job is done, starting with 1 second.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.jobs.Gen3Jobs.get_output">
-<span class="sig-name descname"><span class="pre">get_output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.get_output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.get_output" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.get_output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.get_output" title="Link to this definition">¶</a></dt>
 <dd><p>Get the output of a previously completed job</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.jobs.Gen3Jobs.get_status">
-<span class="sig-name descname"><span class="pre">get_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.get_status"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.get_status" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.get_status"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.get_status" title="Link to this definition">¶</a></dt>
 <dd><p>Get the status of a previously created job</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.jobs.Gen3Jobs.get_version">
-<span class="sig-name descname"><span class="pre">get_version</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.get_version"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.get_version" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_version</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.get_version"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.get_version" title="Link to this definition">¶</a></dt>
 <dd><p>Return the version</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
@@ -118,7 +115,7 @@ sleep in a linear delay until the job is done, starting with 1 second.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.jobs.Gen3Jobs.is_healthy">
-<span class="sig-name descname"><span class="pre">is_healthy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.is_healthy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.is_healthy" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">is_healthy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.is_healthy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.is_healthy" title="Link to this definition">¶</a></dt>
 <dd><p>Return if is healthy or not</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
@@ -132,7 +129,7 @@ sleep in a linear delay until the job is done, starting with 1 second.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.jobs.Gen3Jobs.list_jobs">
-<span class="sig-name descname"><span class="pre">list_jobs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.list_jobs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.list_jobs" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">list_jobs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/jobs.html#Gen3Jobs.list_jobs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.jobs.Gen3Jobs.list_jobs" title="Link to this definition">¶</a></dt>
 <dd><p>List all jobs</p>
 </dd></dl>
 
@@ -168,7 +165,19 @@ sleep in a linear delay until the job is done, starting with 1 second.</p>
 <li class="toctree-l1"><a class="reference internal" href="auth.html">Gen3 Auth Helper</a></li>
 <li class="toctree-l1"><a class="reference internal" href="file.html">Gen3 File Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="indexing.html">Gen3 Index Class</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Gen3 Jobs Class</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Gen3 Jobs Class</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#gen3.jobs.Gen3Jobs"><code class="docutils literal notranslate"><span class="pre">Gen3Jobs</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.jobs.Gen3Jobs.async_run_job_and_wait"><code class="docutils literal notranslate"><span class="pre">Gen3Jobs.async_run_job_and_wait()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.jobs.Gen3Jobs.create_job"><code class="docutils literal notranslate"><span class="pre">Gen3Jobs.create_job()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.jobs.Gen3Jobs.get_output"><code class="docutils literal notranslate"><span class="pre">Gen3Jobs.get_output()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.jobs.Gen3Jobs.get_status"><code class="docutils literal notranslate"><span class="pre">Gen3Jobs.get_status()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.jobs.Gen3Jobs.get_version"><code class="docutils literal notranslate"><span class="pre">Gen3Jobs.get_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.jobs.Gen3Jobs.is_healthy"><code class="docutils literal notranslate"><span class="pre">Gen3Jobs.is_healthy()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.jobs.Gen3Jobs.list_jobs"><code class="docutils literal notranslate"><span class="pre">Gen3Jobs.list_jobs()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="metadata.html">Gen3 Metadata Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="object.html">Gen3 Object Class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="query.html">Gen3 Query Class</a></li>

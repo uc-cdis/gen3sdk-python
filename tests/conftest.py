@@ -13,6 +13,7 @@ from cdisutilstest.code.indexd_fixture import (
     clear_database,
     create_user,
 )
+from gen3.cli.auth import endpoint
 from indexd import get_app
 from indexd.default_settings import settings
 
@@ -33,6 +34,9 @@ class MockAuth:
         self.endpoint = "https://example.commons.com"
         self.refresh_token = {"api_key": "123"}
         self._token_info = {"sub": "42"}
+
+    def _get_auth_value(self):
+        return "foobar"
 
     @property
     def __class__(self):

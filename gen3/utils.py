@@ -4,6 +4,8 @@ from jsonschema import Draft4Validator
 import sys
 import re
 import requests
+import random
+import string
 import os
 
 from urllib.parse import urlunsplit
@@ -23,6 +25,47 @@ SIZE_FORMAT = r"^[0-9]*$"
 ACL_FORMAT = r"^.*$"
 URL_FORMAT = r"^.*$"
 AUTHZ_FORMAT = r"^.*$"
+
+
+def get_random_alphanumeric(length):
+    # end up with roughly the same amount of numbers as letters
+    letters = string.ascii_lowercase + "".join([str(item) for item in range(0, 10)]) * 3
+    return "".join(random.choice(letters) for i in range(length))
+
+
+def make_folders_for_filename(filename, current_directory=None):
+    """
+    Make the directories up to the filename provided. Relative paths are supported.
+    Ensure you supply the current directory you want relative paths to be
+    based off of. Returns the absolute path for the file with the folders
+    created. This does NOT create the actual file.
+
+    Example:
+        output = make_folders_for_filename(
+            "../test/temp/output.txt",
+            current_directory="/home/me/foobar"
+        )
+        print(output)
+        >>> /home/me/test/temp/output.txt
+
+    Args:
+        filename (str): path to desired file
+        current_directory (str, optional): current directory you want relative paths to be
+    based off of
+
+    Returns:
+        str: the absolute path for the file with the folders created
+    """
+    current_directory = os.path.dirname(os.path.realpath(__file__))
+    directory = os.path.dirname(os.path.abspath(filename))
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    absolute_path_filename = (
+        directory.rstrip("/") + "/" + os.path.abspath(filename).split("/")[-1]
+    )
+
+    return absolute_path_filename
 
 
 def get_or_create_event_loop_for_thread():
@@ -48,6 +91,9 @@ def get_or_create_event_loop_for_thread():
 
 
 def raise_for_status_and_print_error(response):
+    """
+    This only works for sync requests
+    """
     try:
         response.raise_for_status()
     except requests.HTTPError as exception:
@@ -155,16 +201,48 @@ def log_backoff_giveup_except_on_no_retries(details):
         )
 
 
-def exception_do_not_retry(error):
-    def _is_status(code):
-        return (
-            str(getattr(error, "code", None)) == code
-            or str(getattr(error, "status", None)) == code
-            or str(getattr(error, "status_code", None)) == code
-            or str(getattr(getattr(error, "response", {}), "status_code", "")) == code
-        )
+def get_delimiter_from_extension(filename):
+    """
+    Return the file delimter based on the extension.
 
-    if _is_status("409") or _is_status("404"):
+    Args:
+        filename (str): file name with extension
+
+    Returns:
+        str: delimeter character, either \t or ,
+    """
+    file_ext = os.path.splitext(filename)
+    if file_ext[-1].lower() == ".tsv":
+        file_delimiter = "\t"
+    else:
+        # default, assume CSV
+        file_delimiter = ","
+    return file_delimiter
+
+
+def is_status_code(error, code):
+    """
+    Args:
+        error (object): Ideally a requests.Response, this safely checks for
+            known attributes where the status code might be
+        code (str): The status code you want to check for in the error. ex: 404
+
+    Returns:
+        bool: Whether or not the error object contains the status code specified
+    """
+    code = str(code)
+    return (
+        str(getattr(error, "code", None)) == code
+        or str(getattr(error, "status", None)) == code
+        or str(getattr(error, "status_code", None)) == code
+        or str(getattr(getattr(error, "response", {}), "code", "")) == code
+        or str(getattr(getattr(error, "response", {}), "status", "")) == code
+        or str(getattr(getattr(error, "response", {}), "status_code", "")) == code
+    )
+
+
+def exception_do_not_retry(error):
+    if is_status_code(error, "409") or is_status_code(error, "404"):
         return True
 
     return False
@@ -269,7 +347,7 @@ DEFAULT_BACKOFF_SETTINGS = {
     "logger": None,
     "on_backoff": log_backoff_retry,
     "on_giveup": log_backoff_giveup,
-    "max_tries": os.environ.get("GEN3SDK_MAX_RETRIES", 3),
+    "max_tries": int(os.environ.get("GEN3SDK_MAX_RETRIES", 3)),
     "giveup": exception_do_not_retry,
 }
 
@@ -279,6 +357,6 @@ BACKOFF_NO_LOG_IF_NOT_RETRIED = {
     "logger": None,
     "on_backoff": log_backoff_retry,
     "on_giveup": log_backoff_giveup_except_on_no_retries,
-    "max_tries": os.environ.get("GEN3SDK_MAX_RETRIES", 3),
+    "max_tries": int(os.environ.get("GEN3SDK_MAX_RETRIES", 3)),
     "giveup": exception_do_not_retry,
 }
