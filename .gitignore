@@ -115,3 +115,11 @@ indexing-output-manifest.csv
 object-manifest.csv
 output_manifest.csv
 
+.dccache
+.idea
+# Files generated during pytest
+input.csv
+test_combined_discovery_metadata.tsv
+test_combined_discovery_metadata_exact_match.tsv
+tmp_output_file.csv
+tmp_output_file_info.csv

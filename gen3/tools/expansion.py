@@ -5,7 +5,7 @@ from gen3.auth import Gen3Auth
 from gen3.submission import Gen3Submission
 from gen3.file import Gen3File
 
-from pandas.io.json import json_normalize
+from pandas import json_normalize
 import pandas as pd
 
 

@@ -9,6 +9,8 @@ import base64
 from datetime import datetime
 from cdislogging import get_logger
 
+from gen3.utils import get_delimiter_from_extension
+
 logging = get_logger("__name__")
 
 
@@ -228,7 +230,10 @@ def merge_guids_into_metadata(
                     rows_to_add = data_from_indexing_manifest.get(key_id_from_row, {})
 
                     for new_row in rows_to_add:
-                        new_row.update(row)
+                        for key, value in row.items():
+                            # only replace if there's content
+                            if value:
+                                new_row.update({key: value})
                         append_row_to_file(
                             filename=output_filename,
                             row=new_row,
@@ -253,7 +258,10 @@ def merge_guids_into_metadata(
                     key_id_from_row = row.get(row_key, "").strip()
                     for new_row in data_from_indexing_manifest.get(key_id_from_row, {}):
                         if new_row.get("guid") == guid:
-                            new_row.update(row)
+                            for key, value in row.items():
+                                # only replace if there's content
+                                if value:
+                                    new_row.update({key: value})
                             append_row_to_file(
                                 filename=output_filename,
                                 row=new_row,
@@ -273,25 +281,6 @@ def merge_guids_into_metadata(
     logging.debug(f"run time: {end_time-start_time}")
 
     logging.debug(f"output file:\n{os.path.abspath(output_filename)}")
-
-
-def get_delimiter_from_extension(filename):
-    """
-    Return the file delimter based on the extension.
-
-    Args:
-        filename (str): file name with extension
-
-    Returns:
-        str: delimeter character, either \t or ,
-    """
-    file_ext = os.path.splitext(filename)
-    if file_ext[-1].lower() == ".tsv":
-        file_delimiter = "\t"
-    else:
-        # default, assume CSV
-        file_delimiter = ","
-    return file_delimiter
 
 
 def write_header_to_file(filename, fieldnames, delimiter="\t"):

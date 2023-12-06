@@ -1,16 +1,15 @@
-
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="../../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>gen3.query &#8212; Gen3 SDK  documentation</title>
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css" />
-    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-    <script src="../../_static/doctools.js"></script>
-    <script src="../../_static/sphinx_highlight.js"></script>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=4f649999" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=039e1c02" />
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
    
@@ -35,7 +34,9 @@
 <span class="kn">from</span> <span class="nn">gen3.utils</span> <span class="kn">import</span> <span class="n">raise_for_status_and_print_error</span>
 
 
-<div class="viewcode-block" id="Gen3Query"><a class="viewcode-back" href="../../query.html#gen3.query.Gen3Query">[docs]</a><span class="k">class</span> <span class="nc">Gen3Query</span><span class="p">:</span>
+<div class="viewcode-block" id="Gen3Query">
+<a class="viewcode-back" href="../../query.html#gen3.query.Gen3Query">[docs]</a>
+<span class="k">class</span> <span class="nc">Gen3Query</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Query ElasticSearch data from a Gen3 system.</span>
 
@@ -53,7 +54,9 @@
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">auth_provider</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span> <span class="o">=</span> <span class="n">auth_provider</span>
 
-<div class="viewcode-block" id="Gen3Query.query"><a class="viewcode-back" href="../../query.html#gen3.query.Gen3Query.query">[docs]</a>    <span class="k">def</span> <span class="nf">query</span><span class="p">(</span>
+<div class="viewcode-block" id="Gen3Query.query">
+<a class="viewcode-back" href="../../query.html#gen3.query.Gen3Query.query">[docs]</a>
+    <span class="k">def</span> <span class="nf">query</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">data_type</span><span class="p">,</span>
         <span class="n">fields</span><span class="p">,</span>
@@ -141,7 +144,10 @@
         <span class="n">variables</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;filter&quot;</span><span class="p">:</span> <span class="n">filter_object</span><span class="p">}</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graphql_query</span><span class="p">(</span><span class="n">query_string</span><span class="o">=</span><span class="n">query_string</span><span class="p">,</span> <span class="n">variables</span><span class="o">=</span><span class="n">variables</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Gen3Query.graphql_query"><a class="viewcode-back" href="../../query.html#gen3.query.Gen3Query.graphql_query">[docs]</a>    <span class="k">def</span> <span class="nf">graphql_query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query_string</span><span class="p">,</span> <span class="n">variables</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+<div class="viewcode-block" id="Gen3Query.graphql_query">
+<a class="viewcode-back" href="../../query.html#gen3.query.Gen3Query.graphql_query">[docs]</a>
+    <span class="k">def</span> <span class="nf">graphql_query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query_string</span><span class="p">,</span> <span class="n">variables</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Execute a GraphQL query against a Data Commons.</span>
 
@@ -175,7 +181,10 @@
             <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Did not receive JSON: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">raise</span></div>
 
-<div class="viewcode-block" id="Gen3Query.raw_data_download"><a class="viewcode-back" href="../../query.html#gen3.query.Gen3Query.raw_data_download">[docs]</a>    <span class="k">def</span> <span class="nf">raw_data_download</span><span class="p">(</span>
+
+<div class="viewcode-block" id="Gen3Query.raw_data_download">
+<a class="viewcode-back" href="../../query.html#gen3.query.Gen3Query.raw_data_download">[docs]</a>
+    <span class="k">def</span> <span class="nf">raw_data_download</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">data_type</span><span class="p">,</span>
         <span class="n">fields</span><span class="p">,</span>
@@ -246,7 +255,9 @@
         <span class="k">if</span> <span class="n">first</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:</span><span class="n">first</span><span class="p">]</span>
 
-        <span class="k">return</span> <span class="n">data</span></div></div>
+        <span class="k">return</span> <span class="n">data</span></div>
+</div>
+
 </pre></div>
 
           </div>

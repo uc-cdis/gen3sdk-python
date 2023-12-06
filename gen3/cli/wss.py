@@ -72,7 +72,7 @@ def copy(ctx, src, dest):
 
 @click.group()
 def wss():
-    """Gen3 sdk workspace storage commands"""
+    """[unfinished] Commands for Workspace Storage Service"""
     pass
 
 

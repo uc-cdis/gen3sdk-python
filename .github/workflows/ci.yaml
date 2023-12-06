@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  # run on pushed commits to master and on new commits on pull requests
+  push:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  Security:
+    name: Security Pipeline
+    uses: uc-cdis/.github/.github/workflows/securitypipeline.yaml@master
+    with:
+       python-poetry: 'false'
+    secrets: inherit  # pragma: allowlist secret
+  UnitTest:
+    name: Python Unit Test
+    uses: uc-cdis/.github/.github/workflows/python_unit_test.yaml@master
+    with:
+        python-version: '3.9'

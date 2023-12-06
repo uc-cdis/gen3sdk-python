@@ -1,17 +1,16 @@
-
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="./">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>Gen3 Workspace Storage &#8212; Gen3 SDK  documentation</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-    <script src="_static/doctools.js"></script>
-    <script src="_static/sphinx_highlight.js"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=4f649999" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=039e1c02" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="prev" title="Metadata Tools" href="tools/metadata.html" />
@@ -32,10 +31,10 @@
           <div class="body" role="main">
             
   <section id="gen3-workspace-storage">
-<h1>Gen3 Workspace Storage<a class="headerlink" href="#gen3-workspace-storage" title="Permalink to this heading">¶</a></h1>
+<h1>Gen3 Workspace Storage<a class="headerlink" href="#gen3-workspace-storage" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="gen3.wss.Gen3WsStorage">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.wss.</span></span><span class="sig-name descname"><span class="pre">Gen3WsStorage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">auth_provider</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.wss.</span></span><span class="sig-name descname"><span class="pre">Gen3WsStorage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">auth_provider</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>A class for interacting with the Gen3 workspace storage service.</p>
 <p class="rubric">Examples</p>
@@ -47,14 +46,14 @@ using the credentials.json downloaded from the commons profile page.</p>
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.wss.Gen3WsStorage.copy">
-<span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src_urlstr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_urlstr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.copy" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src_urlstr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_urlstr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.copy" title="Link to this definition">¶</a></dt>
 <dd><p>Parse src_urlstr and dest_urlstr, and call upload or download
 as appropriate</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.wss.Gen3WsStorage.download">
-<span class="sig-name descname"><span class="pre">download</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src_ws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_wskey</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.download"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.download" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">download</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src_ws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_wskey</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.download"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.download" title="Link to this definition">¶</a></dt>
 <dd><p>Download a file from the workspace to local disk</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -69,7 +68,7 @@ as appropriate</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.wss.Gen3WsStorage.download_url">
-<span class="sig-name descname"><span class="pre">download_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wskey</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.download_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.download_url" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">download_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wskey</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.download_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.download_url" title="Link to this definition">¶</a></dt>
 <dd><p>Get a download url for the given workspace key</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -83,7 +82,7 @@ as appropriate</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.wss.Gen3WsStorage.ls">
-<span class="sig-name descname"><span class="pre">ls</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wskey</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.ls"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.ls" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">ls</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wskey</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.ls"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.ls" title="Link to this definition">¶</a></dt>
 <dd><p>List the contents under the given workspace path</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -97,7 +96,7 @@ as appropriate</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.wss.Gen3WsStorage.ls_path">
-<span class="sig-name descname"><span class="pre">ls_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ws_urlstr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.ls_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.ls_path" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">ls_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ws_urlstr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.ls_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.ls_path" title="Link to this definition">¶</a></dt>
 <dd><dl class="simple">
 <dt>Same as ls - but parses ws_urlstr argument of form:</dt><dd><p>ws:///workspace/key</p>
 </dd>
@@ -114,7 +113,7 @@ as appropriate</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.wss.Gen3WsStorage.rm">
-<span class="sig-name descname"><span class="pre">rm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wskey</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.rm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.rm" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">rm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wskey</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.rm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.rm" title="Link to this definition">¶</a></dt>
 <dd><p>Remove the given workspace key</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -128,19 +127,19 @@ as appropriate</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.wss.Gen3WsStorage.rm_path">
-<span class="sig-name descname"><span class="pre">rm_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ws_urlstr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.rm_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.rm_path" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">rm_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ws_urlstr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.rm_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.rm_path" title="Link to this definition">¶</a></dt>
 <dd><p>Same as rm - but parses the ws_urlstr argument</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.wss.Gen3WsStorage.upload">
-<span class="sig-name descname"><span class="pre">upload</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_ws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_wskey</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.upload"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.upload" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">upload</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_ws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_wskey</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.upload"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.upload" title="Link to this definition">¶</a></dt>
 <dd><p>Upload a local file to the specified workspace path</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.wss.Gen3WsStorage.upload_url">
-<span class="sig-name descname"><span class="pre">upload_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wskey</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.upload_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.upload_url" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">upload_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wskey</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/wss.html#Gen3WsStorage.upload_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.wss.Gen3WsStorage.upload_url" title="Link to this definition">¶</a></dt>
 <dd><p>Get a upload url for the given workspace key</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
