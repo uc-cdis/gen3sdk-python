@@ -119,6 +119,28 @@ class dbgapStudyRegistration(ExternalMetadataSourceInterface):
 
             logging.debug(f"Got study JSON: {study}")
 
-            metadata_for_ids[phsid] = study
+            metadata_for_ids[study["StudyInfo"]["@accession"]] = study
 
         return metadata_for_ids
+
+    def get_child_studies_for_ids(self, ids):
+        """
+        Returns the dbGaP child studies, if any, for each of the provided dbGaP study IDs.
+
+          Args:
+            ids (List[str]): list of IDs to query for
+
+        Returns:
+            Dict[dict]: list of children IDs for each of the provided IDs (which
+                        are the keys in the returned dict)
+        """
+        parents = self.get_metadata_for_ids(ids)
+        result = {}
+        for parent, metadata in parents.items():
+            children = metadata["StudyInfo"].get("childAccession", [])
+            # dbGaP returns a string if there's only one child, so force it into a list here so the dict is consistent
+            if isinstance(metadata["StudyInfo"].get("childAccession", []), list):
+                result[parent] = children
+            else:
+                result[parent] = [children]
+        return result

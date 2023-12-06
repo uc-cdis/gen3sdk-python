@@ -1,8 +1,9 @@
-name: Build docs
+name: Docs
 
 on:
+  # DON'T run on pushed commits to master, ONLY on new commits on pull requests
   pull_request:
-    branches: [ master ]
+    types: [opened, synchronize]
 
 jobs:
   build_docs:

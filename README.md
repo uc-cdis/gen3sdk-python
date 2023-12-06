@@ -23,6 +23,7 @@ The docs here contain general descriptions of the different pieces of the SDK an
     - [Gen3 Subject-level Crosswalk Metadata Tools](docs/howto/crosswalk.md)
   - [Bundle Tools](docs/howto/bundleTools.md)
   - [Development](docs/howto/devTest.md)
+  - [CLI](docs/howto/cli.md)
 
 ---
 
