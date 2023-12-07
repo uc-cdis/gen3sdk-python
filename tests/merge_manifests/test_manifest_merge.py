@@ -121,6 +121,37 @@ def test_size_mismatch():
         )
 
 
+def test_no_guid_input_order():
+    """
+    Test merging two input manifests with that have the same md5, but one has no guid.
+    Ensure that the order of the input results in the same correct output.
+    """
+    file_order_1 = [
+        "tests/merge_manifests/no_guid_same_md5_order/input/manifest_with_guid.tsv",
+        "tests/merge_manifests/no_guid_same_md5_order/input/manifest_WITHOUT_guid.tsv",
+    ]
+    file_order_2 = [
+        "tests/merge_manifests/no_guid_same_md5_order/input/manifest_WITHOUT_guid.tsv",
+        "tests/merge_manifests/no_guid_same_md5_order/input/manifest_with_guid.tsv",
+    ]
+    merge_bucket_manifests(
+        files=file_order_1,
+        output_manifest_file_delimiter=None,
+        output_manifest="merged-output-test-manifest.tsv",
+    )
+    assert _get_tsv_data("merged-output-test-manifest.tsv") == _get_tsv_data(
+        "tests/merge_manifests/no_guid_same_md5_order/expected-merged-output-manifest.tsv"
+    )
+    merge_bucket_manifests(
+        files=file_order_2,
+        output_manifest_file_delimiter=None,
+        output_manifest="merged-output-test-manifest.tsv",
+    )
+    assert _get_tsv_data("merged-output-test-manifest.tsv") == _get_tsv_data(
+        "tests/merge_manifests/no_guid_same_md5_order/expected-merged-output-manifest.tsv"
+    )
+
+
 def _get_tsv_data(manifest, delimiter="\t"):
     """
     Returns a list of rows sorted by md5 for the given manifest.
