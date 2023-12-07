@@ -317,7 +317,7 @@ def try_delete_discovery_objects(auth, guids):
             logging.warning(e)
 
 
-def is_valid_object_manifest(filename):
+def is_valid_object_manifest(filename, suppress_logs=False):
     """
     Checks a file for required object fields, used for publishing or deleting discovery objects
 
@@ -331,7 +331,7 @@ def is_valid_object_manifest(filename):
         columns = set(objects_reader.fieldnames)
         required_fields = REQUIRED_OBJECT_FIELDS.copy()
         missing_columns = required_fields - columns
-        if missing_columns:
+        if missing_columns and not suppress_logs:
             logging.error(f"Missing required column(s) {missing_columns}.")
     return REQUIRED_OBJECT_FIELDS.issubset(columns)
 
