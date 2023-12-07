@@ -495,6 +495,69 @@ def index_object_manifest(
     return files, headers
 
 
+def populate_object_manifest_with_valid_guids(
+    commons_url, manifest_file, output_filename=None
+):
+    """
+    Given a minimal file object manifest, populate any missing GUIDs with valid GUIDs
+    for the given commons.
+
+    NOTE: This DOES NOT index anything, it only works client side to populate the manifest
+          with valid GUIDs (which are obtained from the server). No records are created
+          as part of this function call.
+
+    Args:
+        commons_url (str): root domain for commons where indexd lives
+        manifest_file (str): file path for input manifest file to populate empty GUIDs
+        output_filename(str): output file name for manifest
+    """
+    if not output_filename:
+        file, extension = os.path.splitext(manifest_file)
+        output_filename = file + "_populated_guids" + extension
+
+    try:
+        records, headers = get_and_verify_fileinfos_from_manifest(
+            manifest_file, manifest_file_delimiter=None, include_additional_columns=True
+        )
+    except Exception as exc:
+        logging.error(
+            f"Can not read records and headers from input manifest: {manifest_file}."
+        )
+        raise
+
+    # ensure GUID column exists
+    try:
+        headers.index(GUID_STANDARD_KEY)
+    except ValueError:
+        headers.insert(0, GUID_STANDARD_KEY)
+
+    index = Gen3Index(commons_url)
+    valid_guids = index.get_valid_guids(count=10000)
+
+    # modify records to include a valid GUID if it doesn't exist
+    new_records = []
+    for record in records:
+        if not record.get(GUID_STANDARD_KEY):
+            record[GUID_STANDARD_KEY] = valid_guids.pop()
+
+        # if we run out of valid GUIDs, get some more
+        if not valid_guids:
+            valid_guids = index.get_valid_guids(count=10000)
+
+        new_records.append(record)
+
+    assert len(new_records) == len(records)
+
+    output_filename = os.path.abspath(output_filename)
+    logging.info(f"Writing output to {output_filename}")
+
+    # remove existing output if it exists
+    if os.path.isfile(output_filename):
+        os.unlink(output_filename)
+
+    _write_csv(os.path.join(CURRENT_DIR, output_filename), new_records, headers)
+
+
 @click.command()
 @click.option(
     "--commons-url",

@@ -532,6 +532,72 @@
 
 
 
+<div class="viewcode-block" id="populate_object_manifest_with_valid_guids">
+<a class="viewcode-back" href="../../../../tools/indexing.html#gen3.tools.indexing.index_manifest.populate_object_manifest_with_valid_guids">[docs]</a>
+<span class="k">def</span> <span class="nf">populate_object_manifest_with_valid_guids</span><span class="p">(</span>
+    <span class="n">commons_url</span><span class="p">,</span> <span class="n">manifest_file</span><span class="p">,</span> <span class="n">output_filename</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given a minimal file object manifest, populate any missing GUIDs with valid GUIDs</span>
+<span class="sd">    for the given commons.</span>
+
+<span class="sd">    NOTE: This DOES NOT index anything, it only works client side to populate the manifest</span>
+<span class="sd">          with valid GUIDs (which are obtained from the server). No records are created</span>
+<span class="sd">          as part of this function call.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        commons_url (str): root domain for commons where indexd lives</span>
+<span class="sd">        manifest_file (str): file path for input manifest file to populate empty GUIDs</span>
+<span class="sd">        output_filename(str): output file name for manifest</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">output_filename</span><span class="p">:</span>
+        <span class="n">file</span><span class="p">,</span> <span class="n">extension</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">)</span>
+        <span class="n">output_filename</span> <span class="o">=</span> <span class="n">file</span> <span class="o">+</span> <span class="s2">&quot;_populated_guids&quot;</span> <span class="o">+</span> <span class="n">extension</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">records</span><span class="p">,</span> <span class="n">headers</span> <span class="o">=</span> <span class="n">get_and_verify_fileinfos_from_manifest</span><span class="p">(</span>
+            <span class="n">manifest_file</span><span class="p">,</span> <span class="n">manifest_file_delimiter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">include_additional_columns</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Can not read records and headers from input manifest: </span><span class="si">{</span><span class="n">manifest_file</span><span class="si">}</span><span class="s2">.&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span>
+
+    <span class="c1"># ensure GUID column exists</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">headers</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">GUID_STANDARD_KEY</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="n">headers</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">GUID_STANDARD_KEY</span><span class="p">)</span>
+
+    <span class="n">index</span> <span class="o">=</span> <span class="n">Gen3Index</span><span class="p">(</span><span class="n">commons_url</span><span class="p">)</span>
+    <span class="n">valid_guids</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">get_valid_guids</span><span class="p">(</span><span class="n">count</span><span class="o">=</span><span class="mi">10000</span><span class="p">)</span>
+
+    <span class="c1"># modify records to include a valid GUID if it doesn&#39;t exist</span>
+    <span class="n">new_records</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">records</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">GUID_STANDARD_KEY</span><span class="p">):</span>
+            <span class="n">record</span><span class="p">[</span><span class="n">GUID_STANDARD_KEY</span><span class="p">]</span> <span class="o">=</span> <span class="n">valid_guids</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+
+        <span class="c1"># if we run out of valid GUIDs, get some more</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">valid_guids</span><span class="p">:</span>
+            <span class="n">valid_guids</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">get_valid_guids</span><span class="p">(</span><span class="n">count</span><span class="o">=</span><span class="mi">10000</span><span class="p">)</span>
+
+        <span class="n">new_records</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_records</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">records</span><span class="p">)</span>
+
+    <span class="n">output_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Writing output to </span><span class="si">{</span><span class="n">output_filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># remove existing output if it exists</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">output_filename</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)</span>
+
+    <span class="n">_write_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">CURRENT_DIR</span><span class="p">,</span> <span class="n">output_filename</span><span class="p">),</span> <span class="n">new_records</span><span class="p">,</span> <span class="n">headers</span><span class="p">)</span></div>
+
+
+
 <span class="nd">@click</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
     <span class="s2">&quot;--commons-url&quot;</span><span class="p">,</span>
