@@ -66,7 +66,7 @@ def discovery_publish(ctx, file, use_default_file, omit_empty, guid_type, guid_f
     Run a discovery metadata ingestion on a given metadata TSV / JSON file with guid column / field.
     If [FILE] is omitted and --default-file not set, prompts for TSV / JSON file name.
     """
-    if is_valid_object_manifest(file):
+    if is_valid_object_manifest(file, suppress_logs=True):
         click.confirm(
             "WARNING! It appears like you are attempting to publish discovery **objects** (based on the file provided) but you are attempting to use the non-object, dataset-level command `gen3 discovery publish`. Perhaps you meant to use `gen3 discovery objects publish`. Are you sure you want proceed with publishing the dataset-level discovery metadata using the object file?",
             abort=True,
