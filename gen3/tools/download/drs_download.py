@@ -50,6 +50,7 @@ PACKAGE_EXTENSIONS = [".zip"]
 logger = get_logger("__name__")
 
 
+# Add undefined=Undefined.EXCLUDE here because we only cares if the input manifest has the minimal required metadata fields for data download, any extra metadata fields should be ignored and should not cause a failure
 @dataclass_json(letter_case=LetterCase.SNAKE, undefined=Undefined.EXCLUDE)
 @dataclass
 class Manifest:
