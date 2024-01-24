@@ -201,7 +201,7 @@ class Gen3Submission:
 
         """
         api_url = "{}/api/v0/submission/{}/{}".format(self._endpoint, program, project)
-        logging.info("\nUsing the Sheepdog API URL {}\n".format(api_url))
+        logging.debug("Using the Sheepdog API URL: {}".format(api_url))
 
         output = requests.put(api_url, auth=self._auth_provider, json=json)
         output.raise_for_status()
@@ -238,6 +238,8 @@ class Gen3Submission:
 
             >>> Gen3Submission.delete_records("DCF", "CCLE", ["uuid1", "uuid2"])
         """
+        if not uuids:
+            return
         api_url = "{}/api/v0/submission/{}/{}/entities".format(
             self._endpoint, program, project
         )
