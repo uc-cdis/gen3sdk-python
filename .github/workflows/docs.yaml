@@ -4,6 +4,8 @@ on:
   # DON'T run on pushed commits to master, ONLY on new commits on pull requests
   pull_request:
     types: [opened, synchronize]
+    paths-ignore:
+      - 'docs/**'
 
 jobs:
   build_docs:
