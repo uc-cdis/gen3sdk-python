@@ -2,8 +2,13 @@ name: Docs
 
 on:
   # DON'T run on pushed commits to master, ONLY on new commits on pull requests
+  push:
+    branches-ignore:
+      - 'master'
+    paths-ignore:
+      - 'docs/**'
   pull_request:
-    types: [opened, synchronize]
+    types: [opened]
     paths-ignore:
       - 'docs/**'
 
