@@ -7,10 +7,9 @@ on:
       - 'master'
     paths-ignore:
       - 'docs/**'
+  # Use push trigger since 'paths-ignore' are not respected as expected by 'on.pull_request.paths-ignore', see https://github.com/actions/runner/issues/2324
   pull_request:
     types: [opened]
-    paths-ignore:
-      - 'docs/**'
 
 jobs:
   build_docs:
@@ -21,6 +20,7 @@ jobs:
       with:
         ref: ${{github.event.pull_request.head.ref}}
         repository: ${{github.event.pull_request.head.repo.full_name}}
+        # Passing a PAT from the PlanXCybrog bot account here, since otherwise commit pushed by this actions won't bale able to trigger other actions, see https://github.com/stefanzweifel/git-auto-commit-action?tab=readme-ov-file#commits-made-by-this-action-do-not-trigger-new-workflow-runs
         token: ${{ secrets.PLANXCYBORG_PAT }}
     - name: Set up Python 3.9
       uses: actions/setup-python@v1
