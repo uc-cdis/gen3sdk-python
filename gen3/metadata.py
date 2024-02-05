@@ -105,7 +105,7 @@ class Gen3Metadata:
             endpoint += "/" + service_location
 
         self.endpoint = endpoint.rstrip("/")
-        self.admin_endpoint = endpoint.rstrip("/") + admin_endpoint_suffix
+        self.admin_endpoint = self.endpoint
         self._auth_provider = auth_provider
 
     def is_healthy(self):
