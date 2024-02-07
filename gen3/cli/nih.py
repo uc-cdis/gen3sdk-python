@@ -132,7 +132,7 @@ def get_parent_studies(studies):
          > {
               "phs002795.v1.p1": "phs002793.v2.p1",
               "phs002796.v1.p1": "phs002793.v2.p1"
-              "phs002793.v2.p1": ""
+              "phs002793.v2.p1": None
             }
     """
     result = dbgapStudyRegistration().get_parent_studies_for_ids(studies)
