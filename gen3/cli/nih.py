@@ -107,12 +107,12 @@ def get_child_studies(studies):
         click.echo(f"{json.dumps(result, indent=4)}")
 
 
-@dbgap_study_registration.command(name="get-parent-study")
+@dbgap_study_registration.command(name="get-parent-studies")
 @click.argument(
     "studies",
     nargs=-1,
 )
-def get_parent_study(studies):
+def get_parent_studies(studies):
     """
     Retrieve the parent study associated with each of the provided study names.
 
@@ -135,7 +135,7 @@ def get_parent_study(studies):
               "phs002793.v2.p1": ""
             }
     """
-    result = dbgapStudyRegistration().get_parent_study_for_ids(studies)
+    result = dbgapStudyRegistration().get_parent_studies_for_ids(studies)
 
     if not result:
         logger.info(f"No parent studies found for any {studies}")

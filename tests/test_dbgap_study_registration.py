@@ -178,7 +178,7 @@ def test_get_child_studies_for_ids():
         ]
 
 
-def test_get_parent_study_for_id():
+def test_get_parent_studies_for_id():
     """
     Test retrieving parent accessions from dbGaP study registration metadata.
     """
@@ -188,14 +188,14 @@ def test_get_parent_study_for_id():
         "gen3.external.nih.dbgap_study_registration.requests.get",
         side_effect=_mock_requests_get,
     ):
-        child_to_parent_ids = dbgap_study_reg.get_parent_study_for_ids(["phs000089"])
+        child_to_parent_ids = dbgap_study_reg.get_parent_studies_for_ids(["phs000089"])
         assert child_to_parent_ids["phs000089.v4.p2"] == "phs001172.v1.p2"
 
-        child_to_parent_ids = dbgap_study_reg.get_parent_study_for_ids(["phs001173"])
-        assert child_to_parent_ids["phs001173.v1.p1"] == ""
+        child_to_parent_ids = dbgap_study_reg.get_parent_studies_for_ids(["phs001173"])
+        assert child_to_parent_ids["phs001173.v1.p1"] is None
 
-        child_to_parent_ids = dbgap_study_reg.get_parent_study_for_ids(
+        child_to_parent_ids = dbgap_study_reg.get_parent_studies_for_ids(
             ["phs000089", "phs001173"]
         )
         assert child_to_parent_ids["phs000089.v4.p2"] == "phs001172.v1.p2"
-        assert child_to_parent_ids["phs001173.v1.p1"] == ""
+        assert child_to_parent_ids["phs001173.v1.p1"] is None
