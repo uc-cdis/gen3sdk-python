@@ -144,3 +144,25 @@ class dbgapStudyRegistration(ExternalMetadataSourceInterface):
             else:
                 result[parent] = [children]
         return result
+
+    def get_parent_study_for_ids(self, ids):
+        """
+        Returns the dbGaP parent study, if any, for each of the provided dbGaP study IDs.
+
+          Args:
+            ids (List[str]): list of IDs to query for
+
+        Returns:
+            Dict[str]: dictionary mapping the child study IDs to their parent study IDs. If a given study ID does not
+            have a parent study, then the studyId will map to an empty string.
+
+        """
+        children = self.get_metadata_for_ids(ids)
+        result = {}
+        for child, metadata in children.items():
+            parent = metadata["StudyInfo"].get("@parentAccession", "")
+            if child == parent:
+                result[child] = ""
+            else:
+                result[child] = parent
+        return result
