@@ -105,3 +105,39 @@ def get_child_studies(studies):
         logger.info(f"No child studies found for {studies}")
     else:
         click.echo(f"{json.dumps(result, indent=4)}")
+
+
+@dbgap_study_registration.command(name="get-parent-studies")
+@click.argument(
+    "studies",
+    nargs=-1,
+)
+def get_parent_studies(studies):
+    """
+    Retrieve the parent study associated with each of the provided study names.
+
+    This command fetches the parent study associated with each of the specified child study names
+    from the dbGaP Study Registration API.
+
+    NOTE: If no version is provided, then the latest version for a study will be used.
+
+    Args:
+        studies (str): A space-separated list of child study names for which to fetch their parent study.
+    Example:
+        gen3 nih dbgap-study-registration get-parent-studies phs002795
+        > {
+              "phs002795.v1.p1": "phs002793.v2.p1"
+           }
+        gen3 nih dbgap-study-registration get-parent-studies phs002795 phs002796 phs002793
+         > {
+              "phs002795.v1.p1": "phs002793.v2.p1",
+              "phs002796.v1.p1": "phs002793.v2.p1"
+              "phs002793.v2.p1": None
+            }
+    """
+    result = dbgapStudyRegistration().get_parent_studies_for_ids(studies)
+
+    if not result:
+        logger.info(f"No parent studies found for any {studies}")
+    else:
+        click.echo(f"{json.dumps(result, indent=4)}")
