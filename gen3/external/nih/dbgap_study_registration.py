@@ -154,7 +154,7 @@ class dbgapStudyRegistration(ExternalMetadataSourceInterface):
 
         Returns:
             Dict[str]: dictionary mapping the child study IDs to their parent study IDs. If a given study ID does not
-            have a parent study, then the studyId will map to an empty string.
+            have a parent study, then the studyId will map to None
 
         """
         children = self.get_metadata_for_ids(ids)
