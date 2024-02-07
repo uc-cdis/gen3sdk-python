@@ -160,7 +160,7 @@ class dbgapStudyRegistration(ExternalMetadataSourceInterface):
         children = self.get_metadata_for_ids(ids)
         result = {}
         for child, metadata in children.items():
-            parent = metadata["StudyInfo"].get("@parentAccession", "")
+            parent = metadata["StudyInfo"].get("@parentAccession", None)
             if child == parent:
                 result[child] = None
             else:
