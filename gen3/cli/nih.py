@@ -124,11 +124,11 @@ def get_parent_studies(studies):
     Args:
         studies (str): A space-separated list of child study names for which to fetch their parent study.
     Example:
-        gen3 nih dbgap-study-registration get-child-studies phs002795
+        gen3 nih dbgap-study-registration get-parent-studies phs002795
         > {
               "phs002795.v1.p1": "phs002793.v2.p1"
            }
-        gen3 nih dbgap-study-registration get-child-studies phs002795 phs002796 phs002793
+        gen3 nih dbgap-study-registration get-parent-studies phs002795 phs002796 phs002793
          > {
               "phs002795.v1.p1": "phs002793.v2.p1",
               "phs002796.v1.p1": "phs002793.v2.p1"
