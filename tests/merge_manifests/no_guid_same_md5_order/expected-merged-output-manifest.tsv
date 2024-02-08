@@ -1,0 +1,2 @@
+guid	size	md5	acl	authz	urls	metadata
+dg.4503/1234abcd	1193060	2de45cf5e6b2639c98b56b679cffc119	admin phsXXXXXX.c1	AUTHZ_HERE	gs://path s3://path	some_data
