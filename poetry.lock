@@ -1134,8 +1134,8 @@ sqlalchemy-utils = "^0.37.3"
 [package.source]
 type = "git"
 url = "https://github.com/uc-cdis/indexd.git"
-reference = "chore/update_flask"
-resolved_reference = "02f461e5f89f0df2d335080cf6263ea8e67c3272"
+reference = "5.0.4"
+resolved_reference = "5d3e54c31edba946f92d6d9ddccb016a7520e668"
 
 [[package]]
 name = "iniconfig"
@@ -1673,8 +1673,8 @@ PyYAML = "^6.0.1"
 [package.source]
 type = "git"
 url = "https://github.com/uc-cdis/pypfb"
-reference = "chore/update_click"
-resolved_reference = "dd8544b0208450b9e2522cbfd1db25201c68e5a3"
+reference = "0.5.29"
+resolved_reference = "1f3f992fc8dd72b4108ca32edb553e7d68f98c85"
 
 [[package]]
 name = "pyreadline3"
@@ -2292,4 +2292,4 @@ fhir = ["fhirclient"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9, <4"
-content-hash = "62bceccd25c54c8b3a476c4467a42d067b6e9b3e6b5de04dd5373eb116c76908"
+content-hash = "f123fc10ee0d55ae9d502be7145a52ea0a864e4aee076f4f16c64c401a7d1831"
