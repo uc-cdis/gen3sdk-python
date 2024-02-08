@@ -29,7 +29,7 @@ click = "*"
 jsonschema = "*"
 # FIXME updating to >=0.6.0 breaks a few tests
 dataclasses-json = "<=0.5.9"
-pypfb = { git = "https://github.com/uc-cdis/pypfb", branch="fix/importlib_metadata-3.6.0"}
+pypfb = { git = "https://github.com/uc-cdis/pypfb", branch="chore/update_click"}
 tqdm = "^4.61.2"
 humanfriendly ="*"
 python-dateutil = "*"
@@ -53,7 +53,7 @@ pytest = "^6.0.0"
 pytest-cov = "*"
 requests-mock = "*"
 cdisutilstest = { git = "https://github.com/uc-cdis/cdisutils-test.git", tag = "1.0.0" }
-indexd = { git = "https://github.com/uc-cdis/indexd.git", tag = "5.0.3" }
+indexd = { git = "https://github.com/uc-cdis/indexd.git", branch = "chore/update_flask" }
 
 [tool.poetry.scripts]
 gen3 = "gen3.cli.__main__:main"
