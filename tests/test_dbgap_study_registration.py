@@ -9,6 +9,7 @@ from tests.utils_mock_dbgap_study_registration_response import (
     MOCK_PHS001172,
     MOCK_BAD_RESPONSE,
     MOCK_PHS001174,
+    MOCK_PHS000089,
 )
 from urllib.parse import urlparse, parse_qs
 
@@ -28,6 +29,8 @@ def _mock_requests_get(url):
         output = MOCK_PHS001172
     elif params["phs"][0] == "001171":
         output = MOCK_BAD_RESPONSE
+    elif params["phs"][0] == "000089":
+        output = MOCK_PHS000089
     else:
         # should have requested these studies from the API,
         # if it didn't, something went wrong
@@ -173,3 +176,26 @@ def test_get_child_studies_for_ids():
             "phs000089.v4.p2",
             "phs001103.v1.p2",
         ]
+
+
+def test_get_parent_studies_for_id():
+    """
+    Test retrieving parent accessions from dbGaP study registration metadata.
+    """
+    dbgap_study_reg = dbgapStudyRegistration(api="https://example.com/ss/dbgapssws.cgi")
+
+    with patch(
+        "gen3.external.nih.dbgap_study_registration.requests.get",
+        side_effect=_mock_requests_get,
+    ):
+        child_to_parent_ids = dbgap_study_reg.get_parent_studies_for_ids(["phs000089"])
+        assert child_to_parent_ids["phs000089.v4.p2"] == "phs001172.v1.p2"
+
+        child_to_parent_ids = dbgap_study_reg.get_parent_studies_for_ids(["phs001173"])
+        assert child_to_parent_ids["phs001173.v1.p1"] is None
+
+        child_to_parent_ids = dbgap_study_reg.get_parent_studies_for_ids(
+            ["phs000089", "phs001173"]
+        )
+        assert child_to_parent_ids["phs000089.v4.p2"] == "phs001172.v1.p2"
+        assert child_to_parent_ids["phs001173.v1.p1"] is None
