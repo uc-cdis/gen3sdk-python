@@ -31,7 +31,7 @@ import humanfriendly
 import requests
 import zipfile
 from cdislogging import get_logger
-from dataclasses_json import dataclass_json, LetterCase
+from dataclasses_json import dataclass_json, LetterCase, Undefined
 from dateutil import parser as date_parser
 from tqdm import tqdm
 from urllib.parse import urlparse
@@ -50,7 +50,8 @@ PACKAGE_EXTENSIONS = [".zip"]
 logger = get_logger("__name__")
 
 
-@dataclass_json(letter_case=LetterCase.SNAKE)
+# Add undefined=Undefined.EXCLUDE here because we only cares if the input manifest has the minimal required metadata fields for data download, any extra metadata fields should be ignored and should not cause a failure
+@dataclass_json(letter_case=LetterCase.SNAKE, undefined=Undefined.EXCLUDE)
 @dataclass
 class Manifest:
     """Data class representing a Gen3 JSON manifest typically exported from a Gen3 discovery page.
