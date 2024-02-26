@@ -116,9 +116,9 @@ def get_token_cache_file_name(key):
         os.makedirs(cache_folder)
 
     cache_prefix = cache_folder + "token_cache_"
-    m = hashlib.md5()
-    m.update(key.encode("utf-8"))
-    return cache_prefix + m.hexdigest()
+    s = hashlib.sha256()
+    s.update(key.encode("utf-8"))
+    return cache_prefix + s.hexdigest()
 
 
 class Gen3Auth(AuthBase):

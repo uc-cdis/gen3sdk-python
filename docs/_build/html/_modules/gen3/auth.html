@@ -148,9 +148,9 @@
         <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">cache_folder</span><span class="p">)</span>
 
     <span class="n">cache_prefix</span> <span class="o">=</span> <span class="n">cache_folder</span> <span class="o">+</span> <span class="s2">&quot;token_cache_&quot;</span>
-    <span class="n">m</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">md5</span><span class="p">()</span>
-    <span class="n">m</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">key</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">cache_prefix</span> <span class="o">+</span> <span class="n">m</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">()</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">key</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">cache_prefix</span> <span class="o">+</span> <span class="n">s</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
 
 
 <div class="viewcode-block" id="Gen3Auth">
