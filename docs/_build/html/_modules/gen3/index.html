@@ -479,6 +479,9 @@
         <span class="n">urls_metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">authz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">content_created_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">content_updated_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 
@@ -497,24 +500,42 @@
 <span class="sd">            urls_metadata (dict): metadata attached to each url</span>
 <span class="sd">            baseid (str): optional baseid to group with previous entries versions</span>
 <span class="sd">            version (str): entry version string</span>
+<span class="sd">            description (str): optional description of the object</span>
+<span class="sd">            content_created_date (datetime): optional creation date and time of the content being indexed</span>
+<span class="sd">            content_updated_date (datetime): optional update date and time of the content being indexed</span>
 <span class="sd">        Returns:</span>
 <span class="sd">            Document: json representation of an entry in indexd</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">rec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-            <span class="n">hashes</span><span class="p">,</span>
-            <span class="n">size</span><span class="p">,</span>
-            <span class="n">did</span><span class="p">,</span>
-            <span class="n">urls</span><span class="p">,</span>
-            <span class="n">file_name</span><span class="p">,</span>
-            <span class="n">metadata</span><span class="p">,</span>
-            <span class="n">baseid</span><span class="p">,</span>
-            <span class="n">acl</span><span class="p">,</span>
-            <span class="n">urls_metadata</span><span class="p">,</span>
-            <span class="n">version</span><span class="p">,</span>
-            <span class="n">authz</span><span class="p">,</span>
+        <span class="k">if</span> <span class="n">urls</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">urls</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">json</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;urls&quot;</span><span class="p">:</span> <span class="n">urls</span><span class="p">,</span>
+            <span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;hashes&quot;</span><span class="p">:</span> <span class="n">hashes</span><span class="p">,</span>
+            <span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="n">size</span><span class="p">,</span>
+            <span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="n">file_name</span><span class="p">,</span>
+            <span class="s2">&quot;metadata&quot;</span><span class="p">:</span> <span class="n">metadata</span><span class="p">,</span>
+            <span class="s2">&quot;urls_metadata&quot;</span><span class="p">:</span> <span class="n">urls_metadata</span><span class="p">,</span>
+            <span class="s2">&quot;baseid&quot;</span><span class="p">:</span> <span class="n">baseid</span><span class="p">,</span>
+            <span class="s2">&quot;acl&quot;</span><span class="p">:</span> <span class="n">acl</span><span class="p">,</span>
+            <span class="s2">&quot;authz&quot;</span><span class="p">:</span> <span class="n">authz</span><span class="p">,</span>
+            <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="n">version</span><span class="p">,</span>
+            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="n">description</span><span class="p">,</span>
+            <span class="s2">&quot;content_created_date&quot;</span><span class="p">:</span> <span class="n">content_created_date</span><span class="p">,</span>
+            <span class="s2">&quot;content_updated_date&quot;</span><span class="p">:</span> <span class="n">content_updated_date</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="n">did</span><span class="p">:</span>
+            <span class="n">json</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">did</span>
+        <span class="n">resp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span>
+            <span class="s2">&quot;index/&quot;</span><span class="p">,</span>
+            <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;content-type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">},</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">client</span><span class="o">.</span><span class="n">json_dumps</span><span class="p">(</span><span class="n">json</span><span class="p">),</span>
+            <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">auth</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="k">return</span> <span class="n">rec</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span></div>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">resp</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="Gen3Index.async_create_record">
@@ -534,6 +555,9 @@
         <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">authz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">content_created_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">content_updated_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Asynchronous function to create a record in indexd.</span>
@@ -551,6 +575,9 @@
 <span class="sd">            urls_metadata (dict): metadata attached to each url</span>
 <span class="sd">            baseid (str): optional baseid to group with previous entries versions</span>
 <span class="sd">            version (str): entry version string</span>
+<span class="sd">            description (str): optional description of the object</span>
+<span class="sd">            content_created_date (datetime): optional creation date and time of the content being indexed</span>
+<span class="sd">            content_updated_date (datetime): optional update date and time of the content being indexed</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Document: json representation of an entry in indexd</span>
@@ -581,7 +608,12 @@
                 <span class="n">json</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">version</span>
             <span class="k">if</span> <span class="n">authz</span><span class="p">:</span>
                 <span class="n">json</span><span class="p">[</span><span class="s2">&quot;authz&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">authz</span>
-
+            <span class="k">if</span> <span class="n">description</span><span class="p">:</span>
+                <span class="n">json</span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">description</span>
+            <span class="k">if</span> <span class="n">content_created_date</span><span class="p">:</span>
+                <span class="n">json</span><span class="p">[</span><span class="s2">&quot;content_created_date&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">content_created_date</span>
+            <span class="k">if</span> <span class="n">content_updated_date</span><span class="p">:</span>
+                <span class="n">json</span><span class="p">[</span><span class="s2">&quot;content_updated_date&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">content_updated_date</span>
             <span class="c1"># aiohttp only allows basic auth with their built in auth, so we</span>
             <span class="c1"># need to manually add JWT auth header</span>
             <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">_get_auth_value</span><span class="p">()}</span>
@@ -643,6 +675,9 @@
         <span class="n">urls_metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">authz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">content_created_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">content_updated_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 
@@ -666,6 +701,9 @@
 <span class="sd">            urls_metadata (dict): metadata attached to each url</span>
 <span class="sd">            version (str): entry version string</span>
 <span class="sd">            authz (str): RBAC string</span>
+<span class="sd">            description (str): optional description of the object</span>
+<span class="sd">            content_created_date (datetime): optional creation date and time of the content being indexed</span>
+<span class="sd">            content_updated_date (datetime): optional update date and time of the content being indexed</span>
 
 <span class="sd">            body: json/dictionary format</span>
 <span class="sd">            - Metadata object that needs to be added to the store.</span>
@@ -687,6 +725,9 @@
             <span class="s2">&quot;acl&quot;</span><span class="p">:</span> <span class="n">acl</span><span class="p">,</span>
             <span class="s2">&quot;authz&quot;</span><span class="p">:</span> <span class="n">authz</span><span class="p">,</span>
             <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="n">version</span><span class="p">,</span>
+            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="n">description</span><span class="p">,</span>
+            <span class="s2">&quot;content_created_date&quot;</span><span class="p">:</span> <span class="n">content_created_date</span><span class="p">,</span>
+            <span class="s2">&quot;content_updated_date&quot;</span><span class="p">:</span> <span class="n">content_updated_date</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="k">if</span> <span class="n">did</span><span class="p">:</span>
             <span class="n">json</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">did</span>
@@ -786,6 +827,9 @@
         <span class="n">acl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">authz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">urls_metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">content_created_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">content_updated_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 
@@ -807,6 +851,9 @@
             <span class="s2">&quot;acl&quot;</span><span class="p">:</span> <span class="n">acl</span><span class="p">,</span>
             <span class="s2">&quot;authz&quot;</span><span class="p">:</span> <span class="n">authz</span><span class="p">,</span>
             <span class="s2">&quot;urls_metadata&quot;</span><span class="p">:</span> <span class="n">urls_metadata</span><span class="p">,</span>
+            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="n">description</span><span class="p">,</span>
+            <span class="s2">&quot;content_created_date&quot;</span><span class="p">:</span> <span class="n">content_created_date</span><span class="p">,</span>
+            <span class="s2">&quot;content_updated_date&quot;</span><span class="p">:</span> <span class="n">content_updated_date</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="n">rec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">guid</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">updatable_attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -830,6 +877,9 @@
         <span class="n">authz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">urls_metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">content_created_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">content_updated_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -851,6 +901,9 @@
                 <span class="s2">&quot;acl&quot;</span><span class="p">:</span> <span class="n">acl</span><span class="p">,</span>
                 <span class="s2">&quot;authz&quot;</span><span class="p">:</span> <span class="n">authz</span><span class="p">,</span>
                 <span class="s2">&quot;urls_metadata&quot;</span><span class="p">:</span> <span class="n">urls_metadata</span><span class="p">,</span>
+                <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="n">description</span><span class="p">,</span>
+                <span class="s2">&quot;content_created_date&quot;</span><span class="p">:</span> <span class="n">content_created_date</span><span class="p">,</span>
+                <span class="s2">&quot;content_updated_date&quot;</span><span class="p">:</span> <span class="n">content_updated_date</span><span class="p">,</span>
             <span class="p">}</span>
             <span class="n">record</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_get_record</span><span class="p">(</span><span class="n">guid</span><span class="p">)</span>
             <span class="n">revision</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;rev&quot;</span><span class="p">)</span>

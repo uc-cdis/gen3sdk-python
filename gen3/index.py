@@ -395,6 +395,9 @@ class Gen3Index:
         urls_metadata=None,
         version=None,
         authz=None,
+        description=None,
+        content_created_date=None,
+        content_updated_date=None,
     ):
         """
 
@@ -413,24 +416,42 @@ class Gen3Index:
             urls_metadata (dict): metadata attached to each url
             baseid (str): optional baseid to group with previous entries versions
             version (str): entry version string
+            description (str): optional description of the object
+            content_created_date (datetime): optional creation date and time of the content being indexed
+            content_updated_date (datetime): optional update date and time of the content being indexed
         Returns:
             Document: json representation of an entry in indexd
 
         """
-        rec = self.client.create(
-            hashes,
-            size,
-            did,
-            urls,
-            file_name,
-            metadata,
-            baseid,
-            acl,
-            urls_metadata,
-            version,
-            authz,
+        if urls is None:
+            urls = []
+        json = {
+            "urls": urls,
+            "form": "object",
+            "hashes": hashes,
+            "size": size,
+            "file_name": file_name,
+            "metadata": metadata,
+            "urls_metadata": urls_metadata,
+            "baseid": baseid,
+            "acl": acl,
+            "authz": authz,
+            "version": version,
+            "description": description,
+            "content_created_date": content_created_date,
+            "content_updated_date": content_updated_date,
+        }
+        if did:
+            json["did"] = did
+        resp = self.client._post(
+            "index/",
+            headers={"content-type": "application/json"},
+            data=client.json_dumps(json),
+            auth=self.client.auth,
         )
-        return rec.to_json()
+        raise_for_status_and_print_error(resp)
+
+        return resp.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     async def async_create_record(
@@ -447,6 +468,9 @@ class Gen3Index:
         version=None,
         authz=None,
         _ssl=None,
+        description=None,
+        content_created_date=None,
+        content_updated_date=None,
     ):
         """
         Asynchronous function to create a record in indexd.
@@ -464,6 +488,9 @@ class Gen3Index:
             urls_metadata (dict): metadata attached to each url
             baseid (str): optional baseid to group with previous entries versions
             version (str): entry version string
+            description (str): optional description of the object
+            content_created_date (datetime): optional creation date and time of the content being indexed
+            content_updated_date (datetime): optional update date and time of the content being indexed
 
         Returns:
             Document: json representation of an entry in indexd
@@ -494,7 +521,12 @@ class Gen3Index:
                 json["version"] = version
             if authz:
                 json["authz"] = authz
-
+            if description:
+                json["description"] = description
+            if content_created_date:
+                json["content_created_date"] = content_created_date
+            if content_updated_date:
+                json["content_updated_date"] = content_updated_date
             # aiohttp only allows basic auth with their built in auth, so we
             # need to manually add JWT auth header
             headers = {"Authorization": self.client.auth._get_auth_value()}
@@ -550,6 +582,9 @@ class Gen3Index:
         urls_metadata=None,
         version=None,
         authz=None,
+        description=None,
+        content_created_date=None,
+        content_updated_date=None,
     ):
         """
 
@@ -573,6 +608,9 @@ class Gen3Index:
             urls_metadata (dict): metadata attached to each url
             version (str): entry version string
             authz (str): RBAC string
+            description (str): optional description of the object
+            content_created_date (datetime): optional creation date and time of the content being indexed
+            content_updated_date (datetime): optional update date and time of the content being indexed
 
             body: json/dictionary format
             - Metadata object that needs to be added to the store.
@@ -594,6 +632,9 @@ class Gen3Index:
             "acl": acl,
             "authz": authz,
             "version": version,
+            "description": description,
+            "content_created_date": content_created_date,
+            "content_updated_date": content_updated_date,
         }
         if did:
             json["did"] = did
@@ -684,6 +725,9 @@ class Gen3Index:
         acl=None,
         authz=None,
         urls_metadata=None,
+        description=None,
+        content_created_date=None,
+        content_updated_date=None,
     ):
         """
 
@@ -705,6 +749,9 @@ class Gen3Index:
             "acl": acl,
             "authz": authz,
             "urls_metadata": urls_metadata,
+            "description": description,
+            "content_created_date": content_created_date,
+            "content_updated_date": content_updated_date,
         }
         rec = self.client.get(guid)
         for k, v in updatable_attrs.items():
@@ -725,6 +772,9 @@ class Gen3Index:
         authz=None,
         urls_metadata=None,
         _ssl=None,
+        description=None,
+        content_created_date=None,
+        content_updated_date=None,
         **kwargs,
     ):
         """
@@ -746,6 +796,9 @@ class Gen3Index:
                 "acl": acl,
                 "authz": authz,
                 "urls_metadata": urls_metadata,
+                "description": description,
+                "content_created_date": content_created_date,
+                "content_updated_date": content_updated_date,
             }
             record = await self.async_get_record(guid)
             revision = record.get("rev")
