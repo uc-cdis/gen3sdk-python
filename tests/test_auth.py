@@ -54,7 +54,7 @@ def test_endpoint_from_token():
 
 def test_token_cache():
     cache_file = gen3.auth.get_token_cache_file_name("whatever")
-    expected = "{}/.cache/gen3/token_cache_008c5926ca861023c1d2a36653fd88e2".format(
+    expected = "{}/.cache/gen3/token_cache_85738f8f9a7f1b04b5329c590ebcb9e425925c6d0984089c43a022de4f19c281".format(
         os.path.expanduser("~")
     )
     assert cache_file == expected
@@ -211,7 +211,6 @@ def test_auth_init_with_both_endpoint_and_idp():
 
 
 def test_auth_init_with_matching_endpoint_and_refresh_file():
-
     with open(test_cred_file_name, "w") as f:
         json.dump(test_key, f)
 
