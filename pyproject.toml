@@ -20,7 +20,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.9, <4"
 requests = "*"
-indexclient = "^2.2.0"
+indexclient = "2.2.0"
 drsclient = "^0.2.3"
 aiohttp = "*"
 backoff = "*"

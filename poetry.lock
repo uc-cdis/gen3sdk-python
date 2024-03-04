@@ -1085,12 +1085,12 @@ testing = ["flufl.flake8", "importlib-resources (>=1.3)", "packaging", "pyfakefs
 
 [[package]]
 name = "indexclient"
-version = "2.2.1"
+version = "2.2.0"
 description = ""
 optional = false
 python-versions = "*"
 files = [
-    {file = "indexclient-2.2.1.tar.gz", hash = "sha256:d0374128a340b42042fc2d7c2484a8b1f36b90e05199e6f8357ad764dd6673fd"},
+    {file = "indexclient-2.2.0.tar.gz", hash = "sha256:dac4687d136f45d78a4bad0ccf6650b2f81ead81d7d47a560081a6d7ee69aa42"},
 ]
 
 [package.dependencies]
@@ -1757,13 +1757,13 @@ testing = ["fields", "hunter", "process-tests", "pytest-xdist", "six", "virtuale
 
 [[package]]
 name = "python-dateutil"
-version = "2.9.0"
+version = "2.9.0.post0"
 description = "Extensions to the standard Python datetime module"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 files = [
-    {file = "python-dateutil-2.9.0.tar.gz", hash = "sha256:78e73e19c63f5b20ffa567001531680d939dc042bf7850431877645523c66709"},
-    {file = "python_dateutil-2.9.0-py2.py3-none-any.whl", hash = "sha256:cbf2f1da5e6083ac2fbfd4da39a25f34312230110440f424a14c7558bb85d82e"},
+    {file = "python-dateutil-2.9.0.post0.tar.gz", hash = "sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3"},
+    {file = "python_dateutil-2.9.0.post0-py2.py3-none-any.whl", hash = "sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427"},
 ]
 
 [package.dependencies]
@@ -2276,4 +2276,4 @@ fhir = ["fhirclient"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9, <4"
-content-hash = "335adfcd39fcce19a3957dd6596b2187a919da5d49d9c0d87636e9d6c1985283"
+content-hash = "efe47373cd67c1f5f8753d52aac11b7a3afd078fe343d68f18d0c3b626e19f60"
