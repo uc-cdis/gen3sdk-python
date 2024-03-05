@@ -6,7 +6,7 @@ from cdislogging import get_logger
 
 import sys
 
-import indexclient.client as client
+import gen3.indexclient.client as client
 
 from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status_and_print_error
 from gen3.auth import Gen3Auth

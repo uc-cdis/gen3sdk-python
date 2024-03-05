@@ -58,8 +58,8 @@ from gen3.utils import (
     get_urls,
 )
 from gen3.tools.utils import get_and_verify_fileinfos_from_manifest
-import indexclient.client as client
-from indexclient.client import Document
+import gen3.indexclient.client as client
+from gen3.indexclient.client import Document
 from cdislogging import get_logger
 
 
