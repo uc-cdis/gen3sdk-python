@@ -198,9 +198,6 @@ def test_get_parent_studies_for_id():
         assert child_to_parent_ids[id_1] == "phs001172.v1.p2"
 
         child_to_parent_ids = dbgap_study_reg.get_parent_studies_for_ids([id_2])
-        import pdb
-
-        pdb.set_trace()
         assert child_to_parent_ids[id_2] is None
 
         child_to_parent_ids = dbgap_study_reg.get_parent_studies_for_ids([id_1, id_2])
