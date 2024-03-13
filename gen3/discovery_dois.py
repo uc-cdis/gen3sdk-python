@@ -235,6 +235,10 @@ def mint_dois_for_discovery_datasets(
         metadata_field_for_alternate_id=metadata_field_for_alternate_id,
     )
 
+    logging.debug(
+        f"current_discovery_alternate_id_to_guid: {current_discovery_alternate_id_to_guid}"
+    )
+
     all_doi_data = metadata_interface(
         doi_publisher=doi_publisher,
         current_discovery_alternate_id_to_guid=current_discovery_alternate_id_to_guid,

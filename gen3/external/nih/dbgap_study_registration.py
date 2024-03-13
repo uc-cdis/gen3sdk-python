@@ -119,7 +119,7 @@ class dbgapStudyRegistration(ExternalMetadataSourceInterface):
 
             logging.debug(f"Got study JSON: {study}")
 
-            metadata_for_ids[study["StudyInfo"]["@accession"]] = study
+            metadata_for_ids[phsid] = study
 
         return metadata_for_ids
 

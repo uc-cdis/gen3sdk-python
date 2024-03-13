@@ -504,7 +504,7 @@ def main():
         "phs000179.v6",
     ]
     dbgapfhir = dbgapFHIR()
-    simplified_data = dbgapfhir.get_metadata_for_ids(phsids=studies)
+    simplified_data = dbgapfhir.get_metadata_for_ids(ids=studies)
     dbgapFHIR.write_data_to_file(simplified_data, "fhir_metadata_file.tsv")
 
     # Combine new FHIR Metadata with existing Discovery Metadata
