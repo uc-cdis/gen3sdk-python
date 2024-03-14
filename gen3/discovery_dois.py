@@ -171,6 +171,8 @@ def mint_dois_for_discovery_datasets(
               DOI needs to be created with a link to the previous?
               Perhaps there's just a field to attach a related DOI?
 
+              See https://support.datacite.org/docs/versioning
+
     Args:
         gen3_auth (Gen3Auth): Gen3 auth or tuple with basic auth name and password
         datacite_auth (requests.auth.HTTPBasicAuth): Basic auth username and password
