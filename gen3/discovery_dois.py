@@ -147,6 +147,7 @@ def mint_dois_for_discovery_datasets(
     use_doi_in_landing_page_url=False,
     doi_metadata_field_prefix="doi_",
     datacite_use_prod=False,
+    datacite_override_resolver=None,
     datacite_api=None,
     publish_dois=False,
 ):
@@ -304,6 +305,8 @@ def mint_dois_for_discovery_datasets(
                 doi_contact=doi_contact,
                 doi_metadata_field_prefix=doi_metadata_field_prefix,
                 doi_identifiers=doi_identifiers,
+                datacite_use_prod=datacite_use_prod,
+                datacite_override_resolver=datacite_override_resolver,
             )
         else:
             _create_or_update_doi_and_persist(
@@ -323,6 +326,8 @@ def mint_dois_for_discovery_datasets(
                 doi_contact=doi_contact,
                 doi_metadata_field_prefix=doi_metadata_field_prefix,
                 doi_identifiers=doi_identifiers,
+                datacite_use_prod=datacite_use_prod,
+                datacite_override_resolver=datacite_override_resolver,
             )
 
     return doi_identifiers
@@ -345,6 +350,8 @@ def _create_or_update_doi_and_persist(
     doi_contact,
     doi_metadata_field_prefix,
     doi_identifiers,
+    datacite_use_prod,
+    datacite_override_resolver,
 ):
     # writes metadata to a record
     guid = current_discovery_alternate_id_to_guid[alternate_id]
@@ -354,6 +361,8 @@ def _create_or_update_doi_and_persist(
         doi = DigitalObjectIdentifier(
             identifier=identifier,
             root_url=commons_discovery_page,
+            resolver=datacite_override_resolver,
+            use_prod=datacite_use_prod,
             **doi_metadata,
         )
     else:
@@ -361,6 +370,8 @@ def _create_or_update_doi_and_persist(
         doi = DigitalObjectIdentifier(
             identifier=identifier,
             url=url,
+            resolver=datacite_override_resolver,
+            use_prod=datacite_use_prod,
             **doi_metadata,
         )
 
@@ -374,7 +385,9 @@ def _create_or_update_doi_and_persist(
     else:
         response = datacite.create_doi(doi)
 
-    doi = DigitalObjectIdentifier.from_datacite_create_doi_response(response)
+    doi = DigitalObjectIdentifier.from_datacite_create_doi_response(
+        response, resolver=datacite_override_resolver, use_prod=datacite_use_prod
+    )
 
     # TODO: update `is_available` in `additional_metadata`?
 

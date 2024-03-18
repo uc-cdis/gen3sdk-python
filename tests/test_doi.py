@@ -244,6 +244,7 @@ def test_create_doi(
                 version="0.1",
                 descriptions=descriptions,
                 foobar="test",
+                use_prod=True,
             )
     else:
         doi = DigitalObjectIdentifier(
@@ -259,6 +260,7 @@ def test_create_doi(
             version="0.1",
             descriptions=descriptions,
             foobar="test",
+            use_prod=True,
         )
 
     def _mock_request(url, **kwargs):
@@ -302,6 +304,19 @@ def test_create_doi(
 
 
 @pytest.mark.parametrize(
+    "use_prod,resolver",
+    [
+        # using production, not overriding resolver
+        (True, None),
+        # NOT using production, but overriding resolver
+        (False, "https://example.com/resolver"),
+        # using production but overriding resolver
+        (True, "https://example.com/resolver"),
+        # NOT using production, NOT overriding resolver
+        (False, None),
+    ],
+)
+@pytest.mark.parametrize(
     "doi_metadata_already_exists, existing_metadata",
     [
         # non Discovery, top-level metadata
@@ -335,6 +350,8 @@ def test_doi_metadata_persist(
     gen3_auth,
     doi_metadata_already_exists,
     existing_metadata,
+    use_prod,
+    resolver,
 ):
     """
     Test the DOI metadata persistance into Gen3's metadata service with and
@@ -347,6 +364,7 @@ def test_doi_metadata_persist(
             os.environ.get("DATACITE_USERNAME"),
             os.environ.get("DATACITE_PASSWORD"),
         ),
+        use_prod=use_prod,
     )
 
     gen3_metadata_guid = "Example-Study-01"
@@ -378,7 +396,9 @@ def test_doi_metadata_persist(
     }
 
     # Create/Mint the DOI in DataCite
-    doi = DigitalObjectIdentifier(root_url="foobar", **doi_metadata)
+    doi = DigitalObjectIdentifier(
+        root_url="foobar", use_prod=use_prod, resolver=resolver, **doi_metadata
+    )
 
     def _mock_metadata_create_request(url, **kwargs):
         assert f"/metadata/{gen3_metadata_guid}" in url
@@ -450,11 +470,20 @@ def test_doi_metadata_persist(
     )
     assert doi_requests_get_mock.call_count == 1
 
+    if resolver:
+        doi_resolver = resolver
+    elif use_prod:
+        doi_resolver = DigitalObjectIdentifier.PRODUCTION_DOI_RESOLVER
+    else:
+        doi_resolver = DigitalObjectIdentifier.TEST_DOI_RESOLVER
+
+    doi_resolvable_link = f"{doi_resolver.rstrip('/')}/{identifier}"
+
     expected_output = {
         "_guid_type": "discovery_metadata",
         "gen3_discovery": {
             "doi_identifier": identifier,
-            "doi_resolvable_link": f"https://doi.org/{identifier}",
+            "doi_resolvable_link": doi_resolvable_link,
             "doi_creators": "Bar, Foo",
             "doi_titles": "Some Example Study in Gen3",
             "doi_publisher": "Example Gen3 Sponsor",
