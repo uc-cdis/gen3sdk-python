@@ -82,7 +82,6 @@ class DataCite(object):
         "Unavailable. Please refer to other links or "
         "documentation on this site to determine an effective contact."
     )
-    DOI_RESOLVER = "https://doi.org"
     PRODUCTION_URL = "https://api.datacite.org"
     TEST_URL = "https://api.test.datacite.org"
 
@@ -397,6 +396,9 @@ class DigitalObjectIdentifier(object):
         }
     """
 
+    PRODUCTION_DOI_RESOLVER = "https://doi.org"
+    TEST_DOI_RESOLVER = "https://handle.test.datacite.org"
+
     # to update to a later version, the classes that handle representing various
     # objects will need to change. Also it's possible other parts of this implementation
     # will need to change (including general types, how they should be representined in JSON, etc)
@@ -466,6 +468,8 @@ class DigitalObjectIdentifier(object):
         url=None,
         root_url=None,
         event=None,
+        resolver=None,
+        use_prod=False,
         _type="dois",
         **kwargs,
     ):
@@ -512,6 +516,11 @@ class DigitalObjectIdentifier(object):
                     publish - Triggers a state move from draft or registered to findable
                     register - Triggers a state move from draft to registered
                     hide - Triggers a state move from findable to registered
+            resolver (str, optional): Override resolver API with provided URL.
+                Will ignore `use_prod` if this is provided. Default to DataCite
+                prod / test resolvers depending on `use_prod` var.
+            use_prod (bool, optional): whether or not to use the production Datacite
+                urls
             _type (str, optional): The type of thing to interact with in Datacite
         """
         self.prefix = prefix
@@ -534,6 +543,13 @@ class DigitalObjectIdentifier(object):
 
         # any additional kwargs get interpreted as optional fields
         self.optional_fields = {}
+
+        if resolver:
+            self.resolver = resolver
+        elif use_prod:
+            self.resolver = DigitalObjectIdentifier.PRODUCTION_DOI_RESOLVER
+        else:
+            self.resolver = DigitalObjectIdentifier.TEST_DOI_RESOLVER
 
         for key, value in kwargs.items():
             if key in DigitalObjectIdentifier.OPTIONAL_FIELDS:
@@ -603,7 +619,7 @@ class DigitalObjectIdentifier(object):
         if self.identifier:
             data[prefix + "identifier"] = self.identifier
             data[prefix + "resolvable_link"] = (
-                DataCite.DOI_RESOLVER.rstrip("/") + "/" + self.identifier
+                self.resolver.rstrip("/") + "/" + self.identifier
             )
         if self.creators:
             data[prefix + "creators"] = " & ".join(
@@ -727,10 +743,20 @@ class DigitalObjectIdentifier(object):
         return data
 
     @staticmethod
-    def from_datacite_create_doi_response(response):
+    def from_datacite_create_doi_response(response, resolver=None, use_prod=False):
         """
         Return a DigitalObjectIdentifier instance from the Response from a
         Datacite Create DOI API call.
+
+        Args:
+            resolver (str, optional): override default URLs for the DOI resolution
+                (which gets added to the metadata). If supplied, will override any default
+                Datacite URLs regardless of `use_prod`
+            use_prod (bool, optional): whether or not to use the production Datacite
+                urls
+
+        Returns:
+            TYPE: Description
         """
         raw_attributes = response.json().get("data", {}).get("attributes", {})
         attributes = {}
@@ -754,6 +780,8 @@ class DigitalObjectIdentifier(object):
             doi_type_general=raw_attributes.get("types", {}).get(
                 "resourceTypeGeneral", None
             ),
+            resolver=resolver,
+            use_prod=use_prod,
             **attributes,
         )
 
