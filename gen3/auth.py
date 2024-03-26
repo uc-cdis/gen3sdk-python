@@ -141,8 +141,8 @@ class Gen3Auth(AuthBase):
                 that has the 'client_credentials' grant, allowing it to obtain access tokens.
         client_scopes (str, opt): Space-separated list of scopes requested for access tokens obtained from client
                 credentials. Default: "user data openid"
-        access_token (str, opt): provide an access token directly (this will override) the use of any
-                API key/refresh token and is designed to support cases where you may want to
+        access_token (str, opt): provide an access token to override the use of any
+                API key/refresh token. This is intended for cases where you may want to
                 pass a token that was issued to a particular OIDC client (rather than acting on
                 your own direct behalf, you can provide a key that was client-issued to your user)
 
