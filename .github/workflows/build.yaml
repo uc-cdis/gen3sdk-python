@@ -3,7 +3,7 @@ on:
     tags:
       - '*'
 
-name: Wool
+name: Build
 
 jobs:
   pypi:
