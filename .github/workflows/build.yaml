@@ -1,0 +1,50 @@
+on:
+  pull_request:
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created, edited]
+
+name: Wool
+
+jobs:
+  pypi:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+
+      - name: Set up python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.PYTHON_VERSION }}
+
+      - name: Install poetry
+        # that is poetry's recommended way to install
+        run: |
+          pip install --upgrade pip
+          curl -sSL https://install.python-poetry.org | python -
+          pip list
+          poetry show
+      - name: Install dependencies
+        run: |
+          poetry install -vv --all-extras --no-interaction --no-cache
+          poetry show -vv
+        shell: bash
+      - name: Build using pyinstaller
+        run: |
+          pyinstaller --name gen3 --hidden-import gen3users --onefile ./gen3/cli/__main__.py 
+      - name: Test build
+        run: |
+          cd ./dist
+          gen3 --help
+
+
+
+
