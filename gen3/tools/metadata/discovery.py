@@ -106,6 +106,8 @@ async def output_expanded_discovery_metadata(
                 for guid in sorted(os.listdir(metadata_cache_dir)):
                     with open(f"{metadata_cache_dir}/{guid}", encoding="utf-8") as f:
                         fetched_metadata = json.load(f)
+                        if fetched_metadata["tags"] is None:
+                            fetched_metadata["tags"] = []
                         flattened_tags = {
                             f"_tag_{tag_num}": f"{tag['category']}: {tag['name']}"
                             for tag_num, tag in enumerate(
