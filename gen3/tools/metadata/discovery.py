@@ -106,6 +106,8 @@ async def output_expanded_discovery_metadata(
                 for guid in sorted(os.listdir(metadata_cache_dir)):
                     with open(f"{metadata_cache_dir}/{guid}", encoding="utf-8") as f:
                         fetched_metadata = json.load(f)
+                        if fetched_metadata.get("tags", []) is None:
+                            fetched_metadata["tags"] = []
                         flattened_tags = {
                             f"_tag_{tag_num}": f"{tag['category']}: {tag['name']}"
                             for tag_num, tag in enumerate(
@@ -190,9 +192,8 @@ def read_mds_into_cache(
                     guid_discovery_metadata = guid_metadata["gen3_discovery"]
                     json.dump(guid_discovery_metadata, cached_guid_file)
                     all_fields |= set(guid_discovery_metadata.keys())
-                    num_tags = max(
-                        num_tags, len(guid_discovery_metadata.get("tags", []))
-                    )
+                    tgs = guid_discovery_metadata.get("tags", [])
+                    num_tags = max(num_tags, 0 if tgs is None else len(tgs))
         else:
             break
     return (partial_metadata, all_fields, num_tags)
