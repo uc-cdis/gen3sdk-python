@@ -191,7 +191,12 @@ def read_mds_into_cache(
                     json.dump(guid_discovery_metadata, cached_guid_file)
                     all_fields |= set(guid_discovery_metadata.keys())
                     num_tags = max(
-                        num_tags, len(guid_discovery_metadata.get("tags", []))
+                        num_tags,
+                        len(
+                            []
+                            if guid_discovery_metadata["tags"] is None
+                            else guid_discovery_metadata.get("tags", [])
+                        ),
                     )
         else:
             break
