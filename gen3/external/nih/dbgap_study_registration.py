@@ -119,7 +119,7 @@ class dbgapStudyRegistration(ExternalMetadataSourceInterface):
 
             logging.debug(f"Got study JSON: {study}")
 
-            metadata_for_ids[study["StudyInfo"]["@accession"]] = study
+            metadata_for_ids[phsid] = study
 
         return metadata_for_ids
 
@@ -161,7 +161,18 @@ class dbgapStudyRegistration(ExternalMetadataSourceInterface):
         result = {}
         for child, metadata in children.items():
             parent = metadata["StudyInfo"].get("@parentAccession", None)
-            if child == parent:
+
+            # the input ids may not include a version or partipant set, so we also
+            # want to compare the bare minimum "phs" with the input
+            #
+            # this will now correctly handle cases where the child ID is
+            # "phs001173"
+            # and the parent returned is "phs001173.v1.p1" (which really
+            # are the same)
+            standardized_phsid_parts = get_dbgap_accession_as_parts(parent)
+            parent_simplified = standardized_phsid_parts["phsid"]
+
+            if child == parent or child == parent_simplified:
                 result[child] = None
             else:
                 result[child] = parent

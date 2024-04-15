@@ -66,12 +66,12 @@ def test_dbgap_study_registration(include_version):
     ):
         metadata = dbgap_study_reg.get_metadata_for_ids([phsid_1_req])
         assert metadata
-        assert "phs001173.v1.p1" in metadata
-        assert "StudyInfo" in metadata[f"{phsid_1}.v1.p1"]
+        assert phsid_1_req in metadata
+        assert "StudyInfo" in metadata[phsid_1_req]
         metadata = dbgap_study_reg.get_metadata_for_ids([phsid_2_req])
         assert metadata
-        assert "phs001172.v1.p2" in metadata
-        assert "StudyInfo" in metadata[f"{phsid_2}.v1.p2"]
+        assert phsid_2_req in metadata
+        assert "StudyInfo" in metadata[phsid_2_req]
 
 
 @pytest.mark.parametrize("include_version", [True, False])
@@ -91,10 +91,10 @@ def test_dbgap_study_registration_multiple_reqs(include_version):
     ):
         metadata = dbgap_study_reg.get_metadata_for_ids([phsid_1_req, phsid_2_req])
         assert metadata
-        assert f"{phsid_2}.v1.p2" in metadata
-        assert f"{phsid_1}.v1.p1" in metadata
-        assert "StudyInfo" in metadata[f"{phsid_1}.v1.p1"]
-        assert "StudyInfo" in metadata[f"{phsid_2}.v1.p2"]
+        assert phsid_2_req in metadata
+        assert phsid_1_req in metadata
+        assert "StudyInfo" in metadata[phsid_1_req]
+        assert "StudyInfo" in metadata[phsid_2_req]
 
 
 def test_dbgap_study_registration_bad_dbgap_resp():
@@ -126,11 +126,11 @@ def test_dbgap_study_registration_multi_req_bad_dbgap_resp():
     ):
         metadata = dbgap_study_reg.get_metadata_for_ids([phsid_1, phsid_2, bad_phsid])
         assert metadata
-        assert f"{phsid_2}.v1.p2" in metadata
-        assert f"{phsid_1}.v1.p1" in metadata
+        assert phsid_1 in metadata
+        assert phsid_2 in metadata
         assert bad_phsid not in metadata
-        assert "StudyInfo" in metadata[f"{phsid_1}.v1.p1"]
-        assert "StudyInfo" in metadata[f"{phsid_2}.v1.p2"]
+        assert "StudyInfo" in metadata[phsid_2]
+        assert "StudyInfo" in metadata[phsid_1]
 
 
 def test_dbgap_study_registration_multi_resp():
@@ -145,8 +145,8 @@ def test_dbgap_study_registration_multi_resp():
     ):
         metadata = dbgap_study_reg.get_metadata_for_ids([multi_resp_phs])
         assert metadata
-        assert f"{multi_resp_phs}.v1.p1" in metadata
-        assert "StudyInfo" in metadata[f"{multi_resp_phs}.v1.p1"]
+        assert multi_resp_phs in metadata
+        assert "StudyInfo" in metadata[multi_resp_phs]
 
 
 def test_get_child_studies_for_ids():
@@ -161,18 +161,21 @@ def test_get_child_studies_for_ids():
         "gen3.external.nih.dbgap_study_registration.requests.get",
         side_effect=_mock_requests_get,
     ):
-        parent_to_child_ids = dbgap_study_reg.get_child_studies_for_ids(["phs001173"])
-        assert len(parent_to_child_ids["phs001173.v1.p1"]) == 0
-        parent_to_child_ids = dbgap_study_reg.get_child_studies_for_ids(["phs001172"])
-        assert parent_to_child_ids["phs001172.v1.p2"] == [
+        id_1 = "phs001173"
+        id_2 = "phs001172"
+
+        parent_to_child_ids = dbgap_study_reg.get_child_studies_for_ids([id_1])
+        assert len(parent_to_child_ids[id_1]) == 0
+        parent_to_child_ids = dbgap_study_reg.get_child_studies_for_ids([id_2])
+        assert parent_to_child_ids[id_2] == [
             "phs000089.v4.p2",
             "phs001103.v1.p2",
         ]
         parent_to_child_ids = dbgap_study_reg.get_child_studies_for_ids(
             ["phs001173", "phs001172"]
         )
-        assert len(parent_to_child_ids["phs001173.v1.p1"]) == 0
-        assert parent_to_child_ids["phs001172.v1.p2"] == [
+        assert len(parent_to_child_ids[id_1]) == 0
+        assert parent_to_child_ids[id_2] == [
             "phs000089.v4.p2",
             "phs001103.v1.p2",
         ]
@@ -188,14 +191,15 @@ def test_get_parent_studies_for_id():
         "gen3.external.nih.dbgap_study_registration.requests.get",
         side_effect=_mock_requests_get,
     ):
-        child_to_parent_ids = dbgap_study_reg.get_parent_studies_for_ids(["phs000089"])
-        assert child_to_parent_ids["phs000089.v4.p2"] == "phs001172.v1.p2"
+        id_1 = "phs000089"
+        id_2 = "phs001173"
 
-        child_to_parent_ids = dbgap_study_reg.get_parent_studies_for_ids(["phs001173"])
-        assert child_to_parent_ids["phs001173.v1.p1"] is None
+        child_to_parent_ids = dbgap_study_reg.get_parent_studies_for_ids([id_1])
+        assert child_to_parent_ids[id_1] == "phs001172.v1.p2"
 
-        child_to_parent_ids = dbgap_study_reg.get_parent_studies_for_ids(
-            ["phs000089", "phs001173"]
-        )
-        assert child_to_parent_ids["phs000089.v4.p2"] == "phs001172.v1.p2"
-        assert child_to_parent_ids["phs001173.v1.p1"] is None
+        child_to_parent_ids = dbgap_study_reg.get_parent_studies_for_ids([id_2])
+        assert child_to_parent_ids[id_2] is None
+
+        child_to_parent_ids = dbgap_study_reg.get_parent_studies_for_ids([id_1, id_2])
+        assert child_to_parent_ids[id_1] == "phs001172.v1.p2"
+        assert child_to_parent_ids[id_2] is None

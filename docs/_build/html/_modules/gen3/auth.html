@@ -175,6 +175,10 @@
 <span class="sd">                that has the &#39;client_credentials&#39; grant, allowing it to obtain access tokens.</span>
 <span class="sd">        client_scopes (str, opt): Space-separated list of scopes requested for access tokens obtained from client</span>
 <span class="sd">                credentials. Default: &quot;user data openid&quot;</span>
+<span class="sd">        access_token (str, opt): provide an access token to override the use of any</span>
+<span class="sd">                API key/refresh token. This is intended for cases where you may want to</span>
+<span class="sd">                pass a token that was issued to a particular OIDC client (rather than acting on</span>
+<span class="sd">                your own direct behalf, you can provide a key that was client-issued to your user)</span>
 
 <span class="sd">    Examples:</span>
 <span class="sd">        This generates the Gen3Auth class pointed at the sandbox commons while</span>
@@ -218,13 +222,14 @@
         <span class="n">idp</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">client_credentials</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">client_scopes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">access_token</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Initializing auth..&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">=</span> <span class="n">remove_trailing_whitespace_and_slashes_in_url</span><span class="p">(</span><span class="n">endpoint</span><span class="p">)</span>
         <span class="c1"># note - `_refresh_token` is not actually a JWT refresh token - it&#39;s a</span>
         <span class="c1">#  gen3 api key with a token as the &quot;api_key&quot; property</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span> <span class="o">=</span> <span class="n">refresh_token</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span> <span class="o">=</span> <span class="n">access_token</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_access_token_info</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_wts_idp</span> <span class="o">=</span> <span class="n">idp</span> <span class="ow">or</span> <span class="s2">&quot;local&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_wts_namespace</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;NAMESPACE&quot;</span><span class="p">,</span> <span class="s2">&quot;default&quot;</span><span class="p">)</span>

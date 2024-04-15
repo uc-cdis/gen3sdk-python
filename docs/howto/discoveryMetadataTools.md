@@ -167,7 +167,7 @@ def test_manual_single_doi(publish_dois=False):
   # If your Discovery metadata records don't use the DOI as the GUID,
   # you may need to supply the URL yourself like below
   url = COMMONS_DISCOVERY_PAGE.rstrip("/") + f"/{gen3_metadata_guid}"
-  doi = DigitalObjectIdentifier(url=url, **doi_metadata)
+  doi = DigitalObjectIdentifier(url=url, use_prod=False, **doi_metadata)
 
   if publish_dois:
     logging.info(f"Publishing DOI `{identifier}`...")
@@ -176,7 +176,7 @@ def test_manual_single_doi(publish_dois=False):
   # works for only new DOIs
   # You can use this for updates: `datacite.update_doi(doi)`
   response = datacite.create_doi(doi)
-  doi = DigitalObjectIdentifier.from_datacite_create_doi_response(response)
+  doi = DigitalObjectIdentifier.from_datacite_create_doi_response(response, use_prod=False)
 
   # Persist necessary DOI Metadata in Gen3 Discovery to support the landing page
   metadata = datacite.persist_doi_metadata_in_gen3(
@@ -504,7 +504,7 @@ def main():
         "phs000179.v6",
     ]
     dbgapfhir = dbgapFHIR()
-    simplified_data = dbgapfhir.get_metadata_for_ids(phsids=studies)
+    simplified_data = dbgapfhir.get_metadata_for_ids(ids=studies)
     dbgapFHIR.write_data_to_file(simplified_data, "fhir_metadata_file.tsv")
 
     # Combine new FHIR Metadata with existing Discovery Metadata
