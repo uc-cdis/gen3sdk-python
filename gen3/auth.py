@@ -141,6 +141,10 @@ class Gen3Auth(AuthBase):
                 that has the 'client_credentials' grant, allowing it to obtain access tokens.
         client_scopes (str, opt): Space-separated list of scopes requested for access tokens obtained from client
                 credentials. Default: "user data openid"
+        access_token (str, opt): provide an access token to override the use of any
+                API key/refresh token. This is intended for cases where you may want to
+                pass a token that was issued to a particular OIDC client (rather than acting on
+                your own direct behalf, you can provide a key that was client-issued to your user)
 
     Examples:
         This generates the Gen3Auth class pointed at the sandbox commons while
@@ -184,13 +188,14 @@ class Gen3Auth(AuthBase):
         idp=None,
         client_credentials=None,
         client_scopes=None,
+        access_token=None,
     ):
         logging.debug("Initializing auth..")
         self.endpoint = remove_trailing_whitespace_and_slashes_in_url(endpoint)
         # note - `_refresh_token` is not actually a JWT refresh token - it's a
         #  gen3 api key with a token as the "api_key" property
         self._refresh_token = refresh_token
-        self._access_token = None
+        self._access_token = access_token
         self._access_token_info = None
         self._wts_idp = idp or "local"
         self._wts_namespace = os.environ.get("NAMESPACE", "default")
