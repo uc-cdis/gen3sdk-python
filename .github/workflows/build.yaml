@@ -28,8 +28,8 @@ jobs:
         run: |
           pip install --upgrade pip
           curl -sSL https://install.python-poetry.org | python -
-          pip list
-          poetry show
+          pip --version
+          poetry --version
       - name: Install dependencies
         run: |
           poetry install -vv --all-extras --no-interaction --no-cache

@@ -5,6 +5,7 @@ on:
   push:
     branches-ignore:
       - 'master'
+      - 'main'
     paths-ignore:
       - 'docs/**'
   # Use push trigger since 'paths-ignore' are not respected as expected by 'on.pull_request.paths-ignore', see https://github.com/actions/runner/issues/2324
