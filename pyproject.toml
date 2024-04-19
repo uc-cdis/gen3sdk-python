@@ -74,6 +74,6 @@ testpaths = [
 [tool.poetry-pyinstaller-plugin.scripts]
 gen3 = { source = "./gen3/cli/__main__.py", type = "onedir", bundle = false }
 
-[tool.poetry-pyinstaller-plugin.collect]
+# [tool.poetry-pyinstaller-plugin.collect]
 # Collect all submodules, data files & binaries for 'package_A' and 'package_B'
-all = ['gen3']
+# all = ['gen3']

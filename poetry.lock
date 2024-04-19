@@ -973,7 +973,7 @@ pyyaml = "^6"
 type = "git"
 url = "https://github.com/uc-cdis/gen3users.git"
 reference = "feat/python"
-resolved_reference = "0a8afbc42315d44dca5da3c67efa087746135b94"
+resolved_reference = "b0d3907f83305b4b46dad5d9dba100d32eed6ef2"
 
 [[package]]
 name = "h11"
