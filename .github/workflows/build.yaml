@@ -44,7 +44,8 @@ jobs:
       - name: Test build
         run: |
           cd ./dist
-          gen3 --help
+          ls
+          ./gen3 --help
 
 
 
