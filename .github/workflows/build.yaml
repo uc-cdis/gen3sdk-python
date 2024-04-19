@@ -27,12 +27,15 @@ jobs:
         run: |
           pip install --upgrade pip
           pip --version
+          # this isn't the recommended way to install b/c the poetry deps are now
+          # mixed with the service deps. However, getting the alternative to work
+          # on all OSes was getting difficult. This is a quick hack to move forward
           pip install poetry
-          pip -m poetry --version
+          python -m poetry --version
       - name: Install dependencies
         run: |
-          pip -m poetry install -vv --all-extras --no-interaction --no-cache
-          pip -m poetry show -vv
+          python -m poetry install -vv --all-extras --no-interaction --no-cache
+          python -m poetry show -vv
         shell: bash
       - name: Build using pyinstaller
         run: |
