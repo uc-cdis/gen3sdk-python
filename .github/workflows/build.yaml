@@ -23,6 +23,7 @@ jobs:
         with:
           python-version: '3.9'
 
+      # https://pyinstaller.org/en/stable/when-things-go-wrong.html#helping-pyinstaller-find-modules
       - name: Install poetry
         run: |
           pip install --upgrade pip
@@ -44,8 +45,7 @@ jobs:
           # pyinstaller --log-level=DEBUG --debug=imports --clean --name gen3 --hidden-import gen3users --onefile ./gen3/cli/__main__.py
       - name: Test build
         run: |
-          cd ./dist
-          ls
+          cp ./dist/pyinstaller/*/gen3/gen3 ./gen3
           ./gen3 --help
       - name: Archive artifacts
         uses: actions/upload-artifact@v4
