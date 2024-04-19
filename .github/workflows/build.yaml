@@ -28,7 +28,7 @@ jobs:
         run: |
           pip install --upgrade pip
           curl -sSL https://install.python-poetry.org | python -
-          export PATH="/Users/runner/.local/bin:$PATH"
+          echo "PATH=/Users/runner/.local/bin:$PATH" >> $GITHUB_ENV
           pip --version
           poetry --version
       - name: Install dependencies
