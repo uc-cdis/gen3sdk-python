@@ -24,16 +24,15 @@ jobs:
           python-version: '3.9'
 
       - name: Install poetry
-        # that is poetry's recommended way to install
         run: |
           pip install --upgrade pip
-          curl -sSL https://install.python-poetry.org | python -
           pip --version
-          /Users/runner/.local/bin/poetry --version
+          pip install poetry
+          pip -m poetry --version
       - name: Install dependencies
         run: |
-          /Users/runner/.local/bin/poetry install -vv --all-extras --no-interaction --no-cache
-          /Users/runner/.local/bin/poetry show -vv
+          pip -m poetry install -vv --all-extras --no-interaction --no-cache
+          pip -m poetry show -vv
         shell: bash
       - name: Build using pyinstaller
         run: |
