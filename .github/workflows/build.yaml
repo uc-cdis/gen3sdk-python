@@ -40,7 +40,7 @@ jobs:
       - name: Build using pyinstaller
         run: |
           pip install pyinstaller==6.6.0
-          pyinstaller --name gen3 --hidden-import gen3users --onefile ./gen3/cli/__main__.py 
+          pyinstaller --log-level=DEBUG --clean --name gen3 --hidden-import gen3users --onefile ./gen3/cli/__main__.py
       - name: Test build
         run: |
           cd ./dist
