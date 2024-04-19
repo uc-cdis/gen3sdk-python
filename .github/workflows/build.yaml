@@ -28,13 +28,12 @@ jobs:
         run: |
           pip install --upgrade pip
           curl -sSL https://install.python-poetry.org | python -
-          echo "PATH=/Users/runner/.local/bin:$PATH" >> $GITHUB_ENV
           pip --version
-          poetry --version
+          /Users/runner/.local/bin/poetry --version
       - name: Install dependencies
         run: |
-          poetry install -vv --all-extras --no-interaction --no-cache
-          poetry show -vv
+          /Users/runner/.local/bin/poetry install -vv --all-extras --no-interaction --no-cache
+          /Users/runner/.local/bin/poetry show -vv
         shell: bash
       - name: Build using pyinstaller
         run: |
