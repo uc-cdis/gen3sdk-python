@@ -32,14 +32,14 @@ jobs:
           # on all OSes was getting difficult. This is a quick hack to move forward
           pip install poetry
           python -m poetry --version
-      - name: Install dependencies
+      - name: Install dependencies and then build using pyinstaller
         run: |
           python -m poetry install -vv --all-extras --no-interaction --no-cache
           python -m poetry show -vv
-        shell: bash
-      - name: Build using pyinstaller
-        run: |
+          python -m poetry env info
+
           pip install pyinstaller==6.6.0
+          #  pyinstaller --clean --name gen3 --hidden-import gen3users --onefile ./gen3/cli/__main__.py
           pyinstaller --log-level=DEBUG --debug=imports --clean --name gen3 --hidden-import gen3users --onefile ./gen3/cli/__main__.py
       - name: Test build
         run: |
