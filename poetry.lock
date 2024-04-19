@@ -956,6 +956,26 @@ jsonschema = "*"
 PyYAML = "*"
 
 [[package]]
+name = "gen3users"
+version = "1.1.0"
+description = "Utils for Gen3 Commons user management"
+optional = false
+python-versions = "^3.9"
+files = []
+develop = false
+
+[package.dependencies]
+cdislogging = "^1"
+click = "*"
+pyyaml = "^6"
+
+[package.source]
+type = "git"
+url = "https://github.com/uc-cdis/gen3users.git"
+reference = "feat/python"
+resolved_reference = "0a8afbc42315d44dca5da3c67efa087746135b94"
+
+[[package]]
 name = "h11"
 version = "0.14.0"
 description = "A pure-Python, bring-your-own-I/O implementation of HTTP/1.1"
@@ -2275,4 +2295,4 @@ fhir = ["fhirclient"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9, <4"
-content-hash = "ed0a7aadae6368d3349d2058dd833cc7fe52aeca1a00e777a034122dcb45627d"
+content-hash = "2abb0a0a475f434e858aa42b8fe8af0e69978cc970cc0a8035ac3f55188b1e79"

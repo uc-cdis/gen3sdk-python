@@ -39,7 +39,7 @@ urllib3 = ">2.0.0"
 httpx = "*"
 xmltodict = "^0.13.0"
 pyyaml = ">=6.0.1"
-# gen3users = "*"
+gen3users = { git = "https://github.com/uc-cdis/gen3users.git", branch = "feat/python" }
 
 # A list of all of the optional dependencies, some of which are included in the
 # below `extras`. They can be opted into by apps.
