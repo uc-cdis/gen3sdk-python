@@ -136,7 +136,7 @@ def check_yaml(phsids, path, repo="commons-users", verbose=False):
     # If we find anything ask for input (eventually times out)
     if anything_found:
         print("Would you like to continue? (y/n): ", end="", flush=True)
-        timeout = 5
+        timeout = 90
         i = None
         i, o, e = select([stdin], [], [], timeout)
 
