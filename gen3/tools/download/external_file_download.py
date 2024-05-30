@@ -11,11 +11,9 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List
 
-import requests
 from cdislogging import get_logger
 
-from gen3.auth import Gen3AuthError
-from gen3.tools.download.drs_download import DownloadStatus, wts_get_token
+from gen3.auth import Gen3Auth
 
 REQUIRED_EXTERNAL_FILE_METADATA_KEYS = ["external_oidc_idp", "file_retriever"]
 
@@ -23,14 +21,19 @@ logger = get_logger("__name__", log_level="debug")
 
 
 def download_files_from_metadata(
-    hostname: str, auth, metadata_file, retrievers, download_path="."
+    hostname: str,
+    auth: Gen3Auth,
+    metadata_file: str,
+    retrievers: Dict,
+    download_path: str = ".",
 ) -> Dict[str, Any]:
     """
     Download data from an external repository using
-    external-file metadata and a retreiver function.
+    external-file metadata and a retriever function.
 
     Parses the metadata for 'external_file_metadata' list
-    with IDP and retriever fields.
+    with IDP and retriever fields. The 'external_file_metadata'
+    must be nested under 'gen3_discovery'.
 
     JSON does not allow for storing references to functions. We store
     a string for 'file_retriever' value and then map the string
@@ -41,12 +44,12 @@ def download_files_from_metadata(
         ...,
         "external_file_metadata": [
             {
-            "external_oidc_idp": "qdr-keycloak",
+            "external_oidc_idp": "externaldata-keycloak",
             "file_retriever": "QDR",
             "study_id": "QDR_study_01"
             },
             {
-            "external_oidc_idp": "qdr-keycloak",
+            "external_oidc_idp": "externaldata-keycloak",
             "file_retriever": "QDR",
             "file_id": "QDR_file_02"
             },
@@ -61,37 +64,25 @@ def download_files_from_metadata(
 
     Args:
         hostname (str): hostname of Gen3 commons to use for WTS
-        auth: Gen3 Auth instance for WTS
-        metadata_file (str): path to metadata json file
+        auth: Gen3Auth instance for WTS
+        metadata_file (str): path to external file metadata json file
         retrievers (dict): map of function name string to retreiver function reference.
     Returns:
-        dictionary of download status for each external_file_metadata object
+        dictionary of DownloadStatus for external file objects, None if errors
     """
 
-    # check for empty retrievers
     if retrievers == {}:
         logger.critical(f"ERROR: 'retrievers' specification is empty {retrievers}")
         return None
-
-    # # get access token for WTS commons
-    # try:
-    #     server_access_token = auth.get_access_token()
-    # except Gen3AuthError:
-    #     logger.critical(f"Unable to authenticate your credentials with {hostname}")
-    #     return None
 
     # verify the metadata_file path is valid
     if not os.path.isfile(metadata_file):
         logger.critical(f"ERROR: cannot find metadata json file: {metadata_file}")
         return None
 
-    # read metadata
-    metadata = load_metadata(Path(metadata_file))
-
-    # get list of external_file_metadata objects
+    metadata = load_all_metadata(Path(metadata_file))
     logger.debug(f"Metadata = {metadata}")
     external_file_metadata = extract_external_file_metadata(metadata)
-    # TODO: Handle empty value - log error and return
     logger.debug(f"External file metadata={external_file_metadata}")
     if external_file_metadata == None:
         logger.critical(
@@ -102,7 +93,7 @@ def download_files_from_metadata(
     download_status = pull_files(
         wts_server_name=hostname,
         auth=auth,
-        external_file_metadata=external_file_metadata,
+        file_metadata_list=external_file_metadata,
         retrievers=retrievers,
         download_path=download_path,
     )
@@ -116,7 +107,7 @@ def download_files_from_metadata(
 def pull_files(
     wts_server_name: str,
     auth,
-    external_file_metadata,
+    file_metadata_list,
     retrievers,
     download_path,
 ) -> Dict[str, Any]:
@@ -126,125 +117,48 @@ def pull_files(
     Args:
         wts_server_name (str): hostname of WTS server
         auth: Gen3Auth object for access to WTS
-        external_file_metadata (dict):
+        file_metadata_list (list): list of external file metadata objects
         retrievers (dict):
         download_path: path to write data files
     Returns:
-        list of download status for each external_file_metadata object, None if errors
+        dictionary of DownloadStatus for external file objects, None if errors
     """
     completed = {}
 
-    # loop over external file objects
-    metadata_count = 0
-    for file_metadata in external_file_metadata:
-        # create an identifier and DownloadStatus to store in 'completed' list.
-        if file_metadata.get("study_id"):
-            filename = file_metadata.get("study_id")
-        elif file_metadata.get("file_id"):
-            filename = file_metadata.get("file_id")
-        else:
-            filename = f"{metadata_count}"
-        logger.debug(f"Filename = {filename}")
-        completed[filename] = DownloadStatus(filename=filename, status="pending")
-        metadata_count += 1
+    metadata_grouped_by_retriever = check_data_and_group_by_retriever(
+        file_metadata_list
+    )
+    logger.debug(f"Grouped metadata = {metadata_grouped_by_retriever}")
 
-        if not is_valid_external_file_metadata(file_metadata):
-            logger.info(f"Skipping invalid external file metadata: {file_metadata}")
-            completed[filename].status = "invalid file metadata"
+    for key, val in metadata_grouped_by_retriever.items():
+        retriever_function = retrievers.get(key)
+        if retriever_function == None:
+            logger.critical(f"Could not find retriever function for {key}")
             continue
-        if not file_metadata.get("file_retriever") in retrievers:
-            logger.info(f"Skipping, 'file_retriever' not found in retrievers")
-            completed[filename].status = "invalid file retriever"
-            continue
-        logger.info("Valid metadata, ready to download")
+        file_metadata_list = val
+        download_status = None
 
-        # get the idp for the calls to wts/external_idp
-        idp = file_metadata.get("external_oidc_idp")
-
-        # user should be logged in (say via portal) by now and have refresh tokens for idp
-        # check that user is logged in to commons with WTS server
-        connected_status = wts_connected(wts_server_name, auth.get_access_token())
-        if connected_status != 200:
-            logger.info(f"Skipping, cannot get verify connected at WTS server")
-            completed[filename].status = "failed"
-            continue
-
-        # user should be already logged in (say via portal) and have refresh tokens for idp
         try:
-            wts_access_token = auth.get_access_token()
-        except Gen3AuthError:
-            logger.critical(
-                f"Unable to authenticate your credentials with {wts_server_name}"
+            logger.info(
+                f"Ready to retrieve data with retriever {retriever_function.__name__}"
             )
-            completed[filename].status = "failed"
-            continue
-        idp_access_token = wts_get_token(
-            hostname=wts_server_name, idp=idp, access_token=wts_access_token
-        )
-        if idp_access_token == None:
-            logger.critical(f"Could not get token for idp {idp}")
-            completed[filename].status = "failed"
-            continue
+            download_status = retriever_function(
+                wts_server_name, auth, file_metadata_list, download_path
+            )
+        except NameError:
+            logger.critical("ERROR: Retriever function not in scope.")
+        except Exception as e:
+            logger.critical("Error from retriever function")
+            logger.critical(e)
 
-        # retrieve files from external host
-        success = retriever_manager(
-            file_metadata, idp_access_token, retrievers, download_path
-        )
-        logger.info(f"Downloaded = {success}")
-        if success:
-            completed[filename].status = "downloaded"
-        else:
-            completed[filename].status = "failed"
+        if download_status:
+            logger.info(f"Adding download_status = {download_status}")
+            completed.update(download_status)
 
     if completed == {}:
         return None
     else:
         return completed
-
-
-def retriever_manager(file_metadata, token, retrievers, download_path) -> bool:
-    """
-    Retrieve data from external repo using idp, token, and retriever function.
-    The manager will call the the file_retriever function specified in the file_metadata.
-
-    Args
-        file_metadata: the external_file_metadata with idp and retriever function
-        token: the access token for the external repo
-        retrievers: dict for mapping retriever function string in metadata to function reference
-        download_path: path for output files.
-    Returns:
-        boolean: True if data was downloaded and written to file
-    """
-
-    download_success = False
-    idp = file_metadata.get("external_oidc_idp")
-    # use metadata and retrievers to determine which retriever to call
-    retriever_function_string = file_metadata.get("file_retriever")
-    logger.debug(f"File metadata = {file_metadata}")
-    logger.debug(f"retriever string = {retriever_function_string}")
-
-    retriever_function = retrievers.get(retriever_function_string)
-    study_id = file_metadata.get("study_id")
-    file_id = file_metadata.get("file_id")
-    try:
-        logger.info(
-            f"Ready to retrieve data from {idp} with retriever {retriever_function.__name__}"
-        )
-        download_success = retriever_function(file_metadata, token, download_path)
-    # This is handled further up in main function.
-    except NameError:
-        logger.critical("ERROR: Retriever function not in scope.")
-    # handle errors specific to heal-sdk here
-    #
-    # other errors
-    except Exception as e:
-        logger.critical("Got an error")
-        logger.critical(e)
-
-    return download_success
-
-
-# metadata and external_file_metadata methods
 
 
 def extract_external_file_metadata(mds_object: dict) -> List:
@@ -265,20 +179,26 @@ def extract_external_file_metadata(mds_object: dict) -> List:
         logger.critical("ERROR: Missing key 'gen3_discovery' in metadata")
         logger.critical(e)
         return None
+
     return external_file_metadata
 
 
 def is_valid_external_file_metadata(external_file_metadata: dict) -> bool:
     """
     Check that the external_file dict has the required keys:
-    "external_oidc_idp" and "file_retriever".
+    'external_oidc_idp' and 'file_retriever'.
 
     Args:
         external_file_metadata: dict
     Returns:
         boolean
     """
+    if not isinstance(external_file_metadata, dict):
+        logger.info(f"File_metadata object is not a dict: {external_file_metadata}")
+        return False
+
     isValid = True
+    logger.debug(f"Checking metadata: {external_file_metadata}")
     for key in REQUIRED_EXTERNAL_FILE_METADATA_KEYS:
         if key not in external_file_metadata:
             logger.info(f"Missing key in external file metadata: {key}")
@@ -287,7 +207,7 @@ def is_valid_external_file_metadata(external_file_metadata: dict) -> bool:
     return isValid
 
 
-def load_metadata(path: Path) -> Dict:
+def load_all_metadata(path: Path) -> Dict:
     """
     Loads a metadata object from a json file.
 
@@ -307,42 +227,30 @@ def load_metadata(path: Path) -> Dict:
     return None
 
 
-# Might not need this one.
-def wts_connected(hostname: str, access_token: str) -> int:
+def check_data_and_group_by_retriever(file_metadata_list: list) -> Dict:
     """
-    Check that user is connected to commons with WTS service
-    Args:
-        hostname (str): Gen3 common's WTS service
-        access_token: Gen3 Auth to use to with WTS
+    Group the file metadata by retriever. Exclude any invalid file_metadata items.
 
     Returns:
-        response.status (int): 200 or 403
+        Dict of retrievers and file_metadata lists, for example
+        {
+            "retriever1": [list1],
+            "retriever2": [list2],
+            ...
+        }
     """
-    headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Connection": "keep-alive",
-        "Authorization": "bearer " + access_token,
-    }
+    grouped_by_retriever = {}
+    for item in file_metadata_list:
+        logger.debug(f"Checking item = {item}")
+        if not is_valid_external_file_metadata(item):
+            continue
+        retriever = item.get("file_retriever")
+        logger.debug(f"Found retriever = {retriever}")
+        if retriever in grouped_by_retriever:
+            grouped_by_retriever[retriever].append(item)
+        else:
+            grouped_by_retriever[retriever] = [item]
 
-    try:
-        url = f"https://{hostname}/wts/oauth2/connected"
-        try:
-            response = requests.get(url=url, headers=headers)
-            response.raise_for_status()
-        except requests.exceptions.HTTPError as exc:
-            logger.critical(
-                f"HTTP Error ({exc.response.status_code}): checking WTS connected: {exc.response.text}"
-            )
-            logger.critical(
-                "Please make sure the target commons is connected on your profile page and that connection has not expired."
-            )
-            return None
-
-        print("No errors")
-        print(f"Status code: {response.status_code}")
-        return response.status_code
-
-    except Gen3AuthError:
-        logger.critical(f"Unable to authenticate your credentials with {hostname}")
-        return response.status
+    if grouped_by_retriever == {}:
+        return None
+    return grouped_by_retriever
