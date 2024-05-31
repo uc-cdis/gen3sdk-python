@@ -1,10 +1,6 @@
 name: CI
 
-on:
-  # run on pushed commits to master and on new commits on pull requests
-  push:
-  pull_request:
-    types: [opened, synchronize]
+on: push
 
 jobs:
   Security:

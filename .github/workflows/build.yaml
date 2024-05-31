@@ -1,0 +1,81 @@
+# push will run on every pushed commit to any branch (so this will rerun the tests
+# once a branch gets merged to main in addition to any new commits on any branch)
+on: push
+
+name: Build
+
+jobs:
+  pyinstaller:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+
+      - name: Set up python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install PostgreSQL and dependencies on Ubuntu
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql postgresql-contrib libpq-dev
+
+      - name: Install PostgreSQL and dependencies on macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew update
+          brew install postgresql
+
+      - name: Install PostgreSQL and dependencies on Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          choco install postgresql
+
+      # https://pyinstaller.org/en/stable/when-things-go-wrong.html#helping-pyinstaller-find-modules
+      - name: Install poetry
+        run: |
+          pip install --upgrade pip
+          pip --version
+          # this isn't the recommended way to install b/c the poetry deps are now
+          # mixed with the service deps. However, getting the alternative to work
+          # on all OSes was getting difficult. This is a quick hack to move forward
+          pip install poetry
+          python -m poetry --version
+          python -m poetry self add poetry-pyinstaller-plugin
+      - name: Install dependencies and then build using pyinstaller
+        run: |
+          python -m poetry install -vv --all-extras --no-interaction --no-cache
+          python -m poetry show -vv
+          python -m poetry env info
+          python -m poetry build
+          # pip install pyinstaller==6.6.0
+          # pyinstaller --paths=./gen3 --clean --name gen3 --hidden-import gen3users --onefile ./gen3/cli/__main__.py
+          # pyinstaller --log-level=DEBUG --debug=imports --clean --name gen3 --hidden-import gen3users --onefile ./gen3/cli/__main__.py
+      - name: Test build
+        run: |
+          ls ./dist/pyinstaller/*/gen3
+          ls ./dist/pyinstaller/*/gen3/gen3
+          cp ./dist/pyinstaller/*/gen3/gen3 ./gen3
+          ls
+          ./gen3 --help
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-without-markdown
+          path: |
+            dist
+            !dist/**/*.md
+
+
+
+
