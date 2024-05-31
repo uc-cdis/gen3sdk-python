@@ -14,55 +14,22 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
 
-    # Defining a Postgres DB service, mainly to get the required OS packages
-    # so we can build and deal with `psycopg` from source (which pyinstaller
-    # needs to do when building the binary)
-    services:
-      postgres:
-        # Docker Hub image
-        image: postgres:13
-        env:
-          # trust connections from other jobs in this workflow to access this service
-          # this simplifies the networking to this service
-          POSTGRES_HOST_AUTH_METHOD: trust
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          # Maps tcp port 5432 on service container to the host
-          - 5432:5432
-    steps:
-      - name: Additional Postgres service configuration
-        # PostgreSQL 15 will revoke the CREATE permission from all users
-        # except a database owner from the public (or default) schema.
-        # This is required by some services for db setup for testing, so grant
-        # that permission to the postgres user now to hopefully avoid headache
-        # when we eventually upgrade to 15 (even though it's not technically required
-        # in postgres 13).
+      - name: Install PostgreSQL and dependencies on Ubuntu
+        if: matrix.os == 'ubuntu-latest'
         run: |
-          echo "Versions"
-          psql --version
-          psql -U postgres -h localhost -d postgres -c 'SELECT version();'
+          sudo apt-get update
+          sudo apt-get install -y postgresql postgresql-contrib libpq-dev
 
-          echo "Grant admin privileges to postgres user"
-          psql -U postgres -h localhost -d postgres -c 'GRANT CREATE ON SCHEMA public TO postgres;'
-        env:
-            # The hostname used to communicate with the PostgreSQL service container
-            POSTGRES_HOST: localhost
-            POSTGRES_PORT: 5432
+      - name: Install PostgreSQL and dependencies on macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew update
+          brew install postgresql
 
-      - name: Check out code
-        uses: actions/checkout@v3
-        with:
-          persist-credentials: false
-
-      - name: Set up python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
+      - name: Install PostgreSQL and dependencies on Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          choco install postgresql
 
       # https://pyinstaller.org/en/stable/when-things-go-wrong.html#helping-pyinstaller-find-modules
       - name: Install poetry
