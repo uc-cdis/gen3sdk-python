@@ -45,7 +45,7 @@ jobs:
           # pyinstaller --log-level=DEBUG --debug=imports --clean --name gen3 --hidden-import gen3users --onefile ./gen3/cli/__main__.py
       - name: Test build
         run: |
-          cp ./dist/pyinstaller/*/gen3/gen3 ./gen3
+          cp -r ./dist/pyinstaller/*/gen3/gen3 ./gen3
           ./gen3 --help
       - name: Archive artifacts
         uses: actions/upload-artifact@v4
