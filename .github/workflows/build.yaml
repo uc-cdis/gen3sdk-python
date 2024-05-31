@@ -64,6 +64,8 @@ jobs:
       - name: Test build
         run: |
           ls ./dist/pyinstaller/*/gen3
+          ls ./dist/pyinstaller/*/gen3/gen3
+          ls ./dist/pyinstaller/*/gen3/gen3/gen3
           cp ./dist/pyinstaller/*/gen3/gen3 ./gen3
           ls
           ./gen3 --help
