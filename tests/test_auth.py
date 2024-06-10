@@ -82,6 +82,36 @@ def test_refresh_access_token(mock_gen3_auth):
                     )
 
 
+def test_refresh_access_token_when_no_refresh_token(mock_gen3_auth):
+    """
+    Ensure access token is not refreshed when it's impossible to do so
+    """
+    # simulate scenario where access token is provided but refresh/API key is not
+    mock_gen3_auth._access_token = "foobar"
+    mock_gen3_auth._refresh_token = None
+
+    with patch("gen3.auth.get_access_token_with_key") as mock_access_token:
+        # should not call this
+        mock_access_token.side_effect = Exception()
+        with patch("gen3.auth.decode_token") as mock_decode_token:
+            mock_decode_token().return_value = {"aud": "123"}
+            with patch("gen3.auth.Gen3Auth._write_to_file") as mock_write_to_file:
+                mock_write_to_file().return_value = True
+                with patch(
+                    "gen3.auth.Gen3Auth.__call__",
+                    return_value=MagicMock(
+                        headers={
+                            "Authorization": f"Bearer {mock_gen3_auth._access_token}"
+                        }
+                    ),
+                ) as mock_call:
+                    access_token = mock_gen3_auth.refresh_access_token()
+                    assert (
+                        "Bearer " + access_token == mock_call().headers["Authorization"]
+                    )
+                    assert mock_gen3_auth._access_token == "foobar"
+
+
 def test_refresh_access_token_no_cache_file(mock_gen3_auth):
     """
     Make sure that access token ends up in header when refresh is called after failing to write to cache file
