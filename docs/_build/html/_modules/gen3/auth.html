@@ -404,8 +404,13 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span> <span class="o">=</span> <span class="n">get_access_token_with_client_credentials</span><span class="p">(</span>
                 <span class="n">endpoint</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client_credentials</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client_scopes</span>
             <span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span> <span class="o">=</span> <span class="n">get_access_token_with_key</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Unable to refresh access token. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Authorized API calls will stop working when this token expires.&quot;</span>
+            <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_access_token_info</span> <span class="o">=</span> <span class="n">decode_token</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span><span class="p">)</span>
 
