@@ -98,8 +98,11 @@ def download_files_from_metadata(
         download_path=download_path,
     )
 
-    for key in download_status:
-        logger.info(download_status[key])
+    if download_status == None:
+        logger.critical("Download status is None")
+    else:
+        for key in download_status:
+            logger.info(download_status[key])
 
     return download_status
 
@@ -128,6 +131,10 @@ def pull_files(
     metadata_grouped_by_retriever = check_data_and_group_by_retriever(
         file_metadata_list
     )
+
+    if metadata_grouped_by_retriever == None:
+        logger.critical(f"ERROR: Cannot group external metadata by retrievers")
+        return None
     logger.debug(f"Grouped metadata = {metadata_grouped_by_retriever}")
 
     for key, val in metadata_grouped_by_retriever.items():
