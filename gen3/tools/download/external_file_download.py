@@ -3,7 +3,7 @@ Module for downloading and listing data from external repositories.
 
     Examples:
 
-        See docs/howto/drsDownloading.md for more details
+        See docs/howto/externalFileDownloading.md for more details
 
 """
 import json
@@ -23,7 +23,7 @@ logger = get_logger("__name__", log_level="debug")
 def download_files_from_metadata(
     hostname: str,
     auth: Gen3Auth,
-    metadata_file: str,
+    external_file_metadata: Dict,
     retrievers: Dict,
     download_path: str = ".",
 ) -> Dict[str, Any]:
@@ -31,41 +31,41 @@ def download_files_from_metadata(
     Download data from an external repository using
     external-file metadata and a retriever function.
 
-    Parses the metadata for 'external_file_metadata' list
-    with IDP and retriever fields. The 'external_file_metadata'
-    must be nested under 'gen3_discovery'.
+    The external_file_metadata items should have the following
+    required keys: 'external_oidc_idp' and 'file_retriever'.
+    The items can have an additional optional key of
+    'study_id' or 'file_id.
 
-    JSON does not allow for storing references to functions. We store
-    a string for 'file_retriever' value and then map the string
-    to a function.
+    An example is shown below:
+    [
+        {
+        "external_oidc_idp": "externaldata-keycloak",
+        "file_retriever": "QDR",
+        "study_id": "QDR_study_01"
+        },
+        {
+        "external_oidc_idp": "externaldata-keycloak",
+        "file_retriever": "QDR",
+        "file_id": "QDR_file_02"
+        },
+    ]
 
-    Example metadata:
-    "gen3_discovery: {
-        ...,
-        "external_file_metadata": [
-            {
-            "external_oidc_idp": "externaldata-keycloak",
-            "file_retriever": "QDR",
-            "study_id": "QDR_study_01"
-            },
-            {
-            "external_oidc_idp": "externaldata-keycloak",
-            "file_retriever": "QDR",
-            "file_id": "QDR_file_02"
-            },
-        ],
-        ...,
-    }
+    JSON does not allow for storing references to the retriever functions. We store
+    a string for 'file_retriever' value as shown above. The retriever name string
+    will get mapped to a function.
 
-    Corresponding example retrievers mapping:
+    For a retriever name of 'QDR', the mapping to a function could be as follows:
     { "QDR": get_syracuse_qdr_files }
 
-    Calls the appropriate retriever function to download data.
+    The retriever function should be imported into the code that is calling
+    the 'download_files_from_metadata' function.
+
+    The retriever function (not defined here) will perform the data download.
 
     Args:
         hostname (str): hostname of Gen3 commons to use for WTS
         auth: Gen3Auth instance for WTS
-        metadata_file (str): path to external file metadata json file
+        external_file_metadata (dict): dict of external file objects
         retrievers (dict): map of function name string to retreiver function reference.
     Returns:
         dictionary of DownloadStatus for external file objects, None if errors
@@ -75,19 +75,8 @@ def download_files_from_metadata(
         logger.critical(f"ERROR: 'retrievers' specification is empty {retrievers}")
         return None
 
-    # verify the metadata_file path is valid
-    if not os.path.isfile(metadata_file):
-        logger.critical(f"ERROR: cannot find metadata json file: {metadata_file}")
-        return None
-
-    metadata = load_all_metadata(Path(metadata_file))
-    logger.debug(f"Metadata = {metadata}")
-    external_file_metadata = extract_external_file_metadata(metadata)
-    logger.debug(f"External file metadata={external_file_metadata}")
     if external_file_metadata == None:
-        logger.critical(
-            f"ERROR: cannot find external_file_metadata value in metadata: {metadata_file}"
-        )
+        logger.critical(f"ERROR: external_file_metadata is missing")
         return None
 
     download_status = pull_files(

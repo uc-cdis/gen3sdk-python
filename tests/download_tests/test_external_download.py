@@ -13,7 +13,6 @@ from gen3.tools.download.external_file_download import (
     check_data_and_group_by_retriever,
     download_files_from_metadata,
     pull_files,
-    extract_external_file_metadata,
     is_valid_external_file_metadata,
     load_all_metadata,
 )
@@ -22,10 +21,14 @@ DIR = Path(__file__).resolve().parent
 
 
 @pytest.fixture
+def wts_hostname():
+    return "test.commons1.io"
+
+
+@pytest.fixture
 def valid_external_file_metadata():
-    with open(Path(DIR, "resources/gen3_metadata_external_file_metadata.json")) as fin:
-        metadata = json.load(fin)
-        return metadata["gen3_discovery"]["external_file_metadata"]
+    with open(Path(DIR, "resources/valid_external_file_metadata.json")) as fin:
+        return json.load(fin)
 
 
 def test_load_all_metadata():
@@ -104,36 +107,31 @@ def test_check_data_and_group_by_retriever():
     assert check_data_and_group_by_retriever(file_metadata_list) == expected
 
 
-def test_extract_external_file_metadata(valid_external_file_metadata):
-    # valid metadata
-    metadata_file = "resources/gen3_metadata_external_file_metadata.json"
-    metadata = load_all_metadata(Path(DIR, metadata_file))
-    external_file_metadata = extract_external_file_metadata(metadata)
-
-    assert type(external_file_metadata) is list
-    assert len(external_file_metadata) == 2
-    assert external_file_metadata == valid_external_file_metadata
-
-    # invalid metadata - missing keys
-    metadata_missing_keys = {
-        "_guid_type": "discovery_metadata",
-        "gen3_discovery": {"authz": ""},
-    }
-    assert extract_external_file_metadata(metadata_missing_keys) == None
-    assert extract_external_file_metadata({"_guid_type": "discovery_metadata"}) == None
-    assert extract_external_file_metadata({}) == None
-
-
-def test_pull_files_bad_retriever_input():
-    # retriever does not exist
-    wts_hostname = "test.commons1.io"
+def test_pull_files(wts_hostname, valid_external_file_metadata):
     download_path = "."
-    mock_external_file_metadata = [
-        {
-            "external_oidc_idp": "test-external-idp",
-            "file_retriever": "DoesNotExist",
-        }
-    ]
+    expected_download_status = {
+        "QDR_study_01": DownloadStatus(filename="QDR_study_01", status="downloaded"),
+        "QDR_file_02": DownloadStatus(filename="QDR_file_02", status="downloaded"),
+    }
+    mock_auth = MagicMock()
+
+    mock_retriever = MagicMock()
+    mock_retriever.__name__ = "mock_retriever"
+    mock_retriever.return_value = expected_download_status
+    retrievers = {"QDR": mock_retriever}
+
+    result = pull_files(
+        wts_server_name=wts_hostname,
+        auth=mock_auth,
+        file_metadata_list=valid_external_file_metadata,
+        retrievers=retrievers,
+        download_path=download_path,
+    )
+    assert result == expected_download_status
+
+
+def test_pull_files_bad_retriever_input(wts_hostname):
+    download_path = "."
     mock_auth = MagicMock()
 
     mock_retriever = MagicMock()
@@ -141,6 +139,13 @@ def test_pull_files_bad_retriever_input():
     mock_retriever.return_value = "some_status"
     retrievers = {"QDR": mock_retriever}
 
+    # retriever does not exist
+    mock_external_file_metadata = [
+        {
+            "external_oidc_idp": "test-external-idp",
+            "file_retriever": "DoesNotExist",
+        }
+    ]
     result = pull_files(
         wts_server_name=wts_hostname,
         auth=mock_auth,
@@ -168,55 +173,14 @@ def test_pull_files_bad_retriever_input():
     assert result == None
 
 
-def test_pull_files():
-    wts_hostname = "test.commons1.io"
-    download_path = "."
-    mock_external_file_metadata = [
-        {
-            "external_oidc_idp": "test-external-idp",
-            "file_retriever": "QDR",
-            "study_id": "QDR_study_01",
-        }
-    ]
-    expected_download_status = {
-        "QDR_study_01": DownloadStatus(filename="QDR_study_01", status="downloaded"),
-    }
-
-    mock_auth = MagicMock()
-
-    mock_retriever = MagicMock()
-    mock_retriever.__name__ = "mock_retriever"
-    mock_retriever.return_value = expected_download_status
-    retrievers = {"QDR": mock_retriever}
-
-    result = pull_files(
-        wts_server_name=wts_hostname,
-        auth=mock_auth,
-        file_metadata_list=mock_external_file_metadata,
-        retrievers=retrievers,
-        download_path=download_path,
-    )
-    assert result == expected_download_status
-
-
-def test_pull_files_failures():
-    wts_hostname = "test.commons1.io"
+def test_pull_files_failures(wts_hostname, valid_external_file_metadata):
     download_path = "."
 
-    mock_external_file_metadata = [
-        {
-            "external_oidc_idp": "test-external-idp",
-            "file_retriever": "QDR",
-            "study_id": "QDR_study_01",
-        },
-    ]
-
     mock_auth = MagicMock()
-
     mock_retriever = MagicMock()
     mock_retriever.__name__ = "mock_retriever"
 
-    # failed download status is passed through
+    # failed download status from retriever is passed as return value from pull_files
     expected_download_status = {
         "QDR_study_01": DownloadStatus(filename="QDR_study_01", status="failed")
     }
@@ -226,61 +190,14 @@ def test_pull_files_failures():
     result = pull_files(
         wts_server_name=wts_hostname,
         auth=mock_auth,
-        file_metadata_list=mock_external_file_metadata,
+        file_metadata_list=valid_external_file_metadata,
         retrievers=retrievers,
         download_path=download_path,
     )
     assert result == expected_download_status
 
 
-def test_download_files_from_metadata_bad_input():
-    wts_hostname = "test.commons1.io"
-    mock_auth = MagicMock()
-
-    with mock.patch("gen3.auth") as mock_auth, mock.patch(
-        "gen3.tools.download.external_file_download.extract_external_file_metadata"
-    ) as mock_extract_external_file_metadata:
-        mock_retriever = MagicMock()
-        mock_retriever.__name__ = "mock_retriever"
-        mock_retrievers = {"QDR": mock_retriever}
-
-        # empty retrievers
-        result = download_files_from_metadata(
-            hostname=wts_hostname,
-            auth=mock_auth,
-            metadata_file="some_file",
-            retrievers={},
-            download_path=".",
-        )
-        assert result == None
-        assert not mock_extract_external_file_metadata.called
-
-        # missing metadata file
-        mock_auth.get_access_token.return_value = "some_token"
-        result = download_files_from_metadata(
-            hostname=wts_hostname,
-            auth=mock_auth,
-            metadata_file="missing_file",
-            retrievers=mock_retrievers,
-            download_path=".",
-        )
-        assert result == None
-        assert not mock_extract_external_file_metadata.called
-
-        # invalid metadata
-        mock_extract_external_file_metadata.return_value = None
-        result = download_files_from_metadata(
-            hostname=wts_hostname,
-            auth=mock_auth,
-            metadata_file="tests/download_tests/resources/gen3_metadata_external_file_metadata.json",
-            retrievers=mock_retrievers,
-            download_path=".",
-        )
-        assert result == None
-        assert mock_extract_external_file_metadata.called
-
-
-def test_download_files_from_metadata():
+def test_download_files_from_metadata(valid_external_file_metadata):
     wts_hostname = "test.commons1.io"
     mock_auth = MagicMock()
 
@@ -303,10 +220,30 @@ def test_download_files_from_metadata():
         result = download_files_from_metadata(
             hostname=wts_hostname,
             auth=mock_auth,
-            metadata_file="tests/download_tests/resources/gen3_metadata_external_file_metadata.json",
+            external_file_metadata=valid_external_file_metadata,
             retrievers=mock_retrievers,
             download_path=".",
         )
         # result should match the value returned by pull_files.
         assert result == mock_download_status
         assert mock_pull_files.called
+
+
+def test_download_files_from_metadata_bad_input(
+    wts_hostname, valid_external_file_metadata
+):
+    mock_auth = MagicMock()
+
+    with mock.patch("gen3.auth") as mock_auth, mock.patch(
+        "gen3.tools.download.external_file_download.pull_files"
+    ) as mock_pull_files:
+        # empty retrievers
+        result = download_files_from_metadata(
+            hostname=wts_hostname,
+            auth=mock_auth,
+            external_file_metadata=valid_external_file_metadata,
+            retrievers={},
+            download_path=".",
+        )
+        assert result == None
+        assert not mock_pull_files.called
