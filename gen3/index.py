@@ -87,7 +87,7 @@ class Gen3Index:
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    def get_all_records(self, limit=None, paginate=False, start=None):
+    def get_all_records(self, limit=None, paginate=False):
         """
 
         Get a list of all records

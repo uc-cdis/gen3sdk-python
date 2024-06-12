@@ -368,8 +368,13 @@ class Gen3Auth(AuthBase):
             self._access_token = get_access_token_with_client_credentials(
                 endpoint, self._client_credentials, self._client_scopes
             )
-        else:
+        elif self._refresh_token:
             self._access_token = get_access_token_with_key(self._refresh_token)
+        else:
+            logging.warning(
+                f"Unable to refresh access token. "
+                f"Authorized API calls will stop working when this token expires."
+            )
 
         self._access_token_info = decode_token(self._access_token)
 
