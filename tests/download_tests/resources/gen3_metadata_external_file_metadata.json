@@ -1,0 +1,28 @@
+{
+    "_guid_type": "discovery_metadata",
+    "gen3_discovery": {
+        "authz": "",
+        "__manifest": "",   
+        "year_awarded": "2022",
+        "project_title": "Project title",
+        "external_file_metadata":  [             
+            {
+              "external_oidc_idp": "test-externaldata-idp",
+              "file_retriever": "QDR",
+              "study_id": "QDR_study_01"
+            },
+            {
+              "external_oidc_idp": "test-externaldata-idp",
+              "file_retriever": "QDR",
+              "file_id": "QDR_file_02"
+            }
+        ],
+        "study_metadata": {
+            "data": {
+                "data_type": [],
+                "data_source": []
+            }
+        }
+    }
+}
+            
