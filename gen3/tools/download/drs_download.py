@@ -662,7 +662,7 @@ def resolve_drs_hostname_from_id(
 
 
 def resolve_objects_drs_hostname_from_id(
-    object_ids: List[Downloadable], resolved_drs_prefix_cache: dict, mds_url: str
+    object_ids: List[Downloadable], resolved_drs_prefix_cache: dict, mds_url: str, hostname: str
 ) -> None:
     """Given a list of object_ids go through list and resolve + cache any unknown hosts
 
@@ -670,18 +670,21 @@ def resolve_objects_drs_hostname_from_id(
         object_ids (List[Downloadable]): list of object to resolve
         resolved_drs_prefix_cache (dict): cache of resolved DRS prefixes
         mds_url (str): Gen3 metadata service to resolve DRS prefixes
-
+        hostname (str): Hostname to main Gen3 environment
     """
     for entry in object_ids:
         if entry.hostname is None:
-            # if resolution fails the entry hostname will still be None
-            entry.hostname, nid, drs_type = resolve_drs_hostname_from_id(
-                entry.object_id, resolved_drs_prefix_cache, mds_url
-            )
-            if (
-                drs_type == "hostname"
-            ):  # drs_type is a hostname so object id will be the GUID
-                entry.object_id = nid
+            if hostname is not None:
+                entry.hostname = hostname
+            else:
+                # if resolution fails the entry hostname will still be None
+                entry.hostname, nid, drs_type = resolve_drs_hostname_from_id(
+                    entry.object_id, resolved_drs_prefix_cache, mds_url
+                )
+                if (
+                    drs_type == "hostname"
+                ):  # drs_type is a hostname so object id will be the GUID
+                    entry.object_id = nid
 
 
 def ensure_dirpath_exists(path: Path) -> Path:
@@ -843,7 +846,8 @@ class DownloadManager:
         resolve_objects_drs_hostname_from_id(
             object_list,
             self.resolved_compact_drs,
-            f"http://{self.hostname}/mds/aggregate/info",
+            mds_url=f"http://{self.hostname}/mds/aggregate/info",
+            hostname=self.hostname
         )
         progress_bar = (
             tqdm(desc=f"Resolving objects", total=len(object_list))
