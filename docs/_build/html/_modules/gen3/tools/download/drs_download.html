@@ -717,7 +717,7 @@
     <span class="k">return</span> <span class="n">hostname</span><span class="p">,</span> <span class="n">identifier</span><span class="p">,</span> <span class="n">identifier_type</span>
 
 
-<span class="k">def</span> <span class="nf">resolve_objects_drs_hostname_from_id</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">resolve_objects_drs_hostname</span><span class="p">(</span>
     <span class="n">object_ids</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Downloadable</span><span class="p">],</span> <span class="n">resolved_drs_prefix_cache</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">mds_url</span><span class="p">:</span> <span class="nb">str</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Given a list of object_ids go through list and resolve + cache any unknown hosts</span>
@@ -900,7 +900,7 @@
 <span class="sd">        Args:</span>
 <span class="sd">            object_list (List[Downloadable]): list of Downloadable objects to resolve</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">resolve_objects_drs_hostname_from_id</span><span class="p">(</span>
+        <span class="n">resolve_objects_drs_hostname</span><span class="p">(</span>
             <span class="n">object_list</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">resolved_compact_drs</span><span class="p">,</span>
             <span class="sa">f</span><span class="s2">&quot;http://</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">hostname</span><span class="si">}</span><span class="s2">/mds/aggregate/info&quot;</span><span class="p">,</span>

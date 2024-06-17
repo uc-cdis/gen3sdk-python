@@ -35,6 +35,7 @@ from gen3.tools.download.drs_download import (
     wts_get_token,
     get_download_url_using_drs,
     download_file_from_url,
+    resolve_objects_drs_hostname,
 )
 
 from gen3.tools.download.drs_resolvers import (
@@ -457,6 +458,25 @@ def test_download_objects(
                         },
                         text=download_test_files[object.object_id]["content"],
                     )
+                    m.get(
+                        f"https://{hostname}/{object.object_id}",
+                        headers={
+                            "content-length": download_test_files[object.object_id][
+                                "content_length"
+                            ]
+                        },
+                        text=download_test_files[object.object_id]["content"],
+                    )
+                    m.get(
+                        f"https://{hostname}/ga4gh/drs/v1/objects/{object.object_id}",
+                        json=info,
+                    )
+                    m.get(
+                        f"https://{hostname}/ga4gh/drs/v1/objects/{object.object_id}/access/s3",
+                        json={
+                            "url": f"https://{hostname}/{object.object_id}"
+                        },
+                    )
 
                 downloader = DownloadManager(hostname, auth, object_list)
                 results = downloader.download(
@@ -600,6 +620,11 @@ def test_download_objects(
                 json={},
                 status_code=500,
             )
+            m.get(
+                "https://nullhost/ga4gh/drs/v1/objects/dg.XXTST/b96018c5-db06-4af8-a195-28e339ba815e",
+                json={},
+                status_code=500,
+            )
             result = list_files_in_drs_manifest(
                 "nullhost", auth, Path(DIR, "resources/manifest_test_bad_id.json")
             )
@@ -625,7 +650,7 @@ def test_download_objects(
             )
             expected = {
                 "dg.XXTST/b96018c5-db06-4af8-a195-28e339ba815e": DownloadStatus(
-                    filename=None, status="error (resolving DRS host)"
+                    filename=None, status="error (no access methods)"
                 )
             }
             assert res == expected
@@ -763,6 +788,20 @@ Access for test.datacommons.io:
                 "access",
             ]
             assert results == expected
+
+
+def test_resolve_objects_drs_hostname():
+    object_ids_list = [Downloadable(
+        object_id="dg.MD1R/05db0aab-cbe9-4bfe-bef8-888888888888"
+    )]
+    hostname = "test.midrc.org"
+    resolve_objects_drs_hostname(
+        object_ids_list, {},
+        mds_url=f"http://{hostname}/mds/aggregate/info",
+        hostname=hostname
+    )
+    for obj in object_ids_list:
+        assert obj.hostname == hostname
 
 
 def test_download_status_repr_and_str():
