@@ -798,7 +798,7 @@ def test_resolve_objects_drs_hostname():
     resolve_objects_drs_hostname(
         object_ids_list, {},
         mds_url=f"http://{hostname}/mds/aggregate/info",
-        hostname=hostname
+        endpoint=hostname
     )
     for obj in object_ids_list:
         assert obj.hostname == hostname
