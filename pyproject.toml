@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "gen3"
 homepage = "https://gen3.org/"
-version = "4.24.0"
+version = "4.25.0"
 description = "Gen3 CLI and Python SDK"
 authors = ["Center for Translational Data Science at the University of Chicago <support@datacommons.io>"]
 license = "Apache-2.0"
@@ -20,8 +20,8 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.9, <4"
 requests = "*"
-indexclient = { git = "https://github.com/uc-cdis/indexclient.git", tag = "2.2.0" }
-drsclient = { git = "https://github.com/uc-cdis/drsclient.git", tag = "0.2.3" }
+indexclient = "^2.3.0"
+drsclient = "^0.2.3"
 aiohttp = "*"
 backoff = "*"
 cdislogging = "^1.1.0"
@@ -29,7 +29,7 @@ click = "*"
 jsonschema = "*"
 # FIXME updating to >=0.6.0 breaks a few tests
 dataclasses-json = "<=0.5.9"
-pypfb = { git = "https://github.com/uc-cdis/pypfb", tag="0.5.29"}
+pypfb = "^0.5.29"
 tqdm = "^4.61.2"
 humanfriendly ="*"
 python-dateutil = "*"

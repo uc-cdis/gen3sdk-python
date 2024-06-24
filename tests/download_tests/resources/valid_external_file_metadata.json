@@ -1,0 +1,12 @@
+[             
+    {
+    "external_oidc_idp": "externaldata-keycloak",
+    "file_retriever": "QDR",
+    "study_id": "QDR_study_01"
+    },
+    {
+    "external_oidc_idp": "externaldata-keycloak",
+    "file_retriever": "QDR",
+    "file_id": "QDR_file_02"
+    }
+]
