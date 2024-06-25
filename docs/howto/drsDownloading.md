@@ -73,6 +73,7 @@ To download a list of files, you can use the `drs-pull objects` command:
 gen3 --endpoint my-commons.org --auth <path to API key> drs-pull objects dg.XXTS/181af989-5d66-4139-91e7-69f4570ccd41 dg.XX22/221af922-2222-2239-22e7-62f4570cc222
 ```
 
+Note that, the `commons_url` in manifest file will take action to overwrite the `--endpoint` if they are defined in manifest file.
 ### Listing Files and Access
 
 #### List Contents
