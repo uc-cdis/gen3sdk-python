@@ -427,7 +427,6 @@ class Gen3Index:
             urls = []
         json = {
             "urls": urls,
-            "form": "object",
             "hashes": hashes,
             "size": size,
             "file_name": file_name,
@@ -443,15 +442,9 @@ class Gen3Index:
         }
         if did:
             json["did"] = did
-        resp = self.client._post(
-            "index/",
-            headers={"content-type": "application/json"},
-            data=client.json_dumps(json),
-            auth=self.client.auth,
-        )
-        raise_for_status_and_print_error(resp)
+        rec = self.client.create(**json)
 
-        return resp.json()
+        return rec.to_json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     async def async_create_record(
