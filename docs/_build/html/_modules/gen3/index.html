@@ -511,7 +511,6 @@
             <span class="n">urls</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">json</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;urls&quot;</span><span class="p">:</span> <span class="n">urls</span><span class="p">,</span>
-            <span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span>
             <span class="s2">&quot;hashes&quot;</span><span class="p">:</span> <span class="n">hashes</span><span class="p">,</span>
             <span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="n">size</span><span class="p">,</span>
             <span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="n">file_name</span><span class="p">,</span>
@@ -527,15 +526,9 @@
         <span class="p">}</span>
         <span class="k">if</span> <span class="n">did</span><span class="p">:</span>
             <span class="n">json</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">did</span>
-        <span class="n">resp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span>
-            <span class="s2">&quot;index/&quot;</span><span class="p">,</span>
-            <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;content-type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">},</span>
-            <span class="n">data</span><span class="o">=</span><span class="n">client</span><span class="o">.</span><span class="n">json_dumps</span><span class="p">(</span><span class="n">json</span><span class="p">),</span>
-            <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">auth</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">resp</span><span class="p">)</span>
+        <span class="n">rec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="o">**</span><span class="n">json</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+        <span class="k">return</span> <span class="n">rec</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="Gen3Index.async_create_record">

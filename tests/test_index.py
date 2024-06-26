@@ -278,3 +278,20 @@ def test_desc_and_content_dates(gen3_index):
     assert version_record["description"] == new_version["description"]
     assert version_record["content_created_date"] == new_version["content_created_date"]
     assert version_record["content_updated_date"] == new_version["content_updated_date"]
+
+def test_create_record_response(gen3_index):
+    """
+    Verifies the return value for create_record echoes back the parameters for the record that was created.
+    """
+    to_create = {
+        "hashes": {
+            "md5": "374c12456782738abcfe387492837483"
+        },
+        "size": 10,
+        "urls": ['s3://foo/bar'],
+        "file_name": 'new_file',
+        "acl": ['*']
+    }
+    record = gen3_index.create_record(**to_create)
+    for field, expected_value in to_create.items():
+        assert expected_value == record[field]
