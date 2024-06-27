@@ -4,6 +4,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
     <title>Indexing Tools &#8212; Gen3 SDK  documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d1102ebc" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=12dfc556" />
@@ -14,371 +15,225 @@
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Metadata Tools" href="metadata.html" />
     <link rel="prev" title="DRS Download Tools" href="drs_pull.html" />
+   
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
   </head><body>
+  
+
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
+          
+
           <div class="body" role="main">
-            <section id="indexing-tools">
-            <h1>Indexing Tools<a class="headerlink" href="#indexing-tools" title="Link to this heading">¶</a></h1>
-            <section id="module-gen3.tools.indexing.download_manifest">
-            <span id="download"></span><h2>Download<a class="headerlink" href="#module-gen3.tools.indexing.download_manifest" title="Link to this heading">¶</a></h2>
-            <p>Module for indexing actions for downloading a manifest of
-            indexed file objects (against indexd’s API). Supports
-            multiple processes and coroutines using Python’s asyncio library.</p>
-            <p>The default manifest format created is a Comma-Separated Value file (csv)
-            with rows for every record. A header row is created with field names:
-            guid,authz,acl,file_size,md5,urls,file_name</p>
-            <p>Fields that are lists (like acl, authz, and urls) separate the values with spaces.</p>
-            <dl class="py attribute">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.download_manifest.CURRENT_DIR">
-            <span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.download_manifest.</span></span><span class="sig-name descname"><span class="pre">CURRENT_DIR</span></span><a class="headerlink" href="#gen3.tools.indexing.download_manifest.CURRENT_DIR" title="Link to this definition">¶</a></dt>
-            <dd><p>directory this file is in</p>
-            <dl class="field-list simple">
-            <dt class="field-odd">Type<span class="colon">:</span></dt>
-            <dd class="field-odd"><p>str</p>
-            </dd>
-            </dl>
-            </dd></dl>
-            <dl class="py attribute">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.download_manifest.INDEXD_RECORD_PAGE_SIZE">
-            <span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.download_manifest.</span></span><span class="sig-name descname"><span class="pre">INDEXD_RECORD_PAGE_SIZE</span></span><a class="headerlink" href="#gen3.tools.indexing.download_manifest.INDEXD_RECORD_PAGE_SIZE" title="Link to this definition">¶</a></dt>
-            <dd><p>number of records to request per page</p>
-            <dl class="field-list simple">
-            <dt class="field-odd">Type<span class="colon">:</span></dt>
-            <dd class="field-odd"><p>int</p>
-            </dd>
-            </dl>
-            </dd></dl>
-            <dl class="py attribute">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.download_manifest.MAX_CONCURRENT_REQUESTS">
-            <span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.download_manifest.</span></span><span class="sig-name descname"><span class="pre">MAX_CONCURRENT_REQUESTS</span></span><a class="headerlink" href="#gen3.tools.indexing.download_manifest.MAX_CONCURRENT_REQUESTS" title="Link to this definition">¶</a></dt>
-            <dd><p>maximum number of desired concurrent requests across
-            processes/threads</p>
-            <dl class="field-list simple">
-            <dt class="field-odd">Type<span class="colon">:</span></dt>
-            <dd class="field-odd"><p>int</p>
-            </dd>
-            </dl>
-            </dd></dl>
-            <dl class="py attribute">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.download_manifest.TMP_FOLDER">
-            <span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.download_manifest.</span></span><span class="sig-name descname"><span class="pre">TMP_FOLDER</span></span><a class="headerlink" href="#gen3.tools.indexing.download_manifest.TMP_FOLDER" title="Link to this definition">¶</a></dt>
-            <dd><p>Folder directory for placing temporary files
-            NOTE - We have to use a temporary folder b/c Python’s file writing is not</p>
-            <blockquote>
-            <div><p>thread-safe so we can’t have all processes writing to the same file.
-            To workaround this, we have each process write to a file and concat
-            them all post-processing.</p>
-            </div></blockquote>
-            <dl class="field-list simple">
-            <dt class="field-odd">Type<span class="colon">:</span></dt>
-            <dd class="field-odd"><p>str</p>
-            </dd>
-            </dl>
-            </dd></dl>
-            <dl class="py function">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.download_manifest.async_download_object_manifest">
-            <em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.download_manifest.</span></span><span class="sig-name descname"><span class="pre">async_download_object_manifest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">commons_url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'object-manifest.csv'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_processes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_concurrent_requests</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">24</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_manifest</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">python_subprocess_command</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'python'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/download_manifest.html#async_download_object_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.indexing.download_manifest.async_download_object_manifest" title="Link to this definition">¶</a></dt>
-            <dd><p>Download all file object records into a manifest csv</p>
-            <dl class="field-list simple">
-            <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-            <dd class="field-odd"><ul class="simple">
-            <li><p><strong>commons_url</strong> (<em>str</em>) – root domain for commons where indexd lives</p></li>
-            <li><p><strong>output_filename</strong> (<em>str</em><em>, </em><em>optional</em>) – filename for output</p></li>
-            <li><p><strong>num_processes</strong> (<em>int</em><em>, </em><em>optional</em>) – number of parallel python processes to use for
-            hitting indexd api and processing</p></li>
-            <li><p><strong>max_concurrent_requests</strong> (<em>int</em>) – the maximum number of concurrent requests allowed
-            NOTE: This is the TOTAL number, not just for this process. Used to help
-            determine how many requests a process should be making at one time</p></li>
-            <li><p><strong>input_manifest</strong> (<em>str</em>) – Input file. Read available object data from objects in this
-            file instead of reading everything in indexd. This will attempt to query
-            indexd for only the records identified in this manifest.</p></li>
-            <li><p><strong>python_subprocess_command</strong> (<em>str</em><em>, </em><em>optional</em>) – Command used to execute a
-            python process. By default you should not need to change this, but
-            if you are running something like MacOS and only installed Python 3.x
-            you may need to specify “python3”.</p></li>
-            </ul>
-            </dd>
-            </dl>
-            </dd></dl>
-            </section>
-            <section id="module-gen3.tools.indexing.index_manifest">
-            <span id="index"></span><h2>Index<a class="headerlink" href="#module-gen3.tools.indexing.index_manifest" title="Link to this heading">¶</a></h2>
-            <p>Module for indexing object files in a manifest (against indexd’s API).</p>
-            <p>The default manifest format created is a Tab-Separated Value file (tsv)
-            with rows for every record.</p>
-            <p>Fields that are lists (like acl, authz, and urls) separate the values with commas or spaces
-            See the Attributes session for supported column names.</p>
-            <p>All supported formats of acl, authz and url fields are shown in the below example.</p>
-            <p>guid    md5 size    acl authz   url
-            255e396f-f1f8-11e9-9a07-0a80fada099c    473d83400bc1bc9dc635e334faddf33c    363455714   [‘Open’]    [s3://pdcdatastore/test1.raw]
-            255e396f-f1f8-11e9-9a07-0a80fada098c    473d83400bc1bc9dc635e334faddd33c    343434344   Open    s3://pdcdatastore/test2.raw
-            255e396f-f1f8-11e9-9a07-0a80fada097c    473d83400bc1bc9dc635e334fadd433c    543434443   phs0001 phs0002 s3://pdcdatastore/test3.raw
-            255e396f-f1f8-11e9-9a07-0a80fada096c    473d83400bc1bc9dc635e334fadd433c    363455714   [‘phs0001’, ‘phs0002’]  [‘s3://pdcdatastore/test4.raw’]
-            255e396f-f1f8-11e9-9a07-0a80fada010c    473d83400bc1bc9dc635e334fadde33c    363455714   [‘Open’]    s3://pdcdatastore/test5.raw</p>
-            <dl class="py attribute">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.CURRENT_DIR">
-            <span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">CURRENT_DIR</span></span><a class="headerlink" href="#gen3.tools.indexing.index_manifest.CURRENT_DIR" title="Link to this definition">¶</a></dt>
-            <dd><p>directory this file is in</p>
-            <dl class="field-list simple">
-            <dt class="field-odd">Type<span class="colon">:</span></dt>
-            <dd class="field-odd"><p>str</p>
-            </dd>
-            </dl>
-            </dd></dl>
+            
+  <section id="indexing-tools">
+<h1>Indexing Tools<a class="headerlink" href="#indexing-tools" title="Link to this heading">¶</a></h1>
+<section id="module-gen3.tools.indexing.download_manifest">
+<span id="download"></span><h2>Download<a class="headerlink" href="#module-gen3.tools.indexing.download_manifest" title="Link to this heading">¶</a></h2>
+<p>Module for indexing actions for downloading a manifest of
+indexed file objects (against indexd’s API). Supports
+multiple processes and coroutines using Python’s asyncio library.</p>
+<p>The default manifest format created is a Comma-Separated Value file (csv)
+with rows for every record. A header row is created with field names:
+guid,authz,acl,file_size,md5,urls,file_name</p>
+<p>Fields that are lists (like acl, authz, and urls) separate the values with spaces.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gen3.tools.indexing.download_manifest.CURRENT_DIR">
+<span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.download_manifest.</span></span><span class="sig-name descname"><span class="pre">CURRENT_DIR</span></span><a class="headerlink" href="#gen3.tools.indexing.download_manifest.CURRENT_DIR" title="Link to this definition">¶</a></dt>
+<dd><p>directory this file is in</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
 
-            <dl class="py attribute">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.GUID">
-            <span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">GUID</span></span><a class="headerlink" href="#gen3.tools.indexing.index_manifest.GUID" title="Link to this definition">¶</a></dt>
-            <dd><p>supported file id column names</p>
-            <dl class="field-list simple">
-            <dt class="field-odd">Type<span class="colon">:</span></dt>
-            <dd class="field-odd"><p>list(string)</p>
-            </dd>
-            </dl>
-            </dd></dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gen3.tools.indexing.download_manifest.INDEXD_RECORD_PAGE_SIZE">
+<span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.download_manifest.</span></span><span class="sig-name descname"><span class="pre">INDEXD_RECORD_PAGE_SIZE</span></span><a class="headerlink" href="#gen3.tools.indexing.download_manifest.INDEXD_RECORD_PAGE_SIZE" title="Link to this definition">¶</a></dt>
+<dd><p>number of records to request per page</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
 
-            <dl class="py attribute">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.SIZE">
-            <span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">SIZE</span></span><a class="headerlink" href="#gen3.tools.indexing.index_manifest.SIZE" title="Link to this definition">¶</a></dt>
-            <dd><p>supported file size column names</p>
-            <dl class="field-list simple">
-            <dt class="field-odd">Type<span class="colon">:</span></dt>
-            <dd class="field-odd"><p>list(string)</p>
-            </dd>
-            </dl>
-            </dd></dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gen3.tools.indexing.download_manifest.MAX_CONCURRENT_REQUESTS">
+<span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.download_manifest.</span></span><span class="sig-name descname"><span class="pre">MAX_CONCURRENT_REQUESTS</span></span><a class="headerlink" href="#gen3.tools.indexing.download_manifest.MAX_CONCURRENT_REQUESTS" title="Link to this definition">¶</a></dt>
+<dd><p>maximum number of desired concurrent requests across
+processes/threads</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
 
-            <dl class="py attribute">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.MD5">
-            <span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">MD5</span></span><a class="headerlink" href="#gen3.tools.indexing.index_manifest.MD5" title="Link to this definition">¶</a></dt>
-            <dd><p>supported md5 hash column names</p>
-            <dl class="field-list simple">
-            <dt class="field-odd">Type<span class="colon">:</span></dt>
-            <dd class="field-odd"><p>list(string)</p>
-            </dd>
-            </dl>
-            </dd></dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gen3.tools.indexing.download_manifest.TMP_FOLDER">
+<span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.download_manifest.</span></span><span class="sig-name descname"><span class="pre">TMP_FOLDER</span></span><a class="headerlink" href="#gen3.tools.indexing.download_manifest.TMP_FOLDER" title="Link to this definition">¶</a></dt>
+<dd><p>Folder directory for placing temporary files
+NOTE - We have to use a temporary folder b/c Python’s file writing is not</p>
+<blockquote>
+<div><p>thread-safe so we can’t have all processes writing to the same file.
+To workaround this, we have each process write to a file and concat
+them all post-processing.</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
 
-            <dl class="py attribute">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.ACLS">
-            <span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">ACLS</span></span><a class="headerlink" href="#gen3.tools.indexing.index_manifest.ACLS" title="Link to this definition">¶</a></dt>
-            <dd><p>supported acl column names</p>
-            <dl class="field-list simple">
-            <dt class="field-odd">Type<span class="colon">:</span></dt>
-            <dd class="field-odd"><p>list(string)</p>
-            </dd>
-            </dl>
-            </dd></dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="gen3.tools.indexing.download_manifest.async_download_object_manifest">
+<em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.download_manifest.</span></span><span class="sig-name descname"><span class="pre">async_download_object_manifest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">commons_url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'object-manifest.csv'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_processes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_concurrent_requests</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">24</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_manifest</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">python_subprocess_command</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'python'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/download_manifest.html#async_download_object_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.indexing.download_manifest.async_download_object_manifest" title="Link to this definition">¶</a></dt>
+<dd><p>Download all file object records into a manifest csv</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>commons_url</strong> (<em>str</em>) – root domain for commons where indexd lives</p></li>
+<li><p><strong>output_filename</strong> (<em>str</em><em>, </em><em>optional</em>) – filename for output</p></li>
+<li><p><strong>num_processes</strong> (<em>int</em><em>, </em><em>optional</em>) – number of parallel python processes to use for
+hitting indexd api and processing</p></li>
+<li><p><strong>max_concurrent_requests</strong> (<em>int</em>) – the maximum number of concurrent requests allowed
+NOTE: This is the TOTAL number, not just for this process. Used to help
+determine how many requests a process should be making at one time</p></li>
+<li><p><strong>input_manifest</strong> (<em>str</em>) – Input file. Read available object data from objects in this
+file instead of reading everything in indexd. This will attempt to query
+indexd for only the records identified in this manifest.</p></li>
+<li><p><strong>python_subprocess_command</strong> (<em>str</em><em>, </em><em>optional</em>) – Command used to execute a
+python process. By default you should not need to change this, but
+if you are running something like MacOS and only installed Python 3.x
+you may need to specify “python3”.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
-            <dl class="py attribute">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.URLS">
-            <span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">URLS</span></span><a class="headerlink" href="#gen3.tools.indexing.index_manifest.URLS" title="Link to this definition">¶</a></dt>
-            <dd><p>supported url column names</p>
-            <dl class="field-list simple">
-            <dt class="field-odd">Type<span class="colon">:</span></dt>
-            <dd class="field-odd"><p>list(string)</p>
-            </dd>
-            </dl>
-            </dd></dl>
+</section>
+<section id="module-gen3.tools.indexing.index_manifest">
+<span id="index"></span><h2>Index<a class="headerlink" href="#module-gen3.tools.indexing.index_manifest" title="Link to this heading">¶</a></h2>
+<p>Module for indexing object files in a manifest (against indexd’s API).</p>
+<p>The default manifest format created is a Tab-Separated Value file (tsv)
+with rows for every record.</p>
+<p>Fields that are lists (like acl, authz, and urls) separate the values with commas or spaces
+See the Attributes session for supported column names.</p>
+<p>All supported formats of acl, authz and url fields are shown in the below example.</p>
+<p>guid    md5 size    acl authz   url
+255e396f-f1f8-11e9-9a07-0a80fada099c    473d83400bc1bc9dc635e334faddf33c    363455714   [‘Open’]    [s3://pdcdatastore/test1.raw]
+255e396f-f1f8-11e9-9a07-0a80fada098c    473d83400bc1bc9dc635e334faddd33c    343434344   Open    s3://pdcdatastore/test2.raw
+255e396f-f1f8-11e9-9a07-0a80fada097c    473d83400bc1bc9dc635e334fadd433c    543434443   phs0001 phs0002 s3://pdcdatastore/test3.raw
+255e396f-f1f8-11e9-9a07-0a80fada096c    473d83400bc1bc9dc635e334fadd433c    363455714   [‘phs0001’, ‘phs0002’]  [‘s3://pdcdatastore/test4.raw’]
+255e396f-f1f8-11e9-9a07-0a80fada010c    473d83400bc1bc9dc635e334fadde33c    363455714   [‘Open’]    s3://pdcdatastore/test5.raw</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.CURRENT_DIR">
+<span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">CURRENT_DIR</span></span><a class="headerlink" href="#gen3.tools.indexing.index_manifest.CURRENT_DIR" title="Link to this definition">¶</a></dt>
+<dd><p>directory this file is in</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
 
-            <dl class="py attribute">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.AUTHZ">
-            <span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">AUTHZ</span></span><a class="headerlink" href="#gen3.tools.indexing.index_manifest.AUTHZ" title="Link to this definition">¶</a></dt>
-            <dd><p>supported authz column names</p>
-            <dl class="field-list simple">
-            <dt class="field-odd">Type<span class="colon">:</span></dt>
-            <dd class="field-odd"><p>list(string)</p>
-            </dd>
-            </dl>
-            </dd></dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.GUID">
+<span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">GUID</span></span><a class="headerlink" href="#gen3.tools.indexing.index_manifest.GUID" title="Link to this definition">¶</a></dt>
+<dd><p>supported file id column names</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list(string)</p>
+</dd>
+</dl>
+</dd></dl>
 
-            <dl class="py attribute">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.PREV_GUID">
-            <span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">PREV_GUID</span></span><a class="headerlink" href="#gen3.tools.indexing.index_manifest.PREV_GUID" title="Link to this definition">¶</a></dt>
-            <dd><p>supported previous guid column names</p>
-            <dl class="field-list simple">
-            <dt class="field-odd">Type<span class="colon">:</span></dt>
-            <dd class="field-odd"><p>list(string)</p>
-            </dd>
-            </dl>
-            </dd></dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.SIZE">
+<span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">SIZE</span></span><a class="headerlink" href="#gen3.tools.indexing.index_manifest.SIZE" title="Link to this definition">¶</a></dt>
+<dd><p>supported file size column names</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list(string)</p>
+</dd>
+</dl>
+</dd></dl>
 
-            <dl class="simple">
-            <dt>Usages:</dt><dd><p>python index_manifest.py –commons_url <a class="reference external" href="https://giangb.planx-pla.net">https://giangb.planx-pla.net</a>  –manifest_file path_to_manifest –auth “admin,admin” –replace_urls False –thread_num 10
-            python index_manifest.py –commons_url <a class="reference external" href="https://giangb.planx-pla.net">https://giangb.planx-pla.net</a>  –manifest_file path_to_manifest –api_key ./credentials.json –replace_urls False –thread_num 10</p>
-            </dd>
-            </dl>
-            <dl class="py class">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.ThreadControl">
-            <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">ThreadControl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">processed_files</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_total_files</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/index_manifest.html#ThreadControl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.indexing.index_manifest.ThreadControl" title="Link to this definition">¶</a></dt>
-            <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-            <p>Class for thread synchronization</p>
-            </dd></dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.MD5">
+<span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">MD5</span></span><a class="headerlink" href="#gen3.tools.indexing.index_manifest.MD5" title="Link to this definition">¶</a></dt>
+<dd><p>supported md5 hash column names</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list(string)</p>
+</dd>
+</dl>
+</dd></dl>
 
-            <dl class="py function">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.delete_all_guids">
-            <span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">delete_all_guids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">auth</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/index_manifest.html#delete_all_guids"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.indexing.index_manifest.delete_all_guids" title="Link to this definition">¶</a></dt>
-            <dd><p>Delete all GUIDs specified in the object manifest.</p>
-            <dl class="simple">
-            <dt>WARNING: THIS COMPLETELY REMOVES INDEX RECORDS. USE THIS ONLY IF YOU KNOW</dt><dd><p>THE IMPLICATIONS.</p>
-            </dd>
-            </dl>
-            </dd></dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.ACLS">
+<span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">ACLS</span></span><a class="headerlink" href="#gen3.tools.indexing.index_manifest.ACLS" title="Link to this definition">¶</a></dt>
+<dd><p>supported acl column names</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list(string)</p>
+</dd>
+</dl>
+</dd></dl>
 
-            <dl class="py function">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.index_object_manifest">
-            <span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">index_object_manifest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">commons_url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thread_num</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">replace_urls</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_file_delimiter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'indexing-output-manifest.csv'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">submit_additional_metadata_columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_metadata_columns_even_if_empty</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/index_manifest.html#index_object_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.indexing.index_manifest.index_object_manifest" title="Link to this definition">¶</a></dt>
-            <dd><p>Loop through all the files in the manifest, update/create records in indexd
-            update indexd if the url is not in the record url list or acl has changed</p>
-            <dl class="field-list simple">
-            <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-            <dd class="field-odd"><ul class="simple">
-            <li><p><strong>commons_url</strong> (<em>str</em>) – common url</p></li>
-            <li><p><strong>manifest_file</strong> (<em>str</em>) – path to the manifest</p></li>
-            <li><p><strong>thread_num</strong> (<em>int</em>) – number of threads for indexing</p></li>
-            <li><p><strong>auth</strong> (<a class="reference internal" href="../auth.html#gen3.auth.Gen3Auth" title="gen3.auth.Gen3Auth"><em>Gen3Auth</em></a>) – Gen3 auth or tuple with basic auth name and password</p></li>
-            <li><p><strong>replace_urls</strong> (<em>bool</em>) – flag to indicate if replace urls or not</p></li>
-            <li><p><strong>manifest_file_delimiter</strong> (<em>str</em>) – manifest’s delimiter</p></li>
-            <li><p><strong>output_filename</strong> (<em>str</em>) – output file name for manifest</p></li>
-            <li><p><strong>submit_additional_metadata_columns</strong> (<em>bool</em>) – whether to submit additional metadata to the metadata service</p></li>
-            <li><p><strong>force_metadata_columns_even_if_empty</strong> (<em>bool</em>) – <p>force the creation of a metadata column
-            entry for a GUID even if the value is empty. Enabling
-            this will force the creation of metadata entries for every column.
-            See below for an illustrative example</p>
-            <dl>
-            <dt>Example manifest_file:</dt><dd><dl class="simple">
-            <dt>guid, …, columnA, columnB, ColumnC</dt><dd><p>1, …,   dataA,        ,
-            2, …,        ,   dataB,</p>
-            </dd>
-            </dl>
-            </dd>
-            <dt>Resulting metadata if force_metadata_columns_even_if_empty=True :</dt><dd><dl class="simple">
-            <dt>”1”: {</dt><dd><p>“columnA”: “dataA”,
-            “columnB”: “”,
-            “ColumnC”: “”,</p>
-            </dd>
-            </dl>
-            <p>},
-            “2”: {</p>
-            <blockquote>
-            <div><p>”columnA”: “”,
-            “columnB”: “dataB”,
-            “ColumnC”: “”,</p>
-            </div></blockquote>
-            <p>},</p>
-            </dd>
-            <dt>Resulting metadata if force_metadata_columns_even_if_empty=False :</dt><dd><dl class="simple">
-            <dt>”1”: {</dt><dd><p>“columnA”: “dataA”,</p>
-            </dd>
-            </dl>
-            <p>},
-            “2”: {</p>
-            <blockquote>
-            <div><p>”columnB”: “dataB”,</p>
-            </div></blockquote>
-            <p>},</p>
-            </dd>
-            </dl>
-            </p></li>
-            </ul>
-            </dd>
-            <dt class="field-even">Returns<span class="colon">:</span></dt>
-            <dd class="field-even"><p><p>list of file info
-            [</p>
-            <blockquote>
-            <div><dl class="simple">
-            <dt>{</dt><dd><p>“guid”: “guid_example”,
-            “filename”: “example”,
-            “size”: 100,
-            “acl”: “[‘open’]”,
-            “md5”: “md5_hash”,</p>
-            </dd>
-            </dl>
-            <p>},</p>
-            </div></blockquote>
-            <p>]
-            headers(list(str)): list of fieldnames</p>
-            </p>
-            </dd>
-            <dt class="field-odd">Return type<span class="colon">:</span></dt>
-            <dd class="field-odd"><p>files(list(dict))</p>
-            </dd>
-            </dl>
-            </dd></dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.URLS">
+<span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">URLS</span></span><a class="headerlink" href="#gen3.tools.indexing.index_manifest.URLS" title="Link to this definition">¶</a></dt>
+<dd><p>supported url column names</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list(string)</p>
+</dd>
+</dl>
+</dd></dl>
 
-            </section>
-            <section id="module-gen3.tools.indexing.verify_manifest">
-            <span id="verify"></span><h2>Verify<a class="headerlink" href="#module-gen3.tools.indexing.verify_manifest" title="Link to this heading">¶</a></h2>
-            <p>Module for indexing actions for verifying a manifest of
-            indexed file objects (against indexd’s API). Supports
-            multiple processes and coroutines using Python’s asyncio library.</p>
-            <p>The default manifest format created is a Comma-Separated Value file (csv)
-            with rows for every record. A header row is created with field names:
-            guid,authz,acl,file_size,md5,urls,file_name</p>
-            <p>Fields that are lists (like acl, authz, and urls) separate the values with spaces.</p>
-            <p>There is a default mapping for those column names above but you can override it.
-            Fields that expect lists (like acl, authz, and urls) by default assume these values are
-            separated with spaces. If you need alternate behavior, you can simply override the
-            <cite>manifest_row_parsers</cite> for specific fields and replace the default parsing function
-            with a custom one. For example:</p>
-            <p><a href="#id1"><span class="problematic" id="id2">``</span></a>`
-            from gen3.tools import indexing
-            from gen3.tools.indexing.verify_manifest import manifest_row_parsers</p>
-            <dl class="simple">
-            <dt>def _get_authz_from_row(row):</dt><dd><p>return [row.get(“authz”).strip().strip(“[“).strip(“]”).strip(”’”)]</p>
-            </dd>
-            </dl>
-            <p># override default parsers
-            manifest_row_parsers[“authz”] = _get_authz_from_row</p>
-            <p>indexing.verify_object_manifest(COMMONS)
-            <a href="#id3"><span class="problematic" id="id4">``</span></a><a href="#id5"><span class="problematic" id="id6">`</span></a></p>
-            <p>The output from this verification is a file containing any errors in the following
-            format:</p>
-            <p>{guid}|{error_name}|expected {value_from_manifest}|actual {value_from_indexd}
-            ex: 93d9af72-b0f1-450c-a5c6-7d3d8d2083b4|authz|expected [‘’]|actual [‘/programs/DEV/projects/test’]</p>
-            <dl class="py attribute">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.verify_manifest.CURRENT_DIR">
-            <span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.verify_manifest.</span></span><span class="sig-name descname"><span class="pre">CURRENT_DIR</span></span><a class="headerlink" href="#gen3.tools.indexing.verify_manifest.CURRENT_DIR" title="Link to this definition">¶</a></dt>
-            <dd><p>directory this file is in</p>
-            <dl class="field-list simple">
-            <dt class="field-odd">Type<span class="colon">:</span></dt>
-            <dd class="field-odd"><p>str</p>
-            </dd>
-            </dl>
-            </dd></dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.AUTHZ">
+<span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">AUTHZ</span></span><a class="headerlink" href="#gen3.tools.indexing.index_manifest.AUTHZ" title="Link to this definition">¶</a></dt>
+<dd><p>supported authz column names</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list(string)</p>
+</dd>
+</dl>
+</dd></dl>
 
-            <dl class="py attribute">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.verify_manifest.MAX_CONCURRENT_REQUESTS">
-            <span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.verify_manifest.</span></span><span class="sig-name descname"><span class="pre">MAX_CONCURRENT_REQUESTS</span></span><a class="headerlink" href="#gen3.tools.indexing.verify_manifest.MAX_CONCURRENT_REQUESTS" title="Link to this definition">¶</a></dt>
-            <dd><p>maximum number of desired concurrent requests across
-            processes/threads</p>
-            <dl class="field-list simple">
-            <dt class="field-odd">Type<span class="colon">:</span></dt>
-            <dd class="field-odd"><p>int</p>
-            </dd>
-            </dl>
-            </dd></dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.PREV_GUID">
+<span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">PREV_GUID</span></span><a class="headerlink" href="#gen3.tools.indexing.index_manifest.PREV_GUID" title="Link to this definition">¶</a></dt>
+<dd><p>supported previous guid column names</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list(string)</p>
+</dd>
+</dl>
+</dd></dl>
 
-            <dl class="py function">
-            <dt class="sig sig-object py" id="gen3.tools.indexing.verify_manifest.async_verify_object_manifest">
-            <em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.verify_manifest.</span></span><span class="sig-name descname"><span class="pre">async_verify_object_manifest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">commons_url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_concurrent_requests=24</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_row_parsers={'acl':</span> <span class="pre">&lt;function</span> <span class="pre">_get_acl_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'authz':</span> <span class="pre">&lt;function</span> <span class="pre">_get_authz_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'file_name':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_name_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'file_size':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_size_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'guid':</span> <span class="pre">&lt;function</span> <span class="pre">_get_guid_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'md5':</span> <span class="pre">&lt;function</span> <span class="pre">_get_md5_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'urls':</span> <span class="pre">&lt;function</span> <span class="pre">_get_urls_from_row&gt;}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_file_delimiter=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filename='verify-manifest-errors-1718645188.5020607.log'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/verify_manifest.html#async_verify_object_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.indexing.verify_manifest.async_verify_object_manifest" title="Link to this definition">¶</a></dt>
-            <dd><p>Verify all file object records into a manifest csv</p>
-            <dl class="field-list simple">
-            <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-            <dd class="field-odd"><ul class="simple">
-            <li><p><strong>commons_url</strong> (<em>str</em>) – root domain for commons where indexd lives</p></li>
-            <li><p><strong>manifest_file</strong> (<em>str</em>) – the file to verify against</p></li>
-            <li><p><strong>max_concurrent_requests</strong> (<em>int</em>) – the maximum number of concurrent requests allowed</p></li>
-            <li><p><strong>(</strong><strong>Dict{indexd_field</strong> (<em>manifest_row_parsers</em>) – func_to_parse_row}): Row parsers</p></li>
-            <li><p><strong>manifest_file_delimiter</strong> (<em>str</em>) – delimeter in manifest_file</p></li>
-            <li><p><strong>output_filename</strong> (<em>str</em>) – filename for output logs</p></li>
-            </ul>
-            </dd>
-            </dl>
-            </dd></dl>
+<dl class="simple">
+<dt>Usages:</dt><dd><p>python index_manifest.py –commons_url <a class="reference external" href="https://giangb.planx-pla.net">https://giangb.planx-pla.net</a>  –manifest_file path_to_manifest –auth “admin,admin” –replace_urls False –thread_num 10
+python index_manifest.py –commons_url <a class="reference external" href="https://giangb.planx-pla.net">https://giangb.planx-pla.net</a>  –manifest_file path_to_manifest –api_key ./credentials.json –replace_urls False –thread_num 10</p>
+</dd>
+</dl>
+<dl class="py class">
+<dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.ThreadControl">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.index_manifest.</span></span><span class="sig-name descname"><span class="pre">ThreadControl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">processed_files</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_total_files</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/index_manifest.html#ThreadControl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.indexing.index_manifest.ThreadControl" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class for thread synchronization</p>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="gen3.tools.indexing.index_manifest.delete_all_guids">
@@ -526,7 +381,7 @@ processes/threads</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="gen3.tools.indexing.verify_manifest.async_verify_object_manifest">
-<em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.verify_manifest.</span></span><span class="sig-name descname"><span class="pre">async_verify_object_manifest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">commons_url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_concurrent_requests=24</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_row_parsers={'acl':</span> <span class="pre">&lt;function</span> <span class="pre">_get_acl_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'authz':</span> <span class="pre">&lt;function</span> <span class="pre">_get_authz_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'file_name':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_name_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'file_size':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_size_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'guid':</span> <span class="pre">&lt;function</span> <span class="pre">_get_guid_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'md5':</span> <span class="pre">&lt;function</span> <span class="pre">_get_md5_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'urls':</span> <span class="pre">&lt;function</span> <span class="pre">_get_urls_from_row&gt;}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_file_delimiter=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filename='verify-manifest-errors-1718658897.9326336.log'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/verify_manifest.html#async_verify_object_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.indexing.verify_manifest.async_verify_object_manifest" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gen3.tools.indexing.verify_manifest.</span></span><span class="sig-name descname"><span class="pre">async_verify_object_manifest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">commons_url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_concurrent_requests=24</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_row_parsers={'acl':</span> <span class="pre">&lt;function</span> <span class="pre">_get_acl_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'authz':</span> <span class="pre">&lt;function</span> <span class="pre">_get_authz_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'file_name':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_name_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'file_size':</span> <span class="pre">&lt;function</span> <span class="pre">_get_file_size_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'guid':</span> <span class="pre">&lt;function</span> <span class="pre">_get_guid_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'md5':</span> <span class="pre">&lt;function</span> <span class="pre">_get_md5_from_row&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'urls':</span> <span class="pre">&lt;function</span> <span class="pre">_get_urls_from_row&gt;}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_file_delimiter=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filename='verify-manifest-errors-1719416839.2649546.log'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gen3/tools/indexing/verify_manifest.html#async_verify_object_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.tools.indexing.verify_manifest.async_verify_object_manifest" title="Link to this definition">¶</a></dt>
 <dd><p>Verify all file object records into a manifest csv</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -553,10 +408,21 @@ processes/threads</p>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
 <h1 class="logo"><a href="../index.html">Gen3 SDK</a></h1>
+
+
+
+
+
+
 <p>
 <iframe src="https://ghbtns.com/github-btn.html?user=uc-cdis&repo=gen3sdk-python&type=watch&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
+
+
+
+
+
 <h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../auth.html">Gen3 Auth Helper</a></li>
@@ -627,18 +493,32 @@ processes/threads</p>
     </div>
 </search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
         </div>
       </div>
       <div class="clearer"></div>
     </div>
     <div class="footer">
       &#169;2021, Center for Translational Data Science.
+      
       |
       <a href="../_sources/tools/indexing.rst.txt"
           rel="nofollow">Page source</a>
     </div>
+
+    
     <a href="https://github.com/uc-cdis/gen3sdk-python" class="github">
         <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://github.blog/wp-content/uploads/2008/12/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
     </a>
+    
+
+    
   </body>
 </html>
