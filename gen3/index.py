@@ -410,7 +410,7 @@ class Gen3Index:
             did (str): provide a UUID for the new indexd to be made
             urls (list): list of URLs where you can download the UUID
             acl (list): access control list
-            authz (str): RBAC string
+            authz (list): RBAC strings
             file_name (str): name of the file associated with a given UUID
             metadata (dict): additional key value metadata for this entry
             urls_metadata (dict): metadata attached to each url
