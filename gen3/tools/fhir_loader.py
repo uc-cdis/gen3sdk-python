@@ -58,23 +58,30 @@ class FHIRLoader(object):
         Takes a Gen3 object (dict) and creates a FHIR object (dict) to return.
         Classes extending FHIRLoader should implement this to specify the how data should be transformed
         from Gen3 metadata to a FHIR object containing Gen3 metadata.
+        Different FHIR servers may enforce different versions of the FHIR spec.
         """
         raise NotImplementedError()
 
     def load_FHIR_object(self, fhir_object):
         """
-        Takes a fhir_object dict as an input to create / update
+        Takes a fhir_object dict as an input to create / update.
+        Default implementation assumes sending a PUT request to:
+
+        {self.endpoint}/{fhir_object["resourceType"]}
+
+        Assumes receiving a 200 or 201 status code is a success.
+        Subclasses should override this method if needed.
         """
         logging.info(json.dumps(fhir_object))
         resource_endpoint = f'{self.endpoint}/{fhir_object["resourceType"]}'
         logging.info(f"Got resource endpoint: {resource_endpoint}")
-        response = self.session.post(resource_endpoint, data=json.dumps(fhir_object))
-        if response.status_code == 201:
-            logging.info("Successfully posted FHIR data.")
+        response = self.session.put(resource_endpoint, data=json.dumps(fhir_object))
+        if response.status_code == 200 or response.status_code == 201:
+            logging.info("Successfully PUT FHIR data.")
             logging.info(response.text)
         else:
             error_message = (
-                f"Failed to post FHIR data. Status code: {response.status_code}. "
+                f"Failed to PUT FHIR data. Status code: {response.status_code}. "
             )
             logging.error(error_message)
             logging.info(response.text)
@@ -83,6 +90,12 @@ class FHIRLoader(object):
     def delete_fhir_object(self, resource_type, resource_id):
         """
         Deletes a FHIR object given its resource type and ID.
+        Default implementation assumes sending a DELETE request to:
+
+        {self.endpoint}/{resource_type}/{resource_id}
+
+        Assumes receiving a 200 or 201 status code is a success.
+        Subclasses should override this method if needed.
         """
         delete_endpoint = f"{self.endpoint}/{resource_type}/{resource_id}"
         logging.info(f"Deleting FHIR Object at {delete_endpoint}")

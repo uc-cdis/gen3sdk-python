@@ -27,33 +27,33 @@ def mock_loader():
 
 def test_load_fhir_object(mock_loader):
     """
-    Test that load_FHIR_object calls session.post with correct JSON payload.
+    Test that load_FHIR_object calls session.put with correct JSON payload.
     """
     fhir_object = {"resourceType": "ResearchStudy", "id": "12345"}
     with patch.object(
-        mock_loader.session, "post", return_value=MagicMock(status_code=201)
-    ) as mock_post:
+        mock_loader.session, "put", return_value=MagicMock(status_code=201)
+    ) as mock_put:
         mock_loader.load_FHIR_object(fhir_object)
-        mock_post.assert_called_once_with(
+        mock_put.assert_called_once_with(
             "https://fhir.example.com/ResearchStudy", data=json.dumps(fhir_object)
         )
 
 
 def test_load_fhir_object_failure(mock_loader):
     """
-    Test that load_FHIR_object logs an error when the POST request fails.
+    Test that load_FHIR_object logs an error when the request fails.
     """
     fhir_object = {"resourceType": "ResearchStudy", "id": "12345"}
     with patch.object(
         mock_loader.session,
-        "post",
+        "put",
         return_value=MagicMock(status_code=400, text="Bad Request"),
-    ) as mock_post:
+    ) as mock_put:
         with pytest.raises(Exception) as exc_info:
             mock_loader.load_FHIR_object(fhir_object)
 
         # Check that the exception contains the expected error message
-        assert "Failed to post FHIR data" in str(exc_info.value)
+        assert "Failed to PUT FHIR data" in str(exc_info.value)
 
 
 def test_delete_fhir_object(mock_loader):
@@ -92,9 +92,9 @@ def test_load_metadata_into_fhir(mock_loader):
     fhir_object = {"resourceType": "ResearchStudy", "id": "12345"}
     mock_metadata_file = "tests/test_data/mock_metadata.tsv"
     with patch.object(
-        mock_loader.session, "post", return_value=MagicMock(status_code=201)
-    ) as mock_post:
+        mock_loader.session, "put", return_value=MagicMock(status_code=201)
+    ) as mock_put:
         mock_loader.load_metadata_into_fhir(mock_metadata_file)
-        mock_post.assert_called_once_with(
+        mock_put.assert_called_once_with(
             "https://fhir.example.com/ResearchStudy", data=json.dumps(fhir_object)
         )
