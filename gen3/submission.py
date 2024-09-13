@@ -204,7 +204,7 @@ class Gen3Submission:
         logging.debug("Using the Sheepdog API URL: {}".format(api_url))
 
         output = requests.put(api_url, auth=self._auth_provider, json=json)
-        output.raise_for_status()
+        raise_for_status_and_print_error(output)
         return output.json()
 
     def delete_record(self, program, project, uuid):
