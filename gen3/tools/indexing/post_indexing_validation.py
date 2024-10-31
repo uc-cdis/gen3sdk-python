@@ -58,7 +58,6 @@ class Record:
                 )
                 async with session.get(url, headers=self.headers) as response:
                     if response.ok:
-                        # url = response.get()
                         self.response, self.response_status = (
                             await response.json(),
                             response.status,
@@ -130,7 +129,7 @@ class Records:
         if manifest[-3:] == "tsv":
             sep = "\t"
         else:
-            sep == ","
+            sep = ","
         with open(manifest, mode="r") as f:
             csv_reader = csv.DictReader(f, delimiter=sep)
             rows = [row for row in csv_reader]
@@ -260,6 +259,8 @@ class Records:
                 }
             )
 
+        self.download_results = download_results
+
         # Check if the results list is empty
         if not download_results:
             logger.warning("No results to save.")
@@ -297,7 +298,7 @@ class Records:
         logger.info(f"Results saved to {csv_filename}")
 
 
-async def _validate_manifest_coro(MANIFEST, api_key, output_file):
+async def _validate_manifest_coro(MANIFEST, auth, output_file):
     """
     Manifest validation coroutine.
     Takes as input a manifest location, the location of an api credentials file, and an output file
@@ -311,26 +312,20 @@ async def _validate_manifest_coro(MANIFEST, api_key, output_file):
     """
     logger.info("STARTING...")
     concurrent_limit = 5
-    auth = Gen3Auth(refresh_file=api_key)
-    access_token = auth.get_access_token()
 
     semaphore = asyncio.Semaphore(concurrent_limit)
 
     async with aiohttp.ClientSession() as session:
-        headers = {
-            "accept": "application/json",
-            "authorization": f"bearer {access_token}",
-        }
-
         records = Records(semaphore, session, auth)
 
         records.read_records_from_manifest(MANIFEST)
         await records.get_presigned_url_list()
         await records.download_files()
         records.save_download_check_results_to_csv(output_file)
+        return records
 
 
-def validate_manifest(MANIFEST, api_key, output_file="results.csv"):
+def validate_manifest(MANIFEST, auth, output_file="results.csv"):
     """
     The driver for _validate_manifest_coro
 
@@ -339,4 +334,4 @@ def validate_manifest(MANIFEST, api_key, output_file="results.csv"):
         api_key (str): the location of an api credentials file
         output_file (str): the relative path of the output csv
     """
-    asyncio.run(_validate_manifest_coro(MANIFEST, api_key, output_file))
+    return asyncio.run(_validate_manifest_coro(MANIFEST, auth, output_file))
