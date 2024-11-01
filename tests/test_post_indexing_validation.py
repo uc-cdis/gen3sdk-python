@@ -22,7 +22,6 @@ class MockResponse:
     def __init__(self, status, ok=True, json={"url": "my_presigned_url"}):
         self.status = status
         self.ok = ok
-        self.status = status
         self.json_data = json
 
     async def text(self):
