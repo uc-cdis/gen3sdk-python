@@ -50,7 +50,7 @@ pytest-asyncio = "^0.24.0"
 fhir = ["fhirclient"]
 
 [tool.poetry.dev-dependencies]
-pytest = "*"
+pytest = "^8.2"
 pytest-cov = "*"
 requests-mock = "*"
 cdisutilstest = { git = "https://github.com/uc-cdis/cdisutils-test.git", tag = "1.0.0" }
