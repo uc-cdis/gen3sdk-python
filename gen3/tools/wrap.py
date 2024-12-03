@@ -2,7 +2,7 @@
 # We first write a class in Gen3SDK say Gen3Wrap that utilizes the Gen3Auth class to retrieve
 # the access token from the user's `~/.gen3/credentials.json` file and set it in the Env Var `GEN3_TOKEN`
 
-#  we then take all the other commands including options sent to the gen3 wrap command and execute them in a subprocess
+#  we then take all the other commands including options sent to the `gen3 run` command and execute them in a subprocess
 # Combining STDOUT and STDERR of the subprocess outputs on to the console
 
 import os
@@ -15,7 +15,7 @@ class Gen3Wrap:
     def __init__(self, auth: Gen3Auth, command_args: tuple):
         """
         auth : Gen3Auth instance
-        command_args: A tuple consisting of all the commands sent to the `gen3 wrap` tool
+        command_args: A tuple consisting of all the commands sent to the `gen3 run` tool
         """
         self.auth = auth
         self.command_args = command_args
@@ -29,4 +29,4 @@ class Gen3Wrap:
             os.environ["GEN3_TOKEN"] = self.auth.get_access_token()
             subprocess.run(cmd, stderr=subprocess.STDOUT)
         except Exception as e:
-            print("ERROR running wrap command: ", e)
+            print("ERROR running command: ", e)

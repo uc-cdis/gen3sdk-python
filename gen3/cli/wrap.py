@@ -14,7 +14,7 @@ logger = get_logger("__name__")
 )
 @click.argument("command_args", nargs=-1, type=click.UNPROCESSED)
 @click.pass_context
-def wrap(ctx, command_args):
+def run(ctx, command_args):
     auth = ctx.obj["auth_factory"].get()
     gen3Wrap_object = Gen3Wrap(auth, command_args)
     logger.info(
