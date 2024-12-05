@@ -8,7 +8,10 @@
 import os
 import subprocess
 
-from gen3.auth import Gen3Auth
+from cdislogging import get_logger
+from gen3.auth import Gen3Auth, Gen3AuthError
+
+logger = get_logger("__name__")
 
 
 class Gen3Wrap:
@@ -27,6 +30,13 @@ class Gen3Wrap:
         cmd = list(self.command_args)
         try:
             os.environ["GEN3_TOKEN"] = self.auth.get_access_token()
+            logger.info(
+                f"Running the command {self.command_args} with gen3 access token in environment variable"
+            )
             subprocess.run(cmd, stderr=subprocess.STDOUT)
+        except Gen3AuthError as e:
+            logger.error(f"ERROR getting Gen3 Access Token:", e)
+            raise
         except Exception as e:
-            print("ERROR running command: ", e)
+            logger.error(f"ERROR while running '{cmd}':", e)
+            raise
