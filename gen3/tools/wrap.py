@@ -1,10 +1,3 @@
-# WIP: Explanation of the code, will be taken off once reviewed and approved
-# We first write a class in Gen3SDK say Gen3Wrap that utilizes the Gen3Auth class to retrieve
-# the access token from the user's `~/.gen3/credentials.json` file and set it in the Env Var `GEN3_TOKEN`
-
-#  we then take all the other commands including options sent to the `gen3 run` command and execute them in a subprocess
-# Combining STDOUT and STDERR of the subprocess outputs on to the console
-
 import os
 import subprocess
 

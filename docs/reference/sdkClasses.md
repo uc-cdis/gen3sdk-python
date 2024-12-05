@@ -7,6 +7,7 @@ TOC
 - [Gen3Jobs](#gen3jobs)
 - Gen3File
 - [Gen3Query](#gen3query)
+- [Gen3Wrap](#gen3wrap)
 - Gen3Metadata
 - Gen3WsStorage
 
@@ -34,6 +35,10 @@ This is the client for interacting with the Indexd service for GUID brokering an
 ### Gen3Submission
 
 This is the client for interacting with the Gen3 submission service including GraphQL queries.
+
+### Gen3Wrap
+
+A class that leverages `Gen3Auth` to retrieve the access token from the user's `~/.gen3/credentials.json` file, sets it as the `GEN3_TOKEN` environment variable, and relays all commands and options passed to `gen3 run`
 
 ### Gen3Query
 
