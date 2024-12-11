@@ -23,13 +23,14 @@ class Gen3Wrap:
         cmd = list(self.command_args)
         try:
             os.environ["GEN3_TOKEN"] = self.auth.get_access_token()
-            logger.info(
-                f"Running the command {self.command_args} with gen3 access token in environment variable"
-            )
-            subprocess.run(cmd, stderr=subprocess.STDOUT)
         except Gen3AuthError as e:
             logger.error(f"ERROR getting Gen3 Access Token:", e)
             raise
+        logger.info(
+            f"Running the command {self.command_args} with gen3 access token in environment variable"
+        )
+        try:
+            subprocess.run(cmd, stderr=subprocess.STDOUT)
         except Exception as e:
             logger.error(f"ERROR while running '{cmd}':", e)
             raise
