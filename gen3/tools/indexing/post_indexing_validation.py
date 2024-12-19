@@ -13,6 +13,7 @@ import csv
 from cdislogging import get_logger, get_stream_handler
 from gen3.file import Gen3File
 import requests
+import re
 
 
 logger = get_logger(__name__)
@@ -24,20 +25,19 @@ class GuidError(Exception):
     pass
 
 
+class ManifestError(Exception):
+    pass
+
+
 class Record:
-    def __init__(self, guid, bucket, protocol, acl, access_token, commons, size):
+    def __init__(self, guid, bucket, protocol, acl, size):
         self.guid = guid
         self.bucket = bucket
         self.protocol = protocol
         self.acl = acl
-        self.commons = commons
         self.size = size
         self.response_status = -1
         self.download_status = -1
-        self.headers = {
-            "accept": "application/json",
-            "authorization": f"bearer {access_token}",
-        }
 
     def check_record(self, gen3file):
         """
@@ -70,30 +70,25 @@ class Record:
             logger.info(f"Pre-signed url generation failed for record {self.guid}")
         self.response_status = response_status
 
-        download_success = -1
         if response_status == 200:
             try:
-                download_success = requests.get(url).status_code
+                self.download_status = requests.get(url).status_code
                 logger.info(
-                    f"Download process complete with status code {download_success}"
+                    f"Download process complete with status code {self.download_status}"
                 )
-            except:
-                download_success = -1
-        self.download_status = download_success
+            except Exception as err:
+                self.download_status = -1
+                logger.info(
+                    f"Download process failed due to {err}"
+                )  # maybe should be logger.error
         return
 
 
-class Records:
+class RecordParser:
     def __init__(self, auth):
         self.auth = auth
-        self.access_token = auth.get_access_token()
-        self.commons = auth.endpoint
         self.record_dict = {}
         self.record_sizes = {}
-        self.headers = {
-            "accept": "application/json",
-            "authorization": f"bearer {self.access_token}",
-        }
 
     def read_records_from_manifest(self, manifest):
         """
@@ -102,10 +97,17 @@ class Records:
         Args:
             manifest (str): the location of a manifest file
         """
-        if manifest[-3:] == "tsv":
+        tsv_pattern = "^.*\.tsv$"
+        csv_pattern = "^.*\.csv$"
+        if re.match(tsv_pattern, manifest):
             sep = "\t"
-        else:
+        elif re.match(csv_pattern, manifest):
             sep = ","
+        else:
+            raise ManifestError(
+                "Please enter the path to a valid manifest in .csv or .tsv format"
+            )
+
         with open(manifest, mode="r") as f:
             csv_reader = csv.DictReader(f, delimiter=sep)
             rows = [row for row in csv_reader]
@@ -118,6 +120,7 @@ class Records:
                     "Manifest file has no column named 'GUID', 'guid', or 'id'"
                 )
 
+            url_pattern = r"^[a-zA-Z][a-zA-Z0-9+.-]*://[^\s/]+(?:/[^\s]*)*$"
             for row in rows:
                 url_parsed = False
                 size = row["size"]
@@ -125,25 +128,37 @@ class Records:
                 for acl in row["acl"].split(" "):
                     if acl != "admin":
                         for url in row["url"].split(" "):
-                            if "://" not in url:
-                                continue
+                            url = url.replace("[", "").replace("]", "")
+                            if re.match(url_pattern, url) == None:
+                                raise ManifestError(
+                                    f"Manifest contains guid {guid} with invalid url format: {url}"
+                                )
                             else:
                                 protocol, bucket = (
                                     url.split("://")[0].replace("[", ""),
                                     url.split("/")[2],
                                 )
-                                key = (bucket, protocol, acl)
-                                if key not in self.record_dict or (
-                                    int(self.record_dict[key].size) >= int(size)
-                                    and int(size) != 0
-                                ):
+                                key = (
+                                    bucket,
+                                    protocol,
+                                    acl,
+                                )  # Check a record for each unique (bucket, protocol, acl) combination
+                                if (
+                                    key not in self.record_dict
+                                    or (  # Add record to the list of records if no matching (bucket,protocol,acl) found
+                                        int(self.record_dict[key].size)
+                                        >= int(
+                                            size
+                                        )  # Update to download smallest non-zero sized record
+                                        and int(size)
+                                        != 0  # Make sure record has non-zero size
+                                    )
+                                ):  # If it passes these we temporarily choose this record to check for the bucket, protocol, and acl
                                     record = Record(
                                         guid,
                                         bucket,
                                         protocol,
                                         acl,
-                                        self.access_token,
-                                        self.commons,
                                         size,
                                     )
                                     self.record_dict[key] = record
@@ -179,9 +194,9 @@ class Records:
         Args:
             csv_filename (str): the relative file path of the output csv
         """
-        download_results = []
+        self.download_results = []
         for record in self.record_dict.values():
-            download_results.append(
+            self.download_results.append(
                 {
                     "acl": record.acl,
                     "bucket": record.bucket,
@@ -192,10 +207,10 @@ class Records:
                 }
             )
 
-        self.download_results = download_results
+        self.download_results = self.download_results
 
         # Check if the results list is empty
-        if not download_results:
+        if not self.download_results:
             logger.warning("No results to save.")
             return
 
@@ -216,15 +231,15 @@ class Records:
             writer.writeheader()
 
             # Iterate through the DownloadCheckResult instances and write each row
-            for result in download_results:
+            for result in self.download_results:
                 writer.writerow(
                     {
-                        "ACL": result["acl"],
-                        "Bucket": result["bucket"],
-                        "Protocol": result["protocol"],
-                        "Presigned URL Status": result["presigned_url_status"],
-                        "Download Status": result["download_status"],
-                        "GUID": result["guid"],
+                        "acl": result["acl"],
+                        "bucket": result["bucket"],
+                        "protocol": result["protocol"],
+                        "presigned_url_status": result["presigned_url_status"],
+                        "download_status": result["download_status"],
+                        "guid": result["guid"],
                     }
                 )
 
@@ -243,7 +258,7 @@ def validate_manifest(MANIFEST, auth, output_file="results.csv"):
         auth (str): a Gen3Auth instance
     """
     logger.info("Starting...")
-    records = Records(auth)
+    records = RecordParser(auth)
     records.read_records_from_manifest(MANIFEST)
     records.check_records()
     records.save_download_check_results_to_csv(output_file)
