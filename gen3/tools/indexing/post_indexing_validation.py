@@ -122,7 +122,6 @@ class RecordParser:
 
             url_pattern = r"^[a-zA-Z][a-zA-Z0-9+.-]*://[^\s/]+(?:/[^\s]*)*$"
             for row in rows:
-                url_parsed = False
                 size = row["size"]
                 guid = row[guid_col]
                 for acl in row["acl"].split(" "):
@@ -162,10 +161,6 @@ class RecordParser:
                                         size,
                                     )
                                     self.record_dict[key] = record
-                                url_parsed = True
-
-                if url_parsed == False:
-                    logger.warning(f"No url parsed for record {guid}")
 
     def check_records(self):
         """
