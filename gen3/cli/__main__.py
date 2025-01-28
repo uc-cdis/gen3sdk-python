@@ -1,10 +1,10 @@
-import click
-import os
-import sys
 import logging
+import os
+from importlib.metadata import version
+
+import click
 
 import cdislogging
-import pkg_resources
 import gen3.cli.auth as auth
 import gen3.cli.pfb as pfb
 import gen3.cli.wss as wss
@@ -48,7 +48,7 @@ class AuthFactory:
 @click.option(
     "--endpoint",
     "endpoint",
-    default=os.getenv("GEN3_ENDPOINT", "default"),
+    default=os.getenv("GEN3_ENDPOINT", None),
     help="commons hostname - optional if API Key given in `auth`",
 )
 @click.option(
@@ -81,15 +81,18 @@ class AuthFactory:
 )
 @click.option(
     "--version",
+    is_flag=True,
+    default=False,
     help="Show Gen3 Version",
 )
 @click.option(
     "--commons_url",
     "commons_url",
     default=os.getenv("GEN3_COMMONS_URL", None),
-    help="commons url",
+    help="commons url for metadata if different than endpoint",
 )
 @click.pass_context
+@click.version_option(version=version("gen3"))
 def main(
     ctx,
     auth_config,
@@ -108,8 +111,6 @@ def main(
     ctx.obj["commons_url"] = commons_url
     ctx.obj["auth_factory"] = AuthFactory(auth_config)
 
-    if version:
-        click.echo(pkg_resources.get_distribution("gen3").version)
     if silent:
         # we still need to define the logger, the log_level here doesn't
         # really matter b/c we immediately disable all logging
