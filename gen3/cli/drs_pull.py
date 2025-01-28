@@ -136,6 +136,10 @@ def download_object(
 
     """
     logger.info(f"GA4GH DRS Object Streaming Starting...")
+    print("DRS PULL starting download objects")
+    print(
+        f"CTX endpoint {ctx.obj['endpoint']}, CTX commons_url {ctx.obj['commons_url']}"
+    )
     res = download_drs_objects(
         ctx.obj["endpoint"],
         ctx.obj["auth_factory"].get(),
@@ -144,6 +148,7 @@ def download_object(
         no_progress,
         not no_unpack_packages,
         delete_unpacked_packages,
+        ctx.obj["commons_url"],
     )
 
     success = True
@@ -219,9 +224,11 @@ def download_objects(
 
     logger.info(f"GA4GH DRS Object Streaming Starting...")
     logger.debug(f"object_ids: {object_ids}")
+    print("DRS PULL starting download drs objects #2 ")
     res = download_drs_objects(
         ctx.obj["endpoint"],
         ctx.obj["auth_factory"].get(),
+        ctx.obj["commons_url"],
         object_ids,
         output_dir,
         no_progress,

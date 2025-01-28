@@ -83,6 +83,12 @@ class AuthFactory:
     "--version",
     help="Show Gen3 Version",
 )
+@click.option(
+    "--commons_url",
+    "commons_url",
+    default=os.getenv("GEN3_COMMONS_URL", None),
+    help="commons url",
+)
 @click.pass_context
 def main(
     ctx,
@@ -93,11 +99,13 @@ def main(
     only_error_logs,
     silent,
     version,
+    commons_url,
 ):
     """Gen3 Command Line Interface"""
     ctx.ensure_object(dict)
     ctx.obj["auth_config"] = auth_config
     ctx.obj["endpoint"] = endpoint
+    ctx.obj["commons_url"] = commons_url
     ctx.obj["auth_factory"] = AuthFactory(auth_config)
 
     if version:
