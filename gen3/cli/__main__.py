@@ -79,12 +79,6 @@ class AuthFactory:
     default=False,
     help="don't show ANY logs",
 )
-# @click.option(
-#     "--version",
-#     is_flag=True,
-#     default=False,
-#     help="Show Gen3 Version",
-# )
 @click.option(
     "--commons_url",
     "commons_url",
