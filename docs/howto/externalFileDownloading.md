@@ -29,9 +29,9 @@ This is specified in the `external_file_metadata` field. An example is shown bel
 }
 ```
 
-The `'external_oidc_idp'` field is required. It is used to determine how to get a token from the `workspace token service`.
+The `'file_retriever'` field is required. It is used to determine how to retrieve the file.
 
-The `'file_retriever'` field is also required. It is used to determine how to retrieve the file.
+The `'external_oidc_idp'` field is required if retrieving the file(s) requires to get a token from the `workspace token service`. if the file(s) can be retrieved without any tokens, this field could be omitted.
 
 The `'study_id'` and `'file_id'` fields are allowed but are not required.
 
