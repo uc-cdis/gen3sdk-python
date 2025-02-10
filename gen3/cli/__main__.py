@@ -83,7 +83,7 @@ class AuthFactory:
     "--commons_url",
     "commons_url",
     default=os.getenv("GEN3_COMMONS_URL", None),
-    help="commons url for metadata if different than endpoint",
+    help="commons url for fetching file metadata from if different than endpoint",
 )
 @click.pass_context
 @click.version_option(version=version("gen3"))
