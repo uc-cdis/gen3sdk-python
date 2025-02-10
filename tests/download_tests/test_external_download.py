@@ -71,8 +71,11 @@ def test_check_data_and_group_by_retriever():
         },
         {
             "foo": "bar",
-            "file_retriever": "QDR",
             "file_id": "QDR_file_03",
+        },
+        {
+            "file_retriever": "Dataverse",
+            "file_id": "Dataverse_file_01",
         },
         {
             "external_oidc_idp": "other-external-idp",
@@ -91,6 +94,12 @@ def test_check_data_and_group_by_retriever():
                 "external_oidc_idp": "test-external-idp",
                 "file_retriever": "QDR",
                 "file_id": "QDR_file_03",
+            },
+        ],
+        "Dataverse": [
+            {
+                "file_retriever": "Dataverse",
+                "file_id": "Dataverse_file_01",
             },
         ],
         "Other": [
