@@ -7,7 +7,6 @@ Module for downloading and listing data from external repositories.
 
 """
 import json
-import os
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -15,7 +14,7 @@ from cdislogging import get_logger
 
 from gen3.auth import Gen3Auth
 
-REQUIRED_EXTERNAL_FILE_METADATA_KEYS = ["external_oidc_idp", "file_retriever"]
+REQUIRED_EXTERNAL_FILE_METADATA_KEYS = ["file_retriever"]
 
 logger = get_logger("__name__", log_level="debug")
 
@@ -32,21 +31,25 @@ def download_files_from_metadata(
     external-file metadata and a retriever function.
 
     The external_file_metadata items should have the following
-    required keys: 'external_oidc_idp' and 'file_retriever'.
+    required key: 'file_retriever'.
     The items can have an additional optional key of
     'study_id' or 'file_id.
 
     An example is shown below:
     [
         {
-        "external_oidc_idp": "externaldata-keycloak",
-        "file_retriever": "QDR",
-        "study_id": "QDR_study_01"
+            "external_oidc_idp": "externaldata-keycloak",
+            "file_retriever": "QDR",
+            "study_id": "QDR_study_01"
         },
         {
-        "external_oidc_idp": "externaldata-keycloak",
-        "file_retriever": "QDR",
-        "file_id": "QDR_file_02"
+            "external_oidc_idp": "externaldata-keycloak",
+            "file_retriever": "QDR",
+            "file_id": "QDR_file_02"
+        },
+        {
+            "file_retriever": "Dataverse",
+            "file_id": "Dataverse_file_01"
         },
     ]
 
@@ -181,8 +184,7 @@ def extract_external_file_metadata(mds_object: dict) -> List:
 
 def is_valid_external_file_metadata(external_file_metadata: dict) -> bool:
     """
-    Check that the external_file dict has the required keys:
-    'external_oidc_idp' and 'file_retriever'.
+    Check that the external_file dict has the required key(s) as defined in 'REQUIRED_EXTERNAL_FILE_METADATA_KEYS'
 
     Args:
         external_file_metadata: dict
