@@ -41,15 +41,18 @@ def test_load_all_metadata():
 
 
 def test_is_valid_external_file_metadata_invalid_input():
-    # input is missing the required key(s) 'file_retriever'
+    expected = False
+    # input is missing one of the required keys, 'external_oidc_idp' or 'file_retriever'
     external_file_metadata = {
         "external_oidc_idp": "test-external-idp",
         "file_id": "QDR_file_02",
     }
-    assert is_valid_external_file_metadata(external_file_metadata) == False
+    assert is_valid_external_file_metadata(external_file_metadata) == expected
+    external_file_metadata = {"file_retriever": "QDR", "file_id": "QDR_file_02"}
+    assert is_valid_external_file_metadata(external_file_metadata) == expected
     # input is not a dict
     external_file_metadata = ["some", "list"]
-    assert is_valid_external_file_metadata(external_file_metadata) == False
+    assert is_valid_external_file_metadata(external_file_metadata) == expected
 
 
 def test_is_valid_external_file_metadata(valid_external_file_metadata):
