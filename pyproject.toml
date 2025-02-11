@@ -48,7 +48,7 @@ fhirclient = { version = "*", optional = true }
 [tool.poetry.extras]
 fhir = ["fhirclient"]
 
-[poetry.group.dev.dependencies]
+[tool.poetry.dev-dependencies]
 pytest = "^6.0.0"
 pytest-cov = "*"
 requests-mock = "*"
