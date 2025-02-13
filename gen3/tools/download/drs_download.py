@@ -662,7 +662,11 @@ def resolve_drs_hostname_from_id(
 
 
 def resolve_objects_drs_hostname(
-    object_ids: List[Downloadable], resolved_drs_prefix_cache: dict, mds_url: str, endpoint: str
+    object_ids: List[Downloadable],
+    resolved_drs_prefix_cache: dict,
+    mds_url: str,
+    endpoint: str,
+    commons_url: str = None,
 ) -> None:
     """Given a list of object_ids go through list and resolve + cache any unknown hosts
 
@@ -673,7 +677,9 @@ def resolve_objects_drs_hostname(
         hostname (str): Hostname to main Gen3 environment
     """
     for entry in object_ids:
-        if endpoint is not None and entry.hostname is None:
+        if commons_url is not None:
+            entry.hostname = commons_url
+        elif endpoint is not None and entry.hostname is None:
             entry.hostname = endpoint
         if entry.hostname is None:
             # if resolution fails the entry hostname will still be None
@@ -806,7 +812,8 @@ class DownloadManager:
         auth: Gen3Auth,
         download_list: List[Downloadable],
         show_progress: bool = False,
-        endpoint: str = None
+        endpoint: str = None,
+        commons_url: str = None,
     ):
         """
         Initialize the DownloadManager so that is ready to start downloading.
@@ -821,6 +828,7 @@ class DownloadManager:
 
         self.hostname = hostname
         self.endpoint = endpoint
+        self.commons_url = commons_url
         self.access_token = auth.get_access_token()
         self.metadata = Gen3Metadata(auth)
         self.wts_endpoints = wts_external_oidc(hostname)
@@ -848,7 +856,8 @@ class DownloadManager:
             object_list,
             self.resolved_compact_drs,
             mds_url=f"http://{self.hostname}/mds/aggregate/info",
-            endpoint=self.endpoint
+            endpoint=self.endpoint,
+            commons_url=self.commons_url,
         )
         progress_bar = (
             tqdm(desc=f"Resolving objects", total=len(object_list))
@@ -1129,7 +1138,7 @@ def _download(
         auth=auth,
         download_list=object_list,
         show_progress=show_progress,
-        endpoint=hostname
+        endpoint=hostname,
     )
 
     out_dir_path = ensure_dirpath_exists(Path(output_dir))
@@ -1150,6 +1159,7 @@ def _download_obj(
     show_progress=False,
     unpack_packages=True,
     delete_unpacked_packages=False,
+    commons_url=None,
 ) -> Optional[Dict[str, Any]]:
     """
     A convenience function used to download a single DRS object.
@@ -1177,7 +1187,8 @@ def _download_obj(
         auth=auth,
         download_list=object_list,
         show_progress=show_progress,
-        endpoint=hostname
+        endpoint=hostname,
+        commons_url=commons_url,
     )
 
     out_dir_path = ensure_dirpath_exists(Path(output_dir))
@@ -1364,6 +1375,7 @@ def download_drs_objects(
     show_progress=True,
     unpack_packages=True,
     delete_unpacked_packages=False,
+    commons_url=None,
 ) -> None:
     """
     A convenience function used to download a single DRS object.
@@ -1386,6 +1398,7 @@ def download_drs_objects(
         show_progress,
         unpack_packages,
         delete_unpacked_packages,
+        commons_url,
     )
 
 

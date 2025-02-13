@@ -473,9 +473,7 @@ def test_download_objects(
                     )
                     m.get(
                         f"https://{hostname}/ga4gh/drs/v1/objects/{object.object_id}/access/s3",
-                        json={
-                            "url": f"https://{hostname}/{object.object_id}"
-                        },
+                        json={"url": f"https://{hostname}/{object.object_id}"},
                     )
 
                 downloader = DownloadManager(hostname, auth, object_list)
@@ -791,17 +789,35 @@ Access for test.datacommons.io:
 
 
 def test_resolve_objects_drs_hostname():
-    object_ids_list = [Downloadable(
-        object_id="dg.MD1R/05db0aab-cbe9-4bfe-bef8-888888888888"
-    )]
+    object_ids_list = [
+        Downloadable(object_id="dg.MD1R/05db0aab-cbe9-4bfe-bef8-888888888888")
+    ]
     hostname = "test.midrc.org"
     resolve_objects_drs_hostname(
-        object_ids_list, {},
+        object_ids_list,
+        {},
         mds_url=f"http://{hostname}/mds/aggregate/info",
-        endpoint=hostname
+        endpoint=hostname,
     )
     for obj in object_ids_list:
         assert obj.hostname == hostname
+
+
+def test_resolve_objects_drs_hostname_with_commons_url():
+    object_ids_list = [
+        Downloadable(object_id="dg.MD1R/05db0aab-cbe9-4bfe-bef8-888888888888")
+    ]
+    hostname = "test.midrc.org"
+    commons_url = "test.other-datacommons.io"
+    resolve_objects_drs_hostname(
+        object_ids_list,
+        {},
+        mds_url=f"http://{hostname}/mds/aggregate/info",
+        endpoint=hostname,
+        commons_url=commons_url,
+    )
+    for obj in object_ids_list:
+        assert obj.hostname == commons_url
 
 
 def test_download_status_repr_and_str():

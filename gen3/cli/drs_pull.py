@@ -144,6 +144,7 @@ def download_object(
         no_progress,
         not no_unpack_packages,
         delete_unpacked_packages,
+        ctx.obj["commons_url"],
     )
 
     success = True
@@ -222,6 +223,7 @@ def download_objects(
     res = download_drs_objects(
         ctx.obj["endpoint"],
         ctx.obj["auth_factory"].get(),
+        ctx.obj["commons_url"],
         object_ids,
         output_dir,
         no_progress,
