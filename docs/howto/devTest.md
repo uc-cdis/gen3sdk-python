@@ -43,7 +43,7 @@ There are various ways to select a subset of python unit-tests - see: https://st
 
 ### Manual Testing
 
-You can also set up credentials to submit data to the graph in your data commons.  This assumes that you can get API access by downloading your [credentials.json](https://gen3.org/resources/user/using-api/#credentials-to-send-api-requests).
+You can also set up credentials to submit data to the graph in your data commons.  This assumes that you can get API access by downloading your [credentials.json](https://docs.gen3.org/gen3-resources/user-guide/using-api/#credentials-to-send-api-requests).
 
 > Make sure that your python virtual environment and dependencies are updated.  Also, check that your credentials have appropriate permissions to make the service calls too.
 ```python
