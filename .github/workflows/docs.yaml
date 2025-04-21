@@ -20,7 +20,7 @@ jobs:
       with:
         ref: ${{github.event.pull_request.head.ref}}
         repository: ${{github.event.pull_request.head.repo.full_name}}
-        # Passing a PAT from the PlanXCybrog bot account here, since otherwise commit pushed by this action won't bale able to trigger other actions, see https://github.com/stefanzweifel/git-auto-commit-action?tab=readme-ov-file#commits-made-by-this-action-do-not-trigger-new-workflow-runs
+        # Passing a PAT from the PlanXCybrog bot account here, since otherwise commits pushed by this action won't be able to trigger other actions, see https://github.com/stefanzweifel/git-auto-commit-action?tab=readme-ov-file#commits-made-by-this-action-do-not-trigger-new-workflow-runs
         token: ${{ secrets.PLANXCYBORG_PAT }}
     - name: Set up Python 3.9
       uses: actions/setup-python@v1
