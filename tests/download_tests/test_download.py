@@ -648,7 +648,7 @@ def test_download_objects(
             )
             expected = {
                 "dg.XXTST/b96018c5-db06-4af8-a195-28e339ba815e": DownloadStatus(
-                    filename=None, status="error (no access methods)"
+                    filename=None, status="error (resolving DRS host)"
                 )
             }
             assert res == expected
@@ -792,7 +792,7 @@ def test_resolve_objects_drs_hostname():
     object_ids_list = [
         Downloadable(object_id="dg.MD1R/05db0aab-cbe9-4bfe-bef8-888888888888")
     ]
-    hostname = "test.midrc.org"
+    hostname = "data.midrc.org"
     resolve_objects_drs_hostname(
         object_ids_list,
         {},
