@@ -797,7 +797,6 @@ def test_resolve_objects_drs_hostname():
         object_ids_list,
         {},
         mds_url=f"http://{hostname}/mds/aggregate/info",
-        endpoint=hostname,
     )
     for obj in object_ids_list:
         assert obj.hostname == hostname
@@ -813,7 +812,6 @@ def test_resolve_objects_drs_hostname_with_commons_url():
         object_ids_list,
         {},
         mds_url=f"http://{hostname}/mds/aggregate/info",
-        endpoint=hostname,
         commons_url=commons_url,
     )
     for obj in object_ids_list:

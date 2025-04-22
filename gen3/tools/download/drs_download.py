@@ -304,6 +304,8 @@ def wts_external_oidc(hostname: str) -> Dict[str, Any]:
         dict containing the oidc information
     """
     oidc = {}
+    if not hostname:
+        return oidc
     try:
         response = requests.get(f"https://{hostname}/wts/external_oidc/")
         response.raise_for_status()
@@ -665,7 +667,6 @@ def resolve_objects_drs_hostname(
     object_ids: List[Downloadable],
     resolved_drs_prefix_cache: dict,
     mds_url: str,
-    endpoint: str,
     commons_url: str = None,
 ) -> None:
     """Given a list of object_ids go through list and resolve + cache any unknown hosts
@@ -679,8 +680,6 @@ def resolve_objects_drs_hostname(
     for entry in object_ids:
         if commons_url is not None:
             entry.hostname = commons_url
-        elif endpoint is not None and entry.hostname is None:
-            entry.hostname = endpoint
         if entry.hostname is None:
             # if resolution fails the entry hostname will still be None
             entry.hostname, nid, drs_type = resolve_drs_hostname_from_id(
@@ -759,9 +758,6 @@ def get_user_auth(commons_url: str, access_token: str) -> Optional[List[str]]:
     Returns:
         The authz object from the user endpoint
     """
-    """
-
-    """
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -788,7 +784,7 @@ def list_auth(hostname: str, authz: dict):
         authz (str): dictionary of authz stringts
     """
     print(
-        f"───────────────────────────────────────────────────────────────────────────────────────────────────────"
+        "───────────────────────────────────────────────────────────────────────────────────────────────────────"
     )
     print(f"Access for {hostname}:")
     if authz is not None and len(authz) > 0:
@@ -798,6 +794,18 @@ def list_auth(hostname: str, authz: dict):
             )
     else:
         print("      No access")
+
+
+def get_hostname_from_endpoint(endpoint: str):
+    """
+    Get hostname from an Gen3Auth endpoint value
+    Args:
+        endpoint (str): endpoint value form Gen3Auth
+    """
+    if not endpoint:
+        return None
+    urlparts = urlparse(endpoint)
+    return urlparts.hostname
 
 
 class DownloadManager:
@@ -812,7 +820,6 @@ class DownloadManager:
         auth: Gen3Auth,
         download_list: List[Downloadable],
         show_progress: bool = False,
-        endpoint: str = None,
         commons_url: str = None,
     ):
         """
@@ -826,8 +833,9 @@ class DownloadManager:
             download_list (List[Downloadable]): list of objects to download
         """
 
-        self.hostname = hostname
-        self.endpoint = endpoint
+        self.hostname = (
+            hostname if hostname else get_hostname_from_endpoint(auth.endpoint)
+        )
         self.commons_url = commons_url
         self.access_token = auth.get_access_token()
         self.metadata = Gen3Metadata(auth)
@@ -855,8 +863,9 @@ class DownloadManager:
         resolve_objects_drs_hostname(
             object_list,
             self.resolved_compact_drs,
-            mds_url=f"http://{self.hostname}/mds/aggregate/info",
-            endpoint=self.endpoint,
+            mds_url=f"http://{self.hostname}/mds/aggregate/info"
+            if self.hostname
+            else None,
             commons_url=self.commons_url,
         )
         progress_bar = (
@@ -1138,7 +1147,6 @@ def _download(
         auth=auth,
         download_list=object_list,
         show_progress=show_progress,
-        endpoint=hostname,
     )
 
     out_dir_path = ensure_dirpath_exists(Path(output_dir))
@@ -1187,7 +1195,6 @@ def _download_obj(
         auth=auth,
         download_list=object_list,
         show_progress=show_progress,
-        endpoint=hostname,
         commons_url=commons_url,
     )
 

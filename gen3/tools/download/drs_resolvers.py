@@ -227,6 +227,8 @@ def resolve_drs_using_metadata_service(
            cache_results: set to true to write local cache file
            Returns a hostname if resolved, otherwise None
     """
+    if not metadata_service_url:
+        return None
     try:
         response = requests.get(f"{metadata_service_url}/{identifier}")
         response.raise_for_status()
