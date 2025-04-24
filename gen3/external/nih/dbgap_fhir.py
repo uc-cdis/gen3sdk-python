@@ -419,6 +419,7 @@ class dbgapFHIR(ExternalMetadataSourceInterface):
         self._flatten_relevant_fields(all_data)
         self._remove_unecessary_fields(all_data)
         self._capitalize_top_level_keys(all_data)
+        self._clean_structure(all_data)
 
         return all_data
 
@@ -569,3 +570,30 @@ class dbgapFHIR(ExternalMetadataSourceInterface):
 
             if key != capitalized_key:
                 del all_data[key]
+
+    def _clean_value(self, value):
+        """
+        Replace tab literals in a string
+        """
+        if value is None:
+            return ""
+
+        # Double-escape existing backslashes
+        # Convert every literal tab into the text “\t”
+        return value.replace("\\", "\\\\").replace("\t", r"\t")
+
+    def _clean_structure(self, obj):
+        """
+        Recursively walk a nested structure (dicts, lists, tuples) and clean every string
+        """
+        if isinstance(obj, dict):
+            return {k: self._clean_structure(v) for k, v in obj.items()}
+
+        if isinstance(obj, (list, tuple)):
+            typ = type(obj)
+            return typ(self._clean_structure(v) for v in obj)
+
+        if isinstance(obj, str):
+            return self._clean_value(obj)
+
+        return obj
