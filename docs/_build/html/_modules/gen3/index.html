@@ -82,6 +82,7 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">endpoint</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">service_location</span><span class="p">):</span>
             <span class="n">endpoint</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">service_location</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">=</span> <span class="n">endpoint</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">client</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">IndexClient</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="n">auth_provider</span><span class="p">)</span>
 
     <span class="c1">### Get Requests</span>
@@ -849,6 +850,10 @@
             <span class="s2">&quot;content_updated_date&quot;</span><span class="p">:</span> <span class="n">content_updated_date</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="n">rec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">guid</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">rec</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;No indexd record found for GUID &#39;</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&#39; at &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+            <span class="p">)</span>
         <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">updatable_attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">exec</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;rec.</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2"> = v&quot;</span><span class="p">)</span>
