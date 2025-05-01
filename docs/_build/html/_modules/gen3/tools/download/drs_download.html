@@ -360,6 +360,8 @@
 <span class="sd">        dict containing the oidc information</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">oidc</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">hostname</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">oidc</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;https://</span><span class="si">{</span><span class="n">hostname</span><span class="si">}</span><span class="s2">/wts/external_oidc/&quot;</span><span class="p">)</span>
         <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
@@ -721,7 +723,6 @@
     <span class="n">object_ids</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Downloadable</span><span class="p">],</span>
     <span class="n">resolved_drs_prefix_cache</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
     <span class="n">mds_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">endpoint</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">commons_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Given a list of object_ids go through list and resolve + cache any unknown hosts</span>
@@ -735,8 +736,6 @@
     <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">object_ids</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">commons_url</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">entry</span><span class="o">.</span><span class="n">hostname</span> <span class="o">=</span> <span class="n">commons_url</span>
-        <span class="k">elif</span> <span class="n">endpoint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">entry</span><span class="o">.</span><span class="n">hostname</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">entry</span><span class="o">.</span><span class="n">hostname</span> <span class="o">=</span> <span class="n">endpoint</span>
         <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">hostname</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># if resolution fails the entry hostname will still be None</span>
             <span class="n">entry</span><span class="o">.</span><span class="n">hostname</span><span class="p">,</span> <span class="n">nid</span><span class="p">,</span> <span class="n">drs_type</span> <span class="o">=</span> <span class="n">resolve_drs_hostname_from_id</span><span class="p">(</span>
@@ -815,9 +814,6 @@
 <span class="sd">    Returns:</span>
 <span class="sd">        The authz object from the user endpoint</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-
-<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">&quot;Content-Type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">,</span>
         <span class="s2">&quot;Accept&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">,</span>
@@ -844,7 +840,7 @@
 <span class="sd">        authz (str): dictionary of authz stringts</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="nb">print</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;───────────────────────────────────────────────────────────────────────────────────────────────────────&quot;</span>
+        <span class="s2">&quot;───────────────────────────────────────────────────────────────────────────────────────────────────────&quot;</span>
     <span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Access for </span><span class="si">{</span><span class="n">hostname</span><span class="si">}</span><span class="s2">:&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">authz</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">authz</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -854,6 +850,18 @@
             <span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;      No access&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">get_hostname_from_endpoint</span><span class="p">(</span><span class="n">endpoint</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get hostname from an Gen3Auth endpoint value</span>
+<span class="sd">    Args:</span>
+<span class="sd">        endpoint (str): endpoint value form Gen3Auth</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">endpoint</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">urlparts</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">endpoint</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">urlparts</span><span class="o">.</span><span class="n">hostname</span>
 
 
 <div class="viewcode-block" id="DownloadManager">
@@ -870,7 +878,6 @@
         <span class="n">auth</span><span class="p">:</span> <span class="n">Gen3Auth</span><span class="p">,</span>
         <span class="n">download_list</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Downloadable</span><span class="p">],</span>
         <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-        <span class="n">endpoint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">commons_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -884,8 +891,9 @@
 <span class="sd">            download_list (List[Downloadable]): list of objects to download</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">hostname</span> <span class="o">=</span> <span class="n">hostname</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">=</span> <span class="n">endpoint</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hostname</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">hostname</span> <span class="k">if</span> <span class="n">hostname</span> <span class="k">else</span> <span class="n">get_hostname_from_endpoint</span><span class="p">(</span><span class="n">auth</span><span class="o">.</span><span class="n">endpoint</span><span class="p">)</span>
+        <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">commons_url</span> <span class="o">=</span> <span class="n">commons_url</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">access_token</span> <span class="o">=</span> <span class="n">auth</span><span class="o">.</span><span class="n">get_access_token</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">Gen3Metadata</span><span class="p">(</span><span class="n">auth</span><span class="p">)</span>
@@ -915,8 +923,9 @@
         <span class="n">resolve_objects_drs_hostname</span><span class="p">(</span>
             <span class="n">object_list</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">resolved_compact_drs</span><span class="p">,</span>
-            <span class="n">mds_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;http://</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">hostname</span><span class="si">}</span><span class="s2">/mds/aggregate/info&quot;</span><span class="p">,</span>
-            <span class="n">endpoint</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span><span class="p">,</span>
+            <span class="n">mds_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;http://</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">hostname</span><span class="si">}</span><span class="s2">/mds/aggregate/info&quot;</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hostname</span>
+            <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">commons_url</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">commons_url</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">progress_bar</span> <span class="o">=</span> <span class="p">(</span>
@@ -1212,7 +1221,6 @@
         <span class="n">auth</span><span class="o">=</span><span class="n">auth</span><span class="p">,</span>
         <span class="n">download_list</span><span class="o">=</span><span class="n">object_list</span><span class="p">,</span>
         <span class="n">show_progress</span><span class="o">=</span><span class="n">show_progress</span><span class="p">,</span>
-        <span class="n">endpoint</span><span class="o">=</span><span class="n">hostname</span><span class="p">,</span>
     <span class="p">)</span>
 
     <span class="n">out_dir_path</span> <span class="o">=</span> <span class="n">ensure_dirpath_exists</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">output_dir</span><span class="p">))</span>
@@ -1261,7 +1269,6 @@
         <span class="n">auth</span><span class="o">=</span><span class="n">auth</span><span class="p">,</span>
         <span class="n">download_list</span><span class="o">=</span><span class="n">object_list</span><span class="p">,</span>
         <span class="n">show_progress</span><span class="o">=</span><span class="n">show_progress</span><span class="p">,</span>
-        <span class="n">endpoint</span><span class="o">=</span><span class="n">hostname</span><span class="p">,</span>
         <span class="n">commons_url</span><span class="o">=</span><span class="n">commons_url</span><span class="p">,</span>
     <span class="p">)</span>
 
