@@ -41,18 +41,15 @@ def test_load_all_metadata():
 
 
 def test_is_valid_external_file_metadata_invalid_input():
-    expected = False
-    # input is missing one of the required keys, 'external_oidc_idp' or 'file_retriever'
+    # input is missing one of the required key(s) 'file_retriever'
     external_file_metadata = {
         "external_oidc_idp": "test-external-idp",
         "file_id": "QDR_file_02",
     }
-    assert is_valid_external_file_metadata(external_file_metadata) == expected
-    external_file_metadata = {"file_retriever": "QDR", "file_id": "QDR_file_02"}
-    assert is_valid_external_file_metadata(external_file_metadata) == expected
+    assert is_valid_external_file_metadata(external_file_metadata) is False
     # input is not a dict
     external_file_metadata = ["some", "list"]
-    assert is_valid_external_file_metadata(external_file_metadata) == expected
+    assert is_valid_external_file_metadata(external_file_metadata) is False
 
 
 def test_is_valid_external_file_metadata(valid_external_file_metadata):
@@ -74,8 +71,11 @@ def test_check_data_and_group_by_retriever():
         },
         {
             "foo": "bar",
-            "file_retriever": "QDR",
             "file_id": "QDR_file_03",
+        },
+        {
+            "file_retriever": "Dataverse",
+            "file_id": "Dataverse_file_01",
         },
         {
             "external_oidc_idp": "other-external-idp",
@@ -94,6 +94,12 @@ def test_check_data_and_group_by_retriever():
                 "external_oidc_idp": "test-external-idp",
                 "file_retriever": "QDR",
                 "file_id": "QDR_file_03",
+            },
+        ],
+        "Dataverse": [
+            {
+                "file_retriever": "Dataverse",
+                "file_id": "Dataverse_file_01",
             },
         ],
         "Other": [

@@ -473,9 +473,7 @@ def test_download_objects(
                     )
                     m.get(
                         f"https://{hostname}/ga4gh/drs/v1/objects/{object.object_id}/access/s3",
-                        json={
-                            "url": f"https://{hostname}/{object.object_id}"
-                        },
+                        json={"url": f"https://{hostname}/{object.object_id}"},
                     )
 
                 downloader = DownloadManager(hostname, auth, object_list)
@@ -650,7 +648,7 @@ def test_download_objects(
             )
             expected = {
                 "dg.XXTST/b96018c5-db06-4af8-a195-28e339ba815e": DownloadStatus(
-                    filename=None, status="error (no access methods)"
+                    filename=None, status="error (resolving DRS host)"
                 )
             }
             assert res == expected
@@ -791,17 +789,33 @@ Access for test.datacommons.io:
 
 
 def test_resolve_objects_drs_hostname():
-    object_ids_list = [Downloadable(
-        object_id="dg.MD1R/05db0aab-cbe9-4bfe-bef8-888888888888"
-    )]
-    hostname = "test.midrc.org"
+    object_ids_list = [
+        Downloadable(object_id="dg.MD1R/05db0aab-cbe9-4bfe-bef8-888888888888")
+    ]
+    hostname = "data.midrc.org"
     resolve_objects_drs_hostname(
-        object_ids_list, {},
+        object_ids_list,
+        {},
         mds_url=f"http://{hostname}/mds/aggregate/info",
-        endpoint=hostname
     )
     for obj in object_ids_list:
         assert obj.hostname == hostname
+
+
+def test_resolve_objects_drs_hostname_with_commons_url():
+    object_ids_list = [
+        Downloadable(object_id="dg.MD1R/05db0aab-cbe9-4bfe-bef8-888888888888")
+    ]
+    hostname = "test.midrc.org"
+    commons_url = "test.other-datacommons.io"
+    resolve_objects_drs_hostname(
+        object_ids_list,
+        {},
+        mds_url=f"http://{hostname}/mds/aggregate/info",
+        commons_url=commons_url,
+    )
+    for obj in object_ids_list:
+        assert obj.hostname == commons_url
 
 
 def test_download_status_repr_and_str():
