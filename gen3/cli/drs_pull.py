@@ -144,6 +144,7 @@ def download_object(
         no_progress,
         not no_unpack_packages,
         delete_unpacked_packages,
+        ctx.obj["commons_url"],
     )
 
     success = True
@@ -227,6 +228,7 @@ def download_objects(
         no_progress,
         not no_unpack_packages,
         delete_unpacked_packages,
+        ctx.obj["commons_url"],
     )
     for drs_object_id in res:
         if drs_object_id in res and res[drs_object_id].status == "downloaded":
