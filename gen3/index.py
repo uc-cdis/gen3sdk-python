@@ -48,6 +48,7 @@ class Gen3Index:
         if not endpoint.endswith(service_location):
             endpoint += "/" + service_location
 
+        self.endpoint = endpoint
         self.client = client.IndexClient(endpoint, auth=auth_provider)
 
     ### Get Requests
@@ -747,6 +748,10 @@ class Gen3Index:
             "content_updated_date": content_updated_date,
         }
         rec = self.client.get(guid)
+        if not rec:
+            raise ValueError(
+                f"No indexd record found for GUID '{guid}' at '{self.endpoint}'"
+            )
         for k, v in updatable_attrs.items():
             if v is not None:
                 exec(f"rec.{k} = v")
