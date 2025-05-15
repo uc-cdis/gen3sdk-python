@@ -66,14 +66,17 @@ You should see something like:
 ```
 Datafile05_T.csv    : 100%|████████████████████████████████████████████████████████████████████████| 3.72M/3.72M [00:01<00:00, 1.92MiB/s]
 ```
-
 To download a list of files, you can use the `drs-pull objects` command:
-
 ```
 gen3 --endpoint my-commons.org --auth <path to API key> drs-pull objects dg.XXTS/181af989-5d66-4139-91e7-69f4570ccd41 dg.XX22/221af922-2222-2239-22e7-62f4570cc222
 ```
 
-Note: if specified, the `commons_url` in the manifest file takes precedence over the `--endpoint` parameter. If neither is specified, DRS prefix resolution is used.
+Note: in general, the `drs-pull` commands will use DRS resolution logic to try to determine which environment that object GUID is from. If you want to force it to locate a object GUID directly from an environment instead of doing DRS resolution, specifies the `--commons_url` parameter for `drs-pull object`, or add `commons_url` to manifest and use `drs-pull manifest`.
+Example:
+```
+gen3 --endpoint my-commons.org --auth <path to API key> --commons_url my-commons.org drs-pull objects dg.XX22/221af922-2222-2239-22e7-62f4570cc222
+```
+
 ### Listing Files and Access
 
 #### List Contents
