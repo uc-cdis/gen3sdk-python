@@ -419,7 +419,9 @@ class dbgapFHIR(ExternalMetadataSourceInterface):
         self._flatten_relevant_fields(all_data)
         self._remove_unecessary_fields(all_data)
         self._capitalize_top_level_keys(all_data)
-        self._clean_structure(all_data)
+
+        # clean \t tab characters
+        all_data = self._clean_structure(all_data)
 
         return all_data
 
@@ -580,7 +582,8 @@ class dbgapFHIR(ExternalMetadataSourceInterface):
 
         # Double-escape existing backslashes
         # Convert every literal tab into the text “\t”
-        return value.replace("\\", "\\\\").replace("\t", r"\t")
+        value = value.replace("\\", "\\\\").replace("\t", r"\t")
+        return value
 
     def _clean_structure(self, obj):
         """
