@@ -605,8 +605,7 @@
     <span class="n">total_size_in_bytes</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-length&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
 
     <span class="k">if</span> <span class="n">total_size_in_bytes</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;content-length is 0 and it should not be&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="kc">False</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;content-length is 0&quot;</span><span class="p">)</span>
 
     <span class="n">total_downloaded</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">block_size</span> <span class="o">=</span> <span class="mi">8092</span>  <span class="c1"># 8K blocks might want to tune this.</span>
