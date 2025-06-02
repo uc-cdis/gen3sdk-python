@@ -549,8 +549,7 @@ def download_file_from_url(
     total_size_in_bytes = int(response.headers.get("content-length", 0))
 
     if total_size_in_bytes == 0:
-        logger.critical(f"content-length is 0 and it should not be")
-        return False
+        logger.warning(f"content-length is 0")
 
     total_downloaded = 0
     block_size = 8092  # 8K blocks might want to tune this.
