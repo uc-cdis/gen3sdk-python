@@ -29,7 +29,7 @@ click = "*"
 jsonschema = "*"
 # FIXME updating to >=0.6.0 breaks a few tests
 dataclasses-json = "<=0.5.9"
-pypfb = ">=0.5.30"
+pypfb = ">=0.5.33"
 tqdm = "^4.61.2"
 humanfriendly ="*"
 python-dateutil = "*"
