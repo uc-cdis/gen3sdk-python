@@ -29,7 +29,7 @@ click = "*"
 jsonschema = "*"
 # FIXME updating to >=0.6.0 breaks a few tests
 dataclasses-json = "<=0.5.9"
-pypfb = ">=0.5.30"
+pypfb = {extras = ["gen3"], version = "^0.5.33"}
 tqdm = "^4.61.2"
 humanfriendly ="*"
 python-dateutil = "*"
@@ -44,6 +44,7 @@ gen3users = "*"
 # A list of all of the optional dependencies, some of which are included in the
 # below `extras`. They can be opted into by apps.
 fhirclient = { version = "*", optional = true }
+importlib-metadata = "4.13.0"
 
 [tool.poetry.extras]
 fhir = ["fhirclient"]

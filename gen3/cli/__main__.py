@@ -12,12 +12,41 @@ import gen3.cli.discovery as discovery
 import gen3.cli.configure as configure
 import gen3.cli.objects as objects
 import gen3.cli.file as file
-import gen3.cli.drs_pull as drs_pull
-import gen3.cli.users as users
+
+try:
+    import gen3.cli.drs_pull as drs_pull
+    DRS_PULL_AVAILABLE = True
+except ImportError:
+    DRS_PULL_AVAILABLE = False
+    drs_pull = None
+
+import gen3.cli.download as download
+
+try:
+    import gen3.cli.users as users
+    USERS_AVAILABLE = True
+except ImportError:
+    USERS_AVAILABLE = False
+    users = None
+
 import gen3.cli.wrap as wrap
 import gen3
 from gen3 import logging as sdklogging
-from gen3.cli import nih
+
+try:
+    from gen3.cli import nih
+    NIH_AVAILABLE = True
+except ImportError:
+    NIH_AVAILABLE = False
+    nih = None
+
+
+def get_version():
+    """Get version safely."""
+    try:
+        return version("gen3")
+    except:
+        return "unknown"
 
 
 class AuthFactory:
@@ -86,7 +115,7 @@ class AuthFactory:
     help="commons url for fetching file metadata from if different than endpoint",
 )
 @click.pass_context
-@click.version_option(version=version("gen3"))
+@click.version_option(version=get_version())
 def main(
     ctx,
     auth_config,
@@ -140,9 +169,14 @@ main.add_command(wss.wss)
 main.add_command(discovery.discovery)
 main.add_command(configure.configure)
 main.add_command(objects.objects)
-main.add_command(drs_pull.drs_pull)
+if DRS_PULL_AVAILABLE and drs_pull:
+    main.add_command(drs_pull.drs_pull)
 main.add_command(file.file)
-main.add_command(nih.nih)
-main.add_command(users.users)
+main.add_command(download.download_single, name="download-single")
+main.add_command(download.download_multiple, name="download-multiple")
+if NIH_AVAILABLE and nih:
+    main.add_command(nih.nih)
+if USERS_AVAILABLE and users:
+    main.add_command(users.users)
 main.add_command(wrap.run)
 main()

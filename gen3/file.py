@@ -10,6 +10,9 @@ from types import SimpleNamespace as Namespace
 import os
 import requests
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import List, Dict, Any, Optional
+import click
 
 from cdislogging import get_logger
 
@@ -21,6 +24,7 @@ logging = get_logger("__name__")
 
 
 MAX_RETRIES = 3
+DEFAULT_NUM_PARALLEL = 3
 
 
 class Gen3File:
@@ -71,6 +75,25 @@ class Gen3File:
             return resp.json()
         except:
             return resp.text
+
+    def get_presigned_urls_batch(self, guids, protocol=None):
+        """Get presigned URLs for multiple files efficiently.
+        
+        Args:
+            guids (List[str]): List of GUIDs to get presigned URLs for
+            protocol (str, optional): Protocol preference for URLs
+            
+        Returns:
+            Dict[str, Dict]: Mapping of GUID to presigned URL response
+        """
+        results = {}
+        for guid in guids:
+            try:
+                results[guid] = self.get_presigned_url(guid, protocol)
+            except Exception as e:
+                logging.error(f"Failed to get presigned URL for {guid}: {e}")
+                results[guid] = None
+        return results
 
     def delete_file(self, guid):
         """
@@ -163,62 +186,202 @@ class Gen3File:
 
         return out_path
 
-    def download_single(self, object_id, path):
-        """
-        Download a single file using its GUID.
-
+    def _format_filename(self, guid, original_filename, filename_format):
+        """Format filename based on the specified format option.
+        
         Args:
-            object_id (str): The file's unique ID
-            path (str): Path to store the downloaded file at
+            guid (str): The GUID of the file
+            original_filename (str): Original filename from metadata
+            filename_format (str): Format option - 'original', 'guid', or 'combined'
+            
+        Returns:
+            str: Formatted filename
+        """
+        if filename_format == "guid":
+            return guid
+        elif filename_format == "combined":
+            if original_filename:
+                name, ext = os.path.splitext(original_filename)
+                return f"{name}_{guid}{ext}"
+            return guid
+        else:
+            return original_filename or guid
+
+    def _handle_file_conflict(self, filepath, rename):
+        """Handle file name conflicts.
+        
+        Args:
+            filepath (Path): Proposed file path
+            rename (bool): Whether to rename if conflict exists
+            
+        Returns:
+            Path: Final filepath to use
+        """
+        if not filepath.exists():
+            return filepath
+            
+        if not rename:
+            return filepath
+            
+        counter = 1
+        name = filepath.stem
+        ext = filepath.suffix
+        parent = filepath.parent
+        
+        while True:
+            new_path = parent / f"{name}_{counter}{ext}"
+            if not new_path.exists():
+                return new_path
+            counter += 1
+
+    def _download_file_worker(self, guid, presigned_url_data, output_dir, filename_format, rename, skip_completed):
+        """Worker function for downloading a single file.
+        
+        Args:
+            guid (str): File GUID
+            presigned_url_data (dict): Presigned URL response data
+            output_dir (Path): Output directory
+            filename_format (str): Filename format option
+            rename (bool): Whether to rename on conflict
+            skip_completed (bool): Whether to skip existing files
+            
+        Returns:
+            Dict: Download result with status and details
         """
         try:
-            url = self.get_presigned_url(object_id)
-        except Exception as e:
-            logging.critical(f"Unable to get a presigned URL for download: {e}")
-            return False
-
-        response = requests.get(url["url"], stream=True)
-        if response.status_code != 200:
-            logging.error(f"Response code: {response.status_code}")
+            if not presigned_url_data:
+                return {"guid": guid, "status": "failed", "error": "Failed to get presigned URL"}
+                
+            index = Gen3Index(self._auth_provider)
+            record = index.get_record(guid)
+            original_filename = record.get("file_name")
+            
+            filename = self._format_filename(guid, original_filename, filename_format)
+            filepath = self._handle_file_conflict(output_dir / filename, rename)
+            
+            if skip_completed and filepath.exists():
+                return {"guid": guid, "status": "skipped", "filepath": str(filepath)}
+                
+            response = requests.get(presigned_url_data["url"], stream=True)
             if response.status_code >= 500:
                 for _ in range(MAX_RETRIES):
-                    logging.info("Retrying now...")
-                    # NOTE could be updated with exponential backoff
                     time.sleep(1)
-                    response = requests.get(url["url"], stream=True)
-                    if response.status == 200:
+                    response = requests.get(presigned_url_data["url"], stream=True)
+                    if response.status_code < 500:
                         break
-                if response.status != 200:
-                    logging.critical("Response status not 200, try again later")
-                    return False
+                        
+            response.raise_for_status()
+            
+            # Ensure parent directories exist
+            filepath.parent.mkdir(parents=True, exist_ok=True)
+            
+            total_size = int(response.headers.get("content-length", 0))
+            downloaded = 0
+            
+            with open(filepath, "wb") as f:
+                for chunk in response.iter_content(4096):
+                    downloaded += len(chunk)
+                    f.write(chunk)
+                    
+            if total_size and total_size != downloaded:
+                return {"guid": guid, "status": "failed", "error": "Size mismatch"}
+                
+            return {"guid": guid, "status": "downloaded", "filepath": str(filepath), "size": downloaded}
+            
+        except Exception as e:
+            return {"guid": guid, "status": "failed", "error": str(e)}
+
+    def download_single(self, guid, download_path=".", filename_format="original", protocol=None, skip_completed=False, rename=False):
+        """Download a single file with enhanced options.
+        
+        Args:
+            guid (str): File GUID to download
+            download_path (str): Directory to save file
+            filename_format (str): Format for filename - 'original', 'guid', or 'combined'
+            protocol (str, optional): Protocol preference for download
+            skip_completed (bool): Skip if file already exists
+            rename (bool): Rename file if conflict exists
+            
+        Returns:
+            Dict: Download result with status and details
+        """
+        output_dir = Gen3File._ensure_dirpath_exists(Path(download_path))
+        
+        try:
+            presigned_url_data = self.get_presigned_url(guid, protocol)
+        except Exception as e:
+            return {"status": "failed", "error": f"Failed to get presigned URL: {e}"}
+            
+        result = self._download_file_worker(guid, presigned_url_data, output_dir, filename_format, rename, skip_completed)
+        return result
+
+    def download_multiple(self, manifest_data, download_path=".", filename_format="original", protocol=None, 
+                         num_parallel=DEFAULT_NUM_PARALLEL, skip_completed=False, rename=False, 
+                         no_prompt=False, no_progress=False):
+        """Download multiple files from manifest data.
+        
+        Args:
+            manifest_data (List[Dict]): List of file objects with 'guid' key
+            download_path (str): Directory to save files
+            filename_format (str): Format for filenames - 'original', 'guid', or 'combined'
+            protocol (str, optional): Protocol preference for downloads
+            num_parallel (int): Number of parallel download threads
+            skip_completed (bool): Skip files that already exist
+            rename (bool): Rename files on conflict
+            no_prompt (bool): Skip confirmation prompts
+            no_progress (bool): Disable progress display
+            
+        Returns:
+            Dict: Results summary with succeeded/failed lists
+        """
+        if not manifest_data:
+            return {"succeeded": [], "failed": [], "skipped": []}
+            
+        guids = [item.get("guid") or item.get("object_id") for item in manifest_data if item.get("guid") or item.get("object_id")]
+        if not guids:
+            logging.error("No valid GUIDs found in manifest data")
+            return {"succeeded": [], "failed": [], "skipped": []}
+            
+        if not no_prompt:
+            click.confirm(f"Download {len(guids)} files?", abort=True)
+            
+        output_dir = Gen3File._ensure_dirpath_exists(Path(download_path))
+        
+        logging.info(f"Getting presigned URLs for {len(guids)} files...")
+        presigned_urls = self.get_presigned_urls_batch(guids, protocol)
+        
+        results = {"succeeded": [], "failed": [], "skipped": []}
+        
+        with ThreadPoolExecutor(max_workers=num_parallel) as executor:
+            futures = {
+                executor.submit(
+                    self._download_file_worker, 
+                    guid, 
+                    presigned_urls.get(guid), 
+                    output_dir, 
+                    filename_format, 
+                    rename, 
+                    skip_completed
+                ): guid for guid in guids
+            }
+            
+            if not no_progress:
+                futures_iter = tqdm(as_completed(futures), total=len(futures), desc="Downloading")
             else:
-                return False
-
-        response.raise_for_status()
-
-        total_size_in_bytes = int(response.headers.get("content-length"))
-        total_downloaded = 0
-
-        index = Gen3Index(self._auth_provider)
-        record = index.get_record(object_id)
-
-        filename = record["file_name"]
-
-        out_path = Gen3File._ensure_dirpath_exists(Path(path))
-
-        with open(os.path.join(out_path, filename), "wb") as f:
-            for data in response.iter_content(4096):
-                total_downloaded += len(data)
-                f.write(data)
-
-        if total_size_in_bytes == total_downloaded:
-            logging.info(f"File {filename} downloaded successfully")
-
-        else:
-            logging.error(f"File {filename} not downloaded successfully")
-            return False
-
-        return True
+                futures_iter = as_completed(futures)
+                
+            for future in futures_iter:
+                result = future.result()
+                if result["status"] == "downloaded":
+                    results["succeeded"].append(result["guid"])
+                elif result["status"] == "skipped":
+                    results["skipped"].append(result["guid"])
+                else:
+                    results["failed"].append(result["guid"])
+                    logging.error(f"Download failed for {result['guid']}: {result.get('error', 'Unknown error')}")
+                    
+        logging.info(f"Download complete: {len(results['succeeded'])} succeeded, {len(results['failed'])} failed, {len(results['skipped'])} skipped")
+        return results
 
     def upload_file_to_guid(
         self, guid, file_name, protocol=None, expires_in=None, bucket=None
