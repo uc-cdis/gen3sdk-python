@@ -75,5 +75,5 @@ download_status = download_files_from_metadata(
     retrievers=retrievers,
     download_path=download_path
 )
-print(f"Download status = {download_status})
+print(f"Download status = {download_status}")
 ```
