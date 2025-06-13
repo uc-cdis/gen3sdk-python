@@ -234,12 +234,12 @@ class Gen3File:
                 return new_path
             counter += 1
 
-    def _download_file_worker(self, guid, presigned_url_data, output_dir, filename_format, rename, skip_completed):
+    def _download_file_worker(self, guid, protocol, output_dir, filename_format, rename, skip_completed):
         """Worker function for downloading a single file.
-        
+
         Args:
             guid (str): File GUID
-            presigned_url_data (dict): Presigned URL response data
+            protocol (str): Protocol preference for download
             output_dir (Path): Output directory
             filename_format (str): Filename format option
             rename (bool): Whether to rename on conflict
@@ -249,6 +249,7 @@ class Gen3File:
             Dict: Download result with status and details
         """
         try:
+            presigned_url_data = self.get_presigned_url(guid, protocol)
             if not presigned_url_data:
                 return {"guid": guid, "status": "failed", "error": "Failed to get presigned URL"}
                 
@@ -269,9 +270,9 @@ class Gen3File:
                     response = requests.get(presigned_url_data["url"], stream=True)
                     if response.status_code < 500:
                         break
-                        
+
             response.raise_for_status()
-            
+
             # Ensure parent directories exist
             filepath.parent.mkdir(parents=True, exist_ok=True)
             
@@ -308,12 +309,10 @@ class Gen3File:
         output_dir = Gen3File._ensure_dirpath_exists(Path(download_path))
         
         try:
-            presigned_url_data = self.get_presigned_url(guid, protocol)
+            result = self._download_file_worker(guid, protocol, output_dir, filename_format, rename, skip_completed)
+            return result
         except Exception as e:
-            return {"status": "failed", "error": f"Failed to get presigned URL: {e}"}
-            
-        result = self._download_file_worker(guid, presigned_url_data, output_dir, filename_format, rename, skip_completed)
-        return result
+            return {"status": "failed", "error": f"Download failed: {e}"}
 
     def download_multiple(self, manifest_data, download_path=".", filename_format="original", protocol=None, 
                          num_parallel=DEFAULT_NUM_PARALLEL, skip_completed=False, rename=False, 
@@ -347,9 +346,6 @@ class Gen3File:
             
         output_dir = Gen3File._ensure_dirpath_exists(Path(download_path))
         
-        logging.info(f"Getting presigned URLs for {len(guids)} files...")
-        presigned_urls = self.get_presigned_urls_batch(guids, protocol)
-        
         results = {"succeeded": [], "failed": [], "skipped": []}
         
         with ThreadPoolExecutor(max_workers=num_parallel) as executor:
@@ -357,7 +353,7 @@ class Gen3File:
                 executor.submit(
                     self._download_file_worker, 
                     guid, 
-                    presigned_urls.get(guid), 
+                    protocol, 
                     output_dir, 
                     filename_format, 
                     rename, 
