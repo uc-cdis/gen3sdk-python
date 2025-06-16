@@ -431,6 +431,8 @@ class Gen3Submission:
             if not "data" in data:
                 print(query_txt)
                 print(data)
+            else:
+                break
 
             tries += 1
 
