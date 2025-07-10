@@ -112,8 +112,7 @@ def get_wts_idps(namespace=os.getenv("NAMESPACE", "default"), external_wts_host=
 def get_token_cache_file_name(key):
     """Compute the path to the access-token cache file"""
     cache_folder = "{}/.cache/gen3/".format(os.path.expanduser("~"))
-    if not os.path.isdir(cache_folder):
-        os.makedirs(cache_folder)
+    os.makedirs(cache_folder, exist_ok=True)
 
     cache_prefix = cache_folder + "token_cache_"
     s = hashlib.sha256()
