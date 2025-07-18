@@ -1,30 +1,31 @@
 import json
 import requests
-import json
 import asyncio
 import aiohttp
 import aiofiles
 import time
+import multiprocessing as mp
+import threading
 from tqdm import tqdm
+from tqdm.asyncio import tqdm as async_tqdm
 from types import SimpleNamespace as Namespace
 import os
-import requests
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Any, Optional
-import click
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse, quote
+from queue import Empty
 
 from cdislogging import get_logger
 
 from gen3.index import Gen3Index
 from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status_and_print_error
-from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 logging = get_logger("__name__")
 
 
 MAX_RETRIES = 3
 DEFAULT_NUM_PARALLEL = 3
+DEFAULT_MAX_CONCURRENT_REQUESTS = 50  # Increased for better performance
 
 
 class Gen3File:
@@ -78,11 +79,11 @@ class Gen3File:
 
     def get_presigned_urls_batch(self, guids, protocol=None):
         """Get presigned URLs for multiple files efficiently.
-        
+
         Args:
             guids (List[str]): List of GUIDs to get presigned URLs for
             protocol (str, optional): Protocol preference for URLs
-            
+
         Returns:
             Dict[str, Dict]: Mapping of GUID to presigned URL response
         """
@@ -188,12 +189,12 @@ class Gen3File:
 
     def _format_filename(self, guid, original_filename, filename_format):
         """Format filename based on the specified format option.
-        
+
         Args:
             guid (str): The GUID of the file
             original_filename (str): Original filename from metadata
             filename_format (str): Format option - 'original', 'guid', or 'combined'
-            
+
         Returns:
             str: Formatted filename
         """
@@ -209,32 +210,34 @@ class Gen3File:
 
     def _handle_file_conflict(self, filepath, rename):
         """Handle file name conflicts.
-        
+
         Args:
             filepath (Path): Proposed file path
             rename (bool): Whether to rename if conflict exists
-            
+
         Returns:
             Path: Final filepath to use
         """
         if not filepath.exists():
             return filepath
-            
+
         if not rename:
             return filepath
-            
+
         counter = 1
         name = filepath.stem
         ext = filepath.suffix
         parent = filepath.parent
-        
+
         while True:
             new_path = parent / f"{name}_{counter}{ext}"
             if not new_path.exists():
                 return new_path
             counter += 1
 
-    def _download_file_worker(self, guid, protocol, output_dir, filename_format, rename, skip_completed):
+    def _download_file_worker(
+        self, guid, protocol, output_dir, filename_format, rename, skip_completed
+    ):
         """Worker function for downloading a single file.
 
         Args:
@@ -244,25 +247,29 @@ class Gen3File:
             filename_format (str): Filename format option
             rename (bool): Whether to rename on conflict
             skip_completed (bool): Whether to skip existing files
-            
+
         Returns:
             Dict: Download result with status and details
         """
         try:
             presigned_url_data = self.get_presigned_url(guid, protocol)
             if not presigned_url_data:
-                return {"guid": guid, "status": "failed", "error": "Failed to get presigned URL"}
-                
+                return {
+                    "guid": guid,
+                    "status": "failed",
+                    "error": "Failed to get presigned URL",
+                }
+
             index = Gen3Index(self._auth_provider)
             record = index.get_record(guid)
             original_filename = record.get("file_name")
-            
+
             filename = self._format_filename(guid, original_filename, filename_format)
             filepath = self._handle_file_conflict(output_dir / filename, rename)
-            
+
             if skip_completed and filepath.exists():
                 return {"guid": guid, "status": "skipped", "filepath": str(filepath)}
-                
+
             response = requests.get(presigned_url_data["url"], stream=True)
             if response.status_code >= 500:
                 for _ in range(MAX_RETRIES):
@@ -273,28 +280,40 @@ class Gen3File:
 
             response.raise_for_status()
 
-            # Ensure parent directories exist
             filepath.parent.mkdir(parents=True, exist_ok=True)
-            
+
             total_size = int(response.headers.get("content-length", 0))
             downloaded = 0
-            
+
             with open(filepath, "wb") as f:
                 for chunk in response.iter_content(4096):
                     downloaded += len(chunk)
                     f.write(chunk)
-                    
+
             if total_size and total_size != downloaded:
                 return {"guid": guid, "status": "failed", "error": "Size mismatch"}
-                
-            return {"guid": guid, "status": "downloaded", "filepath": str(filepath), "size": downloaded}
-            
+
+            return {
+                "guid": guid,
+                "status": "downloaded",
+                "filepath": str(filepath),
+                "size": downloaded,
+            }
+
         except Exception as e:
             return {"guid": guid, "status": "failed", "error": str(e)}
 
-    def download_single(self, guid, download_path=".", filename_format="original", protocol=None, skip_completed=False, rename=False):
+    def download_single(
+        self,
+        guid,
+        download_path=".",
+        filename_format="original",
+        protocol=None,
+        skip_completed=False,
+        rename=False,
+    ):
         """Download a single file with enhanced options.
-        
+
         Args:
             guid (str): File GUID to download
             download_path (str): Directory to save file
@@ -302,82 +321,19 @@ class Gen3File:
             protocol (str, optional): Protocol preference for download
             skip_completed (bool): Skip if file already exists
             rename (bool): Rename file if conflict exists
-            
+
         Returns:
             Dict: Download result with status and details
         """
         output_dir = Gen3File._ensure_dirpath_exists(Path(download_path))
-        
+
         try:
-            result = self._download_file_worker(guid, protocol, output_dir, filename_format, rename, skip_completed)
+            result = self._download_file_worker(
+                guid, protocol, output_dir, filename_format, rename, skip_completed
+            )
             return result
         except Exception as e:
             return {"status": "failed", "error": f"Download failed: {e}"}
-
-    def download_multiple(self, manifest_data, download_path=".", filename_format="original", protocol=None, 
-                         num_parallel=DEFAULT_NUM_PARALLEL, skip_completed=False, rename=False, 
-                         no_prompt=False, no_progress=False):
-        """Download multiple files from manifest data.
-        
-        Args:
-            manifest_data (List[Dict]): List of file objects with 'guid' key
-            download_path (str): Directory to save files
-            filename_format (str): Format for filenames - 'original', 'guid', or 'combined'
-            protocol (str, optional): Protocol preference for downloads
-            num_parallel (int): Number of parallel download threads
-            skip_completed (bool): Skip files that already exist
-            rename (bool): Rename files on conflict
-            no_prompt (bool): Skip confirmation prompts
-            no_progress (bool): Disable progress display
-            
-        Returns:
-            Dict: Results summary with succeeded/failed lists
-        """
-        if not manifest_data:
-            return {"succeeded": [], "failed": [], "skipped": []}
-            
-        guids = [item.get("guid") or item.get("object_id") for item in manifest_data if item.get("guid") or item.get("object_id")]
-        if not guids:
-            logging.error("No valid GUIDs found in manifest data")
-            return {"succeeded": [], "failed": [], "skipped": []}
-            
-        if not no_prompt:
-            click.confirm(f"Download {len(guids)} files?", abort=True)
-            
-        output_dir = Gen3File._ensure_dirpath_exists(Path(download_path))
-        
-        results = {"succeeded": [], "failed": [], "skipped": []}
-        
-        with ThreadPoolExecutor(max_workers=num_parallel) as executor:
-            futures = {
-                executor.submit(
-                    self._download_file_worker, 
-                    guid, 
-                    protocol, 
-                    output_dir, 
-                    filename_format, 
-                    rename, 
-                    skip_completed
-                ): guid for guid in guids
-            }
-            
-            if not no_progress:
-                futures_iter = tqdm(as_completed(futures), total=len(futures), desc="Downloading")
-            else:
-                futures_iter = as_completed(futures)
-                
-            for future in futures_iter:
-                result = future.result()
-                if result["status"] == "downloaded":
-                    results["succeeded"].append(result["guid"])
-                elif result["status"] == "skipped":
-                    results["skipped"].append(result["guid"])
-                else:
-                    results["failed"].append(result["guid"])
-                    logging.error(f"Download failed for {result['guid']}: {result.get('error', 'Unknown error')}")
-                    
-        logging.info(f"Download complete: {len(results['succeeded'])} succeeded, {len(results['failed'])} failed, {len(results['skipped'])} skipped")
-        return results
 
     def upload_file_to_guid(
         self, guid, file_name, protocol=None, expires_in=None, bucket=None
@@ -418,3 +374,402 @@ class Gen3File:
         resp = requests.get(url, auth=self._auth_provider)
         raise_for_status_and_print_error(resp)
         return resp.json()
+
+    async def async_download_multiple(
+        self,
+        manifest_data,
+        download_path=".",
+        filename_format="original",
+        protocol=None,
+        max_concurrent_requests=DEFAULT_MAX_CONCURRENT_REQUESTS,
+        num_processes=4,
+        queue_size=1000,
+        batch_size=100,  
+        skip_completed=False,
+        rename=False,
+        no_progress=False,
+    ):
+        """Asynchronously download multiple files using multiprocessing and queues."""
+        if not manifest_data:
+            return {"succeeded": [], "failed": [], "skipped": []}
+
+        guids = []
+        for item in manifest_data:
+            guid = item.get("guid") or item.get("object_id")
+            if guid:
+                if "/" in guid:
+                    guid = guid.split("/")[-1]
+                guids.append(guid)
+
+        if not guids:
+            logging.error("No valid GUIDs found in manifest data")
+            return {"succeeded": [], "failed": [], "skipped": []}
+
+        output_dir = Gen3File._ensure_dirpath_exists(Path(download_path))
+
+        input_queue = mp.Queue(maxsize=queue_size)
+        output_queue = mp.Queue()
+
+        worker_config = {
+            "endpoint": self._endpoint,
+            "auth_token": self._auth_provider.get_access_token(),
+            "download_path": str(output_dir),
+            "filename_format": filename_format,
+            "protocol": protocol,
+            "max_concurrent": max_concurrent_requests,
+            "skip_completed": skip_completed,
+            "rename": rename,
+        }
+
+        processes = []
+        producer_thread = None
+
+        try:
+            for i in range(num_processes):
+                p = mp.Process(
+                    target=self._worker_process,
+                    args=(input_queue, output_queue, worker_config, i),
+                )
+                p.start()
+                processes.append(p)
+
+            producer_thread = threading.Thread(
+                target=self._guid_producer,
+                args=(guids, input_queue, batch_size, num_processes),
+            )
+            producer_thread.start()
+
+            results = {"succeeded": [], "failed": [], "skipped": []}
+            completed_count = 0
+
+            if not no_progress:
+                pbar = tqdm(total=len(guids), desc="Downloading")
+
+            while completed_count < len(guids):
+                try:
+                    batch_results = output_queue.get()
+
+                    if not batch_results:
+                        continue
+
+                    for result in batch_results:
+                        if result["status"] == "downloaded":
+                            results["succeeded"].append(result["guid"])
+                        elif result["status"] == "skipped":
+                            results["skipped"].append(result["guid"])
+                        else:
+                            results["failed"].append(result["guid"])
+
+                        completed_count += 1
+                        if not no_progress:
+                            pbar.update(1)
+
+                except Exception as e:
+                    logging.warning(f"Error waiting for results: {e}")
+
+                    alive_processes = [p for p in processes if p.is_alive()]
+                    if not alive_processes:
+                        logging.error("All worker processes have died")
+                        break
+
+            if not no_progress:
+                pbar.close()
+
+            if producer_thread:
+                
+                producer_thread.join()
+
+        except Exception as e:
+            logging.error(f"Error in download: {e}")
+            results = {"succeeded": [], "failed": [], "skipped": [], "error": str(e)}
+
+        finally:
+            for p in processes:
+                if p.is_alive():
+                    p.terminate()
+                    
+                    p.join()
+                    if p.is_alive():
+                        p.kill()
+
+        logging.info(
+            f"Download complete: {len(results['succeeded'])} succeeded, "
+            f"{len(results['failed'])} failed, {len(results['skipped'])} skipped"
+        )
+        return results
+
+    def _guid_producer(self, guids, input_queue, batch_size, num_processes):
+        try:
+            for i in range(0, len(guids), batch_size):
+                batch = guids[i : i + batch_size]
+                
+                input_queue.put(batch)
+
+            for _ in range(num_processes):
+                
+                input_queue.put(None)
+
+        except Exception as e:
+            logging.error(f"Error in producer: {e}")
+
+    @staticmethod
+    def _worker_process(input_queue, output_queue, config, process_id):
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(
+                Gen3File._worker_main(input_queue, output_queue, config, process_id)
+            )
+        except Exception as e:
+            logging.error(f"Error in worker process {process_id}: {e}")
+        finally:
+            try:
+                loop.close()
+            except:
+                pass
+
+    @staticmethod
+    async def _worker_main(input_queue, output_queue, config, process_id):
+        endpoint = config["endpoint"]
+        auth_token = config["auth_token"]
+        download_path = Path(config["download_path"])
+        filename_format = config["filename_format"]
+        protocol = config["protocol"]
+        max_concurrent = config["max_concurrent"]
+        skip_completed = config["skip_completed"]
+        rename = config["rename"]
+
+        # Configure connector with optimized settings for large files
+        timeout = aiohttp.ClientTimeout(total=None, connect=300, sock_read=300)
+        connector = aiohttp.TCPConnector(
+            limit=max_concurrent * 2,
+            limit_per_host=max_concurrent,
+            ttl_dns_cache=300,
+            use_dns_cache=True,
+            keepalive_timeout=120,
+            enable_cleanup_closed=True,
+        )
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async with aiohttp.ClientSession(
+            connector=connector, timeout=timeout
+        ) as session:
+            while True:
+                try:
+                    try:
+                        guid_batch = input_queue.get()
+                    except Exception:
+                        await asyncio.sleep(0.1)
+                        continue
+
+                    if guid_batch is None:
+                        break
+
+                    batch_results = await Gen3File._process_batch(
+                        session,
+                        guid_batch,
+                        endpoint,
+                        auth_token,
+                        download_path,
+                        filename_format,
+                        protocol,
+                        semaphore,
+                        skip_completed,
+                        rename,
+                    )
+
+                    try:
+                        # Remove timeout limit for queue operations
+                        output_queue.put(batch_results)
+                    except Exception as e:
+                        logging.error(
+                            f"Worker {process_id}: Failed to send results: {e}"
+                        )
+
+                except Exception as e:
+                    logging.error(f"Worker {process_id}: Error processing batch: {e}")
+                    try:
+                        error_result = [
+                            {"guid": "unknown", "status": "failed", "error": str(e)}
+                        ]
+                        
+                        output_queue.put(error_result)
+                    except:
+                        pass
+                    continue
+
+    @staticmethod
+    async def _process_batch(
+        session,
+        guid_batch,
+        endpoint,
+        auth_token,
+        download_path,
+        filename_format,
+        protocol,
+        semaphore,
+        skip_completed,
+        rename,
+    ):
+        async def download_guid(guid):
+            async with semaphore:
+                try:
+                    metadata = await Gen3File._get_metadata(
+                        session, guid, endpoint, auth_token
+                    )
+                    if not metadata:
+                        return {
+                            "guid": guid,
+                            "status": "failed",
+                            "error": "No metadata",
+                        }
+
+                    original_filename = metadata.get("file_name")
+                    filename = Gen3File._format_filename_static(
+                        guid, original_filename, filename_format
+                    )
+                    filepath = Gen3File._handle_conflict_static(
+                        download_path / filename, rename
+                    )
+
+                    if skip_completed and filepath.exists():
+                        return {
+                            "guid": guid,
+                            "status": "skipped",
+                            "filepath": str(filepath),
+                        }
+
+                    presigned_data = await Gen3File._get_presigned_url(
+                        session, guid, endpoint, auth_token, protocol
+                    )
+                    if not presigned_data or not presigned_data.get("url"):
+                        return {
+                            "guid": guid,
+                            "status": "failed",
+                            "error": "No presigned URL",
+                        }
+
+                     
+                    filepath.parent.mkdir(parents=True, exist_ok=True)
+
+                    success = await Gen3File._download_content(
+                        session, presigned_data["url"], guid, filepath
+                    )
+                    if not success:
+                        return {
+                            "guid": guid,
+                            "status": "failed",
+                            "error": "Download failed",
+                        }
+
+                    return {
+                        "guid": guid,
+                        "status": "downloaded",
+                        "filepath": str(filepath),
+                        "size": filepath.stat().st_size,
+                    }
+
+                except Exception as e:
+                    return {"guid": guid, "status": "failed", "error": str(e)}
+
+        tasks = [download_guid(guid) for guid in guid_batch]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        processed_results = []
+        for result in results:
+            if isinstance(result, Exception):
+                processed_results.append(
+                    {"guid": "unknown", "status": "failed", "error": str(result)}
+                )
+            else:
+                processed_results.append(result)
+
+        return processed_results
+
+    @staticmethod
+    async def _get_metadata(session, guid, endpoint, auth_token):
+        encoded_guid = quote(guid, safe="")
+        api_url = f"{endpoint}/index/{encoded_guid}"
+        headers = {"Authorization": f"Bearer {auth_token}"}
+
+        try:
+            
+            async with session.get(
+                api_url, headers=headers, timeout=aiohttp.ClientTimeout(total=60)
+            ) as resp:
+                if resp.status == 200:
+                    return await resp.json()
+                return None
+        except:
+            return None
+
+    @staticmethod
+    async def _get_presigned_url(session, guid, endpoint, auth_token, protocol=None):
+        encoded_guid = quote(guid, safe="")
+        api_url = f"{endpoint}/user/data/download/{encoded_guid}"
+        headers = {"Authorization": f"Bearer {auth_token}"}
+
+        if protocol:
+            api_url += f"?protocol={protocol}"
+
+        try:
+            
+            async with session.get(
+                api_url, headers=headers, timeout=aiohttp.ClientTimeout(total=60)
+            ) as resp:
+                if resp.status == 200:
+                    return await resp.json()
+                return None
+        except:
+            return None
+
+    @staticmethod
+    async def _download_content(session, url, guid, filepath):
+        """Download content directly to file with optimized streaming."""
+        try:
+             
+            async with session.get(
+                url, timeout=aiohttp.ClientTimeout(total=None)
+            ) as resp:
+                if resp.status == 200:
+                    
+                    async with aiofiles.open(filepath, "wb") as f:
+                        chunk_size = 1024 * 1024  
+                        async for chunk in resp.content.iter_chunked(chunk_size):
+                            await f.write(chunk)
+                    return True
+                return False
+        except Exception as e:
+            logging.warning(f"Download failed for {guid}: {e}")
+            return False
+
+    @staticmethod
+    def _format_filename_static(guid, original_filename, filename_format):
+        if filename_format == "guid":
+            return guid
+        elif filename_format == "combined" and original_filename:
+            return f"{guid}_{original_filename}"
+        elif original_filename:
+            return original_filename
+        else:
+            return guid
+
+    @staticmethod
+    def _handle_conflict_static(filepath, rename):
+        if not filepath.exists():
+            return filepath
+
+        if not rename:
+            return filepath
+
+        base = filepath.stem
+        suffix = filepath.suffix
+        parent = filepath.parent
+        counter = 1
+
+        while True:
+            new_name = f"{base}_{counter}{suffix}"
+            new_path = parent / new_name
+            if not new_path.exists():
+                return new_path
+            counter += 1
