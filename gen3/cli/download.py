@@ -175,6 +175,13 @@ def download_multiple_async(
                     f"  - {failure.get('guid', 'unknown')}: {failure.get('error', 'Unknown error')}"
                 )
 
+            click.echo(
+                f"\nTo retry failed downloads, run the same command with --skip-completed flag:"
+            )
+            click.echo(
+                f"  gen3 download-multiple-async --manifest {manifest} --download-path {download_path} --skip-completed"
+            )
+
         success_rate = len(result["succeeded"]) / len(manifest_data) * 100
         click.echo(f"\nSuccess rate: {success_rate:.1f}%")
 

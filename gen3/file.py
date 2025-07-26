@@ -25,7 +25,9 @@ logging = get_logger("__name__")
 
 MAX_RETRIES = 3
 DEFAULT_NUM_PARALLEL = 3
-DEFAULT_MAX_CONCURRENT_REQUESTS = 50  # Increased for better performance
+DEFAULT_MAX_CONCURRENT_REQUESTS = 50
+DEFAULT_QUEUE_SIZE = 1000
+DEFAULT_BATCH_SIZE = 100
 
 
 class Gen3File:
@@ -74,7 +76,11 @@ class Gen3File:
 
         try:
             return resp.json()
-        except:
+        except json.JSONDecodeError:
+            logging.warning(f"Failed to parse JSON response for {guid}, returning text")
+            return resp.text
+        except Exception as e:
+            logging.error(f"Unexpected error parsing response for {guid}: {e}")
             return resp.text
 
     def get_presigned_urls_batch(self, guids, protocol=None):
@@ -166,7 +172,13 @@ class Gen3File:
         raise_for_status_and_print_error(resp)
         try:
             data = json.loads(resp.text)
-        except:
+        except json.JSONDecodeError:
+            logging.warning(
+                f"Failed to parse JSON response for {file_name}, returning text"
+            )
+            return resp.text
+        except Exception as e:
+            logging.error(f"Unexpected error parsing response for {file_name}: {e}")
             return resp.text
 
         return data
@@ -382,9 +394,9 @@ class Gen3File:
         filename_format="original",
         protocol=None,
         max_concurrent_requests=DEFAULT_MAX_CONCURRENT_REQUESTS,
-        num_processes=4,
-        queue_size=1000,
-        batch_size=100,  
+        num_processes=DEFAULT_NUM_PARALLEL,
+        queue_size=DEFAULT_QUEUE_SIZE,
+        batch_size=DEFAULT_BATCH_SIZE,
         skip_completed=False,
         rename=False,
         no_progress=False,
@@ -476,7 +488,6 @@ class Gen3File:
                 pbar.close()
 
             if producer_thread:
-                
                 producer_thread.join()
 
         except Exception as e:
@@ -487,7 +498,7 @@ class Gen3File:
             for p in processes:
                 if p.is_alive():
                     p.terminate()
-                    
+
                     p.join()
                     if p.is_alive():
                         p.kill()
@@ -500,14 +511,9 @@ class Gen3File:
 
     def _guid_producer(self, guids, input_queue, batch_size, num_processes):
         try:
-            for i in range(0, len(guids), batch_size):
-                batch = guids[i : i + batch_size]
-                
-                input_queue.put(batch)
-
-            for _ in range(num_processes):
-                
-                input_queue.put(None)
+            # Put all GUIDs into the queue at once (no batching)
+            for guid in guids:
+                input_queue.put(guid)
 
         except Exception as e:
             logging.error(f"Error in producer: {e}")
@@ -525,8 +531,8 @@ class Gen3File:
         finally:
             try:
                 loop.close()
-            except:
-                pass
+            except Exception as e:
+                logging.warning(f"Error closing event loop in worker {process_id}: {e}")
 
     @staticmethod
     async def _worker_main(input_queue, output_queue, config, process_id):
@@ -556,18 +562,17 @@ class Gen3File:
         ) as session:
             while True:
                 try:
-                    try:
-                        guid_batch = input_queue.get()
-                    except Exception:
-                        await asyncio.sleep(0.1)
-                        continue
+                    # Check if queue is empty with timeout
+                    guid = input_queue.get(timeout=1.0)
+                except Exception as e:
+                    # If queue is empty (timeout), break the loop
+                    break
 
-                    if guid_batch is None:
-                        break
-
+                try:
+                    # Process single GUID as a batch of one
                     batch_results = await Gen3File._process_batch(
                         session,
-                        guid_batch,
+                        [guid],
                         endpoint,
                         auth_token,
                         download_path,
@@ -577,31 +582,21 @@ class Gen3File:
                         skip_completed,
                         rename,
                     )
-
-                    try:
-                        # Remove timeout limit for queue operations
-                        output_queue.put(batch_results)
-                    except Exception as e:
-                        logging.error(
-                            f"Worker {process_id}: Failed to send results: {e}"
-                        )
-
+                    output_queue.put(batch_results)
                 except Exception as e:
-                    logging.error(f"Worker {process_id}: Error processing batch: {e}")
+                    logging.error(f"Worker {process_id}: Error processing {guid}: {e}")
+                    error_result = [{"guid": guid, "status": "failed", "error": str(e)}]
                     try:
-                        error_result = [
-                            {"guid": "unknown", "status": "failed", "error": str(e)}
-                        ]
-                        
                         output_queue.put(error_result)
-                    except:
-                        pass
-                    continue
+                    except Exception as queue_error:
+                        logging.error(
+                            f"Worker {process_id}: Failed to send error result: {queue_error}"
+                        )
 
     @staticmethod
     async def _process_batch(
         session,
-        guid_batch,
+        guids,
         endpoint,
         auth_token,
         download_path,
@@ -611,80 +606,113 @@ class Gen3File:
         skip_completed,
         rename,
     ):
-        async def download_guid(guid):
-            async with semaphore:
-                try:
-                    metadata = await Gen3File._get_metadata(
-                        session, guid, endpoint, auth_token
+        """Process a batch of GUIDs for downloading."""
+        batch_results = []
+        for guid in guids:
+            try:
+                async with semaphore:
+                    result = await Gen3File._download_single_guid(
+                        session,
+                        guid,
+                        endpoint,
+                        auth_token,
+                        download_path,
+                        filename_format,
+                        protocol,
+                        semaphore,
+                        skip_completed,
+                        rename,
                     )
-                    if not metadata:
-                        return {
-                            "guid": guid,
-                            "status": "failed",
-                            "error": "No metadata",
-                        }
+                    batch_results.append(result)
+            except Exception as e:
+                logging.error(f"Error processing {guid} in batch: {e}")
+                batch_results.append(
+                    {"guid": guid, "status": "failed", "error": str(e)}
+                )
+        return batch_results
 
-                    original_filename = metadata.get("file_name")
-                    filename = Gen3File._format_filename_static(
-                        guid, original_filename, filename_format
-                    )
-                    filepath = Gen3File._handle_conflict_static(
-                        download_path / filename, rename
-                    )
+    @staticmethod
+    async def _download_single_guid(
+        session,
+        guid,
+        endpoint,
+        auth_token,
+        download_path,
+        filename_format,
+        protocol,
+        semaphore,
+        skip_completed,
+        rename,
+    ):
+        async with semaphore:
+            try:
+                metadata = await Gen3File._get_metadata(
+                    session, guid, endpoint, auth_token
+                )
+                if not metadata:
+                    return {
+                        "guid": guid,
+                        "status": "failed",
+                        "error": "No metadata",
+                    }
 
-                    if skip_completed and filepath.exists():
-                        return {
-                            "guid": guid,
-                            "status": "skipped",
-                            "filepath": str(filepath),
-                        }
+                original_filename = metadata.get("file_name")
+                filename = Gen3File._format_filename_static(
+                    guid, original_filename, filename_format
+                )
+                filepath = download_path / filename
+                filepath = Gen3File._handle_conflict_static(filepath, rename)
 
-                    presigned_data = await Gen3File._get_presigned_url(
-                        session, guid, endpoint, auth_token, protocol
-                    )
-                    if not presigned_data or not presigned_data.get("url"):
-                        return {
-                            "guid": guid,
-                            "status": "failed",
-                            "error": "No presigned URL",
-                        }
+                if skip_completed and filepath.exists():
+                    return {
+                        "guid": guid,
+                        "status": "skipped",
+                        "filepath": str(filepath),
+                        "reason": "File already exists",
+                    }
 
-                     
-                    filepath.parent.mkdir(parents=True, exist_ok=True)
+                presigned_data = await Gen3File._get_presigned_url(
+                    session, guid, endpoint, auth_token, protocol
+                )
+                if not presigned_data:
+                    return {
+                        "guid": guid,
+                        "status": "failed",
+                        "error": "Failed to get presigned URL",
+                    }
 
-                    success = await Gen3File._download_content(
-                        session, presigned_data["url"], guid, filepath
-                    )
-                    if not success:
-                        return {
-                            "guid": guid,
-                            "status": "failed",
-                            "error": "Download failed",
-                        }
+                url = presigned_data.get("url")
+                if not url:
+                    return {
+                        "guid": guid,
+                        "status": "failed",
+                        "error": "No URL in presigned data",
+                    }
 
+                filepath.parent.mkdir(parents=True, exist_ok=True)
+
+                success = await Gen3File._download_content(session, url, guid, filepath)
+                if success:
                     return {
                         "guid": guid,
                         "status": "downloaded",
                         "filepath": str(filepath),
-                        "size": filepath.stat().st_size,
+                        "size": filepath.stat().st_size if filepath.exists() else 0,
+                    }
+                else:
+                    return {
+                        "guid": guid,
+                        "status": "failed",
+                        "error": "Download failed",
                     }
 
-                except Exception as e:
-                    return {"guid": guid, "status": "failed", "error": str(e)}
-
-        tasks = [download_guid(guid) for guid in guid_batch]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        processed_results = []
-        for result in results:
-            if isinstance(result, Exception):
-                processed_results.append(
-                    {"guid": "unknown", "status": "failed", "error": str(result)}
-                )
-            else:
-                processed_results.append(result)
-
-        return processed_results
+            except Exception as e:
+                logging.error(f"Error downloading {guid}: {e}")
+                return {
+                    "guid": guid,
+                    "status": "failed",
+                    "error": str(e),
+                }
 
     @staticmethod
     async def _get_metadata(session, guid, endpoint, auth_token):
@@ -693,14 +721,23 @@ class Gen3File:
         headers = {"Authorization": f"Bearer {auth_token}"}
 
         try:
-            
             async with session.get(
                 api_url, headers=headers, timeout=aiohttp.ClientTimeout(total=60)
             ) as resp:
                 if resp.status == 200:
                     return await resp.json()
+                logging.warning(
+                    f"Failed to get metadata for {guid}: HTTP {resp.status}"
+                )
                 return None
-        except:
+        except aiohttp.ClientError as e:
+            logging.error(f"Network error getting metadata for {guid}: {e}")
+            return None
+        except asyncio.TimeoutError:
+            logging.error(f"Timeout getting metadata for {guid}")
+            return None
+        except Exception as e:
+            logging.error(f"Unexpected error getting metadata for {guid}: {e}")
             return None
 
     @staticmethod
@@ -713,28 +750,35 @@ class Gen3File:
             api_url += f"?protocol={protocol}"
 
         try:
-            
             async with session.get(
                 api_url, headers=headers, timeout=aiohttp.ClientTimeout(total=60)
             ) as resp:
                 if resp.status == 200:
                     return await resp.json()
+                logging.warning(
+                    f"Failed to get presigned URL for {guid}: HTTP {resp.status}"
+                )
                 return None
-        except:
+        except aiohttp.ClientError as e:
+            logging.error(f"Network error getting presigned URL for {guid}: {e}")
+            return None
+        except asyncio.TimeoutError:
+            logging.error(f"Timeout getting presigned URL for {guid}")
+            return None
+        except Exception as e:
+            logging.error(f"Unexpected error getting presigned URL for {guid}: {e}")
             return None
 
     @staticmethod
     async def _download_content(session, url, guid, filepath):
         """Download content directly to file with optimized streaming."""
         try:
-             
             async with session.get(
                 url, timeout=aiohttp.ClientTimeout(total=None)
             ) as resp:
                 if resp.status == 200:
-                    
                     async with aiofiles.open(filepath, "wb") as f:
-                        chunk_size = 1024 * 1024  
+                        chunk_size = 1024 * 1024
                         async for chunk in resp.content.iter_chunked(chunk_size):
                             await f.write(chunk)
                     return True
@@ -747,12 +791,13 @@ class Gen3File:
     def _format_filename_static(guid, original_filename, filename_format):
         if filename_format == "guid":
             return guid
-        elif filename_format == "combined" and original_filename:
-            return f"{guid}_{original_filename}"
-        elif original_filename:
-            return original_filename
-        else:
+        elif filename_format == "combined":
+            if original_filename:
+                name, ext = os.path.splitext(original_filename)
+                return f"{name}_{guid}{ext}"
             return guid
+        else:
+            return original_filename or guid
 
     @staticmethod
     def _handle_conflict_static(filepath, rename):
@@ -762,14 +807,13 @@ class Gen3File:
         if not rename:
             return filepath
 
-        base = filepath.stem
-        suffix = filepath.suffix
-        parent = filepath.parent
         counter = 1
+        name = filepath.stem
+        ext = filepath.suffix
+        parent = filepath.parent
 
         while True:
-            new_name = f"{base}_{counter}{suffix}"
-            new_path = parent / new_name
+            new_path = parent / f"{name}_{counter}{ext}"
             if not new_path.exists():
                 return new_path
             counter += 1

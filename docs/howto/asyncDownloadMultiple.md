@@ -24,14 +24,14 @@ The implementation uses a three-tier architecture:
 ```python
 # Architecture overview
 Producer Thread → Input Queue → Worker Processes → Output Queue → Results
-     (1)           (1000)         (4×15)           (1000)       (Final)
+     (1)           (configurable)   (configurable)    (configurable)   (Final)
 ```
 
 ### Key Features
 
 - **Memory Efficiency**: Bounded queues prevent memory explosion with large file sets
 - **True Parallelism**: Multiprocessing bypasses Python GIL limitations
-- **High Concurrency**: Up to 60 concurrent downloads (4 processes × 15 requests each)
+- **High Concurrency**: Configurable concurrent downloads per process
 - **Resume Support**: Skip completed files with `--skip-completed` flag
 - **Progress Tracking**: Real-time progress bars and detailed reporting
 
@@ -115,7 +115,7 @@ print(f"Skipped: {len(result['skipped'])}")
 
 The method is optimized for high-throughput scenarios:
 
-- **Concurrent Downloads**: Up to 60 simultaneous downloads
+- **Concurrent Downloads**: Configurable number of simultaneous downloads
 - **Memory Usage**: Bounded by queue sizes (typically < 100MB)
 - **CPU Utilization**: Leverages multiple CPU cores
 - **Network Efficiency**: Just-in-time presigned URL generation
@@ -254,14 +254,3 @@ gen3 --endpoint data.commons.io --auth creds.json download-multiple-async \
     --no-progress \
     --skip-completed
 ```
-
-
-### Workflow Integration
-
-Common integration patterns:
-
-1. **Query-based downloads**: Generate manifest from Gen3 queries
-2. **Batch processing**: Process large datasets in chunks
-3. **Resume workflows**: Skip completed files for interrupted downloads
-4. **Validation pipelines**: Download and validate file integrity
-

@@ -25,7 +25,8 @@ def get_version():
     """Get version safely."""
     try:
         return version("gen3")
-    except:
+    except Exception as e:
+        logging.error(f"Failed to get version: {e}")
         return "unknown"
 
 
@@ -114,6 +115,8 @@ def main(
     ctx.obj["auth_factory"] = AuthFactory(auth_config)
 
     if silent:
+        # we still need to define the logger, the log_level here doesn't
+        # matter since we disable all logging below
         logger = cdislogging.get_logger(
             __name__, format=gen3.LOG_FORMAT, log_level="debug"
         )
