@@ -27,7 +27,6 @@ MAX_RETRIES = 3
 DEFAULT_NUM_PARALLEL = 3
 DEFAULT_MAX_CONCURRENT_REQUESTS = 50
 DEFAULT_QUEUE_SIZE = 1000
-DEFAULT_BATCH_SIZE = 100
 
 
 class Gen3File:
@@ -396,7 +395,6 @@ class Gen3File:
         max_concurrent_requests=DEFAULT_MAX_CONCURRENT_REQUESTS,
         num_processes=DEFAULT_NUM_PARALLEL,
         queue_size=DEFAULT_QUEUE_SIZE,
-        batch_size=DEFAULT_BATCH_SIZE,
         skip_completed=False,
         rename=False,
         no_progress=False,
@@ -447,7 +445,7 @@ class Gen3File:
 
             producer_thread = threading.Thread(
                 target=self._guid_producer,
-                args=(guids, input_queue, batch_size, num_processes),
+                args=(guids, input_queue, num_processes),
             )
             producer_thread.start()
 
@@ -459,7 +457,7 @@ class Gen3File:
 
             while completed_count < len(guids):
                 try:
-                    batch_results = output_queue.get()
+                    batch_results = output_queue.get(timeout=30.0)
 
                     if not batch_results:
                         continue
@@ -477,7 +475,9 @@ class Gen3File:
                             pbar.update(1)
 
                 except Exception as e:
-                    logging.warning(f"Error waiting for results: {e}")
+                    logging.warning(
+                        f"Timeout waiting for results ({completed_count}/{len(guids)}): {e}"
+                    )
 
                     alive_processes = [p for p in processes if p.is_alive()]
                     if not alive_processes:
@@ -509,9 +509,8 @@ class Gen3File:
         )
         return results
 
-    def _guid_producer(self, guids, input_queue, batch_size, num_processes):
+    def _guid_producer(self, guids, input_queue, num_processes):
         try:
-            # Put all GUIDs into the queue at once (no batching)
             for guid in guids:
                 input_queue.put(guid)
 
