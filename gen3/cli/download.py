@@ -24,7 +24,18 @@ def get_or_create_event_loop_for_thread():
 
 
 def load_manifest(manifest_path: str) -> List[Dict[str, Any]]:
-    """Load manifest from JSON file."""
+    """Load manifest from JSON file.
+
+    Args:
+        manifest_path (str): Path to the manifest JSON file.
+
+    Returns:
+        List[Dict[str, Any]]: List of dictionaries containing file information.
+
+    Raises:
+        FileNotFoundError: If the manifest file does not exist.
+        json.JSONDecodeError: If the manifest file contains invalid JSON.
+    """
     try:
         with open(manifest_path, "r") as f:
             return json.load(f)
@@ -33,7 +44,14 @@ def load_manifest(manifest_path: str) -> List[Dict[str, Any]]:
 
 
 def validate_manifest(manifest_data: List[Dict[str, Any]]) -> bool:
-    """Validate manifest structure."""
+    """Validate manifest structure.
+
+    Args:
+        manifest_data (List[Dict[str, Any]]): List of dictionaries to validate.
+
+    Returns:
+        bool: True if manifest is valid, False otherwise.
+    """
     if not isinstance(manifest_data, list):
         return False
 
@@ -48,18 +66,37 @@ def validate_manifest(manifest_data: List[Dict[str, Any]]) -> bool:
 
 @click.command()
 @click.argument("guid")
-@click.option("--download-path", default=".", help="Directory to download file to")
+@click.option(
+    "--download-path",
+    default=".",
+    help="Directory to download file to (default: current directory)",
+)
 @click.option(
     "--filename-format",
     default="original",
     type=click.Choice(["original", "guid", "combined"]),
-    help="Filename format: 'original' uses the original filename from metadata, 'guid' uses only the file GUID, 'combined' uses original filename with GUID appended",
+    help="Filename format: 'original' uses the original filename from metadata, 'guid' uses only the file GUID, 'combined' uses original filename with GUID appended (default: original)",
 )
-@click.option("--protocol", default=None, help="Protocol for presigned URL (e.g., s3)")
-@click.option("--skip-completed", is_flag=True, help="Skip files that already exist")
-@click.option("--rename", is_flag=True, help="Rename file if it already exists")
-@click.option("--no-prompt", is_flag=True, help="Do not prompt for confirmations")
-@click.option("--no-progress", is_flag=True, help="Disable progress bar")
+@click.option(
+    "--protocol",
+    default=None,
+    help="Protocol for presigned URL (e.g., s3) (default: auto-detect)",
+)
+@click.option(
+    "--skip-completed",
+    is_flag=True,
+    default=True,
+    help="Skip files that already exist (default: true)",
+)
+@click.option(
+    "--rename", is_flag=True, help="Rename file if it already exists (default: false)"
+)
+@click.option(
+    "--no-prompt", is_flag=True, help="Do not prompt for confirmations (default: false)"
+)
+@click.option(
+    "--no-progress", is_flag=True, help="Disable progress bar (default: false)"
+)
 @click.pass_context
 def download_single(
     ctx,
@@ -67,10 +104,10 @@ def download_single(
     download_path,
     filename_format,
     protocol,
-    skip_completed,
-    rename,
-    no_prompt,
-    no_progress,
+    skip_completed=True,
+    rename=False,
+    no_prompt=False,
+    no_progress=False,
 ):
     """Download a single file by GUID."""
     auth = ctx.obj["auth_factory"].get()
@@ -102,24 +139,55 @@ def download_single(
 
 @click.command()
 @click.option("--manifest", required=True, help="Path to manifest JSON file")
-@click.option("--download-path", default=".", help="Directory to download files to")
+@click.option(
+    "--download-path",
+    default=".",
+    help="Directory to download files to (default: current directory)",
+)
 @click.option(
     "--filename-format",
     default="original",
     type=click.Choice(["original", "guid", "combined"]),
-    help="Filename format: 'original' uses the original filename from metadata, 'guid' uses only the file GUID, 'combined' uses original filename with GUID appended",
+    help="Filename format: 'original' uses the original filename from metadata, 'guid' uses only the file GUID, 'combined' uses original filename with GUID appended (default: original)",
 )
-@click.option("--protocol", default=None, help="Protocol for presigned URLs (e.g., s3)")
+@click.option(
+    "--protocol",
+    default=None,
+    help="Protocol for presigned URLs (e.g., s3) (default: auto-detect)",
+)
 @click.option(
     "--max-concurrent-requests",
-    default=10,
-    help="Maximum concurrent async downloads",
+    default=300,
+    help="Maximum concurrent async downloads per process (default: 300)",
     type=int,
 )
-@click.option("--skip-completed", is_flag=True, help="Skip files that already exist")
-@click.option("--rename", is_flag=True, help="Rename files if they already exist")
-@click.option("--no-prompt", is_flag=True, help="Do not prompt for confirmations")
-@click.option("--no-progress", is_flag=True, help="Disable progress bar")
+@click.option(
+    "--num-processes",
+    default=3,
+    help="Number of worker processes for parallel downloads (default: 3)",
+    type=int,
+)
+@click.option(
+    "--queue-size",
+    default=1000,
+    help="Maximum items in input queue (default: 1000)",
+    type=int,
+)
+@click.option(
+    "--skip-completed",
+    is_flag=True,
+    default=True,
+    help="Skip files that already exist (default: true)",
+)
+@click.option(
+    "--rename", is_flag=True, help="Rename files if they already exist (default: false)"
+)
+@click.option(
+    "--no-prompt", is_flag=True, help="Do not prompt for confirmations (default: false)"
+)
+@click.option(
+    "--no-progress", is_flag=True, help="Disable progress bar (default: false)"
+)
 @click.pass_context
 def download_multiple_async(
     ctx,
@@ -128,10 +196,12 @@ def download_multiple_async(
     filename_format,
     protocol,
     max_concurrent_requests,
-    skip_completed,
-    rename,
-    no_prompt,
-    no_progress,
+    num_processes,
+    queue_size,
+    skip_completed=True,
+    rename=False,
+    no_prompt=False,
+    no_progress=False,
 ):
     """
     Asynchronously download multiple files from a manifest with just-in-time presigned URL generation.
@@ -156,6 +226,11 @@ def download_multiple_async(
 
         file_client = Gen3File(auth_provider=auth)
 
+        # Debug logging for input parameters
+        logging.debug(
+            f"Async download parameters: manifest_data={len(manifest_data)} items, download_path={download_path}, filename_format={filename_format}, protocol={protocol}, max_concurrent_requests={max_concurrent_requests}, skip_completed={skip_completed}, rename={rename}, no_progress={no_progress}"
+        )
+
         loop = get_or_create_event_loop_for_thread()
         result = loop.run_until_complete(
             file_client.async_download_multiple(
@@ -164,6 +239,8 @@ def download_multiple_async(
                 filename_format=filename_format,
                 protocol=protocol,
                 max_concurrent_requests=max_concurrent_requests,
+                num_processes=num_processes,
+                queue_size=queue_size,
                 skip_completed=skip_completed,
                 rename=rename,
                 no_progress=no_progress,
@@ -173,10 +250,10 @@ def download_multiple_async(
         click.echo(f"\nAsync Download Results:")
         click.echo(f"✓ Succeeded: {len(result['succeeded'])}")
 
-        if len(result["skipped"]) > 0:
+        if result["skipped"] and len(result["skipped"]) > 0:
             click.echo(f"- Skipped: {len(result['skipped'])}")
 
-        if len(result["failed"]) > 0:
+        if result["failed"] and len(result["failed"]) > 0:
             click.echo(f"✗ Failed: {len(result['failed'])}")
 
         if result["failed"]:

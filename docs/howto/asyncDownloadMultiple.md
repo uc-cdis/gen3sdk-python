@@ -53,61 +53,17 @@ gen3 --endpoint my-commons.org --auth credentials.json download-multiple-async \
 
 ### Python API
 
-```python
-from gen3.auth import Gen3Auth
-from gen3.file import Gen3File
-
-# Initialize authentication
-auth = Gen3Auth(refresh_file="credentials.json")
-file_client = Gen3File(auth_provider=auth)
-
-# Manifest data
-manifest_data = [
-    {"guid": "dg.XXTS/b96018c5-db06-4af8-a195-28e339ba815e"},
-    {"guid": "dg.XXTS/6f9a924f-9d83-4597-8f66-fe7d3021729f"},
-    {"object_id": "dg.XXTS/181af989-5d66-4139-91e7-69f4570ccd41"}
-]
-
-# Download files
-import asyncio
-result = asyncio.run(file_client.async_download_multiple(
-    manifest_data=manifest_data,
-    download_path="./downloads",
-    filename_format="original",
-    max_concurrent_requests=10,
-    num_processes=4,
-    skip_completed=True,
-    no_progress=False
-))
-
-print(f"Succeeded: {len(result['succeeded'])}")
-print(f"Failed: {len(result['failed'])}")
-print(f"Skipped: {len(result['skipped'])}")
-```
+The `async_download_multiple` method is available in the `Gen3File` class for programmatic use. Refer to the Python SDK documentation for the complete API reference.
 
 ## Parameters
 
-### Required Parameters
+For detailed parameter information and current default values, run:
 
-- **manifest_data**: List of dictionaries containing file information
-  - Each item must have either `guid` or `object_id` field
-  - Additional metadata fields are supported but optional
+```bash
+gen3 download-multiple-async --help
+```
 
-### Optional Parameters
-
-- **download_path** (str, default: "."): Directory to save downloaded files
-- **filename_format** (str, default: "original"): File naming strategy
-  - `"original"`: Use original filename from metadata
-  - `"guid"`: Use GUID as filename
-  - `"combined"`: Combine original name with GUID
-- **protocol** (str, optional): Preferred download protocol (e.g., "s3")
-- **max_concurrent_requests** (int, default: 10): Maximum concurrent downloads per process
-- **num_processes** (int, default: 4): Number of worker processes
-- **queue_size** (int, default: 1000): Maximum items in input queue
-- **batch_size** (int, default: 100): Number of GUIDs per batch
-- **skip_completed** (bool, default: False): Skip files that already exist
-- **rename** (bool, default: False): Rename files on conflicts
-- **no_progress** (bool, default: False): Disable progress display
+The command supports various options for customizing download behavior, including concurrency settings, file naming strategies, and progress controls.
 
 ## Performance Characteristics
 
@@ -142,46 +98,30 @@ The implementation includes comprehensive error handling:
 
 ### Result Reporting
 
-Detailed results are returned with:
-
-```python
-{
-    "succeeded": [
-        {"guid": "guid1", "filepath": "/path/file1.txt", "size": 1024},
-        {"guid": "guid2", "filepath": "/path/file2.txt", "size": 2048}
-    ],
-    "failed": [
-        {"guid": "guid3", "error": "Network timeout", "attempts": 3}
-    ],
-    "skipped": [
-        {"guid": "guid4", "reason": "File already exists"}
-    ]
-}
-```
+The method returns a structured result object containing lists of succeeded, failed, and skipped downloads with detailed information about each operation.
 
 ## Best Practices
 
 ### Configuration Recommendations
 
-For optimal performance:
+For optimal performance, adjust the concurrency and process settings based on your specific use case:
 
-- **Small files (< 1MB)**: Use higher `max_concurrent_requests` (15-20)
-- **Large files (> 100MB)**: Use lower `max_concurrent_requests` (5-10)
-- **Mixed file sizes**: Use moderate settings (10-15 concurrent requests)
-- **High-bandwidth networks**: Increase `num_processes` to 6-8
-- **Limited memory**: Reduce `queue_size` and `batch_size`
+- **Small files**: Use higher concurrent request limits
+- **Large files**: Use lower concurrent request limits to avoid overwhelming the system
+- **High-bandwidth networks**: Increase the number of worker processes
+- **Limited memory**: Reduce queue sizes to manage memory usage
 
 ### Memory Management
 
-- **Queue Size**: Adjust based on available memory (500-2000 items)
-- **Batch Size**: Balance between memory usage and overhead (50-200 items)
-- **Process Count**: Match available CPU cores (typically 4-8)
+- **Queue Size**: Adjust based on available system memory
+- **Batch Size**: Balance between memory usage and processing overhead
+- **Process Count**: Match available CPU cores for optimal performance
 
 ### Network Optimization
 
-- **Concurrent Requests**: Match network capacity and server limits
-- **Protocol Selection**: Use appropriate protocol for your environment
-- **Resume Support**: Enable `skip_completed` for interrupted downloads
+- **Concurrent Requests**: Match your network capacity and server limits
+- **Protocol Selection**: Use the appropriate protocol for your environment
+- **Resume Support**: Enable skip-completed functionality for interrupted downloads
 
 ## Comparison with Synchronous Downloads
 
@@ -201,13 +141,13 @@ For optimal performance:
 **Slow Downloads:**
 
 - Check network bandwidth and server limits
-- Reduce `max_concurrent_requests` if server is overwhelmed
+- Reduce concurrent request limits if server is overwhelmed
 - Verify authentication token is valid
 
 **Memory Issues:**
 
-- Reduce `queue_size` and `batch_size`
-- Lower `num_processes` if system memory is limited
+- Reduce queue sizes and batch sizes
+- Lower the number of worker processes if system memory is limited
 - Monitor system memory usage during downloads
 
 **Authentication Errors:**
@@ -254,3 +194,5 @@ gen3 --endpoint data.commons.io --auth creds.json download-multiple-async \
     --no-progress \
     --skip-completed
 ```
+
+**Note**: The specific values shown in examples (like `--max-concurrent-requests 20`) are for demonstration only. For current parameter options and default values, always refer to the command line help: `gen3 download-multiple-async --help`
