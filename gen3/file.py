@@ -348,7 +348,7 @@ class Gen3File:
 
             while completed_count < len(guids):
                 try:
-                    batch_results = output_queue.get(timeout=30.0)
+                    batch_results = output_queue.get()
 
                     if not batch_results:
                         continue
@@ -367,12 +367,12 @@ class Gen3File:
 
                 except Empty:
                     logging.warning(
-                        f"Timeout waiting for results ({completed_count}/{len(guids)}): Queue is empty"
+                        f"No more results available ({completed_count}/{len(guids)}): Queue is empty"
                     )
                     break
                 except Exception as e:
                     logging.warning(
-                        f"Timeout waiting for results ({completed_count}/{len(guids)}): {e}"
+                        f"Error waiting for results ({completed_count}/{len(guids)}): {e}"
                     )
 
                     alive_processes = [p for p in processes if p.is_alive()]
@@ -441,13 +441,13 @@ class Gen3File:
         rename = config["rename"]
 
         # Configure connector with optimized settings for large files
-        timeout = aiohttp.ClientTimeout(total=None, connect=300, sock_read=300)
+        timeout = aiohttp.ClientTimeout(total=None, connect=3600, sock_read=3600)
         connector = aiohttp.TCPConnector(
             limit=max_concurrent * 2,
             limit_per_host=max_concurrent,
             ttl_dns_cache=300,
             use_dns_cache=True,
-            keepalive_timeout=120,
+            keepalive_timeout=3600,
             enable_cleanup_closed=True,
         )
         semaphore = asyncio.Semaphore(max_concurrent)
@@ -458,7 +458,7 @@ class Gen3File:
             while True:
                 try:
                     # Check if queue is empty with timeout
-                    guid = input_queue.get(timeout=1.0)
+                    guid = input_queue.get()
                 except Empty:
                     # If queue is empty (timeout), break the loop
                     break
@@ -601,7 +601,7 @@ class Gen3File:
 
         try:
             async with session.get(
-                api_url, headers=headers, timeout=aiohttp.ClientTimeout(total=60)
+                api_url, headers=headers, timeout=aiohttp.ClientTimeout(total=3600)
             ) as resp:
                 if resp.status == 200:
                     return await resp.json()
@@ -630,7 +630,7 @@ class Gen3File:
 
         try:
             async with session.get(
-                api_url, headers=headers, timeout=aiohttp.ClientTimeout(total=60)
+                api_url, headers=headers, timeout=aiohttp.ClientTimeout(total=3600)
             ) as resp:
                 if resp.status == 200:
                     return await resp.json()
