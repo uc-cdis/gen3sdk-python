@@ -42,7 +42,7 @@ Producer Thread → Input Queue → Worker Processes → Output Queue → Result
 Download multiple files using a manifest:
 
 ```bash
-gen3 --endpoint my-commons.org --auth credentials.json download-multiple-async \
+gen3 --endpoint my-commons.org --auth credentials.json download-multiple \
     --manifest files.json \
     --download-path ./downloads \
     --max-concurrent-requests 10 \
@@ -60,7 +60,7 @@ The `async_download_multiple` method is available in the `Gen3File` class for pr
 For detailed parameter information and current default values, run:
 
 ```bash
-gen3 download-multiple-async --help
+gen3 download-multiple --help
 ```
 
 The command supports various options for customizing download behavior, including concurrency settings, file naming strategies, and progress controls.
@@ -111,17 +111,6 @@ For optimal performance, adjust the concurrency and process settings based on yo
 - **High-bandwidth networks**: Increase the number of worker processes
 - **Limited memory**: Reduce queue sizes to manage memory usage
 
-### Memory Management
-
-- **Queue Size**: Adjust based on available system memory
-- **Batch Size**: Balance between memory usage and processing overhead
-- **Process Count**: Match available CPU cores for optimal performance
-
-### Network Optimization
-
-- **Concurrent Requests**: Match your network capacity and server limits
-- **Protocol Selection**: Use the appropriate protocol for your environment
-- **Resume Support**: Enable skip-completed functionality for interrupted downloads
 
 ## Comparison with Synchronous Downloads
 
@@ -142,7 +131,6 @@ For optimal performance, adjust the concurrency and process settings based on yo
 
 - Check network bandwidth and server limits
 - Reduce concurrent request limits if server is overwhelmed
-- Verify authentication token is valid
 
 **Memory Issues:**
 
@@ -167,7 +155,7 @@ For optimal performance, adjust the concurrency and process settings based on yo
 Enable verbose logging for detailed debugging:
 
 ```bash
-gen3 -vv --endpoint my-commons.org --auth credentials.json download-multiple-async \
+gen3 -vv --endpoint my-commons.org --auth credentials.json download-multiple \
     --manifest files.json \
     --download-path ./downloads
 ```
@@ -178,7 +166,7 @@ gen3 -vv --endpoint my-commons.org --auth credentials.json download-multiple-asy
 
 ```bash
 # Download files with default settings
-gen3 --endpoint data.commons.io --auth creds.json download-multiple-async \
+gen3 --endpoint data.commons.io --auth creds.json download-multiple \
     --manifest my_files.json \
     --download-path ./data
 ```
@@ -187,7 +175,7 @@ gen3 --endpoint data.commons.io --auth creds.json download-multiple-async \
 
 ```bash
 # Optimized for high-throughput downloads
-gen3 --endpoint data.commons.io --auth creds.json download-multiple-async \
+gen3 --endpoint data.commons.io --auth creds.json download-multiple \
     --manifest large_dataset.json \
     --download-path ./large_downloads \
     --max-concurrent-requests 20 \
@@ -195,4 +183,4 @@ gen3 --endpoint data.commons.io --auth creds.json download-multiple-async \
     --skip-completed
 ```
 
-**Note**: The specific values shown in examples (like `--max-concurrent-requests 20`) are for demonstration only. For current parameter options and default values, always refer to the command line help: `gen3 download-multiple-async --help`
+**Note**: The specific values shown in examples (like `--max-concurrent-requests 20`) are for demonstration only. For current parameter options and default values, always refer to the command line help: `gen3 download-multiple --help`

@@ -4,13 +4,15 @@ Gen3 download commands for CLI.
 
 import asyncio
 import json
-import logging
-import threading
+from datetime import datetime
 from typing import List, Dict, Any
 
 import click
 
+from cdislogging import get_logger
 from gen3.file import Gen3File
+
+logging = get_logger("__name__")
 
 
 def get_or_create_event_loop_for_thread():
@@ -68,8 +70,8 @@ def validate_manifest(manifest_data: List[Dict[str, Any]]) -> bool:
 @click.argument("guid")
 @click.option(
     "--download-path",
-    default=".",
-    help="Directory to download file to (default: current directory)",
+    default=f"download_{datetime.now().strftime('%d_%b_%Y')}",
+    help="Directory to download file to (default: timestamped folder)",
 )
 @click.option(
     "--filename-format",
@@ -84,7 +86,7 @@ def validate_manifest(manifest_data: List[Dict[str, Any]]) -> bool:
 )
 @click.option(
     "--skip-completed",
-    is_flag=True,
+    type=bool,
     default=True,
     help="Skip files that already exist (default: true)",
 )
@@ -141,8 +143,8 @@ def download_single(
 @click.option("--manifest", required=True, help="Path to manifest JSON file")
 @click.option(
     "--download-path",
-    default=".",
-    help="Directory to download files to (default: current directory)",
+    default=f"download_{datetime.now().strftime('%d_%b_%Y')}",
+    help="Directory to download files to (default: timestamped folder)",
 )
 @click.option(
     "--filename-format",
@@ -157,8 +159,14 @@ def download_single(
 )
 @click.option(
     "--max-concurrent-requests",
-    default=300,
-    help="Maximum concurrent async downloads per process (default: 300)",
+    default=20,
+    help="Maximum concurrent async downloads per process (default: 20)",
+    type=int,
+)
+@click.option(
+    "--numparallel",
+    default=None,
+    help="Number of downloads to run in parallel (compatibility with gen3-client)",
     type=int,
 )
 @click.option(
@@ -175,7 +183,7 @@ def download_single(
 )
 @click.option(
     "--skip-completed",
-    is_flag=True,
+    type=bool,
     default=True,
     help="Skip files that already exist (default: true)",
 )
@@ -189,13 +197,14 @@ def download_single(
     "--no-progress", is_flag=True, help="Disable progress bar (default: false)"
 )
 @click.pass_context
-def download_multiple_async(
+def download_multiple(
     ctx,
     manifest,
     download_path,
     filename_format,
     protocol,
     max_concurrent_requests,
+    numparallel,
     num_processes,
     queue_size,
     skip_completed=True,
@@ -207,6 +216,10 @@ def download_multiple_async(
     Asynchronously download multiple files from a manifest with just-in-time presigned URL generation.
     """
     auth = ctx.obj["auth_factory"].get()
+
+    # Use numparallel as max_concurrent_requests if provided (for gen3-client compatibility)
+    if numparallel is not None and max_concurrent_requests == 20:  # 20 is the default
+        max_concurrent_requests = numparallel
 
     try:
         manifest_data = load_manifest(manifest)
@@ -226,7 +239,7 @@ def download_multiple_async(
 
         file_client = Gen3File(auth_provider=auth)
 
-        # Debug logging for input parameters
+        # Debug logging for input parameters  
         logging.debug(
             f"Async download parameters: manifest_data={len(manifest_data)} items, download_path={download_path}, filename_format={filename_format}, protocol={protocol}, max_concurrent_requests={max_concurrent_requests}, skip_completed={skip_completed}, rename={rename}, no_progress={no_progress}"
         )
@@ -247,7 +260,7 @@ def download_multiple_async(
             )
         )
 
-        click.echo(f"\nAsync Download Results:")
+        click.echo("\nAsync Download Results:")
         click.echo(f"✓ Succeeded: {len(result['succeeded'])}")
 
         if result["skipped"] and len(result["skipped"]) > 0:
@@ -264,7 +277,7 @@ def download_multiple_async(
                 )
 
             click.echo(
-                f"\nTo retry failed downloads, run the same command with --skip-completed flag:"
+                "\nTo retry failed downloads, run the same command with --skip-completed flag:"
             )
 
         success_rate = len(result["succeeded"]) / len(manifest_data) * 100

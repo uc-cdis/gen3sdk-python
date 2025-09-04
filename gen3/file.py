@@ -546,8 +546,7 @@ class Gen3File:
                     guid, original_filename, filename_format
                 )
                 filepath = download_path / filename
-                filepath = Gen3File._handle_conflict_static(filepath, rename)
-
+                
                 if skip_completed and filepath.exists():
                     return {
                         "guid": guid,
@@ -555,6 +554,8 @@ class Gen3File:
                         "filepath": str(filepath),
                         "reason": "File already exists",
                     }
+                
+                filepath = Gen3File._handle_conflict_static(filepath, rename)
 
                 presigned_data = await Gen3File._get_presigned_url_async(
                     session, guid, endpoint, auth_provider.get_access_token(), protocol
