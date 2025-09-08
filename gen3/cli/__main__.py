@@ -21,15 +21,28 @@ from gen3.cli import nih
 
 
 class AuthFactory:
-    def __init__(self, refresh_file):
+    def __init__(self, refresh_file, profile_name=None):
         self.refresh_file = refresh_file
+        self.profile_name = profile_name
         self._cache = None
 
     def get(self):
-        """Lazy factory"""
+        """Lazy factory with profile support"""
         if self._cache:
             return self._cache
-        self._cache = gen3.auth.Gen3Auth(refresh_file=self.refresh_file)
+            
+        if self.profile_name and not self.refresh_file:
+            try:
+                import gen3.configure as config_tool
+                profile_creds = config_tool.get_profile_credentials(self.profile_name)
+                self._cache = gen3.auth.Gen3Auth(
+                    endpoint=profile_creds['api_endpoint'],
+                    refresh_token=profile_creds.get('access_token')
+                )
+            except Exception as e:
+                raise ValueError(f"Error creating auth from profile '{self.profile_name}': {e}")
+        else:
+            self._cache = gen3.auth.Gen3Auth(refresh_file=self.refresh_file)
         return self._cache
 
 
@@ -50,6 +63,12 @@ class AuthFactory:
     "endpoint",
     default=os.getenv("GEN3_ENDPOINT", None),
     help="commons hostname - optional if API Key given in `auth`",
+)
+@click.option(
+    "--profile",
+    "profile_name",
+    default=os.getenv("GEN3_PROFILE", None),
+    help="Profile name to use for authentication (compatible with cdis-data-client profiles)",
 )
 @click.option(
     "-v",
@@ -91,6 +110,7 @@ def main(
     ctx,
     auth_config,
     endpoint,
+    profile_name,
     verbose_logs,
     very_verbose_logs,
     only_error_logs,
@@ -99,10 +119,28 @@ def main(
 ):
     """Gen3 Command Line Interface"""
     ctx.ensure_object(dict)
+    
+    if profile_name and not auth_config:
+        try:
+            import gen3.configure as config_tool
+            profile_creds = config_tool.get_profile_credentials(profile_name)
+            import tempfile
+            import json
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                json.dump(profile_creds, f)
+                auth_config = f.name
+                ctx.obj["temp_cred_file"] = f.name
+            if not endpoint:
+                endpoint = profile_creds.get('api_endpoint')
+        except Exception as e:
+            click.echo(f"Error loading profile '{profile_name}': {e}")
+            ctx.exit(1)
+    
     ctx.obj["auth_config"] = auth_config
     ctx.obj["endpoint"] = endpoint
     ctx.obj["commons_url"] = commons_url
-    ctx.obj["auth_factory"] = AuthFactory(auth_config)
+    ctx.obj["profile_name"] = profile_name
+    ctx.obj["auth_factory"] = AuthFactory(auth_config, profile_name)
 
     if silent:
         # we still need to define the logger, the log_level here doesn't
@@ -139,6 +177,8 @@ main.add_command(pfb.pfb)
 main.add_command(wss.wss)
 main.add_command(discovery.discovery)
 main.add_command(configure.configure)
+main.add_command(configure.list_profiles, name="list-profiles")
+main.add_command(configure.show_profile, name="show-profile")
 main.add_command(objects.objects)
 main.add_command(drs_pull.drs_pull)
 main.add_command(file.file)
