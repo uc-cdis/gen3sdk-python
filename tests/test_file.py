@@ -1,9 +1,10 @@
 """
 Tests gen3.file.Gen3File for calls
 """
-from unittest.mock import patch
-import json
+from unittest.mock import patch, MagicMock
 import pytest
+import tempfile
+from pathlib import Path
 from requests import HTTPError
 
 
@@ -395,3 +396,113 @@ def test_upload_file_wrong_api_key(gen3_file, supported_protocol, authz, expires
             expires_in=expires_in,
         )
         assert res == "Failed to upload data file."
+
+
+@pytest.fixture
+def mock_manifest_data():
+    return [
+        {"guid": "test-guid-1", "file_name": "file1.txt"},
+        {"guid": "test-guid-2", "file_name": "file2.txt"},
+        {"object_id": "test-guid-3", "file_name": "file3.txt"},
+    ]
+
+
+def test_download_single_success(gen3_file):
+    gen3_file._auth_provider._refresh_token = {"api_key": "123"}
+
+    with patch.object(gen3_file, 'async_download_multiple') as mock_async:
+        mock_async.return_value = {"succeeded": ["test-guid"], "failed": [], "skipped": []}
+
+        result = gen3_file.download_single(guid="test-guid", download_path="/tmp")
+
+        assert result["status"] == "downloaded"
+        assert "test-guid" in result["filepath"]
+        mock_async.assert_called_once()
+
+
+def test_download_single_failed(gen3_file):
+    gen3_file._auth_provider._refresh_token = {"api_key": "123"}
+
+    with patch.object(gen3_file, 'async_download_multiple') as mock_async:
+        mock_async.return_value = {"succeeded": [], "failed": ["test-guid"], "skipped": []}
+
+        result = gen3_file.download_single(guid="test-guid")
+
+        assert result["status"] == "failed"
+
+
+@pytest.mark.asyncio
+async def test_async_download_multiple_empty_manifest(gen3_file):
+    result = await gen3_file.async_download_multiple(manifest_data=[])
+    assert result == {"succeeded": [], "failed": [], "skipped": []}
+
+
+@pytest.mark.asyncio
+async def test_async_download_multiple_success(gen3_file, mock_manifest_data):
+    gen3_file._auth_provider._refresh_token = {"api_key": "123"}
+    gen3_file._auth_provider.get_access_token = MagicMock(return_value="fake_token")
+
+    with patch('gen3.file.mp.Process'), patch('gen3.file.mp.Queue') as mock_queue, patch('threading.Thread'):
+        mock_input_queue = MagicMock()
+        mock_output_queue = MagicMock()
+        mock_queue.side_effect = [mock_input_queue, mock_output_queue]
+
+        mock_output_queue.get.side_effect = [
+            [{"guid": "test-guid-1", "status": "downloaded"}],
+            [{"guid": "test-guid-2", "status": "downloaded"}],
+            [{"guid": "test-guid-3", "status": "downloaded"}],
+        ]
+
+        result = await gen3_file.async_download_multiple(manifest_data=mock_manifest_data, download_path="/tmp")
+
+        assert len(result["succeeded"]) == 3
+
+
+def test_get_presigned_urls_batch(gen3_file):
+    gen3_file._auth_provider._refresh_token = {"api_key": "123"}
+
+    with patch.object(gen3_file, 'get_presigned_url') as mock_get_url:
+        mock_get_url.return_value = {"url": "https://example.com/presigned"}
+
+        results = gen3_file.get_presigned_urls_batch(["guid1", "guid2"])
+
+        assert len(results) == 2
+        assert mock_get_url.call_count == 2
+
+
+def test_format_filename_static():
+    from gen3.file import Gen3File
+
+    assert Gen3File._format_filename_static("guid123", "test.txt", "original") == "test.txt"
+    assert Gen3File._format_filename_static("guid123", "test.txt", "guid") == "guid123"
+    assert Gen3File._format_filename_static("guid123", "test.txt", "combined") == "test_guid123.txt"
+
+
+def test_handle_conflict_static():
+    from gen3.file import Gen3File
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        existing_file = temp_path / "existing.txt"
+        existing_file.write_text("test")
+
+        result = Gen3File._handle_conflict_static(existing_file, rename=False)
+        assert result == existing_file
+
+        result = Gen3File._handle_conflict_static(existing_file, rename=True)
+        assert result.name == "existing_1.txt"
+
+
+@pytest.mark.parametrize("skip_completed,rename", [(True, False), (False, True)])
+def test_download_single_options(gen3_file, skip_completed, rename):
+    gen3_file._auth_provider._refresh_token = {"api_key": "123"}
+
+    with patch.object(gen3_file, 'async_download_multiple') as mock_async:
+        mock_async.return_value = {"succeeded": ["test-guid"], "failed": [], "skipped": []}
+
+        gen3_file.download_single(guid="test-guid", skip_completed=skip_completed, rename=rename)
+
+        call_args = mock_async.call_args[1]
+        assert call_args["skip_completed"] == skip_completed
+        assert call_args["rename"] == rename
+        assert call_args["no_progress"]
