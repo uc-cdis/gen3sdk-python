@@ -26,11 +26,10 @@ def configure(profile, cred, apiendpoint):
     logging.info(f"Configuring profile [ {profile} ] with credentials at {cred}")
 
     try:
-        profile_title, new_lines = config_tool.get_profile_from_creds(
+        profile_name, credentials = config_tool.get_profile_from_creds(
             profile, cred, apiendpoint
         )
-        lines = config_tool.get_current_config_lines()
-        config_tool.update_config_lines(lines, profile_title, new_lines)
+        config_tool.update_config_profile(profile_name, credentials)
         
         click.echo(f"Profile '{profile}' has been configured successfully.")
         
@@ -45,7 +44,7 @@ def configure(profile, cred, apiendpoint):
 
 
 @click.command()
-def list_profiles():
+def list_all_profiles():
     """List all available profiles from both gen3sdk and cdis-data-client configs"""
     try:
         profiles = config_tool.list_profiles()

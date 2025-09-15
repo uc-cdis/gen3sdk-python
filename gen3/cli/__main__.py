@@ -18,6 +18,9 @@ import gen3.cli.wrap as wrap
 import gen3
 from gen3 import logging as sdklogging
 from gen3.cli import nih
+import gen3.configure as config_tool
+import tempfile
+import json
 
 
 class AuthFactory:
@@ -33,7 +36,6 @@ class AuthFactory:
             
         if self.profile_name and not self.refresh_file:
             try:
-                import gen3.configure as config_tool
                 profile_creds = config_tool.get_profile_credentials(self.profile_name)
                 self._cache = gen3.auth.Gen3Auth(
                     endpoint=profile_creds['api_endpoint'],
@@ -122,10 +124,7 @@ def main(
     
     if profile_name and not auth_config:
         try:
-            import gen3.configure as config_tool
             profile_creds = config_tool.get_profile_credentials(profile_name)
-            import tempfile
-            import json
             with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
                 json.dump(profile_creds, f)
                 auth_config = f.name
@@ -177,7 +176,7 @@ main.add_command(pfb.pfb)
 main.add_command(wss.wss)
 main.add_command(discovery.discovery)
 main.add_command(configure.configure)
-main.add_command(configure.list_profiles, name="list-profiles")
+main.add_command(configure.list_all_profiles, name="list-profiles")
 main.add_command(configure.show_profile, name="show-profile")
 main.add_command(objects.objects)
 main.add_command(drs_pull.drs_pull)
