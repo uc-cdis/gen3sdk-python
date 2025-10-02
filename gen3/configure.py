@@ -67,7 +67,8 @@ def get_profile_from_creds(profile, cred, apiendpoint=None):
 def ensure_config_dir():
     """Ensure the ~/.gen3 directory exists"""
     config_dir = os.path.dirname(CONFIG_FILE_PATH)
-    os.makedirs(config_dir, exist_ok=True)
+    if config_dir:
+        os.makedirs(config_dir, exist_ok=True)
 
 
 def update_config_profile(profile_name, credentials):
