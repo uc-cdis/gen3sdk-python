@@ -249,20 +249,35 @@ def test_upload_file(
         expected response to compare with mock
     """
     with patch("gen3.file.requests") as mock_request:
-        mock_request.status_code = status_code
-        mock_request.post().text = response_text
-        res = gen3_file.upload_file(
-            file_name="file.txt",
-            authz=authz,
-            protocol=supported_protocol,
-            expires_in=expires_in,
-        )
+        mock_response = MagicMock()
+        mock_response.status_code = status_code
+        mock_response.text = response_text
+        mock_response.json.return_value = expected_response if status_code == 201 else {}
+
+        # Make raise_for_status() raise HTTPError for non-2xx status codes
+        if status_code >= 400:
+            mock_response.raise_for_status.side_effect = HTTPError()
+
+        mock_request.post.return_value = mock_response
+
         if status_code == 201:
+            res = gen3_file.upload_file(
+                file_name="file.txt",
+                authz=authz,
+                protocol=supported_protocol,
+                expires_in=expires_in,
+            )
             # check that the SDK is getting fence
             assert res.get("url") == expected_response["url"]
         else:
-            # check the error message
-            assert expected_response in res
+            # For non-201 status codes, the method should raise an exception
+            with pytest.raises(HTTPError):
+                gen3_file.upload_file(
+                    file_name="file.txt",
+                    authz=authz,
+                    protocol=supported_protocol,
+                    expires_in=expires_in,
+                )
 
 
 @pytest.mark.parametrize(
@@ -327,7 +342,7 @@ def test_upload_file_no_refresh_token(gen3_file, supported_protocol, authz, expi
 def test_upload_file_no_api_key(gen3_file, supported_protocol, authz, expires_in):
     """
     Upload files for a Gen3File given a protocol, authz, and expires_in
-    without an api_key in the refresh token, which should return a 401
+    without an api_key in the refresh token, which should raise an HTTPError
 
     :param gen3.file.Gen3File gen3_file:
         Gen3File object
@@ -342,15 +357,19 @@ def test_upload_file_no_api_key(gen3_file, supported_protocol, authz, expires_in
     gen3_file._auth_provider._refresh_token = {"not_api_key": "123"}
 
     with patch("gen3.file.requests") as mock_request:
-        mock_request.status_code = 401
-        mock_request.post().text = "Failed to upload data file."
-        res = gen3_file.upload_file(
-            file_name="file.txt",
-            authz=authz,
-            protocol=supported_protocol,
-            expires_in=expires_in,
-        )
-        assert res == "Failed to upload data file."
+        mock_response = MagicMock()
+        mock_response.status_code = 401
+        mock_response.text = "Failed to upload data file."
+        mock_response.raise_for_status.side_effect = HTTPError()
+        mock_request.post.return_value = mock_response
+
+        with pytest.raises(HTTPError):
+            gen3_file.upload_file(
+                file_name="file.txt",
+                authz=authz,
+                protocol=supported_protocol,
+                expires_in=expires_in,
+            )
 
 
 @pytest.mark.parametrize(
@@ -372,7 +391,7 @@ def test_upload_file_no_api_key(gen3_file, supported_protocol, authz, expires_in
 def test_upload_file_wrong_api_key(gen3_file, supported_protocol, authz, expires_in):
     """
     Upload files for a Gen3File given a protocol, authz, and expires_in
-    with the wrong value for the api_key in the refresh token, which should return a 401
+    with the wrong value for the api_key in the refresh token, which should raise an HTTPError
 
     :param gen3.file.Gen3File gen3_file:
         Gen3File object
@@ -387,15 +406,19 @@ def test_upload_file_wrong_api_key(gen3_file, supported_protocol, authz, expires
     gen3_file._auth_provider._refresh_token = {"api_key": "wrong_value"}
 
     with patch("gen3.file.requests") as mock_request:
-        mock_request.status_code = 401
-        mock_request.post().text = "Failed to upload data file."
-        res = gen3_file.upload_file(
-            file_name="file.txt",
-            authz=authz,
-            protocol=supported_protocol,
-            expires_in=expires_in,
-        )
-        assert res == "Failed to upload data file."
+        mock_response = MagicMock()
+        mock_response.status_code = 401
+        mock_response.text = "Failed to upload data file."
+        mock_response.raise_for_status.side_effect = HTTPError()
+        mock_request.post.return_value = mock_response
+
+        with pytest.raises(HTTPError):
+            gen3_file.upload_file(
+                file_name="file.txt",
+                authz=authz,
+                protocol=supported_protocol,
+                expires_in=expires_in,
+            )
 
 
 @pytest.fixture
@@ -408,6 +431,12 @@ def mock_manifest_data():
 
 
 def test_download_single_success(gen3_file):
+    """
+    Test successful download of a single file via download_single method.
+
+    Verifies that download_single correctly delegates to async_download_multiple
+    and returns a success status with the filepath.
+    """
     gen3_file._auth_provider._refresh_token = {"api_key": "123"}
 
     with patch.object(gen3_file, 'async_download_multiple') as mock_async:
@@ -421,6 +450,12 @@ def test_download_single_success(gen3_file):
 
 
 def test_download_single_failed(gen3_file):
+    """
+    Test failed download of a single file via download_single method.
+
+    Verifies that download_single correctly handles failures from
+    async_download_multiple and returns a failed status.
+    """
     gen3_file._auth_provider._refresh_token = {"api_key": "123"}
 
     with patch.object(gen3_file, 'async_download_multiple') as mock_async:
@@ -433,12 +468,24 @@ def test_download_single_failed(gen3_file):
 
 @pytest.mark.asyncio
 async def test_async_download_multiple_empty_manifest(gen3_file):
+    """
+    Test async_download_multiple with an empty manifest.
+
+    Verifies that calling async_download_multiple with an empty manifest
+    returns empty succeeded, failed, and skipped lists.
+    """
     result = await gen3_file.async_download_multiple(manifest_data=[])
     assert result == {"succeeded": [], "failed": [], "skipped": []}
 
 
 @pytest.mark.asyncio
 async def test_async_download_multiple_success(gen3_file, mock_manifest_data):
+    """
+    Test successful async download of multiple files.
+
+    Verifies that async_download_multiple correctly processes a manifest with
+    multiple files and returns all downloads as successful.
+    """
     gen3_file._auth_provider._refresh_token = {"api_key": "123"}
     gen3_file._auth_provider.get_access_token = MagicMock(return_value="fake_token")
 
@@ -459,6 +506,12 @@ async def test_async_download_multiple_success(gen3_file, mock_manifest_data):
 
 
 def test_get_presigned_urls_batch(gen3_file):
+    """
+    Test batch retrieval of presigned URLs for multiple GUIDs.
+
+    Verifies that get_presigned_urls_batch correctly calls get_presigned_url
+    for each GUID and returns a mapping of results.
+    """
     gen3_file._auth_provider._refresh_token = {"api_key": "123"}
 
     with patch.object(gen3_file, 'get_presigned_url') as mock_get_url:
@@ -471,6 +524,12 @@ def test_get_presigned_urls_batch(gen3_file):
 
 
 def test_format_filename_static():
+    """
+    Test the static _format_filename_static method with different filename formats.
+
+    Verifies that files can be formatted as original, guid-only, or combined
+    (filename_guidXXX.ext) based on the format parameter.
+    """
     from gen3.file import Gen3File
 
     assert Gen3File._format_filename_static("guid123", "test.txt", "original") == "test.txt"
@@ -479,6 +538,12 @@ def test_format_filename_static():
 
 
 def test_handle_conflict_static():
+    """
+    Test the static _handle_conflict_static method for file conflict resolution.
+
+    Verifies that existing files can be either kept or renamed with a numeric
+    suffix based on the rename parameter.
+    """
     from gen3.file import Gen3File
 
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -495,6 +560,12 @@ def test_handle_conflict_static():
 
 @pytest.mark.parametrize("skip_completed,rename", [(True, False), (False, True)])
 def test_download_single_options(gen3_file, skip_completed, rename):
+    """
+    Test download_single with various option combinations.
+
+    Verifies that skip_completed and rename options are correctly passed
+    to async_download_multiple, and no_progress is set to True.
+    """
     gen3_file._auth_provider._refresh_token = {"api_key": "123"}
 
     with patch.object(gen3_file, 'async_download_multiple') as mock_async:

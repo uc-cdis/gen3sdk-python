@@ -178,9 +178,9 @@ gen3 --endpoint data.commons.io --auth creds.json download-multiple \
 gen3 --endpoint data.commons.io --auth creds.json download-multiple \
     --manifest large_dataset.json \
     --download-path ./large_downloads \
-    --max-concurrent-requests 20 \
+    --max-concurrent-requests 8 \
     --no-progress \
     --skip-completed
 ```
 
-**Note**: The specific values shown in examples (like `--max-concurrent-requests 20`) are for demonstration only. For current parameter options and default values, always refer to the command line help: `gen3 download-multiple --help`
+**Note**: The specific values shown in examples (like `--max-concurrent-requests 8`) are for demonstration only. For current parameter options and default values, always refer to the command line help: `gen3 download-multiple --help`
