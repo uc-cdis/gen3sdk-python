@@ -15,6 +15,7 @@ import gen3.cli.file as file
 import gen3.cli.drs_pull as drs_pull
 import gen3.cli.users as users
 import gen3.cli.wrap as wrap
+import gen3.cli.download as download
 import gen3
 from gen3 import logging as sdklogging
 from gen3.cli import nih
@@ -142,6 +143,8 @@ main.add_command(configure.configure)
 main.add_command(objects.objects)
 main.add_command(drs_pull.drs_pull)
 main.add_command(file.file)
+main.add_command(download.download_single, name="download-single")
+main.add_command(download.download_multiple, name="download-multiple")
 main.add_command(nih.nih)
 main.add_command(users.users)
 main.add_command(wrap.run)
