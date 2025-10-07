@@ -177,65 +177,64 @@ class Gen3File:
 
         return out_path
 
-    def download_single(
-        self,
-        guid,
-        download_path=".",
-        filename_format="original",
-        protocol=None,
-        skip_completed=False,
-        rename=False,
-    ):
-        """Download a single file with enhanced options.
+    def download_single(self, object_id, path):
+        """
+        Download a single file using its GUID.
 
         Args:
-            guid (str): File GUID to download
-            download_path (str): Directory to save file
-            filename_format (str): Format for filename - 'original', 'guid', or 'combined'
-            protocol (str, optional): Protocol preference for download
-            skip_completed (bool): Skip if file already exists
-            rename (bool): Rename file if conflict exists
+            object_id (str): The file's unique ID
+            path (str): Path to store the downloaded file at
 
         Returns:
-            Dict: Download result with status and details
+            bool: True if download successful, False otherwise
         """
-        # Create a single-item manifest to reuse async logic
-        manifest_data = [{"guid": guid}]
-
-        # Use the async download logic with single process
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
         try:
-            result = loop.run_until_complete(
-                self.async_download_multiple(
-                    manifest_data=manifest_data,
-                    download_path=download_path,
-                    filename_format=filename_format,
-                    protocol=protocol,
-                    max_concurrent_requests=1,
-                    num_processes=1,
-                    queue_size=1,
-                    skip_completed=skip_completed,
-                    rename=rename,
-                    no_progress=True,
-                )
-            )
-
-            # Extract the single result
-            if result["succeeded"]:
-                return {"status": "downloaded", "filepath": result["succeeded"][0]}
-            elif result["skipped"]:
-                return {"status": "skipped", "filepath": result["skipped"][0]}
-            elif result["failed"]:
-                return {"status": "failed", "error": result["failed"][0]}
-            else:
-                return {"status": "failed", "error": "Unknown error"}
-
+            url = self.get_presigned_url(object_id)
         except Exception as e:
-            return {"status": "failed", "error": f"Download failed: {e}"}
-        finally:
-            loop.close()
+            logging.critical(f"Unable to get a presigned URL for download: {e}")
+            return False
+
+        response = requests.get(url["url"], stream=True)
+        if response.status_code != 200:
+            logging.error(f"Response code: {response.status_code}")
+            if response.status_code >= 500:
+                for _ in range(MAX_RETRIES):
+                    logging.info("Retrying now...")
+                    # NOTE could be updated with exponential backoff
+                    time.sleep(1)
+                    response = requests.get(url["url"], stream=True)
+                    if response.status_code == 200:
+                        break
+                if response.status_code != 200:
+                    logging.critical("Response status not 200, try again later")
+                    return False
+            else:
+                return False
+
+        response.raise_for_status()
+
+        total_size_in_bytes = int(response.headers.get("content-length"))
+        total_downloaded = 0
+
+        index = Gen3Index(self._auth_provider)
+        record = index.get_record(object_id)
+
+        filename = record["file_name"]
+
+        out_path = Gen3File._ensure_dirpath_exists(Path(path))
+
+        with open(os.path.join(out_path, filename), "wb") as f:
+            for data in response.iter_content(4096):
+                total_downloaded += len(data)
+                f.write(data)
+
+        if total_size_in_bytes == total_downloaded:
+            logging.info(f"File {filename} downloaded successfully")
+        else:
+            logging.error(f"File {filename} not downloaded successfully")
+            return False
+
+        return True
 
     def upload_file_to_guid(
         self, guid, file_name, protocol=None, expires_in=None, bucket=None

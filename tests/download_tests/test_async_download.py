@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock, AsyncMock
 import json
 import pytest
 from pathlib import Path
@@ -99,7 +99,6 @@ class Test_Async_Download:
         data = json.load(f)
         assert len(data) == len(manifest_list)
 
-    @pytest.mark.skip(reason="download_single uses multiprocessing which is incompatible with mocking in tests")
     @patch("gen3.file.requests")
     @patch("gen3.index.Gen3Index.get_record")
     @pytest.mark.parametrize("download_dir_overwrite", [None, "sub/path"])
@@ -165,7 +164,6 @@ class Test_Async_Download:
             if download_dir_overwrite and os.path.exists(download_path):
                 shutil.rmtree(download_path)
 
-    @pytest.mark.skip(reason="download_single uses multiprocessing which is incompatible with mocking in tests")
     @patch("gen3.file.requests")
     def test_download_single_no_auth(self, mock_get, download_dir, mock_gen3_auth):
 
@@ -196,7 +194,6 @@ class Test_Async_Download:
 
         assert result == False
 
-    @pytest.mark.skip(reason="download_single uses multiprocessing which is incompatible with mocking in tests")
     @patch("gen3.file.requests")
     def test_download_single_wrong_auth(self, mock_get, download_dir, mock_gen3_auth):
 
@@ -227,7 +224,6 @@ class Test_Async_Download:
 
         assert result == False
 
-    @pytest.mark.skip(reason="download_single uses multiprocessing which is incompatible with mocking in tests")
     @patch("gen3.file.requests")
     def test_download_single_bad_id(self, mock_get, download_dir, mock_gen3_auth):
 
@@ -268,3 +264,30 @@ class Test_Async_Download:
 
         manifest_list = _load_manifest(Path(DIR, "resources/bad_format.json"))
         assert manifest_list == None
+
+    @pytest.mark.asyncio
+    async def test_async_download_multiple_empty_manifest(self, mock_gen3_auth):
+        """
+        Test async_download_multiple with an empty manifest.
+        Verifies it returns empty results without errors.
+        """
+        file_tool = Gen3File(mock_gen3_auth)
+        result = await file_tool.async_download_multiple(manifest_data=[])
+
+        assert result == {"succeeded": [], "failed": [], "skipped": []}
+
+    @pytest.mark.asyncio
+    async def test_async_download_multiple_invalid_guids(self, mock_gen3_auth):
+        """
+        Test async_download_multiple with invalid GUIDs.
+        Verifies it returns empty results for missing GUIDs.
+        """
+        file_tool = Gen3File(mock_gen3_auth)
+
+        # Manifest with missing guid/object_id fields
+        manifest_data = [{"file_name": "test.txt"}, {}]
+
+        result = await file_tool.async_download_multiple(manifest_data=manifest_data)
+
+        assert result == {"succeeded": [], "failed": [], "skipped": []}
+
