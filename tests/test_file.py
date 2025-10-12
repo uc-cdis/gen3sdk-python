@@ -434,36 +434,48 @@ def test_download_single_success(gen3_file):
     """
     Test successful download of a single file via download_single method.
 
-    Verifies that download_single correctly delegates to async_download_multiple
-    and returns a success status with the filepath.
+    Verifies that download_single correctly downloads a file using synchronous requests
+    and returns True on success.
     """
     gen3_file._auth_provider._refresh_token = {"api_key": "123"}
 
-    with patch.object(gen3_file, 'async_download_multiple') as mock_async:
-        mock_async.return_value = {"succeeded": ["test-guid"], "failed": [], "skipped": []}
+    with patch.object(gen3_file, 'get_presigned_url') as mock_presigned, \
+         patch('gen3.file.requests.get') as mock_get, \
+         patch('gen3.index.Gen3Index.get_record') as mock_index:
 
-        result = gen3_file.download_single(guid="test-guid", download_path="/tmp")
+        mock_presigned.return_value = {"url": "https://fake-url.com/file"}
+        mock_index.return_value = {"file_name": "test-file.txt"}
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        test_content = b"test content"
+        mock_response.headers = {"content-length": str(len(test_content))}
+        mock_response.iter_content = lambda size: [test_content]
+        mock_get.return_value = mock_response
 
-        assert result["status"] == "downloaded"
-        assert "test-guid" in result["filepath"]
-        mock_async.assert_called_once()
+        result = gen3_file.download_single(object_id="test-guid", path="/tmp")
+
+        assert result == True
 
 
 def test_download_single_failed(gen3_file):
     """
     Test failed download of a single file via download_single method.
 
-    Verifies that download_single correctly handles failures from
-    async_download_multiple and returns a failed status.
+    Verifies that download_single correctly handles failures and returns False.
     """
     gen3_file._auth_provider._refresh_token = {"api_key": "123"}
 
-    with patch.object(gen3_file, 'async_download_multiple') as mock_async:
-        mock_async.return_value = {"succeeded": [], "failed": ["test-guid"], "skipped": []}
+    with patch.object(gen3_file, 'get_presigned_url') as mock_presigned, \
+         patch('gen3.file.requests.get') as mock_get:
 
-        result = gen3_file.download_single(guid="test-guid")
+        mock_presigned.return_value = {"url": "https://fake-url.com/file"}
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        mock_get.return_value = mock_response
 
-        assert result["status"] == "failed"
+        result = gen3_file.download_single(object_id="test-guid", path="/tmp")
+
+        assert result == False
 
 
 @pytest.mark.asyncio
@@ -558,22 +570,29 @@ def test_handle_conflict_static():
         assert result.name == "existing_1.txt"
 
 
-@pytest.mark.parametrize("skip_completed,rename", [(True, False), (False, True)])
-def test_download_single_options(gen3_file, skip_completed, rename):
+def test_download_single_basic_functionality(gen3_file):
     """
-    Test download_single with various option combinations.
+    Test download_single basic functionality with synchronous download.
 
-    Verifies that skip_completed and rename options are correctly passed
-    to async_download_multiple, and no_progress is set to True.
+    Verifies that download_single downloads a file successfully using
+    synchronous requests and returns True.
     """
     gen3_file._auth_provider._refresh_token = {"api_key": "123"}
 
-    with patch.object(gen3_file, 'async_download_multiple') as mock_async:
-        mock_async.return_value = {"succeeded": ["test-guid"], "failed": [], "skipped": []}
+    with patch.object(gen3_file, 'get_presigned_url') as mock_presigned, \
+         patch('gen3.file.requests.get') as mock_get, \
+         patch('gen3.index.Gen3Index.get_record') as mock_index:
 
-        gen3_file.download_single(guid="test-guid", skip_completed=skip_completed, rename=rename)
+        mock_presigned.return_value = {"url": "https://fake-url.com/file"}
+        mock_index.return_value = {"file_name": "test-file.txt"}
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {"content-length": "12"}
+        mock_response.iter_content = lambda size: [b"test content"]
+        mock_get.return_value = mock_response
 
-        call_args = mock_async.call_args[1]
-        assert call_args["skip_completed"] == skip_completed
-        assert call_args["rename"] == rename
-        assert call_args["no_progress"]
+        result = gen3_file.download_single(object_id="test-guid", path="/tmp")
+
+        assert result == True
+        mock_presigned.assert_called_once_with("test-guid")
+        mock_index.assert_called_once_with("test-guid")
