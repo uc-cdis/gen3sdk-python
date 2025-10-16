@@ -177,22 +177,83 @@ class Gen3File:
 
         return out_path
 
-    def download_single(self, object_id, path):
+    def download_single(
+        self,
+        object_id=None,
+        path=None,
+        guid=None,
+        download_path=None,
+        filename_format="original",
+        protocol=None,
+        skip_completed=True,
+        rename=False,
+    ):
         """
         Download a single file using its GUID.
 
         Args:
-            object_id (str): The file's unique ID
-            path (str): Path to store the downloaded file at
+            object_id (str): The file's unique ID (legacy parameter)
+            path (str): Path to store the downloaded file at (legacy parameter)
+            guid (str): The file's unique ID (new parameter name)
+            download_path (str): Path to store the downloaded file at (new parameter name)
+            filename_format (str): Format for filename (original, guid, combined)
+            protocol (str): Protocol for presigned URL
+            skip_completed (bool): Skip files that already exist
+            rename (bool): Rename file if it already exists
 
         Returns:
-            bool: True if download successful, False otherwise
+            dict: Status information about the download
         """
+        # Handle both old and new parameter names
+        if object_id is not None:
+            file_guid = object_id
+        elif guid is not None:
+            file_guid = guid
+        else:
+            raise ValueError("Either object_id or guid must be provided")
+
+        if path is not None:
+            download_dir = path
+        elif download_path is not None:
+            download_dir = download_path
+        else:
+            download_dir = "."
         try:
-            url = self.get_presigned_url(object_id)
+            url = self.get_presigned_url(file_guid)
         except Exception as e:
             logging.critical(f"Unable to get a presigned URL for download: {e}")
-            return False
+            return {"status": "failed", "error": str(e)}
+
+        # Get file metadata
+        index = Gen3Index(self._auth_provider)
+        record = index.get_record(file_guid)
+
+        # Determine filename based on format
+        if filename_format == "guid":
+            filename = file_guid
+        elif filename_format == "combined":
+            original_filename = record.get("file_name", file_guid)
+            filename = f"{original_filename}_{file_guid}"
+        else:  # original
+            filename = record.get("file_name", file_guid)
+
+        # Check if file already exists and handle accordingly
+        out_path = Gen3File._ensure_dirpath_exists(Path(download_dir))
+        filepath = os.path.join(out_path, filename)
+
+        if os.path.exists(filepath) and skip_completed:
+            return {
+                "status": "skipped",
+                "reason": "File already exists",
+                "filepath": filepath,
+            }
+        elif os.path.exists(filepath) and rename:
+            counter = 1
+            base_name, ext = os.path.splitext(filename)
+            while os.path.exists(filepath):
+                filename = f"{base_name}_{counter}{ext}"
+                filepath = os.path.join(out_path, filename)
+                counter += 1
 
         response = requests.get(url["url"], stream=True)
         if response.status_code != 200:
@@ -207,34 +268,34 @@ class Gen3File:
                         break
                 if response.status_code != 200:
                     logging.critical("Response status not 200, try again later")
-                    return False
+                    return {
+                        "status": "failed",
+                        "error": "Server error, try again later",
+                    }
             else:
-                return False
+                return {"status": "failed", "error": f"HTTP {response.status_code}"}
 
         response.raise_for_status()
 
-        total_size_in_bytes = int(response.headers.get("content-length"))
+        total_size_in_bytes = int(response.headers.get("content-length", 0))
         total_downloaded = 0
 
-        index = Gen3Index(self._auth_provider)
-        record = index.get_record(object_id)
-
-        filename = record["file_name"]
-
-        out_path = Gen3File._ensure_dirpath_exists(Path(path))
-
-        with open(os.path.join(out_path, filename), "wb") as f:
+        with open(filepath, "wb") as f:
             for data in response.iter_content(4096):
                 total_downloaded += len(data)
                 f.write(data)
 
-        if total_size_in_bytes == total_downloaded:
+        if total_size_in_bytes > 0 and total_size_in_bytes == total_downloaded:
             logging.info(f"File {filename} downloaded successfully")
+            return {"status": "downloaded", "filepath": filepath}
+        elif total_size_in_bytes == 0:
+            logging.info(f"File {filename} downloaded successfully (unknown size)")
+            return {"status": "downloaded", "filepath": filepath}
         else:
             logging.error(f"File {filename} not downloaded successfully")
-            return False
+            return {"status": "failed", "error": "Download incomplete"}
 
-        return True
+        return {"status": "downloaded", "filepath": filepath}
 
     def upload_file_to_guid(
         self, guid, file_name, protocol=None, expires_in=None, bucket=None
@@ -545,7 +606,7 @@ class Gen3File:
                     guid, original_filename, filename_format
                 )
                 filepath = download_path / filename
-                
+
                 if skip_completed and filepath.exists():
                     return {
                         "guid": guid,
@@ -553,7 +614,7 @@ class Gen3File:
                         "filepath": str(filepath),
                         "reason": "File already exists",
                     }
-                
+
                 filepath = Gen3File._handle_conflict_static(filepath, rename)
 
                 presigned_data = await Gen3File._get_presigned_url_async(
