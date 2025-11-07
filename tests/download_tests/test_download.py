@@ -287,20 +287,25 @@ def test_get_external_wts_oidc(wts_oidc, hostname):
 
 
 def test_download_file_from_url_zero_size(download_dir):
-    with requests_mock.Mocker() as m:
-        m.get(
-            url=f"https://test.commons1.io/ga4gh/drs/v1/objects/blah/access/s3",
-            headers={"content-length": "0"},
-            text="",
-        )
-
-        assert (
-            download_file_from_url(
-                "https://test.commons1.io/ga4gh/drs/v1/objects/blah/access/s3",
-                "empty_file",
+    output_file_name = "empty_file"
+    try:
+        with requests_mock.Mocker() as m:
+            m.get(
+                url=f"https://test.commons1.io/ga4gh/drs/v1/objects/blah/access/s3",
+                headers={"content-length": "0"},
+                text="",
             )
-            is True
-        )
+
+            assert (
+                download_file_from_url(
+                    "https://test.commons1.io/ga4gh/drs/v1/objects/blah/access/s3",
+                    output_file_name,
+                )
+                is True
+            )
+    finally:
+        if os.path.exists(output_file_name):
+            os.remove(output_file_name)
 
 
 def test_download_file_from_url_failures(download_dir):
