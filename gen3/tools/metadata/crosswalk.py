@@ -18,7 +18,6 @@ MAX_GUIDS_PER_REQUEST = 2000
 MAX_CONCURRENT_REQUESTS = 5
 BASE_CSV_PARSER_SETTINGS = {
     "delimiter": ",",
-    "quotechar": "",
     "quoting": csv.QUOTE_NONE,
     "escapechar": "\\",
 }
