@@ -18,6 +18,8 @@ jobs:
     uses: uc-cdis/.github/.github/workflows/python_unit_test.yaml@master
     strategy:
       matrix:
-        version: ['3.9', '3.13']
+        # the versions for which we require the CI to pass on PRs can
+        # be updated in the repo settings (branch rules)
+        version: ['3.9', '3.10', '3.11', '3.12', '3.13']
     with:
         python-version: ${{ matrix.version }}
