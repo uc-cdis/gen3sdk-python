@@ -8,7 +8,7 @@ jobs:
     name: PyPI Poetry Publish
     uses: uc-cdis/.github/.github/workflows/python_package_index_publish.yaml@master
     with:
-        PYTHON_VERSION: '3.9'
+        PYTHON_VERSION: '3.13'
         # This will attempt push to test PyPI first and only push to prod if it works
         DO_TEST_PUBLISH_FIRST: true
     secrets:

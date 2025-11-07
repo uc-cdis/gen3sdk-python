@@ -297,7 +297,7 @@ def test_download_file_from_url_zero_size(download_dir):
         assert (
             download_file_from_url(
                 "https://test.commons1.io/ga4gh/drs/v1/objects/blah/access/s3",
-                "empty_file",
+                "tests/outputs/empty_file",
             )
             is True
         )
