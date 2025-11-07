@@ -170,14 +170,14 @@ def test_download_manifest(monkeypatch, gen3_index):
     loop.run_until_complete(
         async_download_object_manifest(
             "http://localhost:8001",
-            output_filename="object-manifest.csv",
+            output_filename="tests/outputs/object-manifest.csv",
             num_processes=1,
         )
     )
 
     records = {}
     try:
-        with open("object-manifest.csv") as file:
+        with open("tests/outputs/object-manifest.csv") as file:
             # skip header
             next(file)
             for line in file:
@@ -246,7 +246,8 @@ def test_download_manifest_with_input_manifest(monkeypatch, gen3_index):
     Test that dowload manifest generates a file with expected content when
     provided an initial input manifest.
     """
-    with open("input.csv", "w+") as file:
+    file_path = "tests/outputs/input.csv"
+    with open(file_path, "w+") as file:
         file.writelines(
             [
                 "guid,urls,authz,acl,md5,file_size,file_name\n",
@@ -297,15 +298,15 @@ def test_download_manifest_with_input_manifest(monkeypatch, gen3_index):
     loop.run_until_complete(
         async_download_object_manifest(
             "http://localhost:8001",
-            output_filename="object-manifest.csv",
+            output_filename="tests/outputs/object-manifest.csv",
             num_processes=1,
-            input_manifest="input.csv",
+            input_manifest=file_path,
         )
     )
 
     records = {}
     try:
-        with open("object-manifest.csv") as file:
+        with open("tests/outputs/object-manifest.csv") as file:
             # skip header
             next(file)
             for line in file:
@@ -383,7 +384,8 @@ def test_download_manifest_with_invalid_input_manifest(monkeypatch, gen3_index):
     Test that dowload manifest errors when
     provided an initial input manifest with an invalid format
     """
-    with open("input.csv", "w+") as file:
+    file_path = "tests/outputs/input.csv"
+    with open(file_path, "w+") as file:
         file.writelines(
             [
                 "guid,urls,authz,acl,md5,file_size,file_name\n",
@@ -436,9 +438,9 @@ def test_download_manifest_with_invalid_input_manifest(monkeypatch, gen3_index):
         loop.run_until_complete(
             async_download_object_manifest(
                 "http://localhost:8001",
-                output_filename="object-manifest.csv",
+                output_filename="tests/outputs/object-manifest.csv",
                 num_processes=1,
-                input_manifest="input.csv",
+                input_manifest=file_path,
             )
         )
         assert False
@@ -635,7 +637,6 @@ def test_read_manifest():
 
 
 def test_index_manifest(gen3_index, indexd_server):
-
     rec1 = gen3_index.create_record(
         did="255e396f-f1f8-11e9-9a07-0a80fada099c",
         hashes={"md5": "473d83400bc1bc9dc635e334faddf33c"},
@@ -654,6 +655,7 @@ def test_index_manifest(gen3_index, indexd_server):
         1,
         ("admin", "admin"),
         replace_urls=False,
+        output_filename="tests/outputs/indexing-output-manifest.csv",
     )
     rec1 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada099c")
     rec2 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada010c")
@@ -708,6 +710,7 @@ def test_index_manifest_with_replace_urls(gen3_index, indexd_server):
         1,
         ("admin", "admin"),
         replace_urls=True,
+        output_filename="tests/outputs/indexing-output-manifest.csv",
     )
     rec1 = gen3_index.get("255e396f-f1f8-11e9-9a07-0a80fada099c")
 
@@ -721,6 +724,7 @@ def test_index_non_guid_manifest(gen3_index, indexd_server):
         1,
         ("admin", "admin"),
         replace_urls=True,
+        output_filename="tests/outputs/indexing-output-manifest.csv",
     )
 
     assert "testprefix" in files[0]["guid"]
@@ -744,6 +748,7 @@ def test_index_manifest_additional_metadata(gen3_index, gen3_auth):
             thread_num=1,
             replace_urls=False,
             submit_additional_metadata_columns=True,
+            output_filename="tests/outputs/indexing-output-manifest.csv",
         )
         mds_records = {
             kwargs["guid"]: kwargs["metadata"]
@@ -785,6 +790,7 @@ def test_index_manifest_additional_metadata_force(
             replace_urls=False,
             submit_additional_metadata_columns=True,
             force_metadata_columns_even_if_empty=force_metadata_columns_even_if_empty,
+            output_filename="tests/outputs/indexing-output-manifest.csv",
         )
         mds_records = {
             kwargs["guid"]: kwargs["metadata"]
@@ -851,6 +857,7 @@ def test_index_manifest_packages(gen3_index, gen3_auth):
             thread_num=1,
             replace_urls=False,
             submit_additional_metadata_columns=True,
+            output_filename="tests/outputs/indexing-output-manifest.csv",
         )
 
         print("MDS create calls:", mock_mds_create.call_args_list)
@@ -980,6 +987,7 @@ def test_index_manifest_packages_failure(data, gen3_index, gen3_auth, logfile):
             thread_num=1,
             replace_urls=False,
             submit_additional_metadata_columns=True,
+            output_filename="tests/outputs/indexing-output-manifest.csv",
         )
         mds_records = {
             kwargs["guid"]: kwargs["metadata"]

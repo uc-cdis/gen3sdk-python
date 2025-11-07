@@ -238,7 +238,7 @@ def _verify_and_process_bundle_manifest(manifest_file, manifest_file_delimiter="
     return records, bundle_name_to_guid
 
 
-def _write_csv(records, filename="output_manifest.csv"):
+def _write_csv(records, filename="tests/outputs/output_manifest.csv"):
     fieldnames = [
         "name",
         "bundles",
