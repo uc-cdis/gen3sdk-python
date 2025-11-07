@@ -16,5 +16,8 @@ jobs:
   UnitTest:
     name: Python Unit Test
     uses: uc-cdis/.github/.github/workflows/python_unit_test.yaml@master
+    strategy:
+      matrix:
+        version: ['3.9', '3.10']
     with:
-        python-version: '3.9'
+        python-version: ${{ matrix.version }}
