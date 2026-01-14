@@ -377,8 +377,8 @@ def test_crosswalk_read(
     update_metadata_patch,
     gen3_auth,
 ):
-    output_filename = "tmp_output_file.csv"
-    output_info_filename = "tmp_output_file_info.csv"
+    output_filename = "tests/outputs/tmp_output_file.csv"
+    output_info_filename = "tests/outputs/tmp_output_file_info.csv"
 
     async def mock_async_update_metadata(guid, metadata, *_, **__):
         # should never get called
