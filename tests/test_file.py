@@ -595,16 +595,13 @@ def test_download_single_basic_functionality(gen3_file):
     Test download_single basic functionality with synchronous download.
 
     Verifies that download_single downloads a file successfully using
-    synchronous requests and returns a success status dictionary.
+    synchronous requests and returns True.
     """
     gen3_file._auth_provider._refresh_token = {"api_key": "123"}
 
-    with (
-        patch.object(gen3_file, "get_presigned_url") as mock_presigned,
-        patch("gen3.file.requests.get") as mock_get,
-        patch("gen3.index.Gen3Index.get_record") as mock_index,
-        patch("os.path.exists", return_value=False),
-    ):
+    with patch.object(gen3_file, "get_presigned_url") as mock_presigned, patch(
+        "gen3.file.requests.get"
+    ) as mock_get, patch("gen3.index.Gen3Index.get_record") as mock_index:
         mock_presigned.return_value = {"url": "https://fake-url.com/file"}
         mock_index.return_value = {"file_name": "test-file.txt"}
         mock_response = MagicMock()
@@ -613,9 +610,10 @@ def test_download_single_basic_functionality(gen3_file):
         mock_response.iter_content = lambda size: [b"test content"]
         mock_get.return_value = mock_response
 
-        result = gen3_file.download_single(object_id="test-guid", path="/tmp")
+        result = gen3_file.download_single(
+            object_id="test-guid", path="/tmp", protocol="s3"
+        )
 
-        assert result["status"] == "downloaded"
-        assert "filepath" in result
-        mock_presigned.assert_called_once_with("test-guid")
+        assert result == True
+        mock_presigned.assert_called_once_with("test-guid", protocol="s3")
         mock_index.assert_called_once_with("test-guid")

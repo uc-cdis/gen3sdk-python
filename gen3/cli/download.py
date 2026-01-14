@@ -6,6 +6,7 @@ import asyncio
 import json
 from datetime import datetime
 from typing import List, Dict, Any
+import os
 
 import click
 
@@ -140,6 +141,55 @@ def download_single(
 
 
 @click.command()
+@click.argument("guid")
+@click.option(
+    "--download-path",
+    default=f"./download_{datetime.now().strftime('%d_%b_%Y')}",
+    help="Directory to download file to (default: timestamped folder)",
+)
+@click.option(
+    "--protocol",
+    default=None,
+    help="Protocol for presigned URL (e.g., s3) (default: auto-detect)",
+)
+@click.pass_context
+def download_single(
+    ctx,
+    guid,
+    download_path,
+    protocol,
+):
+    """Download a single file by GUID."""
+    auth = ctx.obj["auth_factory"].get()
+
+    download_path = os.path.abspath(download_path)
+    os.makedirs(download_path, exist_ok=True)
+
+    try:
+        file_client = Gen3File(auth_provider=auth)
+
+        is_successful = file_client.download_single(
+            object_id=guid,
+            path=download_path,
+            protocol=protocol,
+        )
+
+        result = {
+            "status": "downloaded" if is_successful else "failed",
+            "reason": "Failed to download GUID." if not is_successful else "",
+        }
+
+        if result["status"] == "downloaded":
+            click.echo(f"✓ Downloaded to path: {download_path}")
+        else:
+            click.echo(f"✗ Failed: {result.get('error', 'See logs for error')}")
+
+    except Exception as e:
+        logging.error(f"Download failed: {e}")
+        raise click.ClickException(f"Download failed: {e}")
+
+
+@click.command()
 @click.option("--manifest", required=True, help="Path to manifest JSON file")
 @click.option(
     "--download-path",
@@ -239,7 +289,7 @@ def download_multiple(
 
         file_client = Gen3File(auth_provider=auth)
 
-        # Debug logging for input parameters  
+        # Debug logging for input parameters
         logging.debug(
             f"Async download parameters: manifest_data={len(manifest_data)} items, download_path={download_path}, filename_format={filename_format}, protocol={protocol}, max_concurrent_requests={max_concurrent_requests}, skip_completed={skip_completed}, rename={rename}, no_progress={no_progress}"
         )
