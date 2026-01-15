@@ -289,7 +289,7 @@ def test_discovery_combine():
     metadata_filename = "tests/merge_manifests/discovery_combine/metadata_file.tsv"
     discovery_column_to_map_on = "guid"
     metadata_column_to_map = "Id"
-    output_filename = "test_combined_discovery_metadata.tsv"
+    output_filename = "tests/outputs/test_combined_discovery_metadata.tsv"
     metadata_prefix = "DBGAP_FHIR_"
 
     output_file = combine_discovery_metadata(
@@ -321,7 +321,7 @@ def test_discovery_combine_exact_match():
     )
     discovery_column_to_map_on = "guid"
     metadata_column_to_map = "guid_exact_match"
-    output_filename = "test_combined_discovery_metadata_exact_match.tsv"
+    output_filename = "tests/outputs/test_combined_discovery_metadata_exact_match.tsv"
     metadata_prefix = "DBGAP_FHIR_"
 
     output_file = combine_discovery_metadata(

@@ -16,5 +16,11 @@ jobs:
   UnitTest:
     name: Python Unit Test
     uses: uc-cdis/.github/.github/workflows/python_unit_test.yaml@master
+    strategy:
+      matrix:
+        # the versions for which we require the CI to pass on PRs can
+        # be updated in the repo settings (branch rules)
+        version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+      fail-fast: false  # run for all versions even if one of them fails
     with:
-        python-version: '3.9'
+        python-version: ${{ matrix.version }}
