@@ -219,7 +219,7 @@ class Gen3File:
         index = Gen3Index(self._auth_provider)
         record = index.get_record(object_id)
 
-        filename = record["file_name"] or object_id
+        filename = record["file_name"] or url["url"].split("?")[0].split("/")[-1]
 
         out_path = os.path.join(path, filename)
         Gen3File._ensure_dirpath_exists(Path(os.path.dirname(out_path)))
