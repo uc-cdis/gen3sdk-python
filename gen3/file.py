@@ -15,6 +15,8 @@ from queue import Empty
 
 from cdislogging import get_logger
 
+from werkzeug.security import safe_join
+
 from gen3.index import Gen3Index
 from gen3.utils import raise_for_status_and_print_error
 
@@ -221,7 +223,7 @@ class Gen3File:
 
         filename = record["file_name"] or url["url"].split("?")[0].split("/")[-1]
 
-        out_path = os.path.join(path, filename)
+        out_path = safe_join(path, filename)
         Gen3File._ensure_dirpath_exists(Path(os.path.dirname(out_path)))
 
         with open(out_path, "wb") as f:

@@ -42,6 +42,7 @@ gen3users = "*"
 # A list of all of the optional dependencies, some of which are included in the
 # below `extras`. They can be opted into by apps.
 fhirclient = { version = "*", optional = true }
+werkzeug = "^3.1.5"
 
 [tool.poetry.extras]
 fhir = ["fhirclient"]
