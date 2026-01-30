@@ -1,5 +1,8 @@
 import click
+import sys
 from pfb import cli as pfb_cli
+
+from gen3.utils import load_entry_points
 
 try:
     from importlib.metadata import entry_points
@@ -22,6 +25,4 @@ def pfb():
 for command in pfb_cli.main.commands:
     pfb.add_command(pfb_cli.main.get_command(ctx=None, cmd_name=command))
 
-# load plug-ins from entry_points
-for ep in entry_points().get("gen3.plugins", []):
-    ep.load()
+load_entry_points()

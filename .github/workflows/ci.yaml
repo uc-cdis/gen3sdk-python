@@ -19,8 +19,10 @@ jobs:
     strategy:
       matrix:
         # the versions for which we require the CI to pass on PRs can
+
         # be updated in the repo settings (branch rules)
         version: ['3.9', '3.10', '3.11', '3.12', '3.13']
       fail-fast: false  # run for all versions even if one of them fails
     with:
         python-version: ${{ matrix.version }}
+        poetry-version: '2.2.1' # Max version supported by python 3.9
