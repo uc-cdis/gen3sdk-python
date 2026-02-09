@@ -15,6 +15,8 @@ from gen3.file import Gen3File
 
 logging = get_logger("__name__")
 
+MAX_CONCURRENT_REQUESTS = 20
+
 
 def get_or_create_event_loop_for_thread():
     """Get or create event loop for current thread."""
@@ -117,6 +119,93 @@ def download_single(
 
 
 @click.command()
+@click.argument("guid")
+@click.option(
+    "--download-path",
+    default=f"./download_{datetime.now().strftime('%d_%b_%Y')}",
+    help="Directory to download file to (default: timestamped folder)",
+)
+@click.option(
+    "--protocol",
+    default=None,
+    help="Protocol for presigned URL (e.g., s3) (default: auto-detect)",
+)
+@click.option(
+    "--filename-format",
+    default="original",
+    type=click.Choice(["original", "guid", "combined"]),
+    help="Filename format (default: original)",
+)
+@click.option(
+    "--skip-completed",
+    is_flag=True,
+    default=False,
+    help="Skip file if it already exists (default: false)",
+)
+@click.option(
+    "--rename",
+    is_flag=True,
+    help="Rename file if it already exists (default: false)",
+)
+@click.option(
+    "--no-progress",
+    is_flag=True,
+    help="Disable progress bar (default: false)",
+)
+@click.pass_context
+def download_single(
+    ctx,
+    guid,
+    download_path,
+    protocol,
+    filename_format,
+    skip_completed,
+    rename,
+    no_progress,
+):
+    """Download a single file by GUID using the async download pipeline."""
+    auth = ctx.obj["auth_factory"].get()
+
+    download_path = os.path.abspath(download_path)
+    os.makedirs(download_path, exist_ok=True)
+
+    # Build a single-item manifest compatible with async_download_multiple
+    manifest_data = [{"guid": guid}]
+
+    try:
+        file_client = Gen3File(auth_provider=auth)
+
+        loop = get_or_create_event_loop_for_thread()
+        result = loop.run_until_complete(
+            file_client.async_download_multiple(
+                manifest_data=manifest_data,
+                download_path=download_path,
+                filename_format=filename_format,
+                protocol=protocol,
+                max_concurrent_requests=1,
+                num_processes=1,
+                queue_size=1,
+                skip_completed=skip_completed,
+                rename=rename,
+                no_progress=no_progress,
+            )
+        )
+
+        if result["succeeded"]:
+            click.echo(f"✓ Downloaded GUID {guid} to {download_path}")
+        elif result["skipped"]:
+            click.echo(f"- Skipped GUID {guid} (already exists)")
+        else:
+            click.echo(f"✗ Failed to download GUID {guid}")
+            if result.get("failed"):
+                logging.error(f"Failure details: {result['failed']}")
+
+    except Exception as e:
+        logging.error(f"Download failed: {e}")
+        raise click.ClickException(f"Download failed: {e}")
+
+
+@click.command()
 @click.option("--manifest", required=True, help="Path to manifest JSON file")
 @click.option(
     "--download-path",
@@ -136,14 +225,14 @@ def download_single(
 )
 @click.option(
     "--max-concurrent-requests",
-    default=20,
+    default=MAX_CONCURRENT_REQUESTS,
     help="Maximum concurrent async downloads per process (default: 20)",
     type=int,
 )
 @click.option(
     "--numparallel",
     default=None,
-    help="Number of downloads to run in parallel (compatibility with gen3-client)",
+    help="Same as max-concurrent-requests, for compatibility with previous gen3-client arguments",
     type=int,
 )
 @click.option(
@@ -195,7 +284,9 @@ def download_multiple(
     auth = ctx.obj["auth_factory"].get()
 
     # Use numparallel as max_concurrent_requests if provided (for gen3-client compatibility)
-    if numparallel is not None and max_concurrent_requests == 20:  # 20 is the default
+    if (
+        numparallel is not None and max_concurrent_requests == MAX_CONCURRENT_REQUESTS
+    ):  # 20 is the default
         max_concurrent_requests = numparallel
 
     try:
@@ -247,17 +338,15 @@ def download_multiple(
             click.echo(f"✗ Failed: {len(result['failed'])}")
 
         if result["failed"]:
-            click.echo("\nFailed downloads:")
-            for failure in result["failed"]:
-                click.echo(
-                    f"  - {failure.get('guid', 'unknown')}: {failure.get('error', 'Unknown error')}"
-                )
-
             click.echo(
-                "\nTo retry failed downloads, run the same command with --skip-completed flag:"
+                "\nTo retry failed downloads, run the same command with --skip-completed true:"
             )
 
-        success_rate = len(result["succeeded"]) / len(manifest_data) * 100
+        success_rate = (
+            (len(result["succeeded"]) + len(result["skipped"]))
+            / len(manifest_data)
+            * 100
+        )
         click.echo(f"\nSuccess rate: {success_rate:.1f}%")
 
     except Exception as e:
