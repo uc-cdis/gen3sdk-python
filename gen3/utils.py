@@ -351,10 +351,10 @@ def load_entry_points():
     major = sys.version_info[0]
     minor = sys.version_info[1]
     if major == 3 and minor >= 12:
-        for ep in entry_points(group="pfb.plugins"):
+        for ep in entry_points(group="gen3.plugins"):
             ep.load()
     else:
-        for ep in entry_points().get("pfb.plugins", []):
+        for ep in entry_points().get("gen3.plugins", []):
             ep.load()
 
 
