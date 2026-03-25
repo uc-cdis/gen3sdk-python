@@ -306,27 +306,28 @@ def wts_external_oidc(hostname: str) -> Dict[str, Any]:
     oidc = {}
     if not hostname:
         return oidc
+    url = f"https://{hostname}/wts/external_oidc/"
+    err_msg = "Likely no WTS service running on this Commons. Proceeding, but certain commands might fail."
     try:
-        response = requests.get(f"https://{hostname}/wts/external_oidc/")
+        response = requests.get(url)
         response.raise_for_status()
+    except requests.exceptions.HTTPError as exc:
+        resp_msg = json_loads(exc.response.text)
+        if "message" in resp_msg:
+            resp_msg = resp_msg["message"]
+        logger.warning(
+            f"HTTP Error ({exc.response.status_code}) from '{url}': {resp_msg}. {err_msg}"
+        )
+        return {}
+    try:
         data = response.json()
         if "providers" not in data:
-            logger.warning(
-                'cannot find "providers". Likely no WTS service running for this commons'
-            )
+            logger.warning(f'No "providers" field in WTS response: {data}. {err_msg}')
             return oidc
         for item in data["providers"]:
             oidc[urlparse(item["base_url"]).netloc] = item
-
-    except requests.exceptions.HTTPError as exc:
-        logger.critical(
-            f'HTTP Error ({exc.response.status_code}): {json_loads(exc.response.text).get("message", "")}'
-        )
     except JSONDecodeError as ex:
-        logger.warning(
-            f"Unable to process WTS response. Likely no WTS service running on this commons. "
-            f"Certain commands might fail."
-        )
+        logger.warning(f"Unable to process WTS response: {response.text}. {err_msg}")
 
     return oidc
 
