@@ -306,8 +306,10 @@ def wts_external_oidc(hostname: str) -> Dict[str, Any]:
     oidc = {}
     if not hostname:
         return oidc
+
     url = f"https://{hostname}/wts/external_oidc/"
     err_msg = "Likely no WTS service running on this Commons. Proceeding, but certain commands might fail."
+
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -318,7 +320,8 @@ def wts_external_oidc(hostname: str) -> Dict[str, Any]:
         logger.warning(
             f"HTTP Error ({exc.response.status_code}) from '{url}': {resp_msg}. {err_msg}"
         )
-        return {}
+        return oidc
+
     try:
         data = response.json()
         if "providers" not in data:
@@ -656,11 +659,7 @@ def resolve_drs_hostname_from_id(
         return prefix, identifier, identifier_type
     if identifier_type == "compact":
         if prefix not in resolved_drs_prefix_cache:
-            hostname = resolve_drs(
-                prefix,
-                object_id,
-                metadata_service_url=mds_url,
-            )
+            hostname = resolve_drs(prefix, object_id, metadata_service_url=mds_url)
             if hostname is not None:
                 resolved_drs_prefix_cache[prefix] = hostname
         else:

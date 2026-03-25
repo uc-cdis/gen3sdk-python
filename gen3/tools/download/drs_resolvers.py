@@ -18,15 +18,14 @@ DRS_RESOLVER_HOSTNAME = os.getenv("DRS_RESOLVER_HOSTNAME", "https://dataguids.or
 DRS_CACHE_EXPIRE = timedelta(days=DRS_CACHE_EXPIRE_DURATION)
 LOCALLY_CACHE_RESOLVED_HOSTS = os.getenv("LOCALLY_CACHE_RESOLVED_HOSTS", True)
 DRS_RESOLUTION_ORDER = os.getenv(
-    "DRS_RESOLUTION_ORDER",
-    "cache_file:commons_mds:dataguids_dist:dataguids",
+    "DRS_RESOLUTION_ORDER", "cache_file:commons_mds:dataguids_dist:dataguids"
 )
 
 DRS_CACHE = os.getenv(
     "DRS_CACHE", str(Path(Path.home(), ".drs_cache", "resolved_drs_hosts.json"))
 )
 
-logger = get_logger("download", log_level="info")
+logger = get_logger("download", log_level="warning")
 
 
 def clean_dist_entry(s: str) -> str:
