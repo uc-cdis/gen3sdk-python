@@ -634,7 +634,7 @@ def parse_drs_identifier(drs_candidate: str) -> Tuple[str, str, str]:
 
 
 def resolve_drs_hostname_from_id(
-    object_id: str, resolved_drs_prefix_cache: dict, mds_url: str
+    object_id: str, resolved_drs_prefix_cache: dict, provided_hostname: str
 ) -> Optional[Tuple[str, str, str]]:
     """Resolves and returns a DRS identifier
     The resolved_drs_prefix_cache is updated if needed and is a potential side effect of this
@@ -642,7 +642,7 @@ def resolve_drs_hostname_from_id(
     Args:
         object_id (str): DRS object id to resolve
         resolved_drs_prefix_cache (dict) : cache of resolved DRS prefixes
-        mds_url (str): the URL for the Gen3 Aggregate MDS to use to help resolved DRS hostname
+        provided_hostname (str): user-provided Data Commons url
 
     Returns:
          the hostname of the DRS server if resolved, otherwise it returns None
@@ -654,7 +654,9 @@ def resolve_drs_hostname_from_id(
         return prefix, identifier, identifier_type
     if identifier_type == "compact":
         if prefix not in resolved_drs_prefix_cache:
-            hostname = resolve_drs(prefix, object_id, metadata_service_url=mds_url)
+            hostname = resolve_drs(
+                prefix, object_id, provided_hostname=provided_hostname
+            )
             if hostname is not None:
                 resolved_drs_prefix_cache[prefix] = hostname
         else:
@@ -666,7 +668,7 @@ def resolve_drs_hostname_from_id(
 def resolve_objects_drs_hostname(
     object_ids: List[Downloadable],
     resolved_drs_prefix_cache: dict,
-    mds_url: str,
+    provided_hostname: str,
     commons_url: str = None,
 ) -> None:
     """Given a list of object_ids go through list and resolve + cache any unknown hosts
@@ -674,7 +676,7 @@ def resolve_objects_drs_hostname(
     Args:
         object_ids (List[Downloadable]): list of object to resolve
         resolved_drs_prefix_cache (dict): cache of resolved DRS prefixes
-        mds_url (str): Gen3 metadata service to resolve DRS prefixes
+        provided_hostname (str): user-provided Data Commons url
         hostname (str): Hostname to main Gen3 environment
     """
     for entry in object_ids:
@@ -683,7 +685,7 @@ def resolve_objects_drs_hostname(
         if entry.hostname is None:
             # if resolution fails the entry hostname will still be None
             entry.hostname, nid, drs_type = resolve_drs_hostname_from_id(
-                entry.object_id, resolved_drs_prefix_cache, mds_url
+                entry.object_id, resolved_drs_prefix_cache, provided_hostname
             )
             if (
                 drs_type == "hostname"
@@ -863,9 +865,7 @@ class DownloadManager:
         resolve_objects_drs_hostname(
             object_list,
             self.resolved_compact_drs,
-            mds_url=f"http://{self.hostname}/mds/aggregate/info"
-            if self.hostname
-            else None,
+            provided_hostname=self.hostname,
             commons_url=self.commons_url,
         )
         progress_bar = (

@@ -18,7 +18,8 @@ DRS_RESOLVER_HOSTNAME = os.getenv("DRS_RESOLVER_HOSTNAME", "https://dataguids.or
 DRS_CACHE_EXPIRE = timedelta(days=DRS_CACHE_EXPIRE_DURATION)
 LOCALLY_CACHE_RESOLVED_HOSTS = os.getenv("LOCALLY_CACHE_RESOLVED_HOSTS", True)
 DRS_RESOLUTION_ORDER = os.getenv(
-    "DRS_RESOLUTION_ORDER", "cache_file:commons_mds:dataguids_dist:dataguids"
+    "DRS_RESOLUTION_ORDER",
+    "cache_file:commons_mds:provided_hostname:dataguids_dist:dataguids",
 )
 
 DRS_CACHE = os.getenv(
@@ -213,7 +214,7 @@ def resolve_compact_drs_using_indexd_dist(
 
 def resolve_drs_using_metadata_service(
     identifier: str,
-    metadata_service_url: str,
+    provided_hostname: str,
     cache_results: bool = LOCALLY_CACHE_RESOLVED_HOSTS,
 ) -> Optional[str]:
     """Resolves a compact DRS prefix by by performing a lookup into a Gen3 AggregateMDS.
@@ -223,12 +224,13 @@ def resolve_drs_using_metadata_service(
 
     Args
            identifier: DRS prefix to resolve
-           metadata_service_url: url of MDS server to query.
+           provided_hostname: user-provided Data Commons url.
            cache_results: set to true to write local cache file
            Returns a hostname if resolved, otherwise None
     """
-    if not metadata_service_url:
+    if not provided_hostname:
         return None
+    metadata_service_url = f"http://{provided_hostname}/mds/aggregate/info"
     try:
         response = requests.get(f"{metadata_service_url}/{identifier}")
         response.raise_for_status()
@@ -318,7 +320,7 @@ def resolve_compact_drs_using_official_resolver(
 def resolve_drs_using_commons_mds(
     identifier: str,
     _: str,
-    metadata_service_url: str,
+    provided_hostname: str,
     cache_results: bool = LOCALLY_CACHE_RESOLVED_HOSTS,
 ) -> Optional[str]:
     """Wrapper to use the resolve_drs_using_metadata_service as a DRS resolver functions
@@ -326,12 +328,12 @@ def resolve_drs_using_commons_mds(
     Args:
            identifier: DRS prefix to resolve
            _: unused
-           metadata_service_url: url of MDS server to query.
+           provided_hostname: user-provided Data Commons url.
            cache_results: set to true to write local cache file
            Returns a hostname if resolved, otherwise None
     """
     return resolve_drs_using_metadata_service(
-        identifier, metadata_service_url, cache_results
+        identifier, provided_hostname, cache_results
     )
 
 
@@ -339,6 +341,7 @@ def resolve_drs_using_commons_mds(
 REGISTERED_DRS_RESOLVERS = {
     "cache_file": resolve_drs_from_local_cache,
     "commons_mds": resolve_drs_using_commons_mds,
+    "provided_hostname": resolve_drs_using_provided_hostname,
     "dataguids_dist": resolve_compact_drs_using_indexd_dist,
     "dataguids": resolve_compact_drs_using_official_resolver,
     # TODO "identifiers.org"
