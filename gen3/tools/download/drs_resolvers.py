@@ -214,7 +214,7 @@ def resolve_compact_drs_using_indexd_dist(
 
 def resolve_drs_using_metadata_service(
     identifier: str,
-    provided_hostname: str,
+    metadata_service_url: str,
     cache_results: bool = LOCALLY_CACHE_RESOLVED_HOSTS,
 ) -> Optional[str]:
     """Resolves a compact DRS prefix by by performing a lookup into a Gen3 AggregateMDS.
@@ -224,13 +224,12 @@ def resolve_drs_using_metadata_service(
 
     Args
            identifier: DRS prefix to resolve
-           provided_hostname: user-provided Data Commons url.
+           metadata_service_url: url of MDS server to query.
            cache_results: set to true to write local cache file
            Returns a hostname if resolved, otherwise None
     """
-    if not provided_hostname:
+    if not metadata_service_url:
         return None
-    metadata_service_url = f"http://{provided_hostname}/mds/aggregate/info"
     try:
         response = requests.get(f"{metadata_service_url}/{identifier}")
         response.raise_for_status()
@@ -320,7 +319,7 @@ def resolve_compact_drs_using_official_resolver(
 def resolve_drs_using_commons_mds(
     identifier: str,
     _: str,
-    provided_hostname: str,
+    metadata_service_url: str,
     cache_results: bool = LOCALLY_CACHE_RESOLVED_HOSTS,
 ) -> Optional[str]:
     """Wrapper to use the resolve_drs_using_metadata_service as a DRS resolver functions
@@ -328,13 +327,40 @@ def resolve_drs_using_commons_mds(
     Args:
            identifier: DRS prefix to resolve
            _: unused
-           provided_hostname: user-provided Data Commons url.
+           metadata_service_url: url of MDS server to query.
            cache_results: set to true to write local cache file
            Returns a hostname if resolved, otherwise None
     """
     return resolve_drs_using_metadata_service(
-        identifier, provided_hostname, cache_results
+        identifier, metadata_service_url, cache_results
     )
+
+
+def resolve_drs_using_provided_hostname(
+    _: str,
+    __: str,
+    provided_hostname: str,
+    cache_results: bool = LOCALLY_CACHE_RESOLVED_HOSTS,
+) -> Optional[str]:
+    """Resolves by directly using the hostname provided by the user
+
+    Args:
+           _: unused
+           provided_hostname: url of MDS server to query.
+           cache_results: set to true to write local cache file
+           Returns a hostname if resolved, otherwise None
+    """
+    if cache_results:
+        data = {
+            "identifier": {
+                "host": provided_hostname,
+                "name": provided_hostname,
+                "type": "indexd",
+                "created": datetime.now(timezone.utc).strftime("%m/%d/%Y %H:%M:%S:%z"),
+            }
+        }
+        append_to_local_drs_cache(data)
+    return provided_hostname
 
 
 # TODO: provide methods to turn this into a plugin architecture
@@ -366,6 +392,7 @@ def resolve_drs_via_list(
         resolver = REGISTERED_DRS_RESOLVERS.get(how, None)
         if resolver is None:
             continue
+        logger.info(f"Attempting to resolve {identifier} with {how}...")
         sig = inspect.signature(resolver)
         filter_keys = [
             param.name
@@ -381,7 +408,7 @@ def resolve_drs_via_list(
 
         host = resolver(identifier, object_id, **parameters_dict)
         if host is not None:
-            logger.info(f"resolved {identifier} tried {tried}")
+            logger.info(f"resolved {identifier}, tried: {tried}")
             return host
 
     logger.warning(f"unable to resolve {identifier} or {object_id}, tried {tried}")

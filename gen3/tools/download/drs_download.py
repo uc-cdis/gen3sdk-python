@@ -634,7 +634,10 @@ def parse_drs_identifier(drs_candidate: str) -> Tuple[str, str, str]:
 
 
 def resolve_drs_hostname_from_id(
-    object_id: str, resolved_drs_prefix_cache: dict, provided_hostname: str
+    object_id: str,
+    resolved_drs_prefix_cache: dict,
+    mds_url: str,
+    provided_hostname: str,
 ) -> Optional[Tuple[str, str, str]]:
     """Resolves and returns a DRS identifier
     The resolved_drs_prefix_cache is updated if needed and is a potential side effect of this
@@ -642,6 +645,7 @@ def resolve_drs_hostname_from_id(
     Args:
         object_id (str): DRS object id to resolve
         resolved_drs_prefix_cache (dict) : cache of resolved DRS prefixes
+        mds_url (str): the URL for the Gen3 Aggregate MDS to use to help resolved DRS hostname
         provided_hostname (str): user-provided Data Commons url
 
     Returns:
@@ -655,7 +659,10 @@ def resolve_drs_hostname_from_id(
     if identifier_type == "compact":
         if prefix not in resolved_drs_prefix_cache:
             hostname = resolve_drs(
-                prefix, object_id, provided_hostname=provided_hostname
+                prefix,
+                object_id,
+                metadata_service_url=mds_url,
+                provided_hostname=provided_hostname,
             )
             if hostname is not None:
                 resolved_drs_prefix_cache[prefix] = hostname
@@ -668,6 +675,7 @@ def resolve_drs_hostname_from_id(
 def resolve_objects_drs_hostname(
     object_ids: List[Downloadable],
     resolved_drs_prefix_cache: dict,
+    mds_url: str,
     provided_hostname: str,
     commons_url: str = None,
 ) -> None:
@@ -676,6 +684,7 @@ def resolve_objects_drs_hostname(
     Args:
         object_ids (List[Downloadable]): list of object to resolve
         resolved_drs_prefix_cache (dict): cache of resolved DRS prefixes
+        mds_url (str): Gen3 metadata service to resolve DRS prefixes
         provided_hostname (str): user-provided Data Commons url
         hostname (str): Hostname to main Gen3 environment
     """
@@ -685,7 +694,7 @@ def resolve_objects_drs_hostname(
         if entry.hostname is None:
             # if resolution fails the entry hostname will still be None
             entry.hostname, nid, drs_type = resolve_drs_hostname_from_id(
-                entry.object_id, resolved_drs_prefix_cache, provided_hostname
+                entry.object_id, resolved_drs_prefix_cache, mds_url, provided_hostname
             )
             if (
                 drs_type == "hostname"
@@ -838,6 +847,7 @@ class DownloadManager:
         self.hostname = (
             hostname if hostname else get_hostname_from_endpoint(auth.endpoint)
         )
+        self.provided_hostname = hostname
         self.commons_url = commons_url
         self.access_token = auth.get_access_token()
         self.metadata = Gen3Metadata(auth)
@@ -865,7 +875,10 @@ class DownloadManager:
         resolve_objects_drs_hostname(
             object_list,
             self.resolved_compact_drs,
-            provided_hostname=self.hostname,
+            mds_url=f"http://{self.hostname}/mds/aggregate/info"
+            if self.hostname
+            else None,
+            provided_hostname=self.provided_hostname,
             commons_url=self.commons_url,
         )
         progress_bar = (
@@ -994,8 +1007,7 @@ class DownloadManager:
 
             if entry.hostname is None:
                 logger.critical(
-                    f"{entry.hostname} was not resolved, skipping {entry.object_id}."
-                    f"Skipping {entry.file_name}"
+                    f"Unable to resolve, skipping {entry.object_id}. Skipping"
                 )
                 completed[entry.object_id].status = "error (resolving DRS host)"
                 continue
@@ -1003,8 +1015,7 @@ class DownloadManager:
             # check to see if we have tokens
             if entry.hostname not in self.known_hosts:
                 logger.critical(
-                    f"{entry.hostname} is not present in this commons remote user access."
-                    f"Skipping {entry.file_name}"
+                    f"{entry.hostname} is not present in this commons remote user access. Skipping {entry.file_name}"
                 )
                 completed[entry.object_id].status = "error (resolving DRS host)"
                 continue
