@@ -19,14 +19,14 @@ DRS_CACHE_EXPIRE = timedelta(days=DRS_CACHE_EXPIRE_DURATION)
 LOCALLY_CACHE_RESOLVED_HOSTS = os.getenv("LOCALLY_CACHE_RESOLVED_HOSTS", True)
 DRS_RESOLUTION_ORDER = os.getenv(
     "DRS_RESOLUTION_ORDER",
-    "cache_file:commons_mds:provided_hostname:dataguids_dist:dataguids",
+    "cache_file:commons_mds:dataguids_dist:dataguids",
 )
 
 DRS_CACHE = os.getenv(
     "DRS_CACHE", str(Path(Path.home(), ".drs_cache", "resolved_drs_hosts.json"))
 )
 
-logger = get_logger("download", log_level="warning")
+logger = get_logger("download", log_level="info")
 
 
 def clean_dist_entry(s: str) -> str:
@@ -336,38 +336,10 @@ def resolve_drs_using_commons_mds(
     )
 
 
-def resolve_drs_using_provided_hostname(
-    _: str,
-    __: str,
-    provided_hostname: str,
-    cache_results: bool = LOCALLY_CACHE_RESOLVED_HOSTS,
-) -> Optional[str]:
-    """Resolves by directly using the hostname provided by the user
-
-    Args:
-           _: unused
-           provided_hostname: url of MDS server to query.
-           cache_results: set to true to write local cache file
-           Returns a hostname if resolved, otherwise None
-    """
-    if cache_results:
-        data = {
-            "identifier": {
-                "host": provided_hostname,
-                "name": provided_hostname,
-                "type": "indexd",
-                "created": datetime.now(timezone.utc).strftime("%m/%d/%Y %H:%M:%S:%z"),
-            }
-        }
-        append_to_local_drs_cache(data)
-    return provided_hostname
-
-
 # TODO: provide methods to turn this into a plugin architecture
 REGISTERED_DRS_RESOLVERS = {
     "cache_file": resolve_drs_from_local_cache,
     "commons_mds": resolve_drs_using_commons_mds,
-    "provided_hostname": resolve_drs_using_provided_hostname,
     "dataguids_dist": resolve_compact_drs_using_indexd_dist,
     "dataguids": resolve_compact_drs_using_official_resolver,
     # TODO "identifiers.org"
