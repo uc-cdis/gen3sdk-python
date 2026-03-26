@@ -306,27 +306,31 @@ def wts_external_oidc(hostname: str) -> Dict[str, Any]:
     oidc = {}
     if not hostname:
         return oidc
+
+    url = f"https://{hostname}/wts/external_oidc/"
+    err_msg = "Likely no WTS service running on this Commons. Proceeding, but certain commands might fail."
+
     try:
-        response = requests.get(f"https://{hostname}/wts/external_oidc/")
+        response = requests.get(url)
         response.raise_for_status()
+    except requests.exceptions.HTTPError as exc:
+        resp_msg = json_loads(exc.response.text)
+        if "message" in resp_msg:
+            resp_msg = resp_msg["message"]
+        logger.warning(
+            f"HTTP Error ({exc.response.status_code}) from '{url}': {resp_msg}. {err_msg}"
+        )
+        return oidc
+
+    try:
         data = response.json()
         if "providers" not in data:
-            logger.warning(
-                'cannot find "providers". Likely no WTS service running for this commons'
-            )
+            logger.warning(f'No "providers" field in WTS response: {data}. {err_msg}')
             return oidc
         for item in data["providers"]:
             oidc[urlparse(item["base_url"]).netloc] = item
-
-    except requests.exceptions.HTTPError as exc:
-        logger.critical(
-            f'HTTP Error ({exc.response.status_code}): {json_loads(exc.response.text).get("message", "")}'
-        )
     except JSONDecodeError as ex:
-        logger.warning(
-            f"Unable to process WTS response. Likely no WTS service running on this commons. "
-            f"Certain commands might fail."
-        )
+        logger.warning(f"Unable to process WTS response: {response.text}. {err_msg}")
 
     return oidc
 
@@ -633,7 +637,9 @@ def parse_drs_identifier(drs_candidate: str) -> Tuple[str, str, str]:
 
 
 def resolve_drs_hostname_from_id(
-    object_id: str, resolved_drs_prefix_cache: dict, mds_url: str
+    object_id: str,
+    resolved_drs_prefix_cache: dict,
+    mds_url: str,
 ) -> Optional[Tuple[str, str, str]]:
     """Resolves and returns a DRS identifier
     The resolved_drs_prefix_cache is updated if needed and is a potential side effect of this
@@ -993,8 +999,7 @@ class DownloadManager:
 
             if entry.hostname is None:
                 logger.critical(
-                    f"{entry.hostname} was not resolved, skipping {entry.object_id}."
-                    f"Skipping {entry.file_name}"
+                    f"Unable to resolve, skipping {entry.object_id}. Skipping"
                 )
                 completed[entry.object_id].status = "error (resolving DRS host)"
                 continue
@@ -1002,8 +1007,7 @@ class DownloadManager:
             # check to see if we have tokens
             if entry.hostname not in self.known_hosts:
                 logger.critical(
-                    f"{entry.hostname} is not present in this commons remote user access."
-                    f"Skipping {entry.file_name}"
+                    f"{entry.hostname} is not present in this commons remote user access. Skipping {entry.file_name}"
                 )
                 completed[entry.object_id].status = "error (resolving DRS host)"
                 continue
@@ -1116,6 +1120,7 @@ def _download(
     show_progress=False,
     unpack_packages=True,
     delete_unpacked_packages=False,
+    commons_url=None,
 ) -> Optional[Dict[str, Any]]:
     """
     A convenience function used to download a json manifest.
@@ -1146,6 +1151,7 @@ def _download(
         auth=auth,
         download_list=object_list,
         show_progress=show_progress,
+        commons_url=commons_url,
     )
 
     out_dir_path = ensure_dirpath_exists(Path(output_dir))
@@ -1349,6 +1355,7 @@ def download_files_in_drs_manifest(
     show_progress=True,
     unpack_packages=True,
     delete_unpacked_packages=False,
+    commons_url=None,
 ) -> None:
     """
     A convenience function used to download a json manifest.
@@ -1370,6 +1377,7 @@ def download_files_in_drs_manifest(
         show_progress,
         unpack_packages,
         delete_unpacked_packages,
+        commons_url,
     )
 
 
