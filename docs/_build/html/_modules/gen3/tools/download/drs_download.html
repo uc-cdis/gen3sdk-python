@@ -363,27 +363,31 @@
     <span class="n">oidc</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">hostname</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">oidc</span>
+
+    <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;https://</span><span class="si">{</span><span class="n">hostname</span><span class="si">}</span><span class="s2">/wts/external_oidc/&quot;</span>
+    <span class="n">err_msg</span> <span class="o">=</span> <span class="s2">&quot;Likely no WTS service running on this Commons. Proceeding, but certain commands might fail.&quot;</span>
+
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;https://</span><span class="si">{</span><span class="n">hostname</span><span class="si">}</span><span class="s2">/wts/external_oidc/&quot;</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
         <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+    <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">HTTPError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">resp_msg</span> <span class="o">=</span> <span class="n">json_loads</span><span class="p">(</span><span class="n">exc</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;message&quot;</span> <span class="ow">in</span> <span class="n">resp_msg</span><span class="p">:</span>
+            <span class="n">resp_msg</span> <span class="o">=</span> <span class="n">resp_msg</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">]</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;HTTP Error (</span><span class="si">{</span><span class="n">exc</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">) from &#39;</span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">resp_msg</span><span class="si">}</span><span class="s2">. </span><span class="si">{</span><span class="n">err_msg</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">oidc</span>
+
+    <span class="k">try</span><span class="p">:</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
         <span class="k">if</span> <span class="s2">&quot;providers&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                <span class="s1">&#39;cannot find &quot;providers&quot;. Likely no WTS service running for this commons&#39;</span>
-            <span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;No &quot;providers&quot; field in WTS response: </span><span class="si">{</span><span class="n">data</span><span class="si">}</span><span class="s1">. </span><span class="si">{</span><span class="n">err_msg</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">oidc</span>
         <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;providers&quot;</span><span class="p">]:</span>
             <span class="n">oidc</span><span class="p">[</span><span class="n">urlparse</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;base_url&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">netloc</span><span class="p">]</span> <span class="o">=</span> <span class="n">item</span>
-
-    <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">HTTPError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s1">&#39;HTTP Error (</span><span class="si">{</span><span class="n">exc</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s1">): </span><span class="si">{</span><span class="n">json_loads</span><span class="p">(</span><span class="n">exc</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span>
-        <span class="p">)</span>
     <span class="k">except</span> <span class="n">JSONDecodeError</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Unable to process WTS response. Likely no WTS service running on this commons. &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;Certain commands might fail.&quot;</span>
-        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unable to process WTS response: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">. </span><span class="si">{</span><span class="n">err_msg</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">oidc</span>
 
@@ -690,7 +694,9 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">resolve_drs_hostname_from_id</span><span class="p">(</span>
-    <span class="n">object_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">resolved_drs_prefix_cache</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">mds_url</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">object_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">resolved_drs_prefix_cache</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">mds_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolves and returns a DRS identifier</span>
 <span class="sd">    The resolved_drs_prefix_cache is updated if needed and is a potential side effect of this</span>
@@ -1063,8 +1069,7 @@
 
             <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">hostname</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">hostname</span><span class="si">}</span><span class="s2"> was not resolved, skipping </span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">object_id</span><span class="si">}</span><span class="s2">.&quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;Skipping </span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">file_name</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Unable to resolve, skipping </span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">object_id</span><span class="si">}</span><span class="s2">. Skipping&quot;</span>
                 <span class="p">)</span>
                 <span class="n">completed</span><span class="p">[</span><span class="n">entry</span><span class="o">.</span><span class="n">object_id</span><span class="p">]</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;error (resolving DRS host)&quot;</span>
                 <span class="k">continue</span>
@@ -1072,8 +1077,7 @@
             <span class="c1"># check to see if we have tokens</span>
             <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">hostname</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">known_hosts</span><span class="p">:</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">hostname</span><span class="si">}</span><span class="s2"> is not present in this commons remote user access.&quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;Skipping </span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">file_name</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">hostname</span><span class="si">}</span><span class="s2"> is not present in this commons remote user access. Skipping </span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">file_name</span><span class="si">}</span><span class="s2">&quot;</span>
                 <span class="p">)</span>
                 <span class="n">completed</span><span class="p">[</span><span class="n">entry</span><span class="o">.</span><span class="n">object_id</span><span class="p">]</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;error (resolving DRS host)&quot;</span>
                 <span class="k">continue</span>
@@ -1191,6 +1195,7 @@
     <span class="n">show_progress</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="n">unpack_packages</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">delete_unpacked_packages</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">commons_url</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A convenience function used to download a json manifest.</span>
@@ -1221,6 +1226,7 @@
         <span class="n">auth</span><span class="o">=</span><span class="n">auth</span><span class="p">,</span>
         <span class="n">download_list</span><span class="o">=</span><span class="n">object_list</span><span class="p">,</span>
         <span class="n">show_progress</span><span class="o">=</span><span class="n">show_progress</span><span class="p">,</span>
+        <span class="n">commons_url</span><span class="o">=</span><span class="n">commons_url</span><span class="p">,</span>
     <span class="p">)</span>
 
     <span class="n">out_dir_path</span> <span class="o">=</span> <span class="n">ensure_dirpath_exists</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">output_dir</span><span class="p">))</span>
@@ -1432,6 +1438,7 @@
     <span class="n">show_progress</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">unpack_packages</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">delete_unpacked_packages</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">commons_url</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A convenience function used to download a json manifest.</span>
@@ -1453,6 +1460,7 @@
         <span class="n">show_progress</span><span class="p">,</span>
         <span class="n">unpack_packages</span><span class="p">,</span>
         <span class="n">delete_unpacked_packages</span><span class="p">,</span>
+        <span class="n">commons_url</span><span class="p">,</span>
     <span class="p">)</span></div>
 
 
