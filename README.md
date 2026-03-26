@@ -1,4 +1,4 @@
-# Gen3 SDK for Python (w/ CLI)
+# Gen3 SDK for Python (and CLI)
 
 The Gen3 Software Development Kit (SDK) for Python provides classes and functions for handling common tasks when interacting with a Gen3 commons. It also exposes a Command Line Interface (CLI).
 
