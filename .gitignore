@@ -114,3 +114,4 @@ gen3/tools/indexing/tmp/
 
 .dccache
 .idea
+docs/_build/doctrees/environment.pickle
