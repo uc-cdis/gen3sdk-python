@@ -114,4 +114,7 @@ gen3/tools/indexing/tmp/
 
 .dccache
 .idea
+
+# Do not store the sphinx build environment.pickle.
+# It's unnecessary and creates unnecessary documentation commits on PRs
 docs/_build/doctrees/environment.pickle
