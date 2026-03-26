@@ -89,7 +89,7 @@ async def async_verify_metadata_manifest(
     max_concurrent_requests=MAX_CONCURRENT_REQUESTS,
     manifest_row_parsers=manifest_row_parsers,
     manifest_file_delimiter=None,
-    output_filename=f"verify-metadata-errors-{time.time()}.log",
+    output_filename=None,
 ):
     """
     Verify all file object records
@@ -104,6 +104,9 @@ async def async_verify_metadata_manifest(
         manifest_file_delimiter (str): delimeter in manifest_file
         output_filename (str): filename for output logs
     """
+    if not output_filename:
+        output_filename = f"verify-metadata-errors-{time.time()}.log"
+
     start_time = time.perf_counter()
     logging.info(f"start time: {start_time}")
 

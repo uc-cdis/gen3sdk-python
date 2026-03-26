@@ -150,7 +150,7 @@ async def async_ingest_metadata_manifest(
     max_concurrent_requests=MAX_CONCURRENT_REQUESTS,
     manifest_row_parsers=manifest_row_parsers,
     manifest_file_delimiter=None,
-    output_filename=f"ingest-metadata-manifest-errors-{time.time()}.log",
+    output_filename=None,
     get_guid_from_file=True,
     metadata_type=None,
 ):
@@ -176,6 +176,9 @@ async def async_ingest_metadata_manifest(
                 if is_indexed_file_object
                 else GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT)
     """
+    if not output_filename:
+        output_filename = f"ingest-metadata-manifest-errors-{time.time()}.log"
+
     # if delimiter not specified, try to get based on file ext
     if not manifest_file_delimiter:
         file_ext = os.path.splitext(manifest_file)
