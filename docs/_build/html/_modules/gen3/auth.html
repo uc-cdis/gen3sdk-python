@@ -98,11 +98,11 @@
         <span class="k">raise</span> <span class="n">Gen3AuthError</span><span class="p">(</span><span class="n">err_msg</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="n">json_resp</span><span class="p">))</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">get_access_token_with_key</span><span class="p">(</span><span class="n">api_key</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_access_token_with_key</span><span class="p">(</span><span class="n">api_key</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Try to fetch an access token given the api key</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">endpoint</span> <span class="o">=</span> <span class="n">endpoint_from_token</span><span class="p">(</span><span class="n">api_key</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">])</span>
+    <span class="n">endpoint</span> <span class="o">=</span> <span class="n">endpoint</span> <span class="ow">or</span> <span class="n">endpoint_from_token</span><span class="p">(</span><span class="n">api_key</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">])</span>
     <span class="c1"># attempt to get a token from Fence</span>
     <span class="n">auth_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/user/credentials/cdis/access_token&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">endpoint</span><span class="p">)</span>
     <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">auth_url</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">api_key</span><span class="p">)</span>
@@ -405,7 +405,9 @@
                 <span class="n">endpoint</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client_credentials</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client_scopes</span>
             <span class="p">)</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span> <span class="o">=</span> <span class="n">get_access_token_with_key</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span> <span class="o">=</span> <span class="n">get_access_token_with_key</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">,</span> <span class="n">endpoint</span>
+            <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;Unable to refresh access token. &quot;</span>
