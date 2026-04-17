@@ -30,7 +30,7 @@ class Gen3Wrap:
             f"Running the command {self.command_args} with gen3 access token in environment variable"
         )
         try:
-            subprocess.run(cmd, stderr=subprocess.STDOUT)
+            subprocess.run(cmd, stderr=subprocess.STDOUT, check=True)
         except Exception as e:
             logger.error(f"ERROR while running '{cmd}':", e)
             raise
