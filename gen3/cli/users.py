@@ -1,7 +1,9 @@
 import click
 
 from gen3users import main as users_cli
+import sys
 
+from gen3.utils import load_entry_points
 
 try:
     from importlib.metadata import entry_points
@@ -24,6 +26,4 @@ def users():
 for command in users_cli.main.commands:
     users.add_command(users_cli.main.get_command(ctx=None, cmd_name=command))
 
-# load plug-ins from entry_points
-for ep in entry_points().get("gen3.plugins", []):
-    ep.load()
+load_entry_points()
