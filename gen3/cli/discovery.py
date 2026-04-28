@@ -54,7 +54,7 @@ def discovery():
     "--guid_field",
     "guid_field",
     help=(
-        'The column / field name within the metadata that will be used as GUIDs, if not specified, will try to find a column \ field named "guid" from the metadata.'
+        'The column / field name within the metadata that will be used as GUIDs, if not specified, will try to find a column / field named "guid" from the metadata.'
         "If that field doesn't exist in a certain metadata record, that record will be skipped from publishing."
     ),
     default=None,
