@@ -15,26 +15,14 @@ def mock_access_key(_):
 
 
 profile = "DummyProfile"
-expected_profile_line = f"[{profile}]\n"
 creds = {"key_id": "1234", "api_key": "abc"}
-new_lines = [
-    f"key_id={creds['key_id']}\n",
-    f"api_key={creds['api_key']}\n",
-    f"api_endpoint={mock_endpoint(None)}\n",
-    f"access_key={mock_access_key(None)}\n",
-    "use_shepherd=\n",
-    "min_shepherd_version=\n",
-]
+expected_credentials = {
+    "key_id": creds['key_id'],
+    "api_key": creds['api_key'],
+    "api_endpoint": mock_endpoint(None),
+    "access_token": mock_access_key(None),
+}
 
-lines_with_profile = [
-    f"[{profile}]\n",
-    f"key_id=random_key\n",
-    f"api_key=random_api_key\n",
-    f"api_endpoint=random_endpoint\n",
-    f"access_key=random_access_key\n",
-    "use_shepherd=random_boolean\n",
-    "min_shepherd_version=random_version\n",
-]
 
 
 @patch("gen3.auth.endpoint_from_token", mock_endpoint)
@@ -47,26 +35,33 @@ def test_get_profile_from_creds(monkeypatch):
         with open(test_file_name, "w+") as cred_file:
             json.dump(creds, cred_file)
 
-        profile_line, lines = config_tool.get_profile_from_creds(
+        profile_name, credentials = config_tool.get_profile_from_creds(
             profile, test_file_name
         )
     finally:
         if os.path.exists(test_file_name):
             os.remove(test_file_name)
 
-    assert profile_line == expected_profile_line
-    for line, new_line in zip(lines, new_lines):
-        assert line == new_line
+    assert profile_name == profile
+    assert credentials == expected_credentials
 
 
-@pytest.mark.parametrize("test_lines", [[], lines_with_profile])
-def test_update_config_lines(test_lines, monkeypatch):
+def test_update_config_profile(monkeypatch):
     file_name = str(uuid.uuid4())
     monkeypatch.setattr(config_tool, "CONFIG_FILE_PATH", file_name)
     try:
-        config_tool.update_config_lines(test_lines, expected_profile_line, new_lines)
-        with open(file_name, "r") as f:
-            assert f.readlines() == [expected_profile_line] + new_lines
+        config_tool.update_config_profile(profile, expected_credentials)
+
+        # Verify the config was written correctly using configparser
+        import configparser
+        config = configparser.ConfigParser()
+        config.read(file_name)
+
+        assert profile in config
+        assert config[profile]['key_id'] == expected_credentials['key_id']
+        assert config[profile]['api_key'] == expected_credentials['api_key']
+        assert config[profile]['api_endpoint'] == expected_credentials['api_endpoint']
+        assert config[profile]['access_token'] == expected_credentials['access_token']
     finally:
         if os.path.exists(file_name):
             os.remove(file_name)
