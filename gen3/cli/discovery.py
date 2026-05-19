@@ -20,7 +20,7 @@ from gen3.utils import get_or_create_event_loop_for_thread
 
 @click.group()
 def discovery():
-    """Commands for reading and editing discovery metadata"""
+    """For reading and editing discovery metadata"""
     pass
 
 

@@ -1,0 +1,475 @@
+import asyncio
+import csv
+import json
+import os
+import sys
+import traceback
+
+import click
+
+from gen3 import logging
+from gen3.ai import EmbeddingsClient, LocalEmbeddingClient
+from gen3.cli.ai.utils import chunk_text, get_all_nested_files
+
+COLLECTION_NAME_TO_ID_CACHE = {}
+
+
+@click.command(
+    "publish",
+    help=(
+        """
+        
+        Publish a manifest of already-embedded objects to a Gen3 collection.
+        The manifest must be a CSV/TSV with the following columns:
+
+        \b
+                              embedding: JSON-encoded list of floats
+        collection_id / collection_name: Target collection (use name to lookup id)
+                     **metadata columns: any additional columns are treated as metadata for the embedding
+
+        Example usage:
+
+        \b
+            gen3 ai embeddings publish --collection "ctds-github-md" --manifest_file embeddings.tsv
+        """
+    ),
+)
+@click.argument(
+    "manifest_file",
+    type=click.Path(exists=True, dir_okay=False),
+    required=True,
+)
+@click.option(
+    "--batch-size",
+    "batch_size",
+    help="max number of embeddings to collect before pushing to API in bulk per collection",
+    default=1000,
+)
+@click.option(
+    "--default-collection",
+    "default_collection",
+    help="Name of the default embeddings collection (used when rows don't specify).",
+)
+@click.pass_context
+def publish_embeddings(
+    ctx,
+    manifest_file: str,
+    batch_size: int,
+    default_collection: str | None = None,
+):
+    """
+    Publish embeddings from a manifest file to a collection.
+
+    Args:
+        batch_size (int): max number of embeddings before pushing to API in bulk per collection.
+           NOTE: as this increases it requires a larger memory footprint locally. The backend API
+                 also has limits.
+    """
+    auth = ctx.obj["auth_factory"].get()
+    client: EmbeddingsClient = ctx.obj["client"]
+
+    manifest_file_name = click.format_filename(manifest_file)
+    delimiter = "\t" if manifest_file_name.endswith(".tsv") else ","
+    with open(manifest_file_name, encoding="utf-8") as f:
+        reader = csv.DictReader(f, delimiter=delimiter)
+        # TODO: chunk the rows in addition to the chunked API. As this stands,
+        #       all rows are loaded into memory and only the API calls are batched
+        rows = list(reader)
+
+    if not rows:
+        click.echo("No rows found in manifest.", err=True)
+        return
+
+    # build metadata columns list (exclude embedding and collection fields)
+    excluded = {"embedding", "collection_id", "collection_name", "authz"}
+    metadata_cols = [c for c in getattr(reader, "fieldnames", []) if c not in excluded]
+
+    pending_per_collection = {}
+    pending_count = 0
+    for row in rows:
+        collection_id = row.get("collection_id")
+        collection_name = row.get("collection_name", "")
+        authz = row.get("authz")
+
+        if not collection_id:
+            collection_id, collection_name = _get_collection_id_and_name(
+                collection_name=collection_name,
+                client=client,
+                default_collection=default_collection,
+            )
+
+        try:
+            embedding = json.loads(row.get("embedding", "[]"))
+        except json.JSONDecodeError as exc:
+            click.echo(
+                f"Invalid embedding in row: {row}. Skipping. Error: {exc}", err=True
+            )
+            continue
+
+        metadata = {k: row[k] for k in metadata_cols if k in row}
+        embedding_content = {"embedding": embedding, "metadata": metadata}
+
+        if authz:
+            embedding_content.update({"authz": authz})
+
+        pending_per_collection.setdefault(collection_id, []).append(embedding_content)
+        pending_count += 1
+
+        # create the embeddings
+        if pending_count > batch_size:
+            for (
+                collection_id,
+                embeddings_with_metadata,
+            ) in pending_per_collection.items():
+                # TODO: if this fails, retry? More informative error? depends on what we do on the backend
+                asyncio.run(
+                    client.create_embeddings(
+                        collection_name=collection_name,
+                        collection_id=collection_id,
+                        embeddings_with_metadata=embeddings_with_metadata,
+                    )
+                )
+            pending_per_collection.clear()
+            pending_count = 0
+
+    # get the last batch
+    if pending_per_collection:
+        for collection_id, embeddings_with_metadata in pending_per_collection.items():
+            # TODO: if this fails, retry? More informative error? depends on what we do on the backend
+            asyncio.run(
+                client.create_embeddings(
+                    # ignore unbound type error here because we know it will be bound
+                    collection_name=collection_name,  # type: ignore
+                    collection_id=collection_id,
+                    embeddings_with_metadata=embeddings_with_metadata,
+                )
+            )
+        pending_per_collection.clear()
+        pending_count = 0
+
+    click.echo(f"Published {len(rows)} embeddings.")
+
+
+def _get_collection_id_and_name(
+    collection_name: str,
+    client: EmbeddingsClient,
+    default_collection: str | None = None,
+) -> tuple[str, str]:
+    """
+    Gets collection id by hitting service with name and extracting ID, stores
+    in in-mem cache.
+    """
+    global COLLECTION_NAME_TO_ID_CACHE
+
+    if collection_name and collection_name in COLLECTION_NAME_TO_ID_CACHE:
+        # cache hit
+        collection_id = COLLECTION_NAME_TO_ID_CACHE[collection_name]
+    elif collection_name:
+        # cache miss
+        # resolve collection id if a name was supplied
+        collection = asyncio.run(
+            client.list_collections(collection_name=collection_name)
+        )
+        collection_id = collection[0]["id"]
+
+        # update in-mem cache
+        COLLECTION_NAME_TO_ID_CACHE[collection_name] = collection_id
+
+    elif default_collection:
+        # resolve collection id using default_collection if provided
+        collection_name = default_collection
+        collection = asyncio.run(
+            client.list_collections(collection_name=collection_name)
+        )
+        collection_id = collection[0]["id"]
+
+        # update in-mem cache
+        COLLECTION_NAME_TO_ID_CACHE[collection_name] = collection_id
+    else:
+        click.echo(
+            f"Failed to resolve a collection. Given collection_name:'{collection_name}' / default_collection:'{default_collection}'"
+        )
+        sys.exit(1)
+
+    return collection_id, collection_name
+
+
+@click.command(
+    "read",
+    help="[Not Implemented Yet] Reads embeddings data from Gen3 instance into local files.",
+)
+@click.option(
+    "--output-file",
+    "output_file",
+    default="embeddings.csv",
+    help="filename for output",
+    type=click.Path(writable=True),
+    show_default=True,
+)
+@click.pass_context
+def read_embeddings(ctx, output_file):
+    """
+    Reads embeddings data from Gen3 instance into local files.
+    """
+    auth = ctx.obj["auth_factory"].get()
+    raise NotImplementedError("`gen3 ai embeddings read` is not implemented yet.")
+
+
+@click.command(
+    "delete",
+    help="[Not Implemented Yet] Deletes specified embeddings data in local files from Gen3 instance.",
+)
+@click.pass_context
+def delete_embeddings(ctx):
+    """
+    Deletes specified embeddings data in local files from Gen3 instance.
+    """
+    raise NotImplementedError("`gen3 ai embeddings delete` is not implemented yet.")
+
+
+@click.command()
+# TODO: Eventually, this could first check the Gen3 AI Model Repo / Inference API(s) to see if this
+#       model is available and require some explicit --local flag to allow sentence-transformers?
+@click.option(
+    "--model",
+    "-m",
+    default="all-MiniLM-L6-v2",
+    help="Sentence-transformers model name (default: all-MiniLM-L6-v2)",
+)
+@click.option(
+    "--out-manifest-file",
+    "-o",
+    default="output.tsv",
+    help="Output filename for final manifest (default: output.tsv)",
+)
+@click.option(
+    "--collection-name",
+    type=str,
+    required=False,
+    help="collection_name for all processed files (ends up in output)",
+)
+@click.option(
+    "--collection-id",
+    type=str,
+    required=False,
+    help="collection_id for all processed files (ends up in output)",
+)
+@click.option(
+    "--chunk-size",
+    default=512,
+    type=int,
+    help="Number of characters per chunk (default: 512)",
+)
+@click.option(
+    "--chunk-overlap",
+    default=50,
+    type=int,
+    help="Number of characters to overlap between chunks (default: 50)",
+)
+@click.option(
+    "--strategy",
+    "-s",
+    default="text",
+    type=str,
+    help="Embedding strategy: text / file. File attempts to embed the entire file instead of chunking the text within (default: text)",
+)
+@click.option(
+    "--recursive",
+    "-r",
+    is_flag=True,
+    help="Recursively process directories",
+)
+@click.option(
+    "--file-extensions",
+    "-f",
+    multiple=True,
+    help="File extensions to process. Can be supplied multiple times. ex: -f .txt -f .md -f .sql",
+    default=[".txt", ".md", ".tsv", ".csv"],
+)
+@click.option(
+    "--keep-text",
+    is_flag=True,
+    help="Whether or not to include the original text (non-embedded) in the final output.",
+)
+@click.option(
+    "--keep-folder-paths",
+    is_flag=True,
+    help="Whether or not to include the original folder paths in the final output metadata.",
+)
+@click.argument("paths", nargs=-1, type=click.Path(exists=True))
+@click.pass_context
+def chunk_and_embed_text(
+    ctx: click.Context,
+    out_manifest_file: str,
+    model: str,
+    collection_name: str,
+    collection_id: str,
+    chunk_size: int,
+    chunk_overlap: int,
+    strategy: str,
+    recursive: bool,
+    file_extensions: list,
+    keep_text: bool,
+    keep_folder_paths: bool,
+    paths: list[str],
+) -> None:
+    """
+    Chunk files and create embeddings locally, then submit to the service.
+
+    PATHS: One or more files or directories to chunk and embed
+
+    Embed files in a directory and output a manifest to publish
+    collection is used to get model / dimensions
+    this requires CPU/GPU for the actual embedding process and is not optimized for
+    production-level and extensive embedding, it's really for small-size and local testing.
+
+    To scale this, you need to write your own pipeline to generate the manifest file format and
+    then use the `gen3 ai embeddings publish` command to create records in Gen3.
+
+    chunk-size is used when strategy = text. If strategy = file, then this will attempt to pull the AI Model specified by the
+    collection and use it to embed the whole file.
+
+    ex:
+      gen3 ai embeddings embed ./directory/ --collection "ctds-github-md" --out-manifest-file ... --strategy "text" / "file" --chunk-size 1024
+    """
+    paths = [click.format_filename(path) for path in paths]
+    all_files = get_all_nested_files(
+        paths=paths, file_extensions=file_extensions, recursive=recursive
+    )
+
+    click.echo(f"Found {len(all_files)} file(s) to process")
+    click.echo(f"       Chunk size: {chunk_size} characters")
+    click.echo(f"    Chunk overlap: {chunk_overlap} characters")
+    click.echo(f"            Model: {model}")
+    click.echo(f"    Collection ID: {collection_id}")
+    click.echo(f"  Collection Name: {collection_name}")
+    click.echo(f"         Strategy: {strategy}")
+    click.echo(f"        Recursive: {recursive}")
+    click.echo(f"  File Extensions: {file_extensions}")
+    click.echo(f"        Keep Text: {keep_text}")
+    click.echo(f" Keep Folder Paths: {keep_folder_paths}")
+    click.echo(f"           Output: {out_manifest_file}")
+
+    if not all_files:
+        click.echo()
+        click.echo("No files found!", err=True)
+        sys.exit(1)
+
+    local_client = LocalEmbeddingClient(model_name=model)
+
+    # by default, remove the user directory from any file paths
+    # TODO: we could expose an option to the CLI to customize this
+    prefix_to_remove_from_filepath = os.path.expanduser("~") + "/"
+
+    # read and chunk all files
+    all_texts_with_metadata = _read_and_chunk_files(
+        all_files=all_files,
+        strategy=strategy,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        keep_folder_paths=keep_folder_paths,
+        prefix_to_remove_from_filepath=prefix_to_remove_from_filepath,
+    )
+
+    click.echo()
+    click.echo(f"Total chunks to embed: {len(all_texts_with_metadata)}")
+    click.echo()
+
+    # generate embeddings locally
+    click.echo("Generating embeddings...")
+    try:
+        embeddings_with_metadata = local_client.embed(
+            all_texts_with_metadata,
+            keep_original_text=keep_text,
+            show_progress_bar=True,
+        )
+        click.echo(f"Generated {len(embeddings_with_metadata)} embeddings")
+    except Exception as exc:
+        click.echo(f"  Failed to generate embeddings: {exc}", err=True)
+        logging.error(traceback.format_exc())
+        sys.exit(1)
+
+    click.echo()
+    click.echo(f"Writing embeddings to '{out_manifest_file}'...")
+    click.echo()
+
+    # write to manifest file
+    fieldnames = ["embedding", "collection_name", "collection_id", "authz"]
+
+    all_metadata_keys = set()
+    for item in embeddings_with_metadata:
+        all_metadata_keys.update(item["metadata"].keys())
+
+    fieldnames.extend(sorted(list(all_metadata_keys)))
+
+    with open(out_manifest_file, "w", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter="\t")
+        writer.writeheader()
+        for item in embeddings_with_metadata:
+            row = {
+                "embedding": json.dumps(item["embedding"]),
+                "authz": item["authz"],
+                "collection_name": collection_name if collection_name else "",
+                "collection_id": collection_id if collection_id else "",
+            }
+            row.update(item["metadata"])
+            writer.writerow(row)
+
+    click.echo()
+    click.echo(
+        f"Successfully wrote {len(embeddings_with_metadata)} embeddings to {out_manifest_file}!"
+    )
+
+
+def _read_and_chunk_files(
+    all_files: list[str],
+    strategy: str,
+    chunk_size: int,
+    chunk_overlap: int,
+    keep_folder_paths: bool,
+    prefix_to_remove_from_filepath: str = "",
+):
+    """
+    Read and chunk all files
+    """
+    all_texts_with_metadata = []
+    for file_path in all_files:
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                if not keep_folder_paths:
+                    file_path = os.path.basename(file_path)
+                file_path = file_path.removeprefix(prefix_to_remove_from_filepath)
+                content = f.read()
+                texts_with_metadata = []
+                if strategy == "text":
+                    chunks = chunk_text(content, chunk_size, chunk_overlap)
+                    texts_with_metadata.extend(
+                        [
+                            {
+                                "text": chunk,
+                                "metadata": {
+                                    "file": file_path,
+                                    "chunk_size": chunk_size,
+                                    "chunk_overlap": chunk_overlap,
+                                },
+                            }
+                            for chunk in chunks
+                        ]
+                    )
+                elif strategy == "file":
+                    texts_with_metadata.append(
+                        {
+                            "text": content,
+                            "metadata": {
+                                "file": file_path,
+                            },
+                        }
+                    )
+
+                all_texts_with_metadata.extend(texts_with_metadata)
+                click.echo(f"  {file_path}: {len(texts_with_metadata)} chunk(s)")
+        except Exception as exc:
+            click.echo(f"   {file_path}: {exc}", err=True)
+            sys.exit(1)
+
+    return all_texts_with_metadata

@@ -72,7 +72,7 @@ def copy(ctx, src, dest):
 
 @click.group()
 def wss():
-    """[unfinished] Commands for Workspace Storage Service"""
+    """[unfinished] For Workspace Storage Service"""
     pass
 
 

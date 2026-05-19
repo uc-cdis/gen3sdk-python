@@ -15,6 +15,7 @@ import gen3.cli.file as file
 import gen3.cli.drs_pull as drs_pull
 import gen3.cli.users as users
 import gen3.cli.wrap as wrap
+import gen3.cli.ai.main as ai
 import gen3
 from gen3 import logging as sdklogging
 from gen3.cli import nih
@@ -112,26 +113,39 @@ def main(
         )
         # disables all logging
         logging.disable(logging.CRITICAL)
+        level = logging.NOTSET
     elif very_verbose_logs:
+        level = "DEBUG"
         logger = cdislogging.get_logger(
             __name__, format=gen3.LOG_FORMAT, log_level="debug"
         )
-        sdklogging.setLevel("DEBUG")
+        sdklogging.setLevel(level)
+
     elif verbose_logs:
+        level = "INFO"
         logger = cdislogging.get_logger(
             __name__, format=gen3.LOG_FORMAT, log_level="info"
         )
-        sdklogging.setLevel("INFO")
+        sdklogging.setLevel(level)
+
     elif only_error_logs:
+        level = "ERROR"
         logger = cdislogging.get_logger(
             __name__, format=gen3.LOG_FORMAT, log_level="error"
         )
-        sdklogging.setLevel("ERROR")
+        sdklogging.setLevel(level)
     else:
+        level = "WARNING"
         logger = cdislogging.get_logger(
             __name__, format=gen3.LOG_FORMAT, log_level="warning"
         )
-        sdklogging.setLevel("WARNING")
+        sdklogging.setLevel(level)
+
+    # set other module loggers to the same level as the SDK
+    # so modules like httpx, etc use the same level
+    for name in logging.root.manager.loggerDict:
+        logger = logging.getLogger(name)
+        logger.setLevel(level)
 
 
 main.add_command(auth.auth)
@@ -145,4 +159,5 @@ main.add_command(file.file)
 main.add_command(nih.nih)
 main.add_command(users.users)
 main.add_command(wrap.run)
+main.add_command(ai.ai)
 main()
