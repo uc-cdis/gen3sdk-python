@@ -45,7 +45,7 @@ gen3users = "*"
 fhirclient = { version = "*", optional = true }
 
 # ai
-sentence-transformers = { version = "*", optional = true }
+sentence-transformers = { version = ">=5.1.2", optional = true }
 httpx = { version = "*", optional = true }
 
 [tool.poetry.extras]
