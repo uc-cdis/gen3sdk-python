@@ -18,14 +18,14 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.10, <4"
+python = ">=3.10, <3.15"
 requests = "*"
 indexclient = "^2.3.0"
 drsclient = ">=0.3.0"
 aiohttp = "*"
 backoff = "*"
 cdislogging = "^1.1.0"
-click = "*"
+click = ">=8.3.3"
 importlib_metadata = ">=8,<9"
 jsonschema = "*"
 # FIXME updating to >=0.6.0 breaks a few tests
@@ -47,6 +47,8 @@ fhirclient = { version = "*", optional = true }
 # ai
 sentence-transformers = { version = ">5.4.1", optional = true }
 httpx = { version = "*", optional = true }
+# TODO: Trying removing the following sub-dep when sentence-transformers updates beyond 5.5.0
+torch = ">=2.10.0"
 
 [tool.poetry.extras]
 fhir = ["fhirclient"]
