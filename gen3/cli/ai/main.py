@@ -18,6 +18,9 @@ gen3 --auth ~/.gen3/local_helm_test_user.json --endpoint "http://127.0.0.1:4142"
 # authz: authz resource path (optional, will default to collection)
 # collection_id / collection_name: collection embedding should be placed in (if name is provided, use list_collection(collection_name=provided) to determine the ID)
 # ** additional columns are interpretted as metadata
+
+gen3 --auth ~/.gen3/local_helm_test_user.json --endpoint "http://127.0.0.1:4142" ai --api-prefix "" embeddings publish ./tests/embeddings_tests/expr.tsv --default-collection expr
+
 gen3 ai embeddings publish ./tests/embeddings_tests/expr.tsv --default-collection expr
 gen3 ai embeddings publish ./tests/embeddings_tests/hist.tsv --default-collection hist
 gen3 ai embeddings publish ./tests/embeddings_tests/summ.tsv --default-collection summ
@@ -35,6 +38,7 @@ import click
 from gen3.ai import EmbeddingsClient
 from gen3.cli.ai.embeddings import (
     chunk_and_embed_text,
+    convert_embeddings,
     delete_embeddings,
     publish_embeddings,
     read_embeddings,
@@ -88,6 +92,7 @@ embeddings.add_command(publish_embeddings, name="publish")
 embeddings.add_command(read_embeddings, name="read")
 embeddings.add_command(delete_embeddings, name="delete")
 embeddings.add_command(chunk_and_embed_text, name="embed-files")
+embeddings.add_command(convert_embeddings, name="convert")
 
 collections.add_command(create_collection, name="create")
 collections.add_command(read_collections, name="read")

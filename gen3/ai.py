@@ -68,7 +68,7 @@ class EmbeddingsClient:
         description: str | None = None,
     ) -> dict[str, Any]:
         """
-        Create a new vector collection.
+        Create a new vectorstore collection.
 
         Args:
             collection_name (str): Name of the collection to create
@@ -82,10 +82,16 @@ class EmbeddingsClient:
             httpx.HTTPError: If the request fails
         """
         url = f"{self.endpoint}/vectorstore/collections"
+
         payload = {
             "collection_name": collection_name,
             "dimensions": dimensions,
         }
+
+        # TODO: remove when the service does this automatically
+        if dimensions > 2000:
+            payload["vector_type"] = "halfvec"
+
         if description:
             payload["description"] = description
 
@@ -142,7 +148,7 @@ class EmbeddingsClient:
         self, collection_name: str | None = None
     ) -> list[dict[str, Any]]:
         """
-        List all vector collections.
+        List all vectorstore collections.
 
         Args:
             collection_name (str): optional collection_name to retrieve, if not provided will list all
@@ -154,13 +160,22 @@ class EmbeddingsClient:
             httpx.HTTPError: If the request fails
         """
         url = f"{self.endpoint}/vectorstore/collections"
+        collections = []
+
         if collection_name:
             url += f"/{collection_name}"
 
         async with httpx.AsyncClient() as client:
             response = await client.get(url, headers=self._get_headers())
             response.raise_for_status()
-            return response.json()
+            response_json = response.json()
+
+        if collection_name:
+            collections = [response_json]
+        else:
+            collections = response_json.get("collections", [])
+
+        return collections
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     async def list_embeddings(
@@ -194,7 +209,7 @@ class EmbeddingsClient:
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     async def delete_collection(self, collection_name: str) -> None:
         """
-        Delete a vector collection.
+        Delete a vectorstore collection.
 
         Args:
             collection_name (str): Name of the collection to delete

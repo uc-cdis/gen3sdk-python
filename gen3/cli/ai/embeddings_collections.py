@@ -25,7 +25,7 @@ def create_collection(
     ctx: click.Context, dimensions: int, description: str | None, collection_name: str
 ) -> None:
     """
-    Create a new vector collection.
+    Create a new embeddings collection.
 
     COLLECTION_NAME: Name for the new collection
     """
@@ -58,7 +58,7 @@ def read_collections(
     ctx: click.Context, format: str, collection_name: str | None
 ) -> None:
     """
-    Read vector collections. If no collection name provided, list all.
+    Read embeddings collections. If no collection name provided, list all.
 
     COLLECTION_NAME: Optional specific collection name to filter by
     """
@@ -66,7 +66,7 @@ def read_collections(
 
     if collection_name is not None:
         click_echo_if_text(
-            f"Reading vector collection {collection_name}...", format=format
+            f"Reading embeddings collection {collection_name}...", format=format
         )
         try:
             collections = asyncio.run(
@@ -78,9 +78,9 @@ def read_collections(
             click.echo(f"Failed to find collection: {exc}", err=True)
             sys.exit(1)
     else:
-        click_echo_if_text("Listing all vector collections...", format=format)
+        click_echo_if_text("Listing all embeddings collections...", format=format)
         try:
-            collections = asyncio.run(client.list_collections()).get("collections", [])
+            collections = asyncio.run(client.list_collections())
             click_echo_if_text(f"Found {len(collections)} collection(s)", format=format)
             click_echo_dict_format(input_dict=collections, format=format)
         except httpx.HTTPError as exc:
@@ -93,7 +93,7 @@ def read_collections(
 @click.pass_context
 def delete_collection(ctx: click.Context, collection_name: str | None) -> None:
     """
-    Delete a vector collection.
+    Delete a embeddings collection.
 
     COLLECTION_NAME: collection name to delete
     """
@@ -105,3 +105,5 @@ def delete_collection(ctx: click.Context, collection_name: str | None) -> None:
     except httpx.HTTPError as exc:
         click.echo(f"Failed to delete collection: {exc}", err=True)
         sys.exit(1)
+
+    click_echo_if_text(f"Successfully deleted collection '{collection_name}'!")
