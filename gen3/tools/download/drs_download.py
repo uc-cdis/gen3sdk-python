@@ -743,7 +743,6 @@ def get_download_url_using_drs(
         response.raise_for_status()
         data = response.json()
         return data.get("url", None), response.status_code
-
     except requests.exceptions.Timeout:
         logger.critical(f"Was unable to download: {object_id}. Timeout Error.")
     except requests.exceptions.HTTPError as exc:
