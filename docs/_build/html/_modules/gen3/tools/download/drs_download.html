@@ -335,6 +335,7 @@
     <span class="n">status</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;pending&quot;</span>
     <span class="n">start_time</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">datetime</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">end_time</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">datetime</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">status_code</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">(</span>
@@ -775,7 +776,7 @@
     <span class="n">drs_hostname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">object_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">access_method</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">access_token</span><span class="p">:</span> <span class="nb">str</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Returns the presigned URL and status code from the response for a DRS object, from a DRS hostname, via the access method</span>
+<span class="sd">    Returns the presigned URL for a DRS object, from a DRS hostname, via the access method</span>
 <span class="sd">    Args:</span>
 <span class="sd">        drs_hostname (str): hostname of DRS server</span>
 <span class="sd">        object_id (str): DRS object id</span>
@@ -784,7 +785,7 @@
 
 <span class="sd">    Returns:</span>
 <span class="sd">        presigned url to object</span>
-<span class="sd">        status code from the response</span>
+<span class="sd">        status code</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">&quot;Content-Type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">,</span>
@@ -798,7 +799,7 @@
         <span class="p">)</span>
         <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span>
 
     <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">Timeout</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Was unable to download: </span><span class="si">{</span><span class="n">object_id</span><span class="si">}</span><span class="s2">. Timeout Error.&quot;</span><span class="p">)</span>
@@ -806,7 +807,8 @@
         <span class="n">logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;HTTP Error (</span><span class="si">{</span><span class="n">exc</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">) when requesting download url from </span><span class="si">{</span><span class="n">access_method</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="p">)</span>
-    <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">exc</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span>
+    <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">get_user_auth</span><span class="p">(</span><span class="n">commons_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">access_token</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
@@ -1107,7 +1109,7 @@
                 <span class="k">continue</span>
             <span class="n">access_method</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">access_methods</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;access_id&quot;</span><span class="p">]</span>
 
-            <span class="n">download_url</span> <span class="o">=</span> <span class="n">get_download_url_using_drs</span><span class="p">(</span>
+            <span class="n">download_url</span><span class="p">,</span> <span class="n">status_code</span> <span class="o">=</span> <span class="n">get_download_url_using_drs</span><span class="p">(</span>
                 <span class="n">drs_hostname</span><span class="p">,</span>
                 <span class="n">entry</span><span class="o">.</span><span class="n">object_id</span><span class="p">,</span>
                 <span class="n">access_method</span><span class="p">,</span>
@@ -1115,6 +1117,8 @@
             <span class="p">)</span>
 
             <span class="k">if</span> <span class="n">download_url</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+                    <span class="n">completed</span><span class="p">[</span><span class="n">entry</span><span class="o">.</span><span class="n">object_id</span><span class="p">]</span><span class="o">.</span><span class="n">error_code</span> <span class="o">=</span> <span class="n">status_code</span>
                 <span class="n">completed</span><span class="p">[</span><span class="n">entry</span><span class="o">.</span><span class="n">object_id</span><span class="p">]</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;error&quot;</span>
                 <span class="k">continue</span>
 
@@ -1351,6 +1355,9 @@
     <span class="n">DownloadManager</span><span class="p">(</span>
         <span class="n">hostname</span><span class="o">=</span><span class="n">hostname</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="n">auth</span><span class="p">,</span> <span class="n">download_list</span><span class="o">=</span><span class="n">object_list</span><span class="p">,</span> <span class="n">show_progress</span><span class="o">=</span><span class="kc">False</span>
     <span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">object_list</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
 
     <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">object_list</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">pprint</span><span class="p">())</span>
