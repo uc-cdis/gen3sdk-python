@@ -10,13 +10,13 @@ logger = get_logger("__name__")
 
 @click.group()
 def nih():
-    """Commands for reading from NIH APIs"""
+    """For reading from NIH APIs"""
     pass
 
 
 @nih.group()
 def dbgap_study_registration():
-    """Commands for interacting with the dbgap study registration api"""
+    """For interacting with the dbgap study registration api"""
     pass
 
 

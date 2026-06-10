@@ -22,7 +22,7 @@ from gen3.tools.metadata.crosswalk import (
 
 @click.group()
 def objects():
-    """Commands for reading and editing objects"""
+    """For reading and editing objects"""
     pass
 
 
