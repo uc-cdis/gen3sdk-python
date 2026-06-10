@@ -717,7 +717,7 @@ def ensure_dirpath_exists(path: Path) -> Path:
 
 def get_download_url_using_drs(
     drs_hostname: str, object_id: str, access_method: str, access_token: str
-) -> Optional[str]:
+) -> Tuple[Optional[str], Optional[int]]:
     """
     Returns the presigned URL for a DRS object, from a DRS hostname, via the access method
     Args:
