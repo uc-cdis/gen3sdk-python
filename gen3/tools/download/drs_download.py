@@ -1048,7 +1048,7 @@ class DownloadManager:
 
             if download_url is None:
                 if status_code != 200:
-                    completed[entry.object_id].error_code = status_code
+                    completed[entry.object_id].status_code = status_code
                 completed[entry.object_id].status = "error"
                 continue
 
