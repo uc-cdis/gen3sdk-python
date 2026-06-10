@@ -279,7 +279,7 @@ class DownloadStatus:
     status: str = "pending"
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
-    status_code: Tuple[Optional[str], Optional[int]] = None
+    status_code: Optional[str] = None
 
     def __str__(self):
         return (
