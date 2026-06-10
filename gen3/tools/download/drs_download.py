@@ -279,6 +279,7 @@ class DownloadStatus:
     status: str = "pending"
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
+    status_code: Optional[str] = None
 
     def __str__(self):
         return (
@@ -727,6 +728,7 @@ def get_download_url_using_drs(
 
     Returns:
         presigned url to object
+        status code
     """
     headers = {
         "Content-Type": "application/json",
@@ -740,7 +742,7 @@ def get_download_url_using_drs(
         )
         response.raise_for_status()
         data = response.json()
-        return data.get("url", None)
+        return data.get("url", None), response.status_code
 
     except requests.exceptions.Timeout:
         logger.critical(f"Was unable to download: {object_id}. Timeout Error.")
@@ -748,7 +750,8 @@ def get_download_url_using_drs(
         logger.critical(
             f"HTTP Error ({exc.response.status_code}) when requesting download url from {access_method}"
         )
-    return None
+        return None, exc.response.status_code
+    return None, None
 
 
 def get_user_auth(commons_url: str, access_token: str) -> Optional[List[str]]:
@@ -1036,7 +1039,7 @@ class DownloadManager:
                 continue
             access_method = entry.access_methods[0]["access_id"]
 
-            download_url = get_download_url_using_drs(
+            download_url, status_code = get_download_url_using_drs(
                 drs_hostname,
                 entry.object_id,
                 access_method,
@@ -1044,6 +1047,8 @@ class DownloadManager:
             )
 
             if download_url is None:
+                if status_code != 200:
+                    completed[entry.object_id].error_code = status_code
                 completed[entry.object_id].status = "error"
                 continue
 
@@ -1275,6 +1280,9 @@ def _list_object(hostname, auth, object_id: str) -> bool:
     DownloadManager(
         hostname=hostname, auth=auth, download_list=object_list, show_progress=False
     )
+
+    if not object_list:
+        return False
 
     for x in object_list:
         print(x.pprint())

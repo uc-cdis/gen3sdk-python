@@ -348,10 +348,9 @@ def test_download_file_from_url_failures(download_dir):
             text="1234567890",
             status_code=500,
         )
-        assert (
-            get_download_url_using_drs("test.commons1.io", "blah", "s3", "bad token")
-            is None
-        )
+        assert get_download_url_using_drs(
+            "test.commons1.io", "blah", "s3", "bad token"
+        ) is (None, None)
 
         assert (
             download_file_from_url(
@@ -366,10 +365,9 @@ def test_download_file_from_url_failures(download_dir):
             url=f"https://test.commons1.io/ga4gh/drs/v1/objects/blah/access/s3",
             exc=requests.exceptions.Timeout,
         )
-        assert (
-            get_download_url_using_drs("test.commons1.io", "blah", "s3", "bad token")
-            is None
-        )
+        assert get_download_url_using_drs(
+            "test.commons1.io", "blah", "s3", "bad token"
+        ) is (None, None)
 
         try:
             download_file_from_url(
