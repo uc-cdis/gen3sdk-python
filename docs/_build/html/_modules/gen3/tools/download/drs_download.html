@@ -1118,7 +1118,7 @@
 
             <span class="k">if</span> <span class="n">download_url</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
-                    <span class="n">completed</span><span class="p">[</span><span class="n">entry</span><span class="o">.</span><span class="n">object_id</span><span class="p">]</span><span class="o">.</span><span class="n">error_code</span> <span class="o">=</span> <span class="n">status_code</span>
+                    <span class="n">completed</span><span class="p">[</span><span class="n">entry</span><span class="o">.</span><span class="n">object_id</span><span class="p">]</span><span class="o">.</span><span class="n">status_code</span> <span class="o">=</span> <span class="n">status_code</span>
                 <span class="n">completed</span><span class="p">[</span><span class="n">entry</span><span class="o">.</span><span class="n">object_id</span><span class="p">]</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;error&quot;</span>
                 <span class="k">continue</span>
 
