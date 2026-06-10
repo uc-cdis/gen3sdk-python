@@ -728,7 +728,7 @@ def get_download_url_using_drs(
 
     Returns:
         presigned url to object
-        status-code
+        status code
     """
     headers = {
         "Content-Type": "application/json",
