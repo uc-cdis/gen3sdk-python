@@ -350,7 +350,7 @@ def test_download_file_from_url_failures(download_dir):
         )
         assert get_download_url_using_drs(
             "test.commons1.io", "blah", "s3", "bad token"
-        ) is (None, 500)
+        ) == (None, 500)
 
         assert (
             download_file_from_url(
@@ -367,7 +367,7 @@ def test_download_file_from_url_failures(download_dir):
         )
         assert get_download_url_using_drs(
             "test.commons1.io", "blah", "s3", "bad token"
-        ) is (None, None)
+        ) == (None, None)
 
         try:
             download_file_from_url(
