@@ -450,27 +450,6 @@ def _get_collection_id_and_name(
 
 
 @click.command(
-    "read",
-    help="[Not Implemented Yet] Reads embeddings data from Gen3 instance into local files.",
-)
-@click.option(
-    "--output-file",
-    "output_file",
-    default="embeddings.csv",
-    help="filename for output",
-    type=click.Path(writable=True),
-    show_default=True,
-)
-@click.pass_context
-def read_embeddings(ctx, output_file):
-    """
-    Reads embeddings data from Gen3 instance into local files.
-    """
-    auth = ctx.obj["auth_factory"].get()
-    raise NotImplementedError("`gen3 ai embeddings read` is not implemented yet.")
-
-
-@click.command(
     "delete",
     help="[Not Implemented Yet] Deletes specified embeddings data in local files from Gen3 instance.",
 )

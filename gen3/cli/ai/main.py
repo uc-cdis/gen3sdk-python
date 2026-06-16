@@ -41,7 +41,6 @@ from gen3.cli.ai.embeddings import (
     convert_embeddings,
     delete_embeddings,
     publish_embeddings,
-    read_embeddings,
 )
 from gen3.cli.ai.embeddings_collections import (
     create_collection,
@@ -89,7 +88,6 @@ def collections(ctx: click.Context) -> None:
 
 
 embeddings.add_command(publish_embeddings, name="publish")
-embeddings.add_command(read_embeddings, name="read")
 embeddings.add_command(delete_embeddings, name="delete")
 embeddings.add_command(chunk_and_embed_text, name="embed-files")
 embeddings.add_command(convert_embeddings, name="convert")
