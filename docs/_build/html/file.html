@@ -104,6 +104,79 @@ Delete all locations of a stored data file and remove its record from indexd</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="gen3.file.Gen3File.get_bulk_content">
+<span class="sig-name descname"><span class="pre">get_bulk_content</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">guids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">content_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'gen3_embeddings'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">EmbeddingContent</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.get_bulk_content"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.get_bulk_content" title="Link to this definition">¶</a></dt>
+<dd><p>Retrieve bulk content for a set of GUIDs</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_file</strong> (<em>str</em><em> | </em><em>None</em>) – Path to a file that contains one GUID per line.</p></li>
+<li><p><strong>guids</strong> (<em>tuple</em><em>[</em><em>str</em><em>, </em><em>...</em><em>]</em>) – One or more GUIDs supplied</p></li>
+<li><p><strong>batch_size</strong> (<em>int</em>) – How many GUIDs to send in each request to <cite>/data/content</cite>.</p></li>
+<li><p><strong>content_type</strong> (<em>str</em>) – type of content of GUIDs, this determines how to parse.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gen3.file.Gen3File.get_content">
+<span class="sig-name descname"><span class="pre">get_content</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.get_content"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.get_content" title="Link to this definition">¶</a></dt>
+<dd><p>Bulk retrieve content for a list of GUIDs.</p>
+<p>The Gen3 API provides the <cite>/data/content</cite> endpoint which accepts a JSON body with
+an array of GUID strings.  This helper wraps that call and returns the parsed
+response.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>guids</strong> (<em>list</em>) – A list or tuple of GUIDs for which to fetch content.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>If the request succeeds and the body can be decoded as JSON, a mapping</dt><dd><p>from each provided GUID to its associated content is returned</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict | str</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>requests.HTTPError</strong> – If the HTTP status code indicates an error</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gen3.file.Gen3File.get_embeddings_from_bulk_content">
+<span class="sig-name descname"><span class="pre">get_embeddings_from_bulk_content</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">batch_response</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">EmbeddingContent</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.get_embeddings_from_bulk_content"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.get_embeddings_from_bulk_content" title="Link to this definition">¶</a></dt>
+<dd><p>Get a dict of parsed embeddings from a batch_resonse of GUIDs
+which are all embeddings.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gen3.file.Gen3File.get_embeddings_from_bulk_content_guid">
+<span class="sig-name descname"><span class="pre">get_embeddings_from_bulk_content_guid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bulk_content_guid_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">EmbeddingContent</span></span></span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.get_embeddings_from_bulk_content_guid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.get_embeddings_from_bulk_content_guid" title="Link to this definition">¶</a></dt>
+<dd><p>Return an EmbeddingContent by parsing the response data for a particular GUID in a Bulk Content
+response which corresponds to a Gen3 EmbeddingContent.</p>
+<dl class="simple">
+<dt>Note: this handles base64 decoding if the API call used that. and note that the resulting</dt><dd><p>vector is a numpy array</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>guid</strong> (<em>str</em>) – globally unique identifier for the blob of data provided</p></li>
+<li><p><strong>bulk_content_guid_data</strong> (<em>dict</em>) – data from Bulk Content response.get(“guids”, {}).get(guid)
+e.g. the data for the guid specified</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>EmbeddingContent - a dataclass representation of the embedding</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="gen3.file.Gen3File.get_presigned_url">
 <span class="sig-name descname"><span class="pre">get_presigned_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protocol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.get_presigned_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.get_presigned_url" title="Link to this definition">¶</a></dt>
 <dd><p>Generates a presigned URL for a file.</p>
@@ -221,6 +294,10 @@ This value will also be treated as &lt;= MAX_PRESIGNED_URL_TTL in the fence conf
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.delete_file"><code class="docutils literal notranslate"><span class="pre">Gen3File.delete_file()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.delete_file_locations"><code class="docutils literal notranslate"><span class="pre">Gen3File.delete_file_locations()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.download_single"><code class="docutils literal notranslate"><span class="pre">Gen3File.download_single()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.get_bulk_content"><code class="docutils literal notranslate"><span class="pre">Gen3File.get_bulk_content()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.get_content"><code class="docutils literal notranslate"><span class="pre">Gen3File.get_content()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.get_embeddings_from_bulk_content"><code class="docutils literal notranslate"><span class="pre">Gen3File.get_embeddings_from_bulk_content()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.get_embeddings_from_bulk_content_guid"><code class="docutils literal notranslate"><span class="pre">Gen3File.get_embeddings_from_bulk_content_guid()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.get_presigned_url"><code class="docutils literal notranslate"><span class="pre">Gen3File.get_presigned_url()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.upload_file"><code class="docutils literal notranslate"><span class="pre">Gen3File.upload_file()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.upload_file_to_guid"><code class="docutils literal notranslate"><span class="pre">Gen3File.upload_file_to_guid()</span></code></a></li>

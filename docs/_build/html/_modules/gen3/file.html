@@ -31,14 +31,19 @@
           <div class="body" role="main">
             
   <h1>Source code for gen3.file</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">base64</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">aiohttp</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">aiofiles</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm.auto</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimpleNamespace</span> <span class="k">as</span> <span class="n">Namespace</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
@@ -53,7 +58,20 @@
 <span class="n">logging</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="s2">&quot;__name__&quot;</span><span class="p">)</span>
 
 
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">EmbeddingContent</span><span class="p">:</span>
+    <span class="n">guid</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">embedding_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">embedding</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">authz</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">collection_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="bp">self</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+
+
 <span class="n">MAX_RETRIES</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">DEFAULT_BATCH_SIZE</span> <span class="o">=</span> <span class="mi">500</span>
+<span class="n">SUPPORTED_CONTENT_TYPES</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;gen3_embeddings&quot;</span><span class="p">]</span>
 
 
 <div class="viewcode-block" id="Gen3File">
@@ -108,6 +126,217 @@
             <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
         <span class="k">except</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">text</span></div>
+
+
+<div class="viewcode-block" id="Gen3File.get_bulk_content">
+<a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.get_bulk_content">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_bulk_content</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">input_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">guids</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">batch_size</span><span class="o">=</span><span class="n">DEFAULT_BATCH_SIZE</span><span class="p">,</span>
+        <span class="n">content_type</span><span class="o">=</span><span class="n">SUPPORTED_CONTENT_TYPES</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">EmbeddingContent</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Retrieve bulk content for a set of GUIDs</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            input_file (str | None): Path to a file that contains one GUID per line.</span>
+<span class="sd">            guids (tuple[str, ...]): One or more GUIDs supplied</span>
+<span class="sd">            batch_size (int): How many GUIDs to send in each request to `/data/content`.</span>
+<span class="sd">            content_type (str): type of content of GUIDs, this determines how to parse.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">content_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">SUPPORTED_CONTENT_TYPES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Error: unsupported `content_type=</span><span class="si">{</span><span class="n">content_type</span><span class="si">}</span><span class="s2">`, not in supported: </span><span class="si">{</span><span class="n">SUPPORTED_CONTENT_TYPES</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">final_batch_size</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">DEFAULT_BATCH_SIZE</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">final_batch_size</span> <span class="o">!=</span> <span class="n">batch_size</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Requested batch_size=</span><span class="si">{</span><span class="n">batch_size</span><span class="si">}</span><span class="s2"> too large, using default: </span><span class="si">{</span><span class="n">DEFAULT_BATCH_SIZE</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">input_file</span> <span class="ow">and</span> <span class="n">guids</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Error: provide either input_file or guids, not both.&quot;</span><span class="p">)</span>
+
+        <span class="n">all_guids</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="n">input_file</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">input_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="n">guid</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">guid</span><span class="p">:</span>
+                        <span class="n">all_guids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">guid</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">guids</span><span class="p">:</span>
+            <span class="n">all_guids</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">guids</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Error: provide either input_file or guids&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">all_guids</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;No valid GUIDs found in the supplied input.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">{}</span>
+
+        <span class="n">embeddings</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_guids</span><span class="p">),</span> <span class="n">batch_size</span><span class="p">):</span>
+            <span class="n">batch</span> <span class="o">=</span> <span class="n">all_guids</span><span class="p">[</span><span class="n">start</span> <span class="p">:</span> <span class="n">start</span> <span class="o">+</span> <span class="n">batch_size</span><span class="p">]</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">batch_response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_content</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;API error on batch starting at </span><span class="si">{</span><span class="n">batch</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch_response</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Warning: received raw text response for batch starting with </span><span class="si">{</span><span class="n">batch</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">. Skipping.&quot;</span>
+                <span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">content_type</span> <span class="o">==</span> <span class="s2">&quot;gen3_embeddings&quot;</span><span class="p">:</span>
+                <span class="n">embeddings_from_batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_embeddings_from_bulk_content</span><span class="p">(</span>
+                    <span class="n">batch_response</span>
+                <span class="p">)</span>
+                <span class="n">embeddings</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">embeddings_from_batch</span><span class="p">)</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Successfully retrieved </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">embeddings</span><span class="p">)</span><span class="si">}</span><span class="s2"> records!&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">embeddings</span></div>
+
+
+<div class="viewcode-block" id="Gen3File.get_content">
+<a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.get_content">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guids</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Bulk retrieve content for a list of GUIDs.</span>
+
+<span class="sd">        The Gen3 API provides the `/data/content` endpoint which accepts a JSON body with</span>
+<span class="sd">        an array of GUID strings.  This helper wraps that call and returns the parsed</span>
+<span class="sd">        response.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guids (list): A list or tuple of GUIDs for which to fetch content.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict | str: If the request succeeds and the body can be decoded as JSON, a mapping</span>
+<span class="sd">                from each provided GUID to its associated content is returned</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            requests.HTTPError: If the HTTP status code indicates an error</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="si">}</span><span class="s2">/user/data/content&quot;</span>
+        <span class="n">body</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;guids&quot;</span><span class="p">:</span> <span class="n">guids</span><span class="p">}</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Content-Type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">}</span>
+
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+            <span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">body</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span>
+        <span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">resp</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="Gen3File.get_embeddings_from_bulk_content">
+<a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.get_embeddings_from_bulk_content">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_embeddings_from_bulk_content</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">batch_response</span><span class="p">:</span> <span class="nb">dict</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">EmbeddingContent</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get a dict of parsed embeddings from a batch_resonse of GUIDs</span>
+<span class="sd">        which are all embeddings.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">embeddings</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">guid</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">batch_response</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;guids&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">embeddings</span><span class="p">[</span><span class="n">guid</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_embeddings_from_bulk_content_guid</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">embeddings</span></div>
+
+
+<div class="viewcode-block" id="Gen3File.get_embeddings_from_bulk_content_guid">
+<a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.get_embeddings_from_bulk_content_guid">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_embeddings_from_bulk_content_guid</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">bulk_content_guid_data</span><span class="p">:</span> <span class="nb">dict</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EmbeddingContent</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return an EmbeddingContent by parsing the response data for a particular GUID in a Bulk Content</span>
+<span class="sd">        response which corresponds to a Gen3 EmbeddingContent.</span>
+
+<span class="sd">        Note: this handles base64 decoding if the API call used that. and note that the resulting</span>
+<span class="sd">            vector is a numpy array</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guid (str): globally unique identifier for the blob of data provided</span>
+<span class="sd">            bulk_content_guid_data (dict): data from Bulk Content response.get(&quot;guids&quot;, {}).get(guid)</span>
+<span class="sd">                e.g. the data for the guid specified</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            EmbeddingContent - a dataclass representation of the embedding</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bulk_content_guid_data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: did not find </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2"> in output, adding empty row...&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">EmbeddingContent</span><span class="p">(</span>
+                <span class="n">guid</span><span class="o">=</span><span class="n">guid</span><span class="p">,</span>
+                <span class="n">embedding_id</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+                <span class="n">embedding</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([]),</span>
+                <span class="n">authz</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+                <span class="n">collection_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+                <span class="n">metadata</span><span class="o">=</span><span class="p">{},</span>
+            <span class="p">)</span>
+
+        <span class="n">embedding_id</span> <span class="o">=</span> <span class="n">bulk_content_guid_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s2">&quot;embedding_id&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span>
+        <span class="p">)</span> <span class="ow">or</span> <span class="n">bulk_content_guid_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">raw_vector</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">bulk_content_guid_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;vector&quot;</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="n">bulk_content_guid_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;embedding&quot;</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="p">[]</span>
+        <span class="p">)</span>
+
+        <span class="n">embedding_vector</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># handle vector if base64 version of API used</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">raw_vector</span> <span class="ow">and</span> <span class="s2">&quot;vector_base64&quot;</span> <span class="ow">in</span> <span class="n">bulk_content_guid_data</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;precision&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">bulk_content_guid_data</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;`vector_base64` found but no `precision` specified. Unable to parse.&quot;</span>
+                <span class="p">)</span>
+
+            <span class="n">vector_data_type</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">numpy</span><span class="o">.</span><span class="n">float16</span>
+                <span class="k">if</span> <span class="n">bulk_content_guid_data</span><span class="p">[</span><span class="s2">&quot;precision&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;float16&quot;</span>
+                <span class="k">else</span> <span class="n">numpy</span><span class="o">.</span><span class="n">float32</span>
+            <span class="p">)</span>
+
+            <span class="c1"># endpoint may be using binary representation</span>
+            <span class="n">vector_base64_str</span> <span class="o">=</span> <span class="n">bulk_content_guid_data</span><span class="p">[</span><span class="s2">&quot;vector_base64&quot;</span><span class="p">]</span>
+
+            <span class="c1"># re-pad the string to a multiple of 4 (handles any missing &#39;=&#39; signs)</span>
+            <span class="n">padding_needed</span> <span class="o">=</span> <span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">vector_base64_str</span><span class="p">)</span> <span class="o">%</span> <span class="mi">4</span>
+            <span class="n">padded_b64</span> <span class="o">=</span> <span class="n">vector_base64_str</span> <span class="o">+</span> <span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="n">padding_needed</span><span class="p">)</span>
+            <span class="n">decoded_bytes</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">urlsafe_b64decode</span><span class="p">(</span><span class="n">padded_b64</span><span class="p">)</span>
+
+            <span class="n">embedding_vector</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">decoded_bytes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">vector_data_type</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">embedding_vector</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">embedding_vector</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">raw_vector</span><span class="p">)</span>
+
+        <span class="n">authz_val</span> <span class="o">=</span> <span class="n">bulk_content_guid_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;authz&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">collection_id_val</span> <span class="o">=</span> <span class="n">bulk_content_guid_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s2">&quot;collection_id&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">url_or_self</span> <span class="o">=</span> <span class="n">bulk_content_guid_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;self&quot;</span><span class="p">)</span>
+
+        <span class="n">metadata</span> <span class="o">=</span> <span class="n">bulk_content_guid_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">EmbeddingContent</span><span class="p">(</span>
+            <span class="n">guid</span><span class="o">=</span><span class="n">guid</span><span class="p">,</span>
+            <span class="n">embedding_id</span><span class="o">=</span><span class="n">embedding_id</span><span class="p">,</span>
+            <span class="n">embedding</span><span class="o">=</span><span class="n">embedding_vector</span><span class="p">,</span>
+            <span class="n">authz</span><span class="o">=</span><span class="n">authz_val</span><span class="p">,</span>
+            <span class="n">collection_id</span><span class="o">=</span><span class="n">collection_id_val</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">=</span><span class="n">url_or_self</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+        <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Gen3File.delete_file">
