@@ -6,7 +6,6 @@ from cdislogging import get_logger
 from gen3.file import Gen3File
 from gen3.utils import get_or_create_event_loop_for_thread
 
-
 logger = get_logger("__name__")
 
 

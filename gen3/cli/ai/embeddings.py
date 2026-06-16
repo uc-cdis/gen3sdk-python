@@ -8,10 +8,12 @@ import traceback
 
 import click
 from tqdm.auto import tqdm
+import indexclient.client as indexclient
 
 from gen3 import logging
 from gen3.ai import EmbeddingsClient, LocalEmbeddingClient
 from gen3.cli.ai.utils import chunk_text, get_all_nested_files
+from gen3.index import Gen3Index
 from gen3.utils import get_or_create_event_loop_for_thread
 
 COLLECTION_NAME_TO_ID_CACHE = {}
@@ -81,15 +83,17 @@ def convert_embeddings(
     auth = ctx.obj["auth_factory"].get()
     client: EmbeddingsClient = ctx.obj["client"]
 
+    # we need an indexing client as well
+    gen3_index = Gen3Index(auth.endpoint, auth_provider=auth)
     manifest_file_name = click.format_filename(manifest_file)
-    delimiter = "\t" if manifest_file_name.endswith(".tsv") else ","
-    with open(manifest_file_name, encoding="utf-8") as f:
-        reader = csv.DictReader(f, delimiter=delimiter)
-        rows = list(reader)
 
-    if not rows:
-        click.echo("No rows found in manifest.", err=True)
-        return
+    # get a total line count without loading the whole file in memory
+    with open(manifest_file_name) as file:
+        # - 1 for header
+        total_rows = sum(1 for line in file) - 1
+
+    # get valid indexd guids and dump into the manifest
+    valid_guids = gen3_index.get_valid_guids(count=total_rows)
 
     out_manifest_file = (
         out_manifest_file
@@ -99,51 +103,59 @@ def convert_embeddings(
     click.echo(f"Writing converted manifest to '{out_manifest_file}'")
     fieldnames = ["guid", "md5", "size", "authz", "acl", "url"]
 
-    with open(out_manifest_file, "w", encoding="utf-8", newline="") as out_f:
+    # open output file
+    with open(out_manifest_file, "w", newline="") as out_f:
         writer = csv.DictWriter(out_f, fieldnames=fieldnames, delimiter="\t")
         writer.writeheader()
-        row_number = 1
-        for row in tqdm(rows, desc="Converting rows"):
-            embedding_str = row.get("embedding", "[]")
-            try:
-                # eliminate whitespace in the JSON representation for consistent hashing
-                embedding_json = json.dumps(
-                    json.loads(embedding_str), separators=(",", ":")
-                )
-            except Exception as exc:
-                click.echo(
-                    f"Invalid embedding in row: {row}. Skipping. Error: {exc}", err=True
-                )
-                continue
 
-            md5_hash = hashlib.md5(embedding_json.encode("utf-8")).hexdigest()
-            size_bytes = len(embedding_json.encode("utf-8"))
-            authz = row.get("authz", "")
-            url = row.get("self", "")
+        # open input file and iterate over rows
+        with open(manifest_file_name) as f:
+            delimiter = "\t" if manifest_file_name.endswith(".tsv") else ","
+            reader = csv.DictReader(f, delimiter=delimiter)
 
-            if not url:
-                logging.error(
-                    f"Row #{row_number} did not contain REQUIRED `self` column contents. Continuing anyway..."
-                )
+            row_number = 1
+            for row in tqdm(reader, desc="Converting rows", total=total_rows):
+                embedding_str = row.get("embedding", "[]")
+                try:
+                    # eliminate whitespace in the JSON representation for consistent hashing
+                    embedding_json = json.dumps(
+                        json.loads(embedding_str), separators=(",", ":")
+                    )
+                except Exception as exc:
+                    click.echo(
+                        f"Invalid embedding in row: {row}. Skipping. Error: {exc}",
+                        err=True,
+                    )
+                    continue
 
-            if not authz:
-                logging.error(
-                    f"Row #{row_number} did not contain REQUIRED `authz` column contents. Continuing anyway..."
-                )
+                md5_hash = hashlib.md5(embedding_json.encode("utf-8")).hexdigest()
+                size_bytes = len(embedding_json.encode("utf-8"))
+                authz = row.get("authz", "")
+                url = row.get("self", "")
 
-            if not url.startswith(url_prefix):
-                url = url_prefix + url
+                if not url:
+                    logging.error(
+                        f"Row #{row_number} did not contain REQUIRED `self` column contents. Continuing anyway..."
+                    )
 
-            out_row = {
-                "guid": "",
-                "md5": md5_hash,
-                "size": size_bytes,
-                "authz": authz,
-                "acl": "",
-                "url": url,
-            }
-            writer.writerow(out_row)
-            row_number += 1
+                if not authz:
+                    logging.error(
+                        f"Row #{row_number} did not contain REQUIRED `authz` column contents. Continuing anyway..."
+                    )
+
+                if not url.startswith(url_prefix):
+                    url = url_prefix + url
+
+                out_row = {
+                    "guid": valid_guids.pop(),
+                    "md5": md5_hash,
+                    "size": size_bytes,
+                    "authz": authz,
+                    "acl": "",
+                    "url": url,
+                }
+                writer.writerow(out_row)
+                row_number += 1
 
     click.echo(
         f"Done! Check for errors above. Gen3 Indexing Manifest: {out_manifest_file}"
@@ -214,17 +226,21 @@ def publish_embeddings(
     delimiter = "\t" if manifest_file_name.endswith(".tsv") else ","
 
     # get a total line count without loading the whole file in memory
-    with open(manifest_file_name, encoding="utf-8") as file:
+    with open(manifest_file_name) as file:
         # - 1 for header
         total_rows = sum(1 for line in file) - 1
 
-    with open(manifest_file_name, encoding="utf-8") as file:
+    with open(manifest_file_name) as file:
         reader = csv.DictReader(file, delimiter=delimiter)
         out_manifest_file = (
             out_manifest_file
             if out_manifest_file
             else f"{os.path.splitext(manifest_file_name)[0]}_output.tsv"
         )
+
+        # clear out file if it exists and create if it doesn't, we'll append
+        # content later
+        open(out_manifest_file, "w").close()
 
         # build metadata columns list (exclude embedding and collection fields)
         excluded = {"embedding", "collection_id", "collection_name", "authz"}
@@ -300,12 +316,13 @@ def publish_embeddings(
                             "embeddings", {}
                         )
 
-                        _write_created_embeddings_to_file(
+                        _append_created_embeddings_to_file(
                             created_embeddings,
                             out_manifest_file,
                             all_metadata_keys=all_metadata_keys,
                             output_header_written=output_header_written,
                         )
+                        output_header_written = True
 
                     total_count += pending_count
                     pbar.update(pending_count)
@@ -328,12 +345,13 @@ def publish_embeddings(
                         "embeddings", {}
                     )
 
-                    _write_created_embeddings_to_file(
+                    _append_created_embeddings_to_file(
                         created_embeddings,
                         out_manifest_file,
                         all_metadata_keys=all_metadata_keys,
                         output_header_written=output_header_written,
                     )
+                    output_header_written = True
 
                 total_count += pending_count
                 pbar.update(pending_count)
@@ -344,21 +362,21 @@ def publish_embeddings(
     click.echo(f"Wrote output manifest: {out_manifest_file}.")
 
 
-def _write_created_embeddings_to_file(
+def _append_created_embeddings_to_file(
     created_embeddings: dict,
     out_manifest_file: str,
     all_metadata_keys: set,
     output_header_written: bool,
 ):
     """
-    Write the provided created_embeddings to the output file. Allows calling multiple times
+    Append the provided created_embeddings to the output file. Allows calling multiple times
     """
     logging.info(f"Writing batch of created embeddings to '{out_manifest_file}'...")
     # write to manifest file
     fieldnames = ["embedding_id", "embedding", "collection_id", "authz", "self"]
     fieldnames.extend(sorted(list(all_metadata_keys)))
 
-    with open(out_manifest_file, "w", encoding="utf-8") as f:
+    with open(out_manifest_file, "a") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter="\t")
 
         if not output_header_written:
@@ -639,7 +657,7 @@ def chunk_and_embed_text(
 
     fieldnames.extend(sorted(list(all_metadata_keys)))
 
-    with open(out_manifest_file, "w", encoding="utf-8") as f:
+    with open(out_manifest_file, "w") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter="\t")
         writer.writeheader()
         for item in embeddings_with_metadata:
@@ -672,7 +690,7 @@ def _read_and_chunk_files(
     all_texts_with_metadata = []
     for file_path in all_files:
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, "r") as f:
                 if not keep_folder_paths:
                     file_path = os.path.basename(file_path)
                 file_path = file_path.removeprefix(prefix_to_remove_from_filepath)

@@ -1,11 +1,16 @@
+import base64
+from dataclasses import dataclass, field
+
 import json
+from typing import List, Optional
+import numpy
 import requests
 import json
 import asyncio
 import aiohttp
 import aiofiles
 import time
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from types import SimpleNamespace as Namespace
 import os
 import requests
@@ -20,7 +25,20 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 logging = get_logger("__name__")
 
 
+@dataclass
+class EmbeddingContent:
+    guid: str
+    embedding_id: str
+    embedding: numpy.ndarray
+    authz: list[str]
+    collection_id: int | None
+    self: str
+    metadata: dict[str, str] = field(default_factory=dict)
+
+
 MAX_RETRIES = 3
+DEFAULT_BATCH_SIZE = 500
+SUPPORTED_CONTENT_TYPES = ["gen3_embeddings"]
 
 
 class Gen3File:
@@ -71,6 +89,205 @@ class Gen3File:
             return resp.json()
         except:
             return resp.text
+
+    def get_bulk_content(
+        self,
+        input_file=None,
+        guids=None,
+        batch_size=DEFAULT_BATCH_SIZE,
+        content_type=SUPPORTED_CONTENT_TYPES[0],
+    ) -> dict[str, EmbeddingContent]:
+        """
+        Retrieve bulk content for a set of GUIDs
+
+        Args:
+            input_file (str | None): Path to a file that contains one GUID per line.
+            guids (tuple[str, ...]): One or more GUIDs supplied
+            batch_size (int): How many GUIDs to send in each request to `/data/content`.
+            content_type (str): type of content of GUIDs, this determines how to parse.
+        """
+        if content_type not in SUPPORTED_CONTENT_TYPES:
+            raise ValueError(
+                f"Error: unsupported `content_type={content_type}`, not in supported: {SUPPORTED_CONTENT_TYPES}"
+            )
+
+        final_batch_size = min(batch_size, DEFAULT_BATCH_SIZE)
+        if final_batch_size != batch_size:
+            logging.warning(
+                f"Requested batch_size={batch_size} too large, using default: {DEFAULT_BATCH_SIZE}"
+            )
+
+        if input_file and guids:
+            raise ValueError("Error: provide either input_file or guids, not both.")
+
+        all_guids: List[str] = []
+
+        if input_file:
+            with open(input_file) as f:
+                for line in f:
+                    guid = line.strip()
+                    if guid:
+                        all_guids.append(guid)
+        elif guids:
+            all_guids.extend(guids)
+        else:
+            raise ValueError("Error: provide either input_file or guids")
+
+        if not all_guids:
+            logging.error("No valid GUIDs found in the supplied input.")
+            return {}
+
+        embeddings = {}
+
+        for start in range(0, len(all_guids), batch_size):
+            batch = all_guids[start : start + batch_size]
+            try:
+                batch_response = self.get_content(batch)
+            except Exception as exc:
+                logging.error(f"API error on batch starting at {batch[0]}: {exc}")
+                continue
+
+            if isinstance(batch_response, str):
+                logging.warning(
+                    f"Warning: received raw text response for batch starting with {batch[0]}. Skipping."
+                )
+                continue
+
+            if content_type == "gen3_embeddings":
+                embeddings_from_batch = self.get_embeddings_from_bulk_content(
+                    batch_response
+                )
+                embeddings.update(embeddings_from_batch)
+
+        logging.debug(f"Successfully retrieved {len(embeddings)} records!")
+        return embeddings
+
+    def get_content(self, guids: list) -> dict:
+        """
+        Bulk retrieve content for a list of GUIDs.
+
+        The Gen3 API provides the `/data/content` endpoint which accepts a JSON body with
+        an array of GUID strings.  This helper wraps that call and returns the parsed
+        response.
+
+        Args:
+            guids (list): A list or tuple of GUIDs for which to fetch content.
+
+        Returns:
+            dict | str: If the request succeeds and the body can be decoded as JSON, a mapping
+                from each provided GUID to its associated content is returned
+
+        Raises:
+            requests.HTTPError: If the HTTP status code indicates an error
+        """
+        api_url = f"{self._endpoint}/user/data/content"
+        body = {"guids": guids}
+        headers = {"Content-Type": "application/json"}
+
+        resp = requests.post(
+            api_url, auth=self._auth_provider, json=body, headers=headers
+        )
+        raise_for_status_and_print_error(resp)
+
+        return resp.json()
+
+    def get_embeddings_from_bulk_content(
+        self, batch_response: dict
+    ) -> dict[str, EmbeddingContent]:
+        """
+        Get a dict of parsed embeddings from a batch_resonse of GUIDs
+        which are all embeddings.
+        """
+        embeddings = {}
+        for guid, data in batch_response.get("guids", {}).items():
+            embeddings[guid] = self.get_embeddings_from_bulk_content_guid(guid, data)
+        return embeddings
+
+    def get_embeddings_from_bulk_content_guid(
+        self, guid: str, bulk_content_guid_data: dict
+    ) -> EmbeddingContent:
+        """
+        Return an EmbeddingContent by parsing the response data for a particular GUID in a Bulk Content
+        response which corresponds to a Gen3 EmbeddingContent.
+
+        Note: this handles base64 decoding if the API call used that. and note that the resulting
+            vector is a numpy array
+
+        Args:
+            guid (str): globally unique identifier for the blob of data provided
+            bulk_content_guid_data (dict): data from Bulk Content response.get("guids", {}).get(guid)
+                e.g. the data for the guid specified
+
+        Returns:
+            EmbeddingContent - a dataclass representation of the embedding
+        """
+        if not isinstance(bulk_content_guid_data, dict):
+            logging.info(f"Warning: did not find {guid} in output, adding empty row...")
+            return EmbeddingContent(
+                guid=guid,
+                embedding_id="",
+                embedding=numpy.array([]),
+                authz="",
+                collection_id=None,
+                self="",
+                metadata={},
+            )
+
+        embedding_id = bulk_content_guid_data.get(
+            "embedding_id", ""
+        ) or bulk_content_guid_data.get("id", "")
+        raw_vector = (
+            bulk_content_guid_data.get("vector")
+            or bulk_content_guid_data.get("embedding")
+            or []
+        )
+
+        embedding_vector = None
+
+        # handle vector if base64 version of API used
+        if not raw_vector and "vector_base64" in bulk_content_guid_data:
+            if "precision" not in bulk_content_guid_data:
+                raise Exception(
+                    f"`vector_base64` found but no `precision` specified. Unable to parse."
+                )
+
+            vector_data_type = (
+                numpy.float16
+                if bulk_content_guid_data["precision"] == "float16"
+                else numpy.float32
+            )
+
+            # endpoint may be using binary representation
+            vector_base64_str = bulk_content_guid_data["vector_base64"]
+
+            # re-pad the string to a multiple of 4 (handles any missing '=' signs)
+            padding_needed = -len(vector_base64_str) % 4
+            padded_b64 = vector_base64_str + ("=" * padding_needed)
+            decoded_bytes = base64.urlsafe_b64decode(padded_b64)
+
+            embedding_vector = numpy.frombuffer(decoded_bytes, dtype=vector_data_type)
+
+        if embedding_vector is None:
+            embedding_vector = numpy.array(raw_vector)
+
+        authz_val = bulk_content_guid_data.get("info", {}).get("authz", "")
+        collection_id_val = bulk_content_guid_data.get("info", {}).get(
+            "collection_id", ""
+        )
+
+        url_or_self = bulk_content_guid_data.get("info", {}).get("self")
+
+        metadata = bulk_content_guid_data.get("info", {}).get("metadata")
+
+        return EmbeddingContent(
+            guid=guid,
+            embedding_id=embedding_id,
+            embedding=embedding_vector,
+            authz=authz_val,
+            collection_id=collection_id_val,
+            self=url_or_self,
+            metadata=metadata,
+        )
 
     def delete_file(self, guid):
         """

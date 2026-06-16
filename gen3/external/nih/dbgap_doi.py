@@ -140,9 +140,9 @@ class dbgapDOI(ExternalMetadataSourceInterface):
             doi_metadata["descriptions"] = dbgapDOI._get_doi_descriptions(
                 phsid, dbgap_fhir_metadata
             )
-            doi_metadata[
-                "alternateIdentifiers"
-            ] = dbgapDOI._get_doi_alternate_identifiers(phsid, dbgap_fhir_metadata)
+            doi_metadata["alternateIdentifiers"] = (
+                dbgapDOI._get_doi_alternate_identifiers(phsid, dbgap_fhir_metadata)
+            )
             doi_metadata["fundingReferences"] = dbgapDOI._get_doi_funding(
                 phsid, dbgap_fhir_metadata
             )

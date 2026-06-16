@@ -286,17 +286,17 @@ def combine_discovery_metadata(
     custom_manifests_mapping_config["row_column_name"] = (
         metadata_prefix + metadata_column_to_map
     )
-    custom_manifests_mapping_config[
-        "indexing_manifest_column_name"
-    ] = discovery_column_to_map_on
+    custom_manifests_mapping_config["indexing_manifest_column_name"] = (
+        discovery_column_to_map_on
+    )
 
     # by default, the functions for parsing the manifests and rows assumes a 1:1
     # mapping. There is an additional function provided for partial string matching
     # which we can use here.
     if not exact_match:
-        custom_manifest_row_parsers[
-            "guids_for_manifest_row"
-        ] = get_guids_for_manifest_row_partial_match
+        custom_manifest_row_parsers["guids_for_manifest_row"] = (
+            get_guids_for_manifest_row_partial_match
+        )
 
     temporary_output_filename = (
         CURRENT_DIR.rstrip("/") + "/temp_" + os.path.basename(output_filename)

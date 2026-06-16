@@ -18,6 +18,7 @@ from gen3.tools.metadata.crosswalk import (
     publish_crosswalk_metadata,
     read_crosswalk_metadata,
 )
+from gen3.cli.content import get_bulk_content
 
 
 @click.group()
@@ -352,9 +353,7 @@ manifest.add_command(objects_manifest_publish, name="publish")
 manifest.add_command(objects_manifest_delete_all_guids, name="delete-all-guids")
 
 
-@click.command(
-    help=(
-        """
+@click.command(help=("""
     Publishes specified crosswalk from local files to Gen3 instance and merges
     with existing crosswalk data already in Gen3.\n
 
@@ -364,9 +363,7 @@ manifest.add_command(objects_manifest_delete_all_guids, name="delete-all-guids")
     \t\tcommons url | identifier type | identifier name\n
     
     \tYou can have any number of columns for mapping.\n
-    """
-    )
-)
+    """))
 @click.argument(
     "file",
     type=click.Path(writable=True),
@@ -445,3 +442,5 @@ crosswalk.add_command(objects_crosswalk_publish, name="publish")
 crosswalk.add_command(objects_crosswalk_read, name="read")
 crosswalk.add_command(objects_crosswalk_verify, name="verify")
 crosswalk.add_command(objects_crosswalk_delete, name="delete")
+
+objects.add_command(get_bulk_content, name="read")

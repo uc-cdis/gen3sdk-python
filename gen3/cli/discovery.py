@@ -253,12 +253,10 @@ def objects():
     pass
 
 
-@click.command(
-    help="""
+@click.command(help="""
     Outputs a TSV with populated information. [DATASET_GUIDS] argument is
     a variable number of datasets, e.g. 'phs000001.v1.p1.c1 phs000002.v1.p1.c1'
-    """
-)
+    """)
 @click.argument(
     "dataset_guids",
     nargs=-1,
@@ -320,16 +318,14 @@ def discovery_objects_read(
             click.echo(obj["guid"])
 
 
-@click.command(
-    help="""
+@click.command(help="""
     Takes a TSV as input and writes the specified objects GUIDs and defined metadata into Gen3's
     Metadata API, under a Discovery Metadata record for the dataset. The specified content from
     the TSV goes into an 'objects' block of the dataset's metadata.
     If dataset_guid already exists, update, if it doesn't already exist, create it.
     Use 'discovery objects read --template' to get a TSV with the minimum required columns
     to publish.
-    """
-)
+    """)
 @click.argument(
     "file",
     required=True,

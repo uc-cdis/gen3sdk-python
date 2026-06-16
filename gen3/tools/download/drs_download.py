@@ -17,7 +17,6 @@ this module for downloading DRS objects are DownloadManager and Manifest.
 
 """
 
-
 import re
 import os
 from dataclasses import dataclass, field
@@ -33,7 +32,7 @@ import zipfile
 from cdislogging import get_logger
 from dataclasses_json import dataclass_json, LetterCase, Undefined
 from dateutil import parser as date_parser
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from urllib.parse import urlparse
 
 from gen3.auth import Gen3Auth, Gen3AuthError, decode_token
@@ -104,7 +103,7 @@ class Manifest:
     @staticmethod
     def load(filename: Path) -> Optional[List["Downloadable"]]:
         """
-        Method to load a json manifest and return a list of Bownloadable object.
+        Method to load a json manifest and return a list of Downloadable object.
         This list is passed to the DownloadManager methods of download, and list
 
         Args:
@@ -868,9 +867,9 @@ class DownloadManager:
         resolve_objects_drs_hostname(
             object_list,
             self.resolved_compact_drs,
-            mds_url=f"http://{self.hostname}/mds/aggregate/info"
-            if self.hostname
-            else None,
+            mds_url=(
+                f"http://{self.hostname}/mds/aggregate/info" if self.hostname else None
+            ),
             commons_url=self.commons_url,
         )
         progress_bar = (

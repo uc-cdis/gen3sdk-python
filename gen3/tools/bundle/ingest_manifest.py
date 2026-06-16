@@ -9,7 +9,7 @@ import re
 
 from drsclient.client import DrsClient
 from gen3.auth import Gen3Auth
-from gen3.utils import UUID_FORMAT, SIZE_FORMAT, _verify_format, _standardize_str
+from gen3.utils import UUID_FORMAT, SIZE_FORMAT, _verify_format, standardize_str
 from gen3.tools.utils import (
     GUID_COLUMN_NAMES,
     SIZE_COLUMN_NAMES,
@@ -130,9 +130,9 @@ def _verify_and_process_bundle_manifest(manifest_file, manifest_file_delimiter="
                         bundle_name = value
                         record["name"] = bundle_name
                         if bundle_name not in bundle_name_to_guid:
-                            bundle_name_to_guid[
-                                bundle_name
-                            ] = ""  # to keep track of the available bundles.
+                            bundle_name_to_guid[bundle_name] = (
+                                ""  # to keep track of the available bundles.
+                            )
                         else:
                             logging.error(
                                 "ERROR: bundle_name {} at row {} is not unique".format(
@@ -149,7 +149,7 @@ def _verify_and_process_bundle_manifest(manifest_file, manifest_file_delimiter="
                         pass_verification = False
                 elif key in IDS_COLUMN_NAME:
                     standard = (
-                        _standardize_str(value)
+                        standardize_str(value)
                         .strip()
                         .lstrip("[")
                         .rstrip("]")
@@ -193,7 +193,7 @@ def _verify_and_process_bundle_manifest(manifest_file, manifest_file_delimiter="
                     if not value:
                         continue
                     standard = (
-                        _standardize_str(value)
+                        standardize_str(value)
                         .strip()
                         .lstrip("[")
                         .rstrip("]")

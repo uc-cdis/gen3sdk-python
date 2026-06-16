@@ -1,6 +1,7 @@
 """
 Tests gen3.object.Gen3Object for calls
 """
+
 from unittest.mock import MagicMock, patch
 import requests
 from httpx import delete

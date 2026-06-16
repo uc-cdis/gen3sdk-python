@@ -132,17 +132,17 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                     current_column_name
                     and current_column_name.lower() in GUID_COLUMN_NAMES
                 ):
-                    fieldnames[
-                        fieldnames.index(current_column_name)
-                    ] = GUID_STANDARD_KEY
+                    fieldnames[fieldnames.index(current_column_name)] = (
+                        GUID_STANDARD_KEY
+                    )
                     output_column_name = GUID_STANDARD_KEY
                 elif (
                     current_column_name
                     and current_column_name.lower() in FILENAME_COLUMN_NAMES
                 ):
-                    fieldnames[
-                        fieldnames.index(current_column_name)
-                    ] = FILENAME_STANDARD_KEY
+                    fieldnames[fieldnames.index(current_column_name)] = (
+                        FILENAME_STANDARD_KEY
+                    )
                     output_column_name = FILENAME_STANDARD_KEY
                 elif (
                     current_column_name
@@ -170,9 +170,9 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                     current_column_name
                     and current_column_name.lower() in URLS_COLUMN_NAMES
                 ):
-                    fieldnames[
-                        fieldnames.index(current_column_name)
-                    ] = URLS_STANDARD_KEY
+                    fieldnames[fieldnames.index(current_column_name)] = (
+                        URLS_STANDARD_KEY
+                    )
                     output_column_name = URLS_STANDARD_KEY
                     if not _verify_format(row[current_column_name], URL_FORMAT):
                         logging.error(
@@ -183,9 +183,9 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                     current_column_name
                     and current_column_name.lower() in AUTHZ_COLUMN_NAMES
                 ):
-                    fieldnames[
-                        fieldnames.index(current_column_name)
-                    ] = AUTHZ_STANDARD_KEY
+                    fieldnames[fieldnames.index(current_column_name)] = (
+                        AUTHZ_STANDARD_KEY
+                    )
                     output_column_name = AUTHZ_STANDARD_KEY
                     if not _verify_format(row[current_column_name], AUTHZ_FORMAT):
                         logging.error(
@@ -196,9 +196,9 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                     current_column_name
                     and current_column_name.lower() in SIZE_COLUMN_NAMES
                 ):
-                    fieldnames[
-                        fieldnames.index(current_column_name)
-                    ] = SIZE_STANDARD_KEY
+                    fieldnames[fieldnames.index(current_column_name)] = (
+                        SIZE_STANDARD_KEY
+                    )
                     output_column_name = SIZE_STANDARD_KEY
                     if not _verify_format(row[current_column_name], SIZE_FORMAT):
                         logging.error(
@@ -209,9 +209,9 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                     current_column_name
                     and current_column_name.lower() in PREV_GUID_COLUMN_NAMES
                 ):
-                    fieldnames[
-                        fieldnames.index(current_column_name)
-                    ] = PREV_GUID_STANDARD_KEY
+                    fieldnames[fieldnames.index(current_column_name)] = (
+                        PREV_GUID_STANDARD_KEY
+                    )
                     output_column_name = PREV_GUID_STANDARD_KEY
                     # only validate format if value is provided (since this is optional)
                     if row[current_column_name] and not _verify_format(
@@ -239,9 +239,11 @@ def get_and_verify_fileinfos_from_tsv_manifest(
                         output_row[output_column_name] = (
                             int(row[current_column_name])
                             if output_column_name == SIZE_STANDARD_KEY
-                            else row[current_column_name].strip()
-                            if type(row[current_column_name]) == str
-                            else row[current_column_name]
+                            else (
+                                row[current_column_name].strip()
+                                if type(row[current_column_name]) == str
+                                else row[current_column_name]
+                            )
                         )
                     except ValueError:
                         # don't break

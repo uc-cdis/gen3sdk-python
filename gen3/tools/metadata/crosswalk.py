@@ -139,9 +139,9 @@ async def read_crosswalk_metadata(
                             )
                             crosswalk_columns.add(column_name)
 
-                            crosswalk_info[
-                                commons_url + "|" + identifier_name
-                            ] = indentifer_info.get("description")
+                            crosswalk_info[commons_url + "|" + identifier_name] = (
+                                indentifer_info.get("description")
+                            )
 
                     json.dump(guid_crosswalk_metadata, cached_guid_file)
 

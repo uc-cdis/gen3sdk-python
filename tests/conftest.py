@@ -1,6 +1,7 @@
 """
 Conf Test for Gen3 test suite
 """
+
 from multiprocessing import Process
 import multiprocessing
 from unittest.mock import MagicMock, patch
@@ -25,7 +26,6 @@ from gen3.submission import Gen3Submission
 from gen3.query import Gen3Query
 from gen3.auth import Gen3Auth
 from gen3.object import Gen3Object
-
 
 os.makedirs("tests/outputs", exist_ok=True)
 

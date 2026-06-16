@@ -246,7 +246,7 @@ def test_get_drs_object_type(drs_objects, index, expected):
     assert get_drs_object_type(drs_objects[index]) == expected
 
 
-@pytest.mark.parametrize("hostname", [("test.datacommons.io")])
+@pytest.mark.parametrize("hostname", ["test.datacommons.io"])
 def test_get_external_wts_oidc(wts_oidc, hostname):
     with requests_mock.Mocker() as m:
         m.get(f"https://{hostname}/wts/external_oidc/", json=wts_oidc[hostname])
