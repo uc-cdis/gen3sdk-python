@@ -96,6 +96,7 @@ class Gen3File:
         guids=None,
         batch_size=DEFAULT_BATCH_SIZE,
         content_type=SUPPORTED_CONTENT_TYPES[0],
+        exclude_info=False,
     ) -> dict[str, EmbeddingContent]:
         """
         Retrieve bulk content for a set of GUIDs
@@ -105,6 +106,7 @@ class Gen3File:
             guids (tuple[str, ...]): One or more GUIDs supplied
             batch_size (int): How many GUIDs to send in each request to `/data/content`.
             content_type (str): type of content of GUIDs, this determines how to parse.
+            exclude_info (bool): whether or not to exclude additional info in response
         """
         if content_type not in SUPPORTED_CONTENT_TYPES:
             raise ValueError(
@@ -139,10 +141,11 @@ class Gen3File:
 
         embeddings = {}
 
-        for start in range(0, len(all_guids), batch_size):
-            batch = all_guids[start : start + batch_size]
+        for start in range(0, len(all_guids), final_batch_size):
+            logging.debug(f"fetching batch of size {final_batch_size}...")
+            batch = all_guids[start : start + final_batch_size]
             try:
-                batch_response = self.get_content(batch)
+                batch_response = self.get_content(batch, exclude_info=exclude_info)
             except Exception as exc:
                 logging.error(f"API error on batch starting at {batch[0]}: {exc}")
                 continue
@@ -162,7 +165,7 @@ class Gen3File:
         logging.debug(f"Successfully retrieved {len(embeddings)} records!")
         return embeddings
 
-    def get_content(self, guids: list) -> dict:
+    def get_content(self, guids: list, exclude_info: bool = False) -> dict:
         """
         Bulk retrieve content for a list of GUIDs.
 
@@ -172,6 +175,7 @@ class Gen3File:
 
         Args:
             guids (list): A list or tuple of GUIDs for which to fetch content.
+            exclude_info (bool): whether or not to exclude additional info in response.
 
         Returns:
             dict | str: If the request succeeds and the body can be decoded as JSON, a mapping
@@ -181,6 +185,9 @@ class Gen3File:
             requests.HTTPError: If the HTTP status code indicates an error
         """
         api_url = f"{self._endpoint}/user/data/content"
+        if exclude_info:
+            api_url += "?exclude_info=true"
+
         body = {"guids": guids}
         headers = {"Content-Type": "application/json"}
 
@@ -198,6 +205,11 @@ class Gen3File:
         Get a dict of parsed embeddings from a batch_resonse of GUIDs
         which are all embeddings.
         """
+        batch_response = batch_response or {}
+
+        if not batch_response:
+            logging.warning("Empty batch_response. Continuing anyway...")
+
         embeddings = {}
         for guid, data in batch_response.get("guids", {}).items():
             embeddings[guid] = self.get_embeddings_from_bulk_content_guid(guid, data)
@@ -221,13 +233,13 @@ class Gen3File:
         Returns:
             EmbeddingContent - a dataclass representation of the embedding
         """
-        if not isinstance(bulk_content_guid_data, dict):
+        if not isinstance(bulk_content_guid_data, dict) or not bulk_content_guid_data:
             logging.info(f"Warning: did not find {guid} in output, adding empty row...")
             return EmbeddingContent(
                 guid=guid,
                 embedding_id="",
-                embedding=numpy.array([]),
-                authz="",
+                embedding=numpy.ndarray([]),
+                authz=[],
                 collection_id=None,
                 self="",
                 metadata={},
@@ -270,14 +282,14 @@ class Gen3File:
         if embedding_vector is None:
             embedding_vector = numpy.array(raw_vector)
 
-        authz_val = bulk_content_guid_data.get("info", {}).get("authz", "")
-        collection_id_val = bulk_content_guid_data.get("info", {}).get(
-            "collection_id", ""
-        )
+        bulk_content_guid_data_info = bulk_content_guid_data.get("info", {}) or {}
 
-        url_or_self = bulk_content_guid_data.get("info", {}).get("self")
+        authz_val = bulk_content_guid_data_info.get("authz", [])
+        collection_id_val = bulk_content_guid_data_info.get("collection_id", "")
 
-        metadata = bulk_content_guid_data.get("info", {}).get("metadata")
+        url_or_self = bulk_content_guid_data_info.get("self", "")
+
+        metadata = bulk_content_guid_data_info.get("metadata", {})
 
         return EmbeddingContent(
             guid=guid,

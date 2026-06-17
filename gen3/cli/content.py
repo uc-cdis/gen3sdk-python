@@ -12,17 +12,10 @@ command generates for each row:
     embedding_id   embedding   authz   collection_id   self
 """
 
-import base64
 import csv
-import json
-from pathlib import Path
-from typing import Iterable, List
+from typing import List
 
-import numpy
-from dataclasses import dataclass
 import click
-from cdislogging import get_logger
-import numpy
 
 from gen3.file import DEFAULT_BATCH_SIZE, SUPPORTED_CONTENT_TYPES, Gen3File
 
