@@ -105,7 +105,7 @@ Delete all locations of a stored data file and remove its record from indexd</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.file.Gen3File.get_bulk_content">
-<span class="sig-name descname"><span class="pre">get_bulk_content</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">guids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">content_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'gen3_embeddings'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">EmbeddingContent</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.get_bulk_content"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.get_bulk_content" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_bulk_content</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">guids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">content_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'gen3_embeddings'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exclude_info</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">EmbeddingContent</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.get_bulk_content"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.get_bulk_content" title="Link to this definition">¶</a></dt>
 <dd><p>Retrieve bulk content for a set of GUIDs</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -114,6 +114,7 @@ Delete all locations of a stored data file and remove its record from indexd</p>
 <li><p><strong>guids</strong> (<em>tuple</em><em>[</em><em>str</em><em>, </em><em>...</em><em>]</em>) – One or more GUIDs supplied</p></li>
 <li><p><strong>batch_size</strong> (<em>int</em>) – How many GUIDs to send in each request to <cite>/data/content</cite>.</p></li>
 <li><p><strong>content_type</strong> (<em>str</em>) – type of content of GUIDs, this determines how to parse.</p></li>
+<li><p><strong>exclude_info</strong> (<em>bool</em>) – whether or not to exclude additional info in response</p></li>
 </ul>
 </dd>
 </dl>
@@ -121,14 +122,17 @@ Delete all locations of a stored data file and remove its record from indexd</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.file.Gen3File.get_content">
-<span class="sig-name descname"><span class="pre">get_content</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.get_content"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.get_content" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_content</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exclude_info</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.get_content"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.get_content" title="Link to this definition">¶</a></dt>
 <dd><p>Bulk retrieve content for a list of GUIDs.</p>
 <p>The Gen3 API provides the <cite>/data/content</cite> endpoint which accepts a JSON body with
 an array of GUID strings.  This helper wraps that call and returns the parsed
 response.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>guids</strong> (<em>list</em>) – A list or tuple of GUIDs for which to fetch content.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>guids</strong> (<em>list</em>) – A list or tuple of GUIDs for which to fetch content.</p></li>
+<li><p><strong>exclude_info</strong> (<em>bool</em>) – whether or not to exclude additional info in response.</p></li>
+</ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><dl class="simple">

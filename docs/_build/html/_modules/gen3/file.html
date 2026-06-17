@@ -136,6 +136,7 @@
         <span class="n">guids</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">batch_size</span><span class="o">=</span><span class="n">DEFAULT_BATCH_SIZE</span><span class="p">,</span>
         <span class="n">content_type</span><span class="o">=</span><span class="n">SUPPORTED_CONTENT_TYPES</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">exclude_info</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">EmbeddingContent</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Retrieve bulk content for a set of GUIDs</span>
@@ -145,6 +146,7 @@
 <span class="sd">            guids (tuple[str, ...]): One or more GUIDs supplied</span>
 <span class="sd">            batch_size (int): How many GUIDs to send in each request to `/data/content`.</span>
 <span class="sd">            content_type (str): type of content of GUIDs, this determines how to parse.</span>
+<span class="sd">            exclude_info (bool): whether or not to exclude additional info in response</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">content_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">SUPPORTED_CONTENT_TYPES</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -179,10 +181,11 @@
 
         <span class="n">embeddings</span> <span class="o">=</span> <span class="p">{}</span>
 
-        <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_guids</span><span class="p">),</span> <span class="n">batch_size</span><span class="p">):</span>
-            <span class="n">batch</span> <span class="o">=</span> <span class="n">all_guids</span><span class="p">[</span><span class="n">start</span> <span class="p">:</span> <span class="n">start</span> <span class="o">+</span> <span class="n">batch_size</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_guids</span><span class="p">),</span> <span class="n">final_batch_size</span><span class="p">):</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;fetching batch of size </span><span class="si">{</span><span class="n">final_batch_size</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+            <span class="n">batch</span> <span class="o">=</span> <span class="n">all_guids</span><span class="p">[</span><span class="n">start</span> <span class="p">:</span> <span class="n">start</span> <span class="o">+</span> <span class="n">final_batch_size</span><span class="p">]</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="n">batch_response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_content</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+                <span class="n">batch_response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_content</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">exclude_info</span><span class="o">=</span><span class="n">exclude_info</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
                 <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;API error on batch starting at </span><span class="si">{</span><span class="n">batch</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
                 <span class="k">continue</span>
@@ -205,7 +208,7 @@
 
 <div class="viewcode-block" id="Gen3File.get_content">
 <a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.get_content">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guids</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guids</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">exclude_info</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Bulk retrieve content for a list of GUIDs.</span>
 
@@ -215,6 +218,7 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            guids (list): A list or tuple of GUIDs for which to fetch content.</span>
+<span class="sd">            exclude_info (bool): whether or not to exclude additional info in response.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            dict | str: If the request succeeds and the body can be decoded as JSON, a mapping</span>
@@ -224,6 +228,9 @@
 <span class="sd">            requests.HTTPError: If the HTTP status code indicates an error</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">api_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="si">}</span><span class="s2">/user/data/content&quot;</span>
+        <span class="k">if</span> <span class="n">exclude_info</span><span class="p">:</span>
+            <span class="n">api_url</span> <span class="o">+=</span> <span class="s2">&quot;?exclude_info=true&quot;</span>
+
         <span class="n">body</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;guids&quot;</span><span class="p">:</span> <span class="n">guids</span><span class="p">}</span>
         <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Content-Type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">}</span>
 
@@ -244,6 +251,11 @@
 <span class="sd">        Get a dict of parsed embeddings from a batch_resonse of GUIDs</span>
 <span class="sd">        which are all embeddings.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">batch_response</span> <span class="o">=</span> <span class="n">batch_response</span> <span class="ow">or</span> <span class="p">{}</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">batch_response</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Empty batch_response. Continuing anyway...&quot;</span><span class="p">)</span>
+
         <span class="n">embeddings</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">guid</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">batch_response</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;guids&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="n">embeddings</span><span class="p">[</span><span class="n">guid</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_embeddings_from_bulk_content_guid</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
@@ -270,13 +282,13 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            EmbeddingContent - a dataclass representation of the embedding</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bulk_content_guid_data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bulk_content_guid_data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">bulk_content_guid_data</span><span class="p">:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: did not find </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2"> in output, adding empty row...&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">EmbeddingContent</span><span class="p">(</span>
                 <span class="n">guid</span><span class="o">=</span><span class="n">guid</span><span class="p">,</span>
                 <span class="n">embedding_id</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
-                <span class="n">embedding</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([]),</span>
-                <span class="n">authz</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+                <span class="n">embedding</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">([]),</span>
+                <span class="n">authz</span><span class="o">=</span><span class="p">[],</span>
                 <span class="n">collection_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="bp">self</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
                 <span class="n">metadata</span><span class="o">=</span><span class="p">{},</span>
@@ -319,14 +331,14 @@
         <span class="k">if</span> <span class="n">embedding_vector</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">embedding_vector</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">raw_vector</span><span class="p">)</span>
 
-        <span class="n">authz_val</span> <span class="o">=</span> <span class="n">bulk_content_guid_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;authz&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-        <span class="n">collection_id_val</span> <span class="o">=</span> <span class="n">bulk_content_guid_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-            <span class="s2">&quot;collection_id&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span>
-        <span class="p">)</span>
+        <span class="n">bulk_content_guid_data_info</span> <span class="o">=</span> <span class="n">bulk_content_guid_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="p">{})</span> <span class="ow">or</span> <span class="p">{}</span>
 
-        <span class="n">url_or_self</span> <span class="o">=</span> <span class="n">bulk_content_guid_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;self&quot;</span><span class="p">)</span>
+        <span class="n">authz_val</span> <span class="o">=</span> <span class="n">bulk_content_guid_data_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;authz&quot;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="n">collection_id_val</span> <span class="o">=</span> <span class="n">bulk_content_guid_data_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;collection_id&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
 
-        <span class="n">metadata</span> <span class="o">=</span> <span class="n">bulk_content_guid_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">)</span>
+        <span class="n">url_or_self</span> <span class="o">=</span> <span class="n">bulk_content_guid_data_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;self&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+        <span class="n">metadata</span> <span class="o">=</span> <span class="n">bulk_content_guid_data_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span>
 
         <span class="k">return</span> <span class="n">EmbeddingContent</span><span class="p">(</span>
             <span class="n">guid</span><span class="o">=</span><span class="n">guid</span><span class="p">,</span>
