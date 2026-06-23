@@ -285,6 +285,7 @@ class DownloadStatus:
         return (
             f'filename: {self.filename if self.filename is not None else "not available"}; '
             f"status: {self.status}; "
+            f"status_code: {self.status_code}; "
             f'start_time: {self.start_time.strftime("%m/%d/%Y, %H:%M:%S") if self.start_time is not None else "n/a"}; '
             f'end_time: {self.end_time.strftime("%m/%d/%Y, %H:%M:%S") if self.start_time is not None else "n/a"}'
         )
