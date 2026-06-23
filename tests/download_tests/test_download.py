@@ -841,7 +841,7 @@ def test_download_status_repr_and_str():
         end_time=datetime.strptime("2011-11-04T00:07:12Z", "%Y-%m-%dT%H:%M:%SZ"),
     )
 
-    expected = "filename: test.csv; status: downloaded; start_time: 11/04/2011, 00:05:23; end_time: 11/04/2011, 00:07:12"
+    expected = "filename: test.csv; status: downloaded; status_code: None; start_time: 11/04/2011, 00:05:23; end_time: 11/04/2011, 00:07:12"
 
     results = download1.__repr__()
     assert results == expected
