@@ -363,6 +363,7 @@ def resolve_drs_via_list(
         resolver = REGISTERED_DRS_RESOLVERS.get(how, None)
         if resolver is None:
             continue
+        logger.info(f"Attempting to resolve {identifier} with {how}...")
         sig = inspect.signature(resolver)
         filter_keys = [
             param.name
@@ -378,7 +379,7 @@ def resolve_drs_via_list(
 
         host = resolver(identifier, object_id, **parameters_dict)
         if host is not None:
-            logger.info(f"resolved {identifier} tried {tried}")
+            logger.info(f"resolved {identifier}, tried: {tried}")
             return host
 
     logger.warning(f"unable to resolve {identifier} or {object_id}, tried {tried}")

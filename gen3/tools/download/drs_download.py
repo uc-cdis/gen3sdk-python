@@ -279,11 +279,13 @@ class DownloadStatus:
     status: str = "pending"
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
+    status_code: Optional[int] = None
 
     def __str__(self):
         return (
             f'filename: {self.filename if self.filename is not None else "not available"}; '
             f"status: {self.status}; "
+            f"status_code: {self.status_code}; "
             f'start_time: {self.start_time.strftime("%m/%d/%Y, %H:%M:%S") if self.start_time is not None else "n/a"}; '
             f'end_time: {self.end_time.strftime("%m/%d/%Y, %H:%M:%S") if self.start_time is not None else "n/a"}'
         )
@@ -306,27 +308,31 @@ def wts_external_oidc(hostname: str) -> Dict[str, Any]:
     oidc = {}
     if not hostname:
         return oidc
+
+    url = f"https://{hostname}/wts/external_oidc/"
+    err_msg = "Likely no WTS service running on this Commons. Proceeding, but certain commands might fail."
+
     try:
-        response = requests.get(f"https://{hostname}/wts/external_oidc/")
+        response = requests.get(url)
         response.raise_for_status()
+    except requests.exceptions.HTTPError as exc:
+        resp_msg = json_loads(exc.response.text)
+        if "message" in resp_msg:
+            resp_msg = resp_msg["message"]
+        logger.warning(
+            f"HTTP Error ({exc.response.status_code}) from '{url}': {resp_msg}. {err_msg}"
+        )
+        return oidc
+
+    try:
         data = response.json()
         if "providers" not in data:
-            logger.warning(
-                'cannot find "providers". Likely no WTS service running for this commons'
-            )
+            logger.warning(f'No "providers" field in WTS response: {data}. {err_msg}')
             return oidc
         for item in data["providers"]:
             oidc[urlparse(item["base_url"]).netloc] = item
-
-    except requests.exceptions.HTTPError as exc:
-        logger.critical(
-            f'HTTP Error ({exc.response.status_code}): {json_loads(exc.response.text).get("message", "")}'
-        )
     except JSONDecodeError as ex:
-        logger.warning(
-            f"Unable to process WTS response. Likely no WTS service running on this commons. "
-            f"Certain commands might fail."
-        )
+        logger.warning(f"Unable to process WTS response: {response.text}. {err_msg}")
 
     return oidc
 
@@ -633,7 +639,9 @@ def parse_drs_identifier(drs_candidate: str) -> Tuple[str, str, str]:
 
 
 def resolve_drs_hostname_from_id(
-    object_id: str, resolved_drs_prefix_cache: dict, mds_url: str
+    object_id: str,
+    resolved_drs_prefix_cache: dict,
+    mds_url: str,
 ) -> Optional[Tuple[str, str, str]]:
     """Resolves and returns a DRS identifier
     The resolved_drs_prefix_cache is updated if needed and is a potential side effect of this
@@ -710,7 +718,7 @@ def ensure_dirpath_exists(path: Path) -> Path:
 
 def get_download_url_using_drs(
     drs_hostname: str, object_id: str, access_method: str, access_token: str
-) -> Optional[str]:
+) -> Tuple[Optional[int], Optional[str]]:
     """
     Returns the presigned URL for a DRS object, from a DRS hostname, via the access method
     Args:
@@ -721,6 +729,7 @@ def get_download_url_using_drs(
 
     Returns:
         presigned url to object
+        status code
     """
     headers = {
         "Content-Type": "application/json",
@@ -734,15 +743,15 @@ def get_download_url_using_drs(
         )
         response.raise_for_status()
         data = response.json()
-        return data.get("url", None)
-
+        return data.get("url", None), response.status_code
     except requests.exceptions.Timeout:
         logger.critical(f"Was unable to download: {object_id}. Timeout Error.")
     except requests.exceptions.HTTPError as exc:
         logger.critical(
             f"HTTP Error ({exc.response.status_code}) when requesting download url from {access_method}"
         )
-    return None
+        return None, exc.response.status_code
+    return None, None
 
 
 def get_user_auth(commons_url: str, access_token: str) -> Optional[List[str]]:
@@ -993,8 +1002,7 @@ class DownloadManager:
 
             if entry.hostname is None:
                 logger.critical(
-                    f"{entry.hostname} was not resolved, skipping {entry.object_id}."
-                    f"Skipping {entry.file_name}"
+                    f"Unable to resolve, skipping {entry.object_id}. Skipping"
                 )
                 completed[entry.object_id].status = "error (resolving DRS host)"
                 continue
@@ -1002,8 +1010,7 @@ class DownloadManager:
             # check to see if we have tokens
             if entry.hostname not in self.known_hosts:
                 logger.critical(
-                    f"{entry.hostname} is not present in this commons remote user access."
-                    f"Skipping {entry.file_name}"
+                    f"{entry.hostname} is not present in this commons remote user access. Skipping {entry.file_name}"
                 )
                 completed[entry.object_id].status = "error (resolving DRS host)"
                 continue
@@ -1032,7 +1039,7 @@ class DownloadManager:
                 continue
             access_method = entry.access_methods[0]["access_id"]
 
-            download_url = get_download_url_using_drs(
+            download_url, status_code = get_download_url_using_drs(
                 drs_hostname,
                 entry.object_id,
                 access_method,
@@ -1040,6 +1047,8 @@ class DownloadManager:
             )
 
             if download_url is None:
+                if status_code != 200:
+                    completed[entry.object_id].status_code = status_code
                 completed[entry.object_id].status = "error"
                 continue
 
@@ -1116,6 +1125,7 @@ def _download(
     show_progress=False,
     unpack_packages=True,
     delete_unpacked_packages=False,
+    commons_url=None,
 ) -> Optional[Dict[str, Any]]:
     """
     A convenience function used to download a json manifest.
@@ -1146,6 +1156,7 @@ def _download(
         auth=auth,
         download_list=object_list,
         show_progress=show_progress,
+        commons_url=commons_url,
     )
 
     out_dir_path = ensure_dirpath_exists(Path(output_dir))
@@ -1270,6 +1281,9 @@ def _list_object(hostname, auth, object_id: str) -> bool:
         hostname=hostname, auth=auth, download_list=object_list, show_progress=False
     )
 
+    if not object_list:
+        return False
+
     for x in object_list:
         print(x.pprint())
 
@@ -1349,6 +1363,7 @@ def download_files_in_drs_manifest(
     show_progress=True,
     unpack_packages=True,
     delete_unpacked_packages=False,
+    commons_url=None,
 ) -> None:
     """
     A convenience function used to download a json manifest.
@@ -1370,6 +1385,7 @@ def download_files_in_drs_manifest(
         show_progress,
         unpack_packages,
         delete_unpacked_packages,
+        commons_url,
     )
 
 

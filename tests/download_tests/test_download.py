@@ -348,10 +348,9 @@ def test_download_file_from_url_failures(download_dir):
             text="1234567890",
             status_code=500,
         )
-        assert (
-            get_download_url_using_drs("test.commons1.io", "blah", "s3", "bad token")
-            is None
-        )
+        assert get_download_url_using_drs(
+            "test.commons1.io", "blah", "s3", "bad token"
+        ) == (None, 500)
 
         assert (
             download_file_from_url(
@@ -366,10 +365,9 @@ def test_download_file_from_url_failures(download_dir):
             url=f"https://test.commons1.io/ga4gh/drs/v1/objects/blah/access/s3",
             exc=requests.exceptions.Timeout,
         )
-        assert (
-            get_download_url_using_drs("test.commons1.io", "blah", "s3", "bad token")
-            is None
-        )
+        assert get_download_url_using_drs(
+            "test.commons1.io", "blah", "s3", "bad token"
+        ) == (None, None)
 
         try:
             download_file_from_url(
@@ -843,7 +841,7 @@ def test_download_status_repr_and_str():
         end_time=datetime.strptime("2011-11-04T00:07:12Z", "%Y-%m-%dT%H:%M:%SZ"),
     )
 
-    expected = "filename: test.csv; status: downloaded; start_time: 11/04/2011, 00:05:23; end_time: 11/04/2011, 00:07:12"
+    expected = "filename: test.csv; status: downloaded; status_code: None; start_time: 11/04/2011, 00:05:23; end_time: 11/04/2011, 00:07:12"
 
     results = download1.__repr__()
     assert results == expected

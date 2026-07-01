@@ -5,6 +5,7 @@ import json
 import os
 import pytest
 import sys
+from copy import deepcopy
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -157,3 +158,58 @@ def test_dbgap_fhir(tmp_path):
     assert _get_tsv_data(file_name) == _get_tsv_data(
         "tests/test_data/fhir_metadata.tsv"
     )
+
+
+def test_dbgap_fhir_sanitizes_unsafe_markdown_links():
+    dbgap_fhir = dbgapFHIR(
+        api="https://example.com/fhir/x1",
+        auth_provider=HTTPBasicAuth("DATACITE_USERNAME", "DATACITE_PASSWORD"),
+    )
+
+    unsafe_response = deepcopy(MOCK_NIH_DBGAP_FHIR_RESPONSE_FOR_PHS000007)
+    unsafe_response[
+        "description"
+    ] = "Description with [malformed JS](javascript:getPage(this, 'document.cgi', 2022 and also [unsafe link](javascript:getPage(this, 'document.cgi', 2022);return true;) and context"
+    unsafe_response["keyword"][0][
+        "text"
+    ] = "[JS](javascript:getPage(this, 'document.cgi', 2022);return true;)"
+    unsafe_response["keyword"][1]["text"] = "[VB](vbscript:msgbox(1))"
+    unsafe_response["keyword"][2]["text"] = "[DATA](data:text/html;base64,PHNjcmlwdD4=)"
+
+    clean_response = deepcopy(MOCK_NIH_DBGAP_FHIR_RESPONSE_FOR_PHS000166)
+
+    def _mock_request(path, **kwargs):
+        if path == "ResearchStudy/phs000007":
+            return unsafe_response
+        if path == "ResearchStudy/phs000166":
+            return clean_response
+
+        assert path in ["ResearchStudy/phs000007", "ResearchStudy/phs000166"]
+
+    dbgap_fhir.fhir_client.server.request_json = MagicMock(side_effect=_mock_request)
+
+    metadata = dbgap_fhir.get_metadata_for_ids(
+        [
+            "phs000007.v1.p1.c1",
+            "phs000166.c3",
+        ]
+    )
+
+    unsafe_metadata = metadata["phs000007.v1.p1.c1"]
+    assert (
+        unsafe_metadata["Description"]
+        == "Description with [malformed JS](DEFUSED_javascript:getPage(this, 'document.cgi', 2022 and also unsafe link and context"
+    )
+
+    assert isinstance(unsafe_metadata["Keyword"], list)
+    for item in unsafe_metadata["Keyword"]:
+        assert "javascript:" not in item.lower()
+        assert "vbscript:" not in item.lower()
+        assert "data:text/html" not in item.lower()
+
+    assert "JS" in unsafe_metadata["Keyword"]
+    assert "VB" in unsafe_metadata["Keyword"]
+    assert "DATA" in unsafe_metadata["Keyword"]
+
+    clean_metadata = metadata["phs000166.c3"]
+    assert clean_metadata["Description"] == clean_response["description"]

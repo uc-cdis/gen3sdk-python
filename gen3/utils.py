@@ -341,6 +341,23 @@ def deep_dict_update(a, b):
     return a
 
 
+def load_entry_points():
+    try:
+        from importlib.metadata import entry_points
+    except ImportError:
+        from importlib_metadata import entry_points
+
+    # Load plug-ins from entry_points (syntax changes for python 3.12+)
+    major = sys.version_info[0]
+    minor = sys.version_info[1]
+    if major == 3 and minor >= 12:
+        for ep in entry_points(group="gen3.plugins"):
+            ep.load()
+    else:
+        for ep in entry_points().get("gen3.plugins", []):
+            ep.load()
+
+
 # Default settings to control usage of backoff library.
 DEFAULT_BACKOFF_SETTINGS = {
     # Disable backoff lib default logger, only show custom logs

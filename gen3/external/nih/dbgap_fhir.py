@@ -2,6 +2,7 @@ import backoff
 import collections
 import copy
 import csv
+import re
 import time
 
 from cdislogging import get_logger
@@ -132,6 +133,15 @@ class dbgapFHIR(ExternalMetadataSourceInterface):
         "ComputedAncestry",
         "MolecularDataTypes",
     ]
+
+    # regex to detect markdown links e.g. `[Click Me](javascript:`
+    # capture groups:
+    #   \1 -> The visible link text ("Click Me")
+    #   \2 -> protocol ("javascript")
+    UNSAFE_MARKDOWN_LINK_START_RE = re.compile(
+        r"\[([^\]]*)\]\((javascript|vbscript|data):",
+        re.IGNORECASE,
+    )
 
     DISCLAIMER = (
         "This information was retrieved from dbGaP's FHIR API for "
@@ -575,15 +585,66 @@ class dbgapFHIR(ExternalMetadataSourceInterface):
 
     def _clean_value(self, value):
         """
-        Replace tab literals in a string
+        Clean a string for downstream output.
+
+        This combines two sanitization concerns in one pass:
+        1) Strip unsafe markdown links like [text](javascript:...)
+        2) Escape literal tab characters/backslashes for TSV safety
         """
         if value is None:
             return ""
+
+        value = self._strip_unsafe_markdown_links(value)
 
         # Double-escape existing backslashes
         # Convert every literal tab into the text “\t”
         value = value.replace("\\", "\\\\").replace("\t", r"\t")
         return value
+
+    def _strip_unsafe_markdown_links(self, value):
+        """
+        Replace markdown links using unsafe schemes with only their link text.
+
+        This parser handles nested parentheses, difficult with regex
+        """
+        output = []
+        cursor = 0
+
+        while True:
+            match = self.UNSAFE_MARKDOWN_LINK_START_RE.search(value, cursor)
+            if not match:
+                output.append(value[cursor:])
+                break
+
+            output.append(value[cursor : match.start()])
+            link_text = match.group(1)
+
+            # start after "[text](scheme:"
+            index = match.end()
+            depth = 1
+            while index < len(value) and depth > 0:
+                if value[index] == "(":
+                    depth += 1
+                elif value[index] == ")":
+                    depth -= 1
+                index += 1
+
+            if depth == 0:
+                output.append(link_text)
+                cursor = index
+            else:
+                # in the case of unclosed parens/malformed link
+                # defuse the protocol name to make it un-executable.
+                # this is to save trailing textt.
+                link_text = match.group(1)
+                protocol = match.group(2)
+
+                defused_start = f"[{link_text}](DEFUSED_{protocol}:"
+                output.append(defused_start)
+
+                cursor = match.end()
+
+        return "".join(output)
 
     def _clean_structure(self, obj):
         """

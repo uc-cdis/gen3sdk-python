@@ -14,7 +14,9 @@ def test_gen3_wrap_valid_auth(mock_gen3_auth):
     with patch("gen3.tools.wrap.subprocess.run") as mock_subprocess_run:
         wrapper_obj = Gen3Wrap(mock_gen3_auth, test_command_args)
         wrapper_obj.run_command()
-        mock_subprocess_run.assert_called_once_with(list(test_command_args), stderr=-2)
+        mock_subprocess_run.assert_called_once_with(
+            list(test_command_args), stderr=-2, check=True
+        )
 
 
 @patch.object(Gen3Auth, "get_access_token", MagicMock(side_effect=Gen3AuthError()))

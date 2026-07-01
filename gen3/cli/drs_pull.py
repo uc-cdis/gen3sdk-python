@@ -91,6 +91,7 @@ def download_manifest(
         not no_progress,
         not no_unpack_packages,
         delete_unpacked_packages,
+        ctx.obj["commons_url"],
     )
 
 

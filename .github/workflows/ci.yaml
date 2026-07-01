@@ -24,3 +24,4 @@ jobs:
       fail-fast: false  # run for all versions even if one of them fails
     with:
         python-version: ${{ matrix.version }}
+        poetry-version: '2.2.1' # Max version supported by python 3.9
