@@ -35,7 +35,6 @@ gen3 ai embeddings embed-files --recursive --chunk-size 1024 --chunk-overlap 256
 
 import click
 
-from gen3.ai import EmbeddingsClient
 from gen3.cli.ai.embeddings import (
     chunk_and_embed_text,
     convert_embeddings,
@@ -69,13 +68,8 @@ def embeddings(ctx: click.Context) -> None:
     """
     For working with embeddings
     """
-    api_prefix = ctx.obj["ai_api_prefix"]
-    auth = ctx.obj["auth_factory"].get()
-    endpoint = ctx.obj["endpoint"] or auth.endpoint
-
-    ctx.obj["client"] = EmbeddingsClient(
-        auth=auth, endpoint=endpoint, api_prefix=api_prefix
-    )
+    if "ai_api_prefix" not in ctx.obj:
+        ctx.obj["ai_api_prefix"] = "ai"
 
 
 @embeddings.group()

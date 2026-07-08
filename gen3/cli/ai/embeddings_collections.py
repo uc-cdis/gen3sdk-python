@@ -4,7 +4,11 @@ import sys
 import click
 import httpx
 
-from gen3.cli.ai.utils import click_echo_dict_format, click_echo_if_text
+from gen3.cli.ai.utils import (
+    click_echo_dict_format,
+    click_echo_if_text,
+    get_embeddings_client,
+)
 
 
 @click.command("create")
@@ -29,7 +33,7 @@ def create_collection(
 
     COLLECTION_NAME: Name for the new collection
     """
-    client = ctx.obj["client"]
+    client = get_embeddings_client(ctx)
 
     click.echo(
         f"Creating collection '{collection_name}' with {dimensions} dimensions..."
@@ -62,7 +66,7 @@ def read_collections(
 
     COLLECTION_NAME: Optional specific collection name to filter by
     """
-    client = ctx.obj["client"]
+    client = get_embeddings_client(ctx)
 
     if collection_name is not None:
         click_echo_if_text(
@@ -97,7 +101,7 @@ def delete_collection(ctx: click.Context, collection_name: str | None) -> None:
 
     COLLECTION_NAME: collection name to delete
     """
-    client = ctx.obj["client"]
+    client = get_embeddings_client(ctx)
 
     click_echo_if_text(f"Deleting collection '{collection_name}'...")
     try:

@@ -12,7 +12,7 @@ import indexclient.client as indexclient
 
 from gen3 import logging
 from gen3.ai import EmbeddingsClient, LocalEmbeddingClient
-from gen3.cli.ai.utils import chunk_text, get_all_nested_files
+from gen3.cli.ai.utils import chunk_text, get_all_nested_files, get_embeddings_client
 from gen3.index import Gen3Index
 from gen3.utils import get_or_create_event_loop_for_thread
 
@@ -81,7 +81,7 @@ def convert_embeddings(
     See above `help` for more details.
     """
     auth = ctx.obj["auth_factory"].get()
-    client: EmbeddingsClient = ctx.obj["client"]
+    client = get_embeddings_client(ctx)
 
     # we need an indexing client as well
     gen3_index = Gen3Index(auth.endpoint, auth_provider=auth)
@@ -220,7 +220,7 @@ def publish_embeddings(
                  also has limits.
     """
     auth = ctx.obj["auth_factory"].get()
-    client: EmbeddingsClient = ctx.obj["client"]
+    client = get_embeddings_client(ctx)
 
     manifest_file_name = click.format_filename(manifest_file)
     delimiter = "\t" if manifest_file_name.endswith(".tsv") else ","

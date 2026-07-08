@@ -3,6 +3,21 @@ import os
 
 import click
 
+from gen3.ai import EmbeddingsClient
+
+
+def get_embeddings_client(ctx: click.Context) -> EmbeddingsClient:
+    if "client" in ctx.obj:
+        return ctx.obj["client"]
+
+    auth = ctx.obj["auth_factory"].get()
+    api_prefix = ctx.obj.get("ai_api_prefix", "ai")
+    endpoint = ctx.obj.get("endpoint") or getattr(auth, "endpoint", None)
+
+    client = EmbeddingsClient(auth=auth, endpoint=endpoint, api_prefix=api_prefix)
+    ctx.obj["client"] = client
+    return client
+
 
 def click_echo_if_text(message: str, format: str = "text") -> None:
     """
