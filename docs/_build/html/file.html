@@ -55,6 +55,12 @@ using the credentials.json downloaded from the commons profile page.</p>
 </pre></div>
 </div>
 <dl class="py method">
+<dt class="sig sig-object py" id="gen3.file.Gen3File.async_download_multiple">
+<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">async_download_multiple</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">download_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'.'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'original'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protocol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_concurrent_requests</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_processes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">queue_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_completed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">no_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.async_download_multiple"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.async_download_multiple" title="Link to this definition">¶</a></dt>
+<dd><p>Asynchronously download multiple files using multiprocessing and queues.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="gen3.file.Gen3File.delete_file">
 <span class="sig-name descname"><span class="pre">delete_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.delete_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.delete_file" title="Link to this definition">¶</a></dt>
 <dd><p>This method is DEPRECATED. Use delete_file_locations() instead.
@@ -91,7 +97,7 @@ Delete all locations of a stored data file and remove its record from indexd</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.file.Gen3File.download_single">
-<span class="sig-name descname"><span class="pre">download_single</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.download_single"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.download_single" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">download_single</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protocol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.download_single"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.download_single" title="Link to this definition">¶</a></dt>
 <dd><p>Download a single file using its GUID.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -99,6 +105,12 @@ Delete all locations of a stored data file and remove its record from indexd</p>
 <li><p><strong>object_id</strong> (<em>str</em>) – The file’s unique ID</p></li>
 <li><p><strong>path</strong> (<em>str</em>) – Path to store the downloaded file at</p></li>
 </ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if download successful, False otherwise</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
 </dd>
 </dl>
 </dd></dl>
@@ -120,6 +132,26 @@ Delete all locations of a stored data file and remove its record from indexd</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3File</span><span class="o">.</span><span class="n">get_presigned_url</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
 </pre></div>
 </div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gen3.file.Gen3File.get_presigned_urls_batch">
+<span class="sig-name descname"><span class="pre">get_presigned_urls_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protocol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/file.html#Gen3File.get_presigned_urls_batch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.file.Gen3File.get_presigned_urls_batch" title="Link to this definition">¶</a></dt>
+<dd><p>Get presigned URLs for multiple files efficiently.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>guids</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of GUIDs to get presigned URLs for</p></li>
+<li><p><strong>protocol</strong> (<em>str</em><em>, </em><em>optional</em>) – Protocol preference for URLs</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mapping of GUID to presigned URL response</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dict[str, Dict]</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -218,10 +250,12 @@ This value will also be treated as &lt;= MAX_PRESIGNED_URL_TTL in the fence conf
 <li class="toctree-l1"><a class="reference internal" href="auth.html">Gen3 Auth Helper</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Gen3 File Class</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#gen3.file.Gen3File"><code class="docutils literal notranslate"><span class="pre">Gen3File</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.async_download_multiple"><code class="docutils literal notranslate"><span class="pre">Gen3File.async_download_multiple()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.delete_file"><code class="docutils literal notranslate"><span class="pre">Gen3File.delete_file()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.delete_file_locations"><code class="docutils literal notranslate"><span class="pre">Gen3File.delete_file_locations()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.download_single"><code class="docutils literal notranslate"><span class="pre">Gen3File.download_single()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.get_presigned_url"><code class="docutils literal notranslate"><span class="pre">Gen3File.get_presigned_url()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.get_presigned_urls_batch"><code class="docutils literal notranslate"><span class="pre">Gen3File.get_presigned_urls_batch()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.upload_file"><code class="docutils literal notranslate"><span class="pre">Gen3File.upload_file()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.file.Gen3File.upload_file_to_guid"><code class="docutils literal notranslate"><span class="pre">Gen3File.upload_file_to_guid()</span></code></a></li>
 </ul>
