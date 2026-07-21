@@ -202,6 +202,12 @@ def convert_embeddings(
     default=None,
     help="Output filename for final manifest",
 )
+@click.option(
+    "--overwrite",
+    is_flag=True,
+    default=False,
+    help="Overwrite existing embeddings if they already exist (use PUT instead of POST).",
+)
 @click.pass_context
 def publish_embeddings(
     ctx,
@@ -209,6 +215,7 @@ def publish_embeddings(
     manifest_file: str,
     batch_size: int,
     default_collection: str | None = None,
+    overwrite: bool = False,
 ):
     """
     Publish embeddings from a manifest file to a collection.
@@ -310,6 +317,7 @@ def publish_embeddings(
                                 collection_name=collection_group["name"],
                                 collection_id=collection_id,
                                 embeddings_with_metadata=collection_group["embeddings"],
+                                overwrite=overwrite,
                             )
                         )
                         created_embeddings = created_embeddings_response.get(
@@ -339,6 +347,7 @@ def publish_embeddings(
                             collection_name=collection_group["name"],
                             collection_id=collection_id,
                             embeddings_with_metadata=collection_group["embeddings"],
+                            overwrite=overwrite,
                         )
                     )
                     created_embeddings = created_embeddings_response.get(

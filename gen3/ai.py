@@ -111,6 +111,7 @@ class EmbeddingsClient:
         embeddings_with_metadata: list[dict],
         collection_id: int | None = None,
         ai_model: str | None = None,
+        overwrite: bool = False,
     ) -> dict[str, Any]:
         """
         Create and add embeddings to an existing collection.
@@ -119,6 +120,7 @@ class EmbeddingsClient:
             collection_name (str): Name of the collection to add embeddings to
             embeddings_with_metadata (list[dict]): List of dictionaries containing the embedding and metadata
             ai_model (str): Optional AI model name
+            overwrite (bool): Whether to overwrite existing embeddings
 
         Returns:
             Response from the API
@@ -133,8 +135,12 @@ class EmbeddingsClient:
 
         body = {"embeddings": embeddings_with_metadata}
 
+        method = "post"
+        if overwrite:
+            method = "put"
+
         async with httpx.AsyncClient() as client:
-            response = await client.post(
+            response = await getattr(client, method)(
                 url,
                 json=body,
                 params=params,
