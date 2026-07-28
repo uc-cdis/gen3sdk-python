@@ -2,7 +2,7 @@ import re
 
 from cdislogging import get_logger
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 # For more details about this regex, see the function that uses it
 DBGAP_ACCESSION_REGEX = (

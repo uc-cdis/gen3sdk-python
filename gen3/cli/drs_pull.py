@@ -11,7 +11,7 @@ from gen3.tools.download.drs_download import (
     list_access_in_drs_manifest,
 )
 
-logger = get_logger("__name__")
+logger = get_logger(__name__)
 
 
 @click.command()

@@ -11,7 +11,7 @@ import indexclient.client as client
 from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status_and_print_error
 from gen3.auth import Gen3Auth
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 class Gen3Index:

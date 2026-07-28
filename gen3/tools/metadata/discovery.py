@@ -31,7 +31,7 @@ BASE_CSV_PARSER_SETTINGS = {
 }
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 async def output_expanded_discovery_metadata(

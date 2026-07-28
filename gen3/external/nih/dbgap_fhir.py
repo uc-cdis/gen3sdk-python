@@ -17,7 +17,7 @@ from gen3.external.nih.utils import get_dbgap_accession_as_parts
 from gen3.tools.metadata.discovery import sanitize_tsv_row, BASE_CSV_PARSER_SETTINGS
 from gen3.utils import DEFAULT_BACKOFF_SETTINGS
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 class dbgapFHIR(ExternalMetadataSourceInterface):

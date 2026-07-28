@@ -17,7 +17,7 @@ from gen3.utils import (
     remove_trailing_whitespace_and_slashes_in_url,
 )
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 class Gen3AuthError(Exception):

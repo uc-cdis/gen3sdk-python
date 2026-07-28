@@ -19,7 +19,7 @@ from gen3.utils import (
     is_status_code,
 )
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 class GetMetadataInterface(object):

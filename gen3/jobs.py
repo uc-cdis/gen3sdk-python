@@ -25,7 +25,7 @@ INDEX_MANIFEST_JOB = "index-object-manifest"
 DOWNLOAD_MANIFEST_JOB = "download-indexd-manifest"
 MERGE_MANIFEST_JOB = "merge-manifests"
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 class Gen3Jobs:

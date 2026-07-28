@@ -16,7 +16,7 @@ from gen3.tools.utils import (
 
 from cdislogging import get_logger
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 def is_valid_manifest_format(

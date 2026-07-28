@@ -554,7 +554,7 @@ from gen3.tools.metadata.discovery_objects import (
 from gen3.utils import get_or_create_event_loop_for_thread
 from gen3.auth import Gen3Auth
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 if __name__ == "__main__":
     auth = Gen3Auth()

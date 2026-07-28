@@ -4,7 +4,7 @@ import subprocess
 from cdislogging import get_logger
 from gen3.auth import Gen3Auth, Gen3AuthError
 
-logger = get_logger("__name__")
+logger = get_logger(__name__)
 
 
 class Gen3Wrap:

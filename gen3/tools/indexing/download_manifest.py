@@ -55,7 +55,7 @@ MAX_CONCURRENT_REQUESTS = 24
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 TMP_FOLDER = os.path.abspath(CURRENT_DIR + "/tmp") + "/"
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 async def async_download_object_manifest(

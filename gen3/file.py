@@ -17,7 +17,7 @@ from gen3.index import Gen3Index
 from gen3.utils import DEFAULT_BACKOFF_SETTINGS, raise_for_status_and_print_error
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 MAX_RETRIES = 3

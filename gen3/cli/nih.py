@@ -5,7 +5,7 @@ import click
 from gen3.external.nih.dbgap_study_registration import dbgapStudyRegistration
 from cdislogging import get_logger
 
-logger = get_logger("__name__")
+logger = get_logger(__name__)
 
 
 @click.group()

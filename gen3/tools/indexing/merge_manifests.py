@@ -40,7 +40,7 @@ from gen3.tools.utils import (
     AUTHZ_STANDARD_KEY,
 )
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 def merge_bucket_manifests(
