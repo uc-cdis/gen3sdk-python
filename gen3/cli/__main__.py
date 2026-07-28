@@ -108,28 +108,28 @@ def main(
         # we still need to define the logger, the log_level here doesn't
         # really matter b/c we immediately disable all logging
         logger = cdislogging.get_logger(
-            __name__, format=gen3.LOG_FORMAT, log_level="debug"
+            "gen3", format=gen3.LOG_FORMAT, log_level="debug"
         )
         # disables all logging
         logging.disable(logging.CRITICAL)
     elif very_verbose_logs:
         logger = cdislogging.get_logger(
-            __name__, format=gen3.LOG_FORMAT, log_level="debug"
+            "gen3", format=gen3.LOG_FORMAT, log_level="debug"
         )
         sdklogging.setLevel("DEBUG")
     elif verbose_logs:
         logger = cdislogging.get_logger(
-            __name__, format=gen3.LOG_FORMAT, log_level="info"
+            "gen3", format=gen3.LOG_FORMAT, log_level="info"
         )
         sdklogging.setLevel("INFO")
     elif only_error_logs:
         logger = cdislogging.get_logger(
-            __name__, format=gen3.LOG_FORMAT, log_level="error"
+            "gen3", format=gen3.LOG_FORMAT, log_level="error"
         )
         sdklogging.setLevel("ERROR")
     else:
         logger = cdislogging.get_logger(
-            __name__, format=gen3.LOG_FORMAT, log_level="warning"
+            "gen3", format=gen3.LOG_FORMAT, log_level="warning"
         )
         sdklogging.setLevel("WARNING")
 

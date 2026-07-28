@@ -16,7 +16,7 @@ from gen3.auth import Gen3Auth
 
 REQUIRED_EXTERNAL_FILE_METADATA_KEYS = ["file_retriever"]
 
-logger = get_logger("__name__", log_level="debug")
+logger = get_logger(__name__)
 
 
 def download_files_from_metadata(
