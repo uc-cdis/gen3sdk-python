@@ -90,13 +90,14 @@ class Gen3File:
         except:
             return resp.text
 
-    def get_bulk_content(
+    async def get_bulk_content(
         self,
         input_file=None,
         guids=None,
         batch_size=DEFAULT_BATCH_SIZE,
         content_type=SUPPORTED_CONTENT_TYPES[0],
         exclude_info=False,
+        concurrency: int = 10,
     ) -> dict[str, EmbeddingContent]:
         """
         Retrieve bulk content for a set of GUIDs
@@ -107,6 +108,7 @@ class Gen3File:
             batch_size (int): How many GUIDs to send in each request to `/data/content`.
             content_type (str): type of content of GUIDs, this determines how to parse.
             exclude_info (bool): whether or not to exclude additional info in response
+            concurrency (int): Maximum number of concurrent requests
         """
         if content_type not in SUPPORTED_CONTENT_TYPES:
             raise ValueError(
@@ -114,6 +116,9 @@ class Gen3File:
             )
 
         final_batch_size = min(batch_size, DEFAULT_BATCH_SIZE)
+        logging.debug(
+            f"Using batch_size={final_batch_size} for requests to /data/content"
+        )
         if final_batch_size != batch_size:
             logging.warning(
                 f"Requested batch_size={batch_size} too large, using default: {DEFAULT_BATCH_SIZE}"
@@ -139,15 +144,28 @@ class Gen3File:
             logging.error("No valid GUIDs found in the supplied input.")
             return {}
 
-        embeddings = {}
+        embeddings: dict[str, EmbeddingContent] = {}
+        batches = [
+            all_guids[i : i + batch_size] for i in range(0, len(all_guids), batch_size)
+        ]
+        semaphore = asyncio.Semaphore(concurrency)
 
-        for start in range(0, len(all_guids), final_batch_size):
-            logging.debug(f"fetching batch of size {final_batch_size}...")
-            batch = all_guids[start : start + final_batch_size]
-            try:
-                batch_response = self.get_content(batch, exclude_info=exclude_info)
-            except Exception as exc:
-                logging.error(f"API error on batch starting at {batch[0]}: {exc}")
+        async def fetch_one(batch: list[str]):
+            async with semaphore:
+                logging.debug(f"fetching batch of size {len(batch)}...")
+                try:
+                    batch_response = await asyncio.to_thread(
+                        self.get_content, batch, exclude_info=exclude_info
+                    )
+                    return batch, batch_response
+                except Exception as exc:
+                    logging.error(f"API error on batch starting at {batch[0]}: {exc}")
+                    return batch, None
+
+        results = await asyncio.gather(*(fetch_one(batch) for batch in batches))
+
+        for batch, batch_response in results:
+            if batch_response is None:
                 continue
 
             if isinstance(batch_response, str):

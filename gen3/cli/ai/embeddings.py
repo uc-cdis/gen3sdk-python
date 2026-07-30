@@ -68,12 +68,20 @@ COLLECTION_NAME_TO_ID_CACHE = {}
         "in all the `self` fields."
     ),
 )
+@click.option(
+    "--guid-batch-size",
+    default=10000,
+    type=int,
+    show_default=True,
+    help="Number of GUIDs to mint per request to indexd.",
+)
 @click.pass_context
 def convert_embeddings(
     ctx,
     manifest_file: str,
     out_manifest_file: str | None,
     url_prefix: str = "",
+    guid_batch_size: int = 10000,
 ):
     """
     Convert a Gen3 Embeddings Manifest into a Gen3 Indexing Manifest.
@@ -91,9 +99,6 @@ def convert_embeddings(
     with open(manifest_file_name) as file:
         # - 1 for header
         total_rows = sum(1 for line in file) - 1
-
-    # get valid indexd guids and dump into the manifest
-    valid_guids = gen3_index.get_valid_guids(count=total_rows)
 
     out_manifest_file = (
         out_manifest_file
@@ -114,6 +119,7 @@ def convert_embeddings(
             reader = csv.DictReader(f, delimiter=delimiter)
 
             row_number = 1
+            valid_guids = []
             for row in tqdm(reader, desc="Converting rows", total=total_rows):
                 embedding_str = row.get("embedding", "[]")
                 try:
@@ -145,6 +151,12 @@ def convert_embeddings(
 
                 if not url.startswith(url_prefix):
                     url = url_prefix + url
+
+                if not valid_guids:
+                    remaining = total_rows - (row_number - 1)
+                    batch_count = min(guid_batch_size, remaining)
+                    # get valid indexd guids and dump into the manifest
+                    valid_guids = gen3_index.get_valid_guids(count=batch_count)
 
                 out_row = {
                     "guid": valid_guids.pop(),
