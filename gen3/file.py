@@ -146,7 +146,8 @@ class Gen3File:
 
         embeddings: dict[str, EmbeddingContent] = {}
         batches = [
-            all_guids[i : i + batch_size] for i in range(0, len(all_guids), batch_size)
+            all_guids[i : i + final_batch_size]
+            for i in range(0, len(all_guids), final_batch_size)
         ]
         semaphore = asyncio.Semaphore(concurrency)
 
