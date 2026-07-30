@@ -130,13 +130,14 @@
 
 <div class="viewcode-block" id="Gen3File.get_bulk_content">
 <a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.get_bulk_content">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_bulk_content</span><span class="p">(</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_bulk_content</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">input_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">guids</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">batch_size</span><span class="o">=</span><span class="n">DEFAULT_BATCH_SIZE</span><span class="p">,</span>
         <span class="n">content_type</span><span class="o">=</span><span class="n">SUPPORTED_CONTENT_TYPES</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
         <span class="n">exclude_info</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">concurrency</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">EmbeddingContent</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Retrieve bulk content for a set of GUIDs</span>
@@ -147,6 +148,7 @@
 <span class="sd">            batch_size (int): How many GUIDs to send in each request to `/data/content`.</span>
 <span class="sd">            content_type (str): type of content of GUIDs, this determines how to parse.</span>
 <span class="sd">            exclude_info (bool): whether or not to exclude additional info in response</span>
+<span class="sd">            concurrency (int): Maximum number of concurrent requests</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">content_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">SUPPORTED_CONTENT_TYPES</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -154,6 +156,9 @@
             <span class="p">)</span>
 
         <span class="n">final_batch_size</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">DEFAULT_BATCH_SIZE</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Using batch_size=</span><span class="si">{</span><span class="n">final_batch_size</span><span class="si">}</span><span class="s2"> for requests to /data/content&quot;</span>
+        <span class="p">)</span>
         <span class="k">if</span> <span class="n">final_batch_size</span> <span class="o">!=</span> <span class="n">batch_size</span><span class="p">:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;Requested batch_size=</span><span class="si">{</span><span class="n">batch_size</span><span class="si">}</span><span class="s2"> too large, using default: </span><span class="si">{</span><span class="n">DEFAULT_BATCH_SIZE</span><span class="si">}</span><span class="s2">&quot;</span>
@@ -179,15 +184,28 @@
             <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;No valid GUIDs found in the supplied input.&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="p">{}</span>
 
-        <span class="n">embeddings</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">embeddings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">EmbeddingContent</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">batches</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">all_guids</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">batch_size</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_guids</span><span class="p">),</span> <span class="n">batch_size</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="n">semaphore</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Semaphore</span><span class="p">(</span><span class="n">concurrency</span><span class="p">)</span>
 
-        <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_guids</span><span class="p">),</span> <span class="n">final_batch_size</span><span class="p">):</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;fetching batch of size </span><span class="si">{</span><span class="n">final_batch_size</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
-            <span class="n">batch</span> <span class="o">=</span> <span class="n">all_guids</span><span class="p">[</span><span class="n">start</span> <span class="p">:</span> <span class="n">start</span> <span class="o">+</span> <span class="n">final_batch_size</span><span class="p">]</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">batch_response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_content</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">exclude_info</span><span class="o">=</span><span class="n">exclude_info</span><span class="p">)</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;API error on batch starting at </span><span class="si">{</span><span class="n">batch</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">fetch_one</span><span class="p">(</span><span class="n">batch</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">semaphore</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;fetching batch of size </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">batch_response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">get_content</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">exclude_info</span><span class="o">=</span><span class="n">exclude_info</span>
+                    <span class="p">)</span>
+                    <span class="k">return</span> <span class="n">batch</span><span class="p">,</span> <span class="n">batch_response</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;API error on batch starting at </span><span class="si">{</span><span class="n">batch</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="n">batch</span><span class="p">,</span> <span class="kc">None</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="n">fetch_one</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span> <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">batches</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">batch</span><span class="p">,</span> <span class="n">batch_response</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">batch_response</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">continue</span>
 
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch_response</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
