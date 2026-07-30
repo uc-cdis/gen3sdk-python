@@ -7,7 +7,7 @@ import pandas as pd
 
 from gen3.utils import raise_for_status_and_print_error
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 class Gen3Error(Exception):

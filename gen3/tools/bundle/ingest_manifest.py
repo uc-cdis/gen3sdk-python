@@ -21,7 +21,7 @@ from gen3.tools.utils import (
     ALIASES_COLUMN_NAME,
 )
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 """
 NOTES:

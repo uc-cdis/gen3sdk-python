@@ -19,7 +19,7 @@ from gen3.utils import (
     DEFAULT_BACKOFF_SETTINGS,
 )
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 class DataCiteDOIValidationError(Exception):

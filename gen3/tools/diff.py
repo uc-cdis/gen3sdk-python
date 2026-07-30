@@ -11,7 +11,7 @@ import traceback
 
 from cdislogging import get_logger
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 def manifest_diff(

@@ -20,7 +20,7 @@ from gen3.utils import (
 )
 from cdislogging import get_logger
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 # Pre-defined supported column names
 RECORD_TYPE_STANDARD_KEY = "record_type"

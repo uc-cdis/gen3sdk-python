@@ -25,7 +25,7 @@ BASE_CSV_PARSER_SETTINGS = {
 GUID_TYPE = "subject"
 CROSSWALK_NAMESPACE = "crosswalk"
 
-logging = get_logger("__name__", log_level="debug")
+logging = get_logger(__name__)
 
 
 async def read_crosswalk_metadata(

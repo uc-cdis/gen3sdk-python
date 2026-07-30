@@ -24,9 +24,11 @@ functions yourself. Generally this provides the most flexibility, at less
 of a convenience.
 
 ### Export Discovery Metadata into File
+
 Gen3's SDK can be used to export discovery metadata from a certain Gen3 environment into a file by using the `output_expanded_discovery_metadata()` function. By default this function will query for metadata with `guid_type=discovery_metadata` for the dump, and export the metadata into a TSV file. User can also specify a different `guid_type` values for this operation, and/or choose to export the metadata into a JSON file. When using TSV format, some certain fields from metadata will be flattened or "jsonified" so that each metadata record can be fitted into one row.
 
 Example of usage:
+
 ```python
 from gen3.tools.metadata.discovery import (
     output_expanded_discovery_metadata,
@@ -45,9 +47,11 @@ if __name__ == "__main__":
 ```
 
 ### Publish Discovery Metadata from File
+
 Gen3's SDK can also be used to publish discovery metadata onto a target Gen3 environment from a file by using the `publish_discovery_metadata()` function. Ideally the metadata file should be originated from a metadata dump obtained by using the `output_expanded_discovery_metadata()` function.
 
 Example of usage:
+
 ```python
 from gen3.tools.metadata.discovery import (
     publish_discovery_metadata,
@@ -77,7 +81,7 @@ The general overview for how Gen3 supports DOIs is as follows:
 * Gen3 SDK/CLI used to gather Metadata from External Public Metadata Sources
 * Gen3 SDK/CLI used to do any conversions to DOI Metadata
 * Gen3 SDK/CLI communicates with DataCite API to mint DOI
-    * NOTE: the gathering of metadata, conversion to DOI fields, and final minting may or may not be a part of a regular data ingestion. It’s possible that this is used ad-hocly, as needed
+    - NOTE: the gathering of metadata, conversion to DOI fields, and final minting may or may not be a part of a regular data ingestion. It’s possible that this is used ad-hocly, as needed
 * Gen3 SDK/CLI persists metadata in Gen3
 * Persisted metadata in Gen3 exposed via Discovery Page
 * Discovery Page is used as the required DOI Landing Page
@@ -112,7 +116,7 @@ from gen3.doi import (
 )
 from gen3.auth import Gen3Auth
 
-logging = get_logger("__name__", log_level="info")
+logging = get_logger(__name__, log_level="info")
 
 # This prefix should be provided by DataCite
 PREFIX = "10.12345"
@@ -394,7 +398,7 @@ from gen3.auth import Gen3Auth
 from gen3.discovery_dois import mint_dois_for_discovery_datasets, DbgapMetadataInterface
 from gen3.utils import get_random_alphanumeric
 
-logging = get_logger("__name__", log_level="info")
+logging = get_logger(__name__, log_level="info")
 
 PREFIX = "10.12345"
 PUBLISHER = "Example"
@@ -533,9 +537,11 @@ if __name__ == "__main__":
 ```
 
 ### Publish Discovery Metadata Objects from File
+
 Gen3's SDK can be used to ingest data objects related to datasets in Gen3 environment from a file by using the `publish_discovery_object_metadata()` function. To obtain a file of existing metadata objects, use the `output_discovery_objects()` function. By default new objects published from a file are appended to a dataset in a Gen3 environment. If object guids from a file already exist for a dataset in the Gen3 environment, objects are updated. If the `overwrite` option is `True`, all current metadata objects related to a dataset are instead replaced. You can also use this functionality from the CLI. See `gen3 discovery objects --help`
 
 Example of usage:
+
 ```python
 """
 Example script showing reading Discovery Objects Metadata and then
@@ -554,7 +560,7 @@ from gen3.tools.metadata.discovery_objects import (
 from gen3.utils import get_or_create_event_loop_for_thread
 from gen3.auth import Gen3Auth
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 if __name__ == "__main__":
     auth = Gen3Auth()

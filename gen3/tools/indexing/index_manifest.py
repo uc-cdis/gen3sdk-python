@@ -65,7 +65,7 @@ from cdislogging import get_logger
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 class ThreadControl(object):

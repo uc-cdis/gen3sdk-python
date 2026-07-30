@@ -40,7 +40,7 @@ COLUMN_TO_USE_AS_GUID = "guid"
 GUID_TYPE_FOR_INDEXED_FILE_OBJECT = "indexed_file_object"
 GUID_TYPE_FOR_NON_INDEXED_FILE_OBJECT = "metadata_object"
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 def _get_guid_for_row(commons_url, row, lock):

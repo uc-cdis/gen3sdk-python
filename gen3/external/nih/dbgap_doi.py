@@ -12,7 +12,7 @@ from gen3.external.nih.dbgap_study_registration import dbgapStudyRegistration
 from gen3.external.nih.dbgap_fhir import dbgapFHIR
 from gen3.external.nih.utils import get_dbgap_accession_as_parts
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 class dbgapDOI(ExternalMetadataSourceInterface):

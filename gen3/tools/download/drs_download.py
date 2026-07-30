@@ -47,7 +47,7 @@ DEFAULT_EXPIRE: timedelta = timedelta(hours=1)
 # package formats we handle for unpacking
 PACKAGE_EXTENSIONS = [".zip"]
 
-logger = get_logger("__name__")
+logger = get_logger(__name__)
 
 
 # Add undefined=Undefined.EXCLUDE here because we only cares if the input manifest has the minimal required metadata fields for data download, any extra metadata fields should be ignored and should not cause a failure

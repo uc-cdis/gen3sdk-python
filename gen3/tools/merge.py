@@ -11,7 +11,7 @@ from cdislogging import get_logger
 
 from gen3.utils import get_delimiter_from_extension
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 def _get_guids_for_manifest_row(row, data_from_indexing_manifest, config, **kwargs):
