@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock, AsyncMock
 import json
 import pytest
 from pathlib import Path
@@ -264,3 +264,30 @@ class Test_Async_Download:
 
         manifest_list = _load_manifest(Path(DIR, "resources/bad_format.json"))
         assert manifest_list == None
+
+    @pytest.mark.asyncio
+    async def test_async_download_multiple_empty_manifest(self, mock_gen3_auth):
+        """
+        Test async_download_multiple with an empty manifest.
+        Verifies it returns empty results without errors.
+        """
+        file_tool = Gen3File(mock_gen3_auth)
+        result = await file_tool.async_download_multiple(manifest_data=[])
+
+        assert result == {"succeeded": [], "failed": [], "skipped": []}
+
+    @pytest.mark.asyncio
+    async def test_async_download_multiple_invalid_guids(self, mock_gen3_auth):
+        """
+        Test async_download_multiple with invalid GUIDs.
+        Verifies it returns empty results for missing GUIDs.
+        """
+        file_tool = Gen3File(mock_gen3_auth)
+
+        # Manifest with missing guid/object_id fields
+        manifest_data = [{"file_name": "test.txt"}, {}]
+
+        result = await file_tool.async_download_multiple(manifest_data=manifest_data)
+
+        assert result == {"succeeded": [], "failed": [], "skipped": []}
+
