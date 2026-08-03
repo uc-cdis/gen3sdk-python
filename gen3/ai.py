@@ -235,6 +235,94 @@ class EmbeddingsClient:
             # 204 on success, so no body
             return None
 
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    async def search_in_collection(
+        self,
+        collection_name: str,
+        input: str | list[float],
+        top_k: int = 10,
+        min_value: float | None = None,
+        max_value: float | None = None,
+        distance_metric: str = "cosine_similarity",
+        filters: dict[str, str] | None = None,
+        ai_model: str | None = None,
+        exclude_info: bool = False,
+    ) -> dict[str, Any]:
+        url = f"{self.endpoint}/vectorstore/collections/{collection_name}/search"
+
+        params = {"exclude_info": str(exclude_info).lower()}
+        if ai_model:
+            params["ai_model"] = ai_model
+
+        body = {
+            "input": input,
+            "top_k": top_k,
+            "distance_metric": distance_metric,
+        }
+        if min_value is not None:
+            body["min_value"] = min_value
+        if max_value is not None:
+            body["max_value"] = max_value
+        if filters is not None:
+            body["filters"] = filters
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                url,
+                json=body,
+                params=params,
+                headers=self._get_headers(),
+            )
+            response.raise_for_status()
+            return response.json()
+
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    async def search_across_collections(
+        self,
+        input: str | list[float],
+        collections: list[str] | None = None,
+        top_k: int = 10,
+        min_value: float | None = None,
+        max_value: float | None = None,
+        distance_metric: str = "cosine_similarity",
+        filters: dict[str, str] | None = None,
+        ai_model: str | None = None,
+        vector_type: str = "vector",
+        exclude_info: bool = False,
+    ) -> dict[str, Any]:
+        url = f"{self.endpoint}/vectorstore/search"
+
+        params = {
+            "vector_type": vector_type,
+            "exclude_info": str(exclude_info).lower(),
+        }
+        if ai_model:
+            params["ai_model"] = ai_model
+        if collections:
+            params["collections"] = ",".join(collections)
+
+        body = {
+            "input": input,
+            "top_k": top_k,
+            "distance_metric": distance_metric,
+        }
+        if min_value is not None:
+            body["min_value"] = min_value
+        if max_value is not None:
+            body["max_value"] = max_value
+        if filters is not None:
+            body["filters"] = filters
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                url,
+                json=body,
+                params=params,
+                headers=self._get_headers(),
+            )
+            response.raise_for_status()
+            return response.json()
+
 
 class LocalEmbeddingClient:
     """
