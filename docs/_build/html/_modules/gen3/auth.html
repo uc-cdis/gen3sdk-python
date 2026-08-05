@@ -104,7 +104,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">endpoint</span> <span class="o">=</span> <span class="n">endpoint_from_token</span><span class="p">(</span><span class="n">api_key</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">])</span>
     <span class="c1"># attempt to get a token from Fence</span>
-    <span class="n">auth_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/user/credentials/cdis/access_token&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">endpoint</span><span class="p">)</span>
+    <span class="n">auth_url</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/user/credentials/api/access_token&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">endpoint</span><span class="p">)</span>
     <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">auth_url</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">api_key</span><span class="p">)</span>
     <span class="n">token_key</span> <span class="o">=</span> <span class="s2">&quot;access_token&quot;</span>
     <span class="k">return</span> <span class="n">_handle_access_token_response</span><span class="p">(</span><span class="n">resp</span><span class="p">,</span> <span class="n">token_key</span><span class="p">)</span>
@@ -484,6 +484,19 @@
             <span class="p">)</span>
         <span class="c1"># use cache</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_access_token</span></div>
+
+
+<div class="viewcode-block" id="Gen3Auth.get_api_key">
+<a class="viewcode-back" href="../../auth.html#gen3.auth.Gen3Auth.get_api_key">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_api_key</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the actual API key loaded, or None if the loaded credentials</span>
+<span class="sd">        do not contain one (for example a raw access token).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_token</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;api_key&quot;</span><span class="p">)</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_auth_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
