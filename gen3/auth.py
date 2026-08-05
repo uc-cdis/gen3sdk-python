@@ -71,7 +71,7 @@ def get_access_token_with_key(api_key):
     """
     endpoint = endpoint_from_token(api_key["api_key"])
     # attempt to get a token from Fence
-    auth_url = "{}/user/credentials/cdis/access_token".format(endpoint)
+    auth_url = "{}/user/credentials/api/access_token".format(endpoint)
     resp = requests.post(auth_url, json=api_key)
     token_key = "access_token"
     return _handle_access_token_response(resp, token_key)
@@ -444,6 +444,16 @@ class Gen3Auth(AuthBase):
             )
         # use cache
         return self._access_token
+
+    def get_api_key(self):
+        """
+        Returns the actual API key loaded, or None if the loaded credentials
+        do not contain one (for example a raw access token).
+        """
+        if not self._refresh_token:
+            return None
+
+        return self._refresh_token.get("api_key")
 
     def _get_auth_value(self):
         """Returns the Authorization header value for the request

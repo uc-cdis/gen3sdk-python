@@ -9,18 +9,19 @@ The docs here contain general descriptions of the different pieces of the SDK an
 
 * [Detailed API Documentation](https://uc-cdis.github.io/gen3sdk-python/_build/html/index.html)
 
-
 ## Prerequisites
 
 This project is built with Python. Ensure you have Python 3.6 or later installed.
 
 Other prerequisites include:
+
 - [pip](https://pip.pypa.io/en/stable/)
 - Access to a Gen3 commons.
 
 ## Installation Steps:
 
 ### Using pip
+
 To install the latest released version of the SDK, run:
 
 ```
@@ -41,9 +42,10 @@ Additional documentation for different components is available:
 - [Available Classes](docs/reference/sdkClasses.md)
 - [Indexing Tools](docs/howto/diirmIndexing.md)
 - [Metadata Tools](docs/howto/metadataTools.md)
-  - [Gen3 Discovery Page Metadata Tools](docs/howto/discoveryMetadataTools.md)
-  - [Gen3 Subject-level Crosswalk Metadata Tools](docs/howto/crosswalk.md)
+    - [Gen3 Discovery Page Metadata Tools](docs/howto/discoveryMetadataTools.md)
+    - [Gen3 Subject-level Crosswalk Metadata Tools](docs/howto/crosswalk.md)
 - [Bundle Tools](docs/howto/bundleTools.md)
+- [Nextflow with the Gen3 DPoP Proxy](docs/howto/nextflow.md)
 - [Development](docs/howto/devTest.md)
 - [CLI](docs/howto/cli.md)
 

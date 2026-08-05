@@ -246,7 +246,7 @@ def test_get_drs_object_type(drs_objects, index, expected):
     assert get_drs_object_type(drs_objects[index]) == expected
 
 
-@pytest.mark.parametrize("hostname", [("test.datacommons.io")])
+@pytest.mark.parametrize("hostname", ["test.datacommons.io"])
 def test_get_external_wts_oidc(wts_oidc, hostname):
     with requests_mock.Mocker() as m:
         m.get(f"https://{hostname}/wts/external_oidc/", json=wts_oidc[hostname])
@@ -670,7 +670,7 @@ def test_download_objects(
 
         # test download object with no auth
         m.post(
-            f"http://{hostname}/user/credentials/cdis/access_token",
+            f"http://{hostname}/user/credentials/api/access_token",
             json={},
             status_code=404,
         )
@@ -864,7 +864,7 @@ def test_no_gen3_auth():
 
     with requests_mock.Mocker() as m:
         m.post(
-            f"http://{hostname}/user/credentials/cdis/access_token",
+            f"http://{hostname}/user/credentials/api/access_token",
             json={},
             status_code=501,
         )
@@ -924,7 +924,7 @@ def test_list_no_auth(
     with requests_mock.Mocker() as m:
         m.get(f"https://{hostname}/wts/external_oidc/", json=wts_oidc[hostname])
         m.post(
-            f"http://{hostname}/user/credentials/cdis/access_token",
+            f"http://{hostname}/user/credentials/api/access_token",
             json={"access_token": "test_access_token"},
         )
         for object_id, info in drs_object_info.items():
@@ -937,7 +937,7 @@ def test_list_no_auth(
             # test getting auth error
             # test no auth
             m.post(
-                f"http://{hostname}/user/credentials/cdis/access_token",
+                f"http://{hostname}/user/credentials/api/access_token",
                 json={"access_token": "test_access_token"},
                 status_code=401,
             )
