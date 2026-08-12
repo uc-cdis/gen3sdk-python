@@ -33,27 +33,33 @@
   <h1>Source code for gen3.file</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">aiohttp</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">aiofiles</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">multiprocessing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimpleNamespace</span> <span class="k">as</span> <span class="n">Namespace</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_qsl</span><span class="p">,</span> <span class="n">urlencode</span><span class="p">,</span> <span class="n">urlparse</span><span class="p">,</span> <span class="n">urlunparse</span><span class="p">,</span> <span class="n">quote</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">queue</span><span class="w"> </span><span class="kn">import</span> <span class="n">Empty</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">cdislogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_logger</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">werkzeug.security</span><span class="w"> </span><span class="kn">import</span> <span class="n">safe_join</span>
+
 <span class="kn">from</span><span class="w"> </span><span class="nn">gen3.index</span><span class="w"> </span><span class="kn">import</span> <span class="n">Gen3Index</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">gen3.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">,</span> <span class="n">raise_for_status_and_print_error</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_qsl</span><span class="p">,</span> <span class="n">urlencode</span><span class="p">,</span> <span class="n">urlparse</span><span class="p">,</span> <span class="n">urlunparse</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">gen3.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">raise_for_status_and_print_error</span>
 
 <span class="n">logging</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 
 <span class="n">MAX_RETRIES</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">DEFAULT_NUM_PARALLEL</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">DEFAULT_MAX_CONCURRENT_REQUESTS</span> <span class="o">=</span> <span class="mi">300</span>
+<span class="n">DEFAULT_QUEUE_SIZE</span> <span class="o">=</span> <span class="mi">1000</span>
 
 
 <div class="viewcode-block" id="Gen3File">
@@ -80,7 +86,6 @@
         <span class="c1"># auth_provider legacy interface required endpoint as 1st arg</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span> <span class="o">=</span> <span class="n">auth_provider</span> <span class="ow">or</span> <span class="n">endpoint</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">endpoint</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">unsuccessful_downloads</span> <span class="o">=</span> <span class="p">[]</span>
 
 <div class="viewcode-block" id="Gen3File.get_presigned_url">
 <a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.get_presigned_url">[docs]</a>
@@ -104,10 +109,29 @@
         <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
         <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">resp</span><span class="p">)</span>
 
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">text</span></div>
+        <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="Gen3File.get_presigned_urls_batch">
+<a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.get_presigned_urls_batch">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_presigned_urls_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guids</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get presigned URLs for multiple files efficiently.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guids (List[str]): List of GUIDs to get presigned URLs for</span>
+<span class="sd">            protocol (str, optional): Protocol preference for URLs</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dict[str, Dict]: Mapping of GUID to presigned URL response</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">guid</span> <span class="ow">in</span> <span class="n">guids</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">results</span><span class="p">[</span><span class="n">guid</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_presigned_url</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">protocol</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to get presigned URL for </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">results</span><span class="p">[</span><span class="n">guid</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">results</span></div>
 
 
 <div class="viewcode-block" id="Gen3File.delete_file">
@@ -186,12 +210,7 @@
             <span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">body</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span>
         <span class="p">)</span>
         <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">resp</span><span class="p">)</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">text</span>
-
-        <span class="k">return</span> <span class="n">data</span></div>
+        <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_ensure_dirpath_exists</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
@@ -212,16 +231,19 @@
 
 <div class="viewcode-block" id="Gen3File.download_single">
 <a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.download_single">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">download_single</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">object_id</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">download_single</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">object_id</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Download a single file using its GUID.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            object_id (str): The file&#39;s unique ID</span>
 <span class="sd">            path (str): Path to store the downloaded file at</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: True if download successful, False otherwise</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_presigned_url</span><span class="p">(</span><span class="n">object_id</span><span class="p">)</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_presigned_url</span><span class="p">(</span><span class="n">object_id</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="n">protocol</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unable to get a presigned URL for download: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="kc">False</span>
@@ -235,9 +257,9 @@
                     <span class="c1"># NOTE could be updated with exponential backoff</span>
                     <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
                     <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">],</span> <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-                    <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span>
                         <span class="k">break</span>
-                <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
                     <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;Response status not 200, try again later&quot;</span><span class="p">)</span>
                     <span class="k">return</span> <span class="kc">False</span>
             <span class="k">else</span><span class="p">:</span>
@@ -251,18 +273,18 @@
         <span class="n">index</span> <span class="o">=</span> <span class="n">Gen3Index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
         <span class="n">record</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">get_record</span><span class="p">(</span><span class="n">object_id</span><span class="p">)</span>
 
-        <span class="n">filename</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">]</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">]</span> <span class="ow">or</span> <span class="n">url</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;?&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 
-        <span class="n">out_path</span> <span class="o">=</span> <span class="n">Gen3File</span><span class="o">.</span><span class="n">_ensure_dirpath_exists</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+        <span class="n">out_path</span> <span class="o">=</span> <span class="n">safe_join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+        <span class="n">Gen3File</span><span class="o">.</span><span class="n">_ensure_dirpath_exists</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">out_path</span><span class="p">)))</span>
 
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_path</span><span class="p">,</span> <span class="n">filename</span><span class="p">),</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">out_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">iter_content</span><span class="p">(</span><span class="mi">4096</span><span class="p">):</span>
                 <span class="n">total_downloaded</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
                 <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">total_size_in_bytes</span> <span class="o">==</span> <span class="n">total_downloaded</span><span class="p">:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2"> downloaded successfully&quot;</span><span class="p">)</span>
-
         <span class="k">else</span><span class="p">:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2"> not downloaded successfully&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="kc">False</span>
@@ -311,7 +333,445 @@
         <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
         <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">resp</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
-</div>
+
+
+<div class="viewcode-block" id="Gen3File.async_download_multiple">
+<a class="viewcode-back" href="../../file.html#gen3.file.Gen3File.async_download_multiple">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">async_download_multiple</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">manifest_data</span><span class="p">,</span>
+        <span class="n">download_path</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span>
+        <span class="n">filename_format</span><span class="o">=</span><span class="s2">&quot;original&quot;</span><span class="p">,</span>
+        <span class="n">protocol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">max_concurrent_requests</span><span class="o">=</span><span class="n">DEFAULT_MAX_CONCURRENT_REQUESTS</span><span class="p">,</span>
+        <span class="n">num_processes</span><span class="o">=</span><span class="n">DEFAULT_NUM_PARALLEL</span><span class="p">,</span>
+        <span class="n">queue_size</span><span class="o">=</span><span class="n">DEFAULT_QUEUE_SIZE</span><span class="p">,</span>
+        <span class="n">skip_completed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">rename</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">no_progress</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously download multiple files using multiprocessing and queues.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">manifest_data</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;succeeded&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;failed&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;skipped&quot;</span><span class="p">:</span> <span class="p">[]}</span>
+
+        <span class="n">guids</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">manifest_data</span><span class="p">:</span>
+            <span class="n">guid</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;guid&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;object_id&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">guid</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s2">&quot;/&quot;</span> <span class="ow">in</span> <span class="n">guid</span><span class="p">:</span>
+                    <span class="n">guid</span> <span class="o">=</span> <span class="n">guid</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">guids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">guid</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">guids</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;No valid GUIDs found in manifest data&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;succeeded&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;failed&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;skipped&quot;</span><span class="p">:</span> <span class="p">[]}</span>
+
+        <span class="n">output_dir</span> <span class="o">=</span> <span class="n">Gen3File</span><span class="o">.</span><span class="n">_ensure_dirpath_exists</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">download_path</span><span class="p">))</span>
+
+        <span class="n">input_queue</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">Queue</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="n">queue_size</span><span class="p">)</span>
+        <span class="n">output_queue</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+
+        <span class="n">worker_config</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;endpoint&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span>
+            <span class="s2">&quot;auth_provider&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">,</span>
+            <span class="s2">&quot;download_path&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">output_dir</span><span class="p">),</span>
+            <span class="s2">&quot;filename_format&quot;</span><span class="p">:</span> <span class="n">filename_format</span><span class="p">,</span>
+            <span class="s2">&quot;protocol&quot;</span><span class="p">:</span> <span class="n">protocol</span><span class="p">,</span>
+            <span class="s2">&quot;max_concurrent&quot;</span><span class="p">:</span> <span class="n">max_concurrent_requests</span><span class="p">,</span>
+            <span class="s2">&quot;skip_completed&quot;</span><span class="p">:</span> <span class="n">skip_completed</span><span class="p">,</span>
+            <span class="s2">&quot;rename&quot;</span><span class="p">:</span> <span class="n">rename</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="n">processes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">producer_thread</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_processes</span><span class="p">):</span>
+                <span class="n">p</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span>
+                    <span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_async_worker_process</span><span class="p">,</span>
+                    <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">input_queue</span><span class="p">,</span> <span class="n">output_queue</span><span class="p">,</span> <span class="n">worker_config</span><span class="p">,</span> <span class="n">i</span><span class="p">),</span>
+                <span class="p">)</span>
+                <span class="n">p</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+                <span class="n">processes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+            <span class="n">producer_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span>
+                <span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_guid_producer</span><span class="p">,</span>
+                <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">guids</span><span class="p">,</span> <span class="n">input_queue</span><span class="p">,</span> <span class="n">num_processes</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="n">producer_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+            <span class="n">results</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;succeeded&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;failed&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;skipped&quot;</span><span class="p">:</span> <span class="p">[]}</span>
+            <span class="n">completed_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">no_progress</span><span class="p">:</span>
+                <span class="n">pbar</span> <span class="o">=</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">guids</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Downloading&quot;</span><span class="p">)</span>
+
+            <span class="k">while</span> <span class="n">completed_count</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">guids</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">batch_results</span> <span class="o">=</span> <span class="n">output_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">batch_results</span><span class="p">:</span>
+                        <span class="k">continue</span>
+
+                    <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">batch_results</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;downloaded&quot;</span><span class="p">:</span>
+                            <span class="n">results</span><span class="p">[</span><span class="s2">&quot;succeeded&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;guid&quot;</span><span class="p">])</span>
+                        <span class="k">elif</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;skipped&quot;</span><span class="p">:</span>
+                            <span class="n">results</span><span class="p">[</span><span class="s2">&quot;skipped&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;guid&quot;</span><span class="p">])</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">results</span><span class="p">[</span><span class="s2">&quot;failed&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;guid&quot;</span><span class="p">])</span>
+
+                        <span class="n">completed_count</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">no_progress</span><span class="p">:</span>
+                            <span class="n">pbar</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+                <span class="k">except</span> <span class="n">Empty</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;No more results available (</span><span class="si">{</span><span class="n">completed_count</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">guids</span><span class="p">)</span><span class="si">}</span><span class="s2">): Queue is empty&quot;</span>
+                    <span class="p">)</span>
+                    <span class="k">break</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Error waiting for results (</span><span class="si">{</span><span class="n">completed_count</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">guids</span><span class="p">)</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+
+                    <span class="n">alive_processes</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">processes</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()]</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">alive_processes</span><span class="p">:</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;All worker processes have died&quot;</span><span class="p">)</span>
+                        <span class="k">break</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">no_progress</span><span class="p">:</span>
+                <span class="n">pbar</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">producer_thread</span><span class="p">:</span>
+                <span class="n">producer_thread</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error in download: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;succeeded&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;failed&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;skipped&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span>
+
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">processes</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">is_alive</span><span class="p">():</span>
+                    <span class="n">p</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+
+                    <span class="n">p</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">is_alive</span><span class="p">():</span>
+                        <span class="n">p</span><span class="o">.</span><span class="n">kill</span><span class="p">()</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Download complete: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;succeeded&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2"> succeeded, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;failed&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2"> failed, </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;skipped&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2"> skipped&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">results</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_guid_producer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guids</span><span class="p">,</span> <span class="n">input_queue</span><span class="p">,</span> <span class="n">num_processes</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">guid</span> <span class="ow">in</span> <span class="n">guids</span><span class="p">:</span>
+                <span class="n">input_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">guid</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error in producer: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_async_worker_process</span><span class="p">(</span><span class="n">input_queue</span><span class="p">,</span> <span class="n">output_queue</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">process_id</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">new_event_loop</span><span class="p">()</span>
+            <span class="n">asyncio</span><span class="o">.</span><span class="n">set_event_loop</span><span class="p">(</span><span class="n">loop</span><span class="p">)</span>
+            <span class="n">loop</span><span class="o">.</span><span class="n">run_until_complete</span><span class="p">(</span>
+                <span class="n">Gen3File</span><span class="o">.</span><span class="n">_worker_main</span><span class="p">(</span><span class="n">input_queue</span><span class="p">,</span> <span class="n">output_queue</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">process_id</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error in worker process </span><span class="si">{</span><span class="n">process_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">loop</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error closing event loop in worker </span><span class="si">{</span><span class="n">process_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_worker_main</span><span class="p">(</span><span class="n">input_queue</span><span class="p">,</span> <span class="n">output_queue</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">process_id</span><span class="p">):</span>
+        <span class="n">endpoint</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;endpoint&quot;</span><span class="p">]</span>
+        <span class="n">auth_provider</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;auth_provider&quot;</span><span class="p">]</span>
+        <span class="n">download_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;download_path&quot;</span><span class="p">])</span>
+        <span class="n">filename_format</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;filename_format&quot;</span><span class="p">]</span>
+        <span class="n">protocol</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;protocol&quot;</span><span class="p">]</span>
+        <span class="n">max_concurrent</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;max_concurrent&quot;</span><span class="p">]</span>
+        <span class="n">skip_completed</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;skip_completed&quot;</span><span class="p">]</span>
+        <span class="n">rename</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;rename&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Configure connector with optimized settings for large files</span>
+        <span class="n">timeout</span> <span class="o">=</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientTimeout</span><span class="p">(</span><span class="n">total</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">connect</span><span class="o">=</span><span class="mi">3600</span><span class="p">,</span> <span class="n">sock_read</span><span class="o">=</span><span class="mi">3600</span><span class="p">)</span>
+        <span class="n">connector</span> <span class="o">=</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">TCPConnector</span><span class="p">(</span>
+            <span class="n">limit</span><span class="o">=</span><span class="n">max_concurrent</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="n">limit_per_host</span><span class="o">=</span><span class="n">max_concurrent</span><span class="p">,</span>
+            <span class="n">ttl_dns_cache</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>
+            <span class="n">use_dns_cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">keepalive_timeout</span><span class="o">=</span><span class="mi">3600</span><span class="p">,</span>
+            <span class="n">enable_cleanup_closed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">semaphore</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Semaphore</span><span class="p">(</span><span class="n">max_concurrent</span><span class="p">)</span>
+
+        <span class="k">async</span> <span class="k">with</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">(</span>
+            <span class="n">connector</span><span class="o">=</span><span class="n">connector</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span>
+        <span class="p">)</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="c1"># Check if queue is empty with timeout</span>
+                    <span class="n">guid</span> <span class="o">=</span> <span class="n">input_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+                <span class="k">except</span> <span class="n">Empty</span><span class="p">:</span>
+                    <span class="c1"># If queue is empty (timeout), break the loop</span>
+                    <span class="k">break</span>
+
+                <span class="c1"># Process single GUID as a batch of one</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">batch_results</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Gen3File</span><span class="o">.</span><span class="n">_process_batch</span><span class="p">(</span>
+                        <span class="n">session</span><span class="p">,</span>
+                        <span class="p">[</span><span class="n">guid</span><span class="p">],</span>
+                        <span class="n">endpoint</span><span class="p">,</span>
+                        <span class="n">auth_provider</span><span class="p">,</span>
+                        <span class="n">download_path</span><span class="p">,</span>
+                        <span class="n">filename_format</span><span class="p">,</span>
+                        <span class="n">protocol</span><span class="p">,</span>
+                        <span class="n">semaphore</span><span class="p">,</span>
+                        <span class="n">skip_completed</span><span class="p">,</span>
+                        <span class="n">rename</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">batch_results</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Worker </span><span class="si">{</span><span class="n">process_id</span><span class="si">}</span><span class="s2">: Failed to process </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+                    <span class="n">error_result</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;guid&quot;</span><span class="p">:</span> <span class="n">guid</span><span class="p">,</span> <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;failed&quot;</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}]</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">error_result</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">queue_error</span><span class="p">:</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;Worker </span><span class="si">{</span><span class="n">process_id</span><span class="si">}</span><span class="s2">: Failed to send error result for </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">queue_error</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">queue_error</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_process_batch</span><span class="p">(</span>
+        <span class="n">session</span><span class="p">,</span>
+        <span class="n">guids</span><span class="p">,</span>
+        <span class="n">endpoint</span><span class="p">,</span>
+        <span class="n">auth_provider</span><span class="p">,</span>
+        <span class="n">download_path</span><span class="p">,</span>
+        <span class="n">filename_format</span><span class="p">,</span>
+        <span class="n">protocol</span><span class="p">,</span>
+        <span class="n">semaphore</span><span class="p">,</span>
+        <span class="n">skip_completed</span><span class="p">,</span>
+        <span class="n">rename</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Process a batch of GUIDs for downloading.&quot;&quot;&quot;</span>
+        <span class="n">batch_results</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">guid</span> <span class="ow">in</span> <span class="n">guids</span><span class="p">:</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">semaphore</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Gen3File</span><span class="o">.</span><span class="n">_download_single_async</span><span class="p">(</span>
+                    <span class="n">session</span><span class="p">,</span>
+                    <span class="n">guid</span><span class="p">,</span>
+                    <span class="n">endpoint</span><span class="p">,</span>
+                    <span class="n">auth_provider</span><span class="p">,</span>
+                    <span class="n">download_path</span><span class="p">,</span>
+                    <span class="n">filename_format</span><span class="p">,</span>
+                    <span class="n">protocol</span><span class="p">,</span>
+                    <span class="n">semaphore</span><span class="p">,</span>
+                    <span class="n">skip_completed</span><span class="p">,</span>
+                    <span class="n">rename</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">batch_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">batch_results</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_download_single_async</span><span class="p">(</span>
+        <span class="n">session</span><span class="p">,</span>
+        <span class="n">guid</span><span class="p">,</span>
+        <span class="n">endpoint</span><span class="p">,</span>
+        <span class="n">auth_provider</span><span class="p">,</span>
+        <span class="n">download_path</span><span class="p">,</span>
+        <span class="n">filename_format</span><span class="p">,</span>
+        <span class="n">protocol</span><span class="p">,</span>
+        <span class="n">semaphore</span><span class="p">,</span>
+        <span class="n">skip_completed</span><span class="p">,</span>
+        <span class="n">rename</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">semaphore</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">metadata</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Gen3File</span><span class="o">.</span><span class="n">_get_metadata</span><span class="p">(</span>
+                    <span class="n">session</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">,</span> <span class="n">auth_provider</span><span class="o">.</span><span class="n">get_access_token</span><span class="p">()</span>
+                <span class="p">)</span>
+
+                <span class="n">original_filename</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;file_name&quot;</span><span class="p">)</span>
+                <span class="n">filename</span> <span class="o">=</span> <span class="n">Gen3File</span><span class="o">.</span><span class="n">_format_filename_static</span><span class="p">(</span>
+                    <span class="n">guid</span><span class="p">,</span> <span class="n">original_filename</span><span class="p">,</span> <span class="n">filename_format</span>
+                <span class="p">)</span>
+                <span class="n">filepath</span> <span class="o">=</span> <span class="n">download_path</span> <span class="o">/</span> <span class="n">filename</span>
+
+                <span class="k">if</span> <span class="n">skip_completed</span> <span class="ow">and</span> <span class="n">filepath</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                    <span class="k">return</span> <span class="p">{</span>
+                        <span class="s2">&quot;guid&quot;</span><span class="p">:</span> <span class="n">guid</span><span class="p">,</span>
+                        <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;skipped&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;filepath&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">filepath</span><span class="p">),</span>
+                        <span class="s2">&quot;reason&quot;</span><span class="p">:</span> <span class="s2">&quot;File already exists&quot;</span><span class="p">,</span>
+                    <span class="p">}</span>
+
+                <span class="n">filepath</span> <span class="o">=</span> <span class="n">Gen3File</span><span class="o">.</span><span class="n">_handle_conflict_static</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">rename</span><span class="p">)</span>
+
+                <span class="n">presigned_data</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Gen3File</span><span class="o">.</span><span class="n">_get_presigned_url_async</span><span class="p">(</span>
+                    <span class="n">session</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">,</span> <span class="n">auth_provider</span><span class="o">.</span><span class="n">get_access_token</span><span class="p">(),</span> <span class="n">protocol</span>
+                <span class="p">)</span>
+
+                <span class="n">url</span> <span class="o">=</span> <span class="n">presigned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">url</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="p">{</span>
+                        <span class="s2">&quot;guid&quot;</span><span class="p">:</span> <span class="n">guid</span><span class="p">,</span>
+                        <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;failed&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;No URL in presigned data&quot;</span><span class="p">,</span>
+                    <span class="p">}</span>
+
+                <span class="n">filepath</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="n">success</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Gen3File</span><span class="o">.</span><span class="n">_download_content</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">filepath</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">success</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="p">{</span>
+                        <span class="s2">&quot;guid&quot;</span><span class="p">:</span> <span class="n">guid</span><span class="p">,</span>
+                        <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;downloaded&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;filepath&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">filepath</span><span class="p">),</span>
+                        <span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="n">filepath</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span><span class="o">.</span><span class="n">st_size</span> <span class="k">if</span> <span class="n">filepath</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="p">}</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="p">{</span>
+                        <span class="s2">&quot;guid&quot;</span><span class="p">:</span> <span class="n">guid</span><span class="p">,</span>
+                        <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;failed&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Download failed&quot;</span><span class="p">,</span>
+                    <span class="p">}</span>
+
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error downloading </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="p">{</span>
+                    <span class="s2">&quot;guid&quot;</span><span class="p">:</span> <span class="n">guid</span><span class="p">,</span>
+                    <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;failed&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">),</span>
+                <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_get_metadata</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">,</span> <span class="n">auth_token</span><span class="p">):</span>
+        <span class="n">encoded_guid</span> <span class="o">=</span> <span class="n">quote</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">endpoint</span><span class="si">}</span><span class="s2">/index/</span><span class="si">{</span><span class="n">encoded_guid</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Bearer </span><span class="si">{</span><span class="n">auth_token</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                <span class="n">api_url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientTimeout</span><span class="p">(</span><span class="n">total</span><span class="o">=</span><span class="mi">3600</span><span class="p">)</span>
+            <span class="p">)</span> <span class="k">as</span> <span class="n">resp</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">resp</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="k">await</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Failed to get metadata for </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">: HTTP </span><span class="si">{</span><span class="n">resp</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+        <span class="k">except</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Network error getting metadata for </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">TimeoutError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Timeout getting metadata for </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;Failed to get metadata&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unexpected error getting metadata for </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_get_presigned_url_async</span><span class="p">(</span>
+        <span class="n">session</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">,</span> <span class="n">auth_token</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="n">encoded_guid</span> <span class="o">=</span> <span class="n">quote</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">endpoint</span><span class="si">}</span><span class="s2">/user/data/download/</span><span class="si">{</span><span class="n">encoded_guid</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Bearer </span><span class="si">{</span><span class="n">auth_token</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+
+        <span class="k">if</span> <span class="n">protocol</span><span class="p">:</span>
+            <span class="n">api_url</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;?protocol=</span><span class="si">{</span><span class="n">protocol</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                <span class="n">api_url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientTimeout</span><span class="p">(</span><span class="n">total</span><span class="o">=</span><span class="mi">3600</span><span class="p">)</span>
+            <span class="p">)</span> <span class="k">as</span> <span class="n">resp</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">resp</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="k">await</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Failed to get presigned URL for </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">: HTTP </span><span class="si">{</span><span class="n">resp</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+        <span class="k">except</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Network error getting presigned URL for </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">TimeoutError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Timeout getting presigned URL for </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;Failed to get presigned URL&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Unexpected error getting presigned URL for </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+            <span class="k">raise</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_download_content</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">filepath</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Download content directly to file with optimized streaming.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                <span class="n">url</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientTimeout</span><span class="p">(</span><span class="n">total</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="p">)</span> <span class="k">as</span> <span class="n">resp</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">resp</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span>
+                    <span class="k">async</span> <span class="k">with</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                        <span class="n">chunk_size</span> <span class="o">=</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span>
+                        <span class="k">async</span> <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">resp</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">iter_chunked</span><span class="p">(</span><span class="n">chunk_size</span><span class="p">):</span>
+                            <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="kc">True</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Download failed for </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">: HTTP </span><span class="si">{</span><span class="n">resp</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">except</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Network error downloading </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">except</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">TimeoutError</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Timeout downloading </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File system error downloading </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Unexpected error downloading </span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_format_filename_static</span><span class="p">(</span><span class="n">guid</span><span class="p">,</span> <span class="n">original_filename</span><span class="p">,</span> <span class="n">filename_format</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">filename_format</span> <span class="o">==</span> <span class="s2">&quot;guid&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">guid</span>
+        <span class="k">elif</span> <span class="n">filename_format</span> <span class="o">==</span> <span class="s2">&quot;combined&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">original_filename</span><span class="p">:</span>
+                <span class="n">name</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">original_filename</span><span class="p">)</span>
+                <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">guid</span><span class="si">}{</span><span class="n">ext</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">return</span> <span class="n">guid</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">original_filename</span> <span class="ow">or</span> <span class="n">guid</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_handle_conflict_static</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">rename</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">rename</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">filepath</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File will be overwritten: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">filepath</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">filepath</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">filepath</span>
+
+        <span class="n">counter</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">filepath</span><span class="o">.</span><span class="n">stem</span>
+        <span class="n">ext</span> <span class="o">=</span> <span class="n">filepath</span><span class="o">.</span><span class="n">suffix</span>
+        <span class="n">parent</span> <span class="o">=</span> <span class="n">filepath</span><span class="o">.</span><span class="n">parent</span>
+
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">new_path</span> <span class="o">=</span> <span class="n">parent</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">counter</span><span class="si">}{</span><span class="n">ext</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">new_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="k">return</span> <span class="n">new_path</span>
+            <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span></div>
 
 </pre></div>
 
