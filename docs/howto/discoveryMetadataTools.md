@@ -25,7 +25,7 @@ of a convenience.
 
 ### Export Discovery Metadata into File
 
-Gen3's SDK can be used to export discovery metadata from a certain Gen3 environment into a file by using the `output_expanded_discovery_metadata()` function. By default this function will query for metadata with `guid_type=discovery_metadata` for the dump, and export the metadata into a TSV file. User can also specify a different `guid_type` values for this operation, and/or choose to export the metadata into a JSON file. When using TSV format, some certain fields from metadata will be flattened or "jsonified" so that each metadata record can be fitted into one row.
+Gen3's SDK can be used to export discovery metadata from a certain Gen3 environment into a file by using the `output_expanded_discovery_metadata()` function. By default this function will query for metadata with `guid_type=discovery_metadata` for the dump, and export the metadata into a TSV file. The default `limit` is 500 records, so pass an explicit limit for a larger export. User can also specify a different `guid_type` values for this operation, and/or choose to export the metadata into a JSON file. When using TSV format, some certain fields from metadata will be flattened or "jsonified" so that each metadata record can be fitted into one row.
 
 Example of usage:
 
@@ -387,6 +387,14 @@ See below for a full example using the dbGaP `DbgapMetadataInterface`.
 
 More interfaces may exist in the future for doing this by querying non-dbGaP
 sources.
+
+The DOI workflow uses `output_expanded_discovery_metadata()` to build its
+alternate-ID mapping. It passes a 10,000 record limit and fetches MDS in pages and
+includes all fetched pages in the TSV. Raise that DOI specific limit if a commons
+grows beyond it. In the dbGaP interface, records with missing required source
+metadata or an invalid `ReleaseDate` are logged and skipped individually while valid
+records continue. Contributors without a source `contributorType` are sent to
+DataCite as `Other`.
 
 ```python
 import os

@@ -73,7 +73,9 @@ class dbgapDOI(ExternalMetadataSourceInterface):
 
     def get_metadata_for_ids(self, ids):
         """
-        Return DOI metadata for each of the provided IDs.
+        Return DOI metadata for each provided ID with valid required source data.
+        Invalid records are logged and skipped without blocking valid records in
+        the same batch.
 
         Args:
             ids (List[str]): list of IDs to query for
@@ -97,55 +99,64 @@ class dbgapDOI(ExternalMetadataSourceInterface):
 
         for phsid in ids:
             if not dbgap_fhir_metadata.get(phsid):
-                logging.error(
+                logging.warning(
                     f"{phsid} is missing dbGaP FHIR metadata. Cannot "
                     f"continue creating a DOI without it. Skipping..."
                 )
                 continue
 
             if not dbgap_study_registration_metadata.get(phsid):
-                logging.error(
+                logging.warning(
                     f"{phsid} is missing dbGaP Study Registration "
                     f"metadata. Cannot continue creating a DOI without it. Skipping..."
                 )
                 continue
 
-            doi_metadata = {}
+            try:
+                doi_metadata = {}
 
-            # 1) required fields
-            doi_metadata["creators"] = dbgapDOI._get_doi_creators(
-                phsid, dbgap_study_registration_metadata
-            )
-            doi_metadata["titles"] = dbgapDOI._get_doi_title(phsid, dbgap_fhir_metadata)
-            doi_metadata["publication_year"] = dbgapDOI._get_doi_publication_year(
-                phsid, dbgap_fhir_metadata
-            )
-            doi_metadata["doi_type_general"] = "Dataset"
+                # 1) required fields
+                doi_metadata["creators"] = dbgapDOI._get_doi_creators(
+                    phsid, dbgap_study_registration_metadata
+                )
+                doi_metadata["titles"] = dbgapDOI._get_doi_title(
+                    phsid, dbgap_fhir_metadata
+                )
+                doi_metadata["publication_year"] = dbgapDOI._get_doi_publication_year(
+                    phsid, dbgap_fhir_metadata
+                )
+                doi_metadata["doi_type_general"] = "Dataset"
 
-            # publisher is provided
-            doi_metadata["publisher"] = self.publisher
+                # publisher is provided
+                doi_metadata["publisher"] = self.publisher
 
-            # NOTE: This does NOT include the required landing page URL
-            #       b/c this requires the final ID (which should be generated
-            #       elsewhere).
-            # doi_metadata["url"] = None
+                # NOTE: This does NOT include the required landing page URL
+                #       b/c this requires the final ID (which should be generated
+                #       elsewhere).
+                # doi_metadata["url"] = None
 
-            # 2) optional fields
-            doi_metadata["version"] = dbgapDOI._get_doi_version(
-                phsid, dbgap_fhir_metadata
-            )
-            doi_metadata["contributors"] = dbgapDOI._get_doi_contributors(
-                phsid, dbgap_study_registration_metadata, dbgap_fhir_metadata
-            )
-            doi_metadata["descriptions"] = dbgapDOI._get_doi_descriptions(
-                phsid, dbgap_fhir_metadata
-            )
-            doi_metadata[
-                "alternateIdentifiers"
-            ] = dbgapDOI._get_doi_alternate_identifiers(phsid, dbgap_fhir_metadata)
-            doi_metadata["fundingReferences"] = dbgapDOI._get_doi_funding(
-                phsid, dbgap_fhir_metadata
-            )
+                # 2) optional fields
+                doi_metadata["version"] = dbgapDOI._get_doi_version(
+                    phsid, dbgap_fhir_metadata
+                )
+                contributors = dbgapDOI._get_doi_contributors(
+                    phsid, dbgap_study_registration_metadata, dbgap_fhir_metadata
+                )
+                for contributor in contributors:
+                    contributor.setdefault("contributorType", "Other")
+                doi_metadata["contributors"] = contributors
+                doi_metadata["descriptions"] = dbgapDOI._get_doi_descriptions(
+                    phsid, dbgap_fhir_metadata
+                )
+                doi_metadata[
+                    "alternateIdentifiers"
+                ] = dbgapDOI._get_doi_alternate_identifiers(phsid, dbgap_fhir_metadata)
+                doi_metadata["fundingReferences"] = dbgapDOI._get_doi_funding(
+                    phsid, dbgap_fhir_metadata
+                )
+            except Exception as exc:
+                logging.warning(f"Skipping dbGaP DOI metadata for `{phsid}`: {exc}")
+                continue
 
             all_doi_metadata[phsid] = doi_metadata
 
@@ -196,24 +207,20 @@ class dbgapDOI(ExternalMetadataSourceInterface):
     def _get_doi_publication_year(phsid, dbgap_fhir_metadata):
         date = dbgap_fhir_metadata.get(phsid, {}).get("ReleaseDate")
 
-        if not date:
-            logging.debug(f"dbgap_fhir_metadata: {dbgap_fhir_metadata}")
-            raise Exception(
-                f"ReleaseDate from dbgap FHIR does not match expected pattern "
-                f"YYYY-MM-DD: '{date}'. Unable to parse."
+        if not isinstance(date, str):
+            raise ValueError(
+                f"dbGaP FHIR ReleaseDate for `{phsid}` must begin with a four-digit "
+                f"year; received {date!r}."
             )
 
-        if date:
-            date = date.split("-")[0]
+        publication_year = date.split("-", 1)[0]
+        if len(publication_year) != 4 or not publication_year.isdigit():
+            raise ValueError(
+                f"dbGaP FHIR ReleaseDate for `{phsid}` must begin with a four-digit "
+                f"year; received {date!r}."
+            )
 
-            if len(date) != 4:
-                logging.debug(f"dbgap_fhir_metadata: {dbgap_fhir_metadata}")
-                raise Exception(
-                    f"ReleaseDate from dbgap FHIR does not match expected pattern "
-                    f"YYYY-MM-DD: '{date}'. Unable to parse."
-                )
-
-        return date
+        return publication_year
 
     @staticmethod
     def _get_doi_contributors(

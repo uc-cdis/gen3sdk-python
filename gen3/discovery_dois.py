@@ -21,6 +21,8 @@ from gen3.utils import (
 
 logging = get_logger(__name__)
 
+DOI_DISCOVERY_METADATA_EXPORT_LIMIT = 10_000
+
 
 class GetMetadataInterface(object):
     """
@@ -418,8 +420,9 @@ def _raise_exception_on_collision(datacite, identifier):
 def get_alternate_id_to_guid_mapping(metadata_field_for_alternate_id, auth):
     """
     Return mapping from the alternate ID in current Discovery Metadata
-    to Metadata GUID. This function uses the provided `metadata_field_for_alternate_id`
-    to find the actual value in the Discovery Metadata).
+    to Metadata GUID. This function uses the expanded Discovery metadata export
+    with an explicit limit and the provided `metadata_field_for_alternate_id`
+    to find the actual value in the Discovery Metadata.
 
     Args:
         metadata_field_for_alternate_id (str): Field in current Discovery Metadata
@@ -433,26 +436,30 @@ def get_alternate_id_to_guid_mapping(metadata_field_for_alternate_id, auth):
     """
     loop = get_or_create_event_loop_for_thread()
     output_filename = loop.run_until_complete(
-        output_expanded_discovery_metadata(auth, endpoint=auth.endpoint)
+        output_expanded_discovery_metadata(
+            auth,
+            endpoint=auth.endpoint,
+            limit=DOI_DISCOVERY_METADATA_EXPORT_LIMIT,
+        )
     )
 
     alternate_id_to_guid = {}
     all_discovery_metadata = {}
-    with open(output_filename) as metadata_file:
+    with open(output_filename, encoding="utf-8") as metadata_file:
         csv_parser_setting = {
             **BASE_CSV_PARSER_SETTINGS,
             "delimiter": get_delimiter_from_extension(output_filename),
         }
-        metadata_reader = csv.DictReader(metadata_file, **{**csv_parser_setting})
+        metadata_reader = csv.DictReader(metadata_file, **csv_parser_setting)
         for row in metadata_reader:
-            if row.get(metadata_field_for_alternate_id):
-                alternate_id_to_guid[row.get(metadata_field_for_alternate_id)] = row[
-                    "guid"
-                ]
+            alternate_id = row.get(metadata_field_for_alternate_id)
+            if alternate_id:
+                alternate_id_to_guid[alternate_id] = row["guid"]
                 all_discovery_metadata[row["guid"]] = row
             else:
                 logging.warning(
-                    f"Could not find field {metadata_field_for_alternate_id} on row: {row}. Skipping..."
+                    f"Could not find `{metadata_field_for_alternate_id}` on Discovery "
+                    f"metadata GUID `{row.get('guid', '')}`. Skipping..."
                 )
 
     return alternate_id_to_guid, all_discovery_metadata

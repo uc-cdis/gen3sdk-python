@@ -1,8 +1,9 @@
 import asyncio
 import csv
 import json
+import os
 import tempfile
-from unittest.mock import patch
+from unittest.mock import call, patch
 import pytest
 
 from gen3.tools.metadata.discovery import (
@@ -206,6 +207,69 @@ def test_discovery_read(
                     output_format="blah",
                 )
             )
+
+
+@patch("gen3.tools.metadata.discovery._create_metadata_output_filename")
+@patch("gen3.metadata.Gen3Metadata.query")
+def test_discovery_tsv_export_with_large_limit_reads_multiple_pages(
+    metadata_query_patch, metadata_file_patch, gen3_auth, tmp_path
+):
+    """
+    This test proves the exporter actually makes paginated MDS
+    queries when given a larger limit.
+    """
+    output_filename = tmp_path / "discovery_metadata.tsv"
+    metadata_file_patch.return_value = str(output_filename)
+    metadata_query_patch.side_effect = [
+        {
+            "guid_one": {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": {"dbgap_accession": "phs004546.v1.p1.c1"},
+            }
+        },
+        {
+            "guid_two": {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": {"dbgap_accession": "phs000007.v1.p1.c1"},
+            }
+        },
+    ]
+
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(
+            output_expanded_discovery_metadata(
+                gen3_auth,
+                endpoint="excommons.org",
+                limit=4000,
+            )
+        )
+    finally:
+        loop.close()
+
+    with open(output_filename, encoding="utf-8") as output_file:
+        csv_rows = list(csv.DictReader(output_file, **BASE_CSV_PARSER_SETTINGS))
+
+    assert csv_rows == [
+        {"guid": "guid_one", "dbgap_accession": "phs004546.v1.p1.c1"},
+        {"guid": "guid_two", "dbgap_accession": "phs000007.v1.p1.c1"},
+    ]
+    assert metadata_query_patch.call_args_list == [
+        call(
+            "_guid_type=discovery_metadata",
+            return_full_metadata=True,
+            limit=2000,
+            offset=0,
+            use_agg_mds=False,
+        ),
+        call(
+            "_guid_type=discovery_metadata",
+            return_full_metadata=True,
+            limit=2000,
+            offset=2000,
+            use_agg_mds=False,
+        ),
+    ]
 
 
 @patch("gen3.metadata.Gen3Metadata.async_create")
