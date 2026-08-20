@@ -73,11 +73,11 @@ and installed in ~/.gen3/credentials.json</p>
 </pre></div>
 </div>
 <p>or use ~/.gen3/crdc.json:</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;crdc&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">"crdc"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>or use some arbitrary file:</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;./key.json&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">"./key.json"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>or set the GEN3_API_KEY environment variable rather
@@ -87,8 +87,8 @@ constructor.</p>
 access tokens, provide the client ID and secret:</p>
 <p>Note: client secrets should never be hardcoded!</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span>
-<span class="go">    endpoint=&quot;https://datacommons.example&quot;,</span>
-<span class="go">    client_credentials=(&quot;client ID&quot;, os.environ[&quot;GEN3_OIDC_CLIENT_CREDS_SECRET&quot;])</span>
+<span class="go">    endpoint="https://datacommons.example",</span>
+<span class="go">    client_credentials=("client ID", os.environ["GEN3_OIDC_CLIENT_CREDS_SECRET"])</span>
 <span class="go">)</span>
 </pre></div>
 </div>
