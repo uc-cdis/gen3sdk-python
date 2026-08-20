@@ -58,13 +58,8 @@ dpop = ["uvicorn"]
 [tool.poetry.group.dev.dependencies]
 pytest = ">=6.0.0"
 pytest-cov = "*"
+pytest-xdist = "*"
 requests-mock = "*"
-cdisutilstest = { git = "https://github.com/uc-cdis/cdisutils-test.git", tag = "2.0.0" }
-# Can't be locked while authutils is pinned to the feat/dpop branch (8.1.0):
-# indexd 5.0.4 requires authutils <7.0.0. tests/conftest.py still imports it, so
-# install it by hand until authutils 8 is released and indexd picks it up.
-# TODO FIXME
-# indexd = { git = "https://github.com/uc-cdis/indexd.git", tag = "5.0.4" }
 deptry = ">=0.23.1"
 
 [tool.poetry.scripts]
@@ -78,7 +73,27 @@ build-backend = "poetry.masonry.api"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-vv"
+# Run tests in parallel (as much as possible) by default.
+#
+# `load`, xdist's default, hands each test to whichever worker is free, so two tests
+# from the same module can run at once in different processes. `loadscope` instead
+# groups tests by class, or by module for tests outside one, and gives each whole
+# group to a single worker, so a module's tests stay in order in one process.
+#
+# `--dist loadscope` MUST accompany `-n`. Why? Some modules are not independent
+# test-by-test:
+#   - the fixed TMP_FOLDER in gen3/tools/indexing/download_manifest.py, which the
+#     library wipes on entry and then collects with a glob
+#   - the ~/.cache/gen3 token cache, keyed by API key rather than by test
+#   - download_tests/test_resolvers.py, where one test reads a DRS cache file that an
+#     earlier test in the module wrote
+#   - others? there might be...
+#
+# Under `load` these corrupt each other or go missing, and which tests fail moves
+# around from run to run. Thus, `loadscope` keeps things safe.
+#
+# Pass `-n0` to run serially if needed for debugging.
+addopts = "-vv --dist loadscope -n auto"
 testpaths = [
     "tests",
 ]

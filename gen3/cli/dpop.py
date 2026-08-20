@@ -84,7 +84,7 @@ def proxy_start_command(
             tes_endpoint=tes_endpoint,
             s3_endpoint=s3_endpoint,
         ) as (_, proxy_port):
-            logging.info(
+            logging.warning(
                 f"***  Starting Gen3 DPoP proxy on http://127.0.0.1:{proxy_port} (Press Ctrl+C to stop)...  ***"
             )
             try:
