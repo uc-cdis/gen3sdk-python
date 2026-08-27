@@ -314,11 +314,11 @@
             <span class="n">uuids_to_delete</span> <span class="o">=</span> <span class="n">uuids</span><span class="p">[</span><span class="n">batch_size</span> <span class="o">*</span> <span class="n">i</span> <span class="p">:</span> <span class="n">batch_size</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">uuids_to_delete</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">break</span>
-            <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
-                <span class="s2">"</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="s2">","</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">uuids_to_delete</span><span class="p">)),</span>
-                <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">,</span>
-            <span class="p">)</span>
             <span class="k">try</span><span class="p">:</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
+                    <span class="s2">"</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="s2">","</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">uuids_to_delete</span><span class="p">)),</span>
+                    <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">,</span>
+                <span class="p">)</span>
                 <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
             <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">HTTPError</span><span class="p">:</span>
                 <span class="nb">print</span><span class="p">(</span>
@@ -423,7 +423,9 @@
         <span class="n">api_url</span> <span class="o">=</span> <span class="s2">"</span><span class="si">{}</span><span class="s2">/api/v0/submission/</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/export?ids=</span><span class="si">{}</span><span class="s2">&amp;format=</span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">uuid</span><span class="p">,</span> <span class="n">fileformat</span>
         <span class="p">)</span>
-        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span>
         <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">fileformat</span> <span class="o">==</span> <span class="s2">"json"</span><span class="p">:</span>
                 <span class="k">try</span><span class="p">:</span>
@@ -462,7 +464,9 @@
         <span class="n">api_url</span> <span class="o">=</span> <span class="s2">"</span><span class="si">{}</span><span class="s2">/api/v0/submission/</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/export/?node_label=</span><span class="si">{}</span><span class="s2">&amp;format=</span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_endpoint</span><span class="p">,</span> <span class="n">program</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">node_type</span><span class="p">,</span> <span class="n">fileformat</span>
         <span class="p">)</span>
-        <span class="n">output</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
+        <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span>
         <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">fileformat</span> <span class="o">==</span> <span class="s2">"json"</span><span class="p">:</span>
                 <span class="k">try</span><span class="p">:</span>
