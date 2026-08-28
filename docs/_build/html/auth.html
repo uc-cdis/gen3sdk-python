@@ -125,6 +125,13 @@ in the given namespace.  If idp is not set, then default to “local”</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="gen3.auth.Gen3Auth.get_api_key">
+<span class="sig-name descname"><span class="pre">get_api_key</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/auth.html#Gen3Auth.get_api_key"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.auth.Gen3Auth.get_api_key" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the actual API key loaded, or None if the loaded credentials
+do not contain one (for example a raw access token).</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="gen3.auth.Gen3Auth.refresh_access_token">
 <span class="sig-name descname"><span class="pre">refresh_access_token</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">endpoint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/auth.html#Gen3Auth.refresh_access_token"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.auth.Gen3Auth.refresh_access_token" title="Link to this definition">¶</a></dt>
 <dd><p>Get a new access token</p>
@@ -173,6 +180,7 @@ in the given namespace.  If idp is not set, then default to “local”</p>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.auth.Gen3Auth.curl"><code class="docutils literal notranslate"><span class="pre">Gen3Auth.curl()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.auth.Gen3Auth.get_access_token"><code class="docutils literal notranslate"><span class="pre">Gen3Auth.get_access_token()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.auth.Gen3Auth.get_access_token_from_wts"><code class="docutils literal notranslate"><span class="pre">Gen3Auth.get_access_token_from_wts()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.auth.Gen3Auth.get_api_key"><code class="docutils literal notranslate"><span class="pre">Gen3Auth.get_api_key()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.auth.Gen3Auth.refresh_access_token"><code class="docutils literal notranslate"><span class="pre">Gen3Auth.refresh_access_token()</span></code></a></li>
 </ul>
 </li>

@@ -6,6 +6,10 @@ from gen3 import logging, LOG_FORMAT
 from gen3.tools.indexing import is_valid_manifest_format
 from gen3.tools.utils import Columns
 
+# Two test files attach a FileHandler to this path and delete it on teardown, so a
+# name shared across xdist workers lets one truncate another's log mid-test.
+LOG_FILE = f"gen3tests-{os.environ.get('PYTEST_XDIST_WORKER', 'main')}.logs"
+
 
 @pytest.fixture(autouse=True)
 def set_log_level_to_warning():
@@ -14,9 +18,9 @@ def set_log_level_to_warning():
     """
     logging.setLevel(default_logging.WARNING)
 
-    if os.path.exists("gen3tests.logs"):
-        os.remove("gen3tests.logs")
-    logfile_handler = default_logging.FileHandler("gen3tests.logs")
+    if os.path.exists(LOG_FILE):
+        os.remove(LOG_FILE)
+    logfile_handler = default_logging.FileHandler(LOG_FILE)
     logfile_handler.setFormatter(default_logging.Formatter(LOG_FORMAT))
     logging.addHandler(logfile_handler)
     yield
@@ -40,11 +44,11 @@ def logfile():
                     self.logs += line
             return self.logs
 
-    yield Logfile(filename="gen3tests.logs")
+    yield Logfile(filename=LOG_FILE)
 
     # cleanup after each use
-    if os.path.exists("gen3tests.logs"):
-        os.remove("gen3tests.logs")
+    if os.path.exists(LOG_FILE):
+        os.remove(LOG_FILE)
 
 
 def test_is_valid_manifest_format_with_no_errors(logfile):
