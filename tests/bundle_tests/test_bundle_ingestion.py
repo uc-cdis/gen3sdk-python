@@ -1,7 +1,8 @@
 import os
 import sys
 from unittest.mock import MagicMock, patch
-from drsclient.client import DrsClient
+
+import requests
 
 from gen3.tools.bundle.ingest_manifest import (
     _replace_bundle_name_with_guid,
@@ -34,7 +35,7 @@ def test_replace_bundle_name_with_guid():
     assert list_with_guid == expected_list
 
 
-def test_valid_ingest_bundle_manifest(gen3_index, indexd_server, drs_client):
+def test_valid_ingest_bundle_manifest(gen3_index, indexd_server, drs_endpoint):
     """
     Test valid manifest
     """
@@ -75,10 +76,14 @@ def test_valid_ingest_bundle_manifest(gen3_index, indexd_server, drs_client):
     # 6 bundles in the manfiest
     assert len(records) == 6
 
-    resp = drs_client.get("dg.xxxx/590ee63d-2790-477a-bbf8-d53873ca4933")
+    resp = requests.get(
+        "{}/ga4gh/drs/v1/objects/dg.xxxx/590ee63d-2790-477a-bbf8-d53873ca4933".format(
+            drs_endpoint
+        )
+    )
     assert resp.status_code == 200
 
-    resp1 = drs_client.get_all(endpoint="/bundle")
+    resp1 = requests.get("{}/bundle".format(drs_endpoint))
     assert resp1.status_code == 200
     res1 = resp1.json()
     assert len(res1["records"]) == 6
@@ -86,7 +91,11 @@ def test_valid_ingest_bundle_manifest(gen3_index, indexd_server, drs_client):
     for record in res1["records"]:
         assert record["name"] in ["A", "B", "C", "D", "E", "F"]
 
-    resp2 = drs_client.get("dg.xxxx/e366dbca-3c7f-4be6-86e4-c1f8f3e4189d")
+    resp2 = requests.get(
+        "{}/ga4gh/drs/v1/objects/dg.xxxx/e366dbca-3c7f-4be6-86e4-c1f8f3e4189d".format(
+            drs_endpoint
+        )
+    )
     rec2 = resp2.json()
     for checksum in rec2["checksums"]:
         assert checksum in [
@@ -97,7 +106,11 @@ def test_valid_ingest_bundle_manifest(gen3_index, indexd_server, drs_client):
             },
         ]
 
-    resp3 = drs_client.get("dg.xxxx/590ee63d-2790-477a-bbf8-d53873ca4933")
+    resp3 = requests.get(
+        "{}/ga4gh/drs/v1/objects/dg.xxxx/590ee63d-2790-477a-bbf8-d53873ca4933".format(
+            drs_endpoint
+        )
+    )
     rec3 = resp3.json()
     for checksum in rec3["checksums"]:
         assert checksum in [
@@ -109,7 +122,7 @@ def test_valid_ingest_bundle_manifest(gen3_index, indexd_server, drs_client):
         ]
 
 
-def test_invalid_ingest_bundle_manifest(gen3_index, indexd_server, drs_client):
+def test_invalid_ingest_bundle_manifest(gen3_index, indexd_server, drs_endpoint):
     """
     Test invalid manifest
     """
@@ -149,9 +162,13 @@ def test_invalid_ingest_bundle_manifest(gen3_index, indexd_server, drs_client):
 
     assert records == None
 
-    resp = drs_client.get("dg.xxxx/590ee63d-2790-477a-bbf8-d53873ca4933")
+    resp = requests.get(
+        "{}/ga4gh/drs/v1/objects/dg.xxxx/590ee63d-2790-477a-bbf8-d53873ca4933".format(
+            drs_endpoint
+        )
+    )
     assert resp.status_code == 404
 
-    resp1 = drs_client.get_all(endpoint="/bundle")
+    resp1 = requests.get("{}/bundle".format(drs_endpoint))
     rec1 = resp1.json()
     assert len(rec1["records"]) == 0
