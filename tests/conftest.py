@@ -8,7 +8,6 @@ import os
 import pytest
 import requests
 
-from drsclient.client import DrsClient
 from cdisutilstest.code.indexd_fixture import (
     setup_database,
     clear_database,
@@ -213,26 +212,15 @@ def gen3_query(gen3_auth):
 
 
 @pytest.fixture(scope="function")
-def drs_client(indexd_server):
+def drs_endpoint(indexd_server):
     """
-    Returns a DrsClient. This will delete any documents,
-    aliases, or users made by this
-    client after the test has completed.
-    Currently the default user is the admin user
-    Runs once per test.
+    Returns the base url of an indexd instance with the "user" user created.
+    This will delete any documents, aliases, or users made against it after the
+    test has completed. Runs once per test.
     """
     try:
-        user = create_user("user", "user")
+        create_user("user", "user")
     except Exception:
-        user = ("user", "user")
-    client = DrsClient(baseurl=indexd_server.baseurl, auth=user)
-    yield client
+        pass
+    yield indexd_server.baseurl
     clear_database()
-
-
-@pytest.fixture(scope="function")
-def drsclient(drs_client):
-    """
-    Mock drsclient
-    """
-    return drs_client

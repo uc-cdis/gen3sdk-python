@@ -33,7 +33,7 @@ class AuthFactory:
         return self._cache
 
 
-@click.group()
+@click.group(epilog="FHIR commands require extras. See: poetry install --all-extras")
 @click.option(
     "--auth",
     "auth_config",
@@ -145,4 +145,23 @@ main.add_command(file.file)
 main.add_command(nih.nih)
 main.add_command(users.users)
 main.add_command(wrap.run)
+
+# optional fhir subcommand dependent on whether user installed FHIR extras
+try:
+    import gen3.cli.fhir as fhir
+
+    main.add_command(fhir.fhir)
+except ImportError as e:
+
+    @click.group(
+        name="fhir",
+        epilog="Requires FHIR packages which aren't installed by default. Install the 'fhir' extras: poetry install --all-extras",
+    )
+    def fhir():
+        """Commands for FHIR data processing: transform & cleanup"""
+        raise
+
+    main.add_command(fhir)
+
+
 main()

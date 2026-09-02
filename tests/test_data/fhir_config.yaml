@@ -1,0 +1,39 @@
+version: "1.0"
+
+
+##Global Override (Applies to all resources if used)
+#global_authz: "/programs/NCI/projects/TargetedStudyA"
+
+
+# Conditional Field-Level Routing (Per Resource Type)
+rules:
+ - resource_type: "Patient"
+   condition: "Patient.managingOrganization.reference = 'Organization/site-alpha'"
+   authz: "/programs/Alpha/projects/Main"
+
+ - resource_type: "Observation"
+   condition: "Observation.code.coding.where(code = '9876-5').exists()"
+   authz: "/programs/Restricted/projects/Genomics"
+
+ - resource_type: "Specimen"
+   condition: "Specimen.status = 'unavailable'"
+   authz: "/programs/Alpha/projects/Biobank"
+
+ - resource_type: "Specimen"
+   condition: "Specimen.status = 'available'"
+   authz: "/programs/Alpha/projects/Biobank"
+
+ - resource_type: "Specimen"
+   condition: "Specimen.Type = 'Blood specimen (specimen)'"
+   authz: "/programs/Alpha/projects/Biobank"
+
+ -  resource_type: "Patient"
+    condition: "Patient.gender = 'male'"
+    authz: "/programs/Alpha/projects/Biobank"
+  
+ -  resource_type: "Patient"
+    condition: "Patient.gender = 'female'"
+    authz: "/programs/Restricted/projects/Genomics"
+
+
+
