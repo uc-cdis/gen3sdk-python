@@ -187,7 +187,7 @@ class Gen3Workflow:
             "CANCELED",
             "SYSTEM_ERROR",
         }
-        logging.info("Polling task {task_id} until {expected_final_state}")
+        logging.info(f"Polling task {task_id} until {expected_final_state}")
         for attempt in range(1, max_retries + 1):
             # TODO: might wrap in try-except here.
             task_info = self.get_tes_task(
