@@ -365,21 +365,23 @@ class AsyncDPoPProxy:
                 if the path is neither a TES nor an S3 path, or if it escapes the
                 base it was routed to.
         """
-        service: Service
-        if path.startswith("/ga4gh/tes"):
-            service = _SERVICE_TES
-            base = self._config["TES_ENDPOINT"].rstrip("/")
+        if path.startswith("/ga4gh/tes/"):
             subpath = path.removeprefix("/ga4gh/tes")
-        elif path.startswith("/s3"):
-            service = _SERVICE_S3
-            base = self._config["S3_ENDPOINT"].rstrip("/")
-            subpath = path.removeprefix("/s3")
+        elif path.startswith("/workflows/"):
+            subpath = path.removeprefix("/workflows")
         else:
             logging.warning(
-                f"Refusing to proxy {path}: only /ga4gh/tes and /s3 paths are "
+                f"Refusing to proxy {path}: only /ga4gh/tes and /workflows paths are "
                 "proxied. Check the endpoints your pipeline is configured with."
             )
             return None
+
+        service: Service = _SERVICE_TES
+        base = self._config["TES_ENDPOINT"].rstrip("/")
+        if subpath.startswith("/s3/"):
+            subpath = subpath.removeprefix("/s3")
+            base = self._config["S3_ENDPOINT"].rstrip("/")
+            service = _SERVICE_S3
 
         # httpx2 resolves dot segments when it builds the request, so `/s3/../user`
         # would leave the base chosen above and reach an arbitrary commons endpoint
