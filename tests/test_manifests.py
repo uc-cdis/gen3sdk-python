@@ -17,6 +17,10 @@ from gen3.utils import get_or_create_event_loop_for_thread
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
+# Two test files attach a FileHandler to this path and delete it on teardown, so a
+# name shared across xdist workers lets one truncate another's log mid-test.
+LOG_FILE = f"gen3tests-{os.environ.get('PYTEST_XDIST_WORKER', 'main')}.logs"
+
 
 @pytest.fixture(autouse=True)
 def set_log_level_to_error():
@@ -25,9 +29,9 @@ def set_log_level_to_error():
     """
     logging.setLevel(default_logging.ERROR)
 
-    if os.path.exists("gen3tests.logs"):
-        os.remove("gen3tests.logs")
-    logfile_handler = default_logging.FileHandler("gen3tests.logs")
+    if os.path.exists(LOG_FILE):
+        os.remove(LOG_FILE)
+    logfile_handler = default_logging.FileHandler(LOG_FILE)
     logfile_handler.setFormatter(default_logging.Formatter(LOG_FORMAT))
     logging.addHandler(logfile_handler)
     yield
@@ -51,11 +55,11 @@ def logfile():
                     self.logs += line
             return self.logs
 
-    yield Logfile(filename="gen3tests.logs")
+    yield Logfile(filename=LOG_FILE)
 
     # cleanup after each use
-    if os.path.exists("gen3tests.logs"):
-        os.remove("gen3tests.logs")
+    if os.path.exists(LOG_FILE):
+        os.remove(LOG_FILE)
 
 
 @patch("gen3.tools.indexing.verify_manifest.Gen3Index")
@@ -124,11 +128,11 @@ def test_verify_manifest(mock_index):
     assert "no_record" in logs["dg.TEST/9c205cd7-c399-4503-9f49-5647188bde66"]
 
 
-def test_download_manifest(monkeypatch, gen3_index):
+def test_download_manifest(monkeypatch, gen3_index_over_http):
     """
     Test that dowload manifest generates a file with expected content.
     """
-    rec1 = gen3_index.create_record(
+    rec1 = gen3_index_over_http.create_record(
         did="dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b",
         hashes={"md5": "a1234567891234567890123456789012"},
         size=123,
@@ -136,7 +140,7 @@ def test_download_manifest(monkeypatch, gen3_index):
         authz=["/programs/DEV/projects/test"],
         urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
     )
-    rec2 = gen3_index.create_record(
+    rec2 = gen3_index_over_http.create_record(
         did="dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2",
         hashes={"md5": "b1234567891234567890123456789012"},
         size=234,
@@ -145,7 +149,7 @@ def test_download_manifest(monkeypatch, gen3_index):
         urls=["gs://test/test.txt"],
         file_name="test.txt",
     )
-    rec3 = gen3_index.create_record(
+    rec3 = gen3_index_over_http.create_record(
         did="dg.TEST/ed8f4658-6acd-4f96-9dd8-3709890c959e",
         hashes={"md5": "e1234567891234567890123456789012"},
         size=345,
@@ -154,7 +158,7 @@ def test_download_manifest(monkeypatch, gen3_index):
         urls=["gs://test/test3.txt"],
     )
     # record with space
-    rec4 = gen3_index.create_record(
+    rec4 = gen3_index_over_http.create_record(
         did="dg.TEST/a802e27d-4a5b-42e3-92b0-ba19e81b9dce",
         hashes={"md5": "f1234567891234567890123456789012"},
         size=345,
@@ -169,7 +173,7 @@ def test_download_manifest(monkeypatch, gen3_index):
     loop = get_or_create_event_loop_for_thread()
     loop.run_until_complete(
         async_download_object_manifest(
-            "http://localhost:8001",
+            gen3_index_over_http.client.url,
             output_filename="tests/outputs/object-manifest.csv",
             num_processes=1,
         )
@@ -241,7 +245,7 @@ def test_download_manifest(monkeypatch, gen3_index):
     ).get("file_name")
 
 
-def test_download_manifest_with_input_manifest(monkeypatch, gen3_index):
+def test_download_manifest_with_input_manifest(monkeypatch, gen3_index_over_http):
     """
     Test that dowload manifest generates a file with expected content when
     provided an initial input manifest.
@@ -257,7 +261,7 @@ def test_download_manifest_with_input_manifest(monkeypatch, gen3_index):
             ]
         )
 
-    rec1 = gen3_index.create_record(
+    rec1 = gen3_index_over_http.create_record(
         did="dg.TEST/f2a39f98-6ae1-48a5-8d48-825a0c52a22b",
         hashes={"md5": "a1234567891234567890123456789012"},
         size=123,
@@ -265,7 +269,7 @@ def test_download_manifest_with_input_manifest(monkeypatch, gen3_index):
         authz=["/programs/DEV/projects/test"],
         urls=["s3://testaws/aws/test.txt", "gs://test/test.txt"],
     )
-    rec2 = gen3_index.create_record(
+    rec2 = gen3_index_over_http.create_record(
         did="dg.TEST/1e9d3103-cbe2-4c39-917c-b3abad4750d2",
         hashes={"md5": "b1234567891234567890123456789012"},
         size=234,
@@ -274,7 +278,7 @@ def test_download_manifest_with_input_manifest(monkeypatch, gen3_index):
         urls=["gs://test/test.txt"],
         file_name="test.txt",
     )
-    rec3 = gen3_index.create_record(
+    rec3 = gen3_index_over_http.create_record(
         did="dg.TEST/ed8f4658-6acd-4f96-9dd8-3709890c959e",
         hashes={"md5": "e1234567891234567890123456789012"},
         size=345,
@@ -283,7 +287,7 @@ def test_download_manifest_with_input_manifest(monkeypatch, gen3_index):
         urls=["gs://test/test3.txt"],
     )
     # record with space
-    rec4 = gen3_index.create_record(
+    rec4 = gen3_index_over_http.create_record(
         did="dg.TEST/a802e27d-4a5b-42e3-92b0-ba19e81b9dce",
         hashes={"md5": "f1234567891234567890123456789012"},
         size=345,
@@ -297,7 +301,7 @@ def test_download_manifest_with_input_manifest(monkeypatch, gen3_index):
     loop = get_or_create_event_loop_for_thread()
     loop.run_until_complete(
         async_download_object_manifest(
-            "http://localhost:8001",
+            gen3_index_over_http.client.url,
             output_filename="tests/outputs/object-manifest.csv",
             num_processes=1,
             input_manifest=file_path,

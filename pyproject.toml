@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "gen3"
 homepage = "https://gen3.org/"
-version = "4.28.3"
+version = "5.0.0"
 description = "Gen3 CLI and Python SDK"
 authors = ["Center for Translational Data Science at the University of Chicago <support@gen3.org>"]
 license = "Apache-2.0"
@@ -13,46 +13,54 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
-    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9, <4"
+python = ">=3.13, <4"
 requests = "*"
-indexclient = "^2.3.0"
+httpx2 = ">=2.9.1"
+indexclient = ">=2.3.0"
 drsclient = ">=0.3.0"
 aiohttp = "*"
 backoff = "*"
-cdislogging = "^1.1.0"
+cdislogging = ">=1.1.0"
 click = "*"
 importlib_metadata = ">=8,<9"
 jsonschema = "*"
 # FIXME updating to >=0.6.0 breaks a few tests
 dataclasses-json = "<=0.5.9"
 pypfb = ">=0.6.2"
-tqdm = "^4.61.2"
+tqdm = ">=4.61.2"
 humanfriendly ="*"
 python-dateutil = "*"
 aiofiles = "*"
 pandas = ">=1.4.2"
-xmltodict = "^0.13.0"
+xmltodict = ">=0.13.0"
 gen3users = "*"
+joserfc = ">=1.7.3"
+
+authutils = {git = "https://github.com/uc-cdis/authutils.git", rev = "feat/dpop"}
 
 # A list of all of the optional dependencies, some of which are included in the
 # below `extras`. They can be opted into by apps.
+# fhir
 fhirclient = { version = "*", optional = true }
+
+# dpop
+uvicorn = { version = "*", optional = true }
 
 [tool.poetry.extras]
 fhir = ["fhirclient"]
+dpop = ["uvicorn"]
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^6.0.0"
+pytest = ">=6.0.0"
 pytest-cov = "*"
+pytest-xdist = "*"
 requests-mock = "*"
-cdisutilstest = { git = "https://github.com/uc-cdis/cdisutils-test.git", tag = "2.0.0" }
-indexd = { git = "https://github.com/uc-cdis/indexd.git", tag = "5.0.4" }
-deptry = "^0.23.1"
+deptry = ">=0.23.1"
 
 [tool.poetry.scripts]
 gen3 = "gen3.cli.__main__:main"
@@ -65,7 +73,27 @@ build-backend = "poetry.masonry.api"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-vv"
+# Run tests in parallel (as much as possible) by default.
+#
+# `load`, xdist's default, hands each test to whichever worker is free, so two tests
+# from the same module can run at once in different processes. `loadscope` instead
+# groups tests by class, or by module for tests outside one, and gives each whole
+# group to a single worker, so a module's tests stay in order in one process.
+#
+# `--dist loadscope` MUST accompany `-n`. Why? Some modules are not independent
+# test-by-test:
+#   - the fixed TMP_FOLDER in gen3/tools/indexing/download_manifest.py, which the
+#     library wipes on entry and then collects with a glob
+#   - the ~/.cache/gen3 token cache, keyed by API key rather than by test
+#   - download_tests/test_resolvers.py, where one test reads a DRS cache file that an
+#     earlier test in the module wrote
+#   - others? there might be...
+#
+# Under `load` these corrupt each other or go missing, and which tests fail moves
+# around from run to run. Thus, `loadscope` keeps things safe.
+#
+# Pass `-n0` to run serially if needed for debugging.
+addopts = "-vv --dist loadscope -n auto"
 testpaths = [
     "tests",
 ]
