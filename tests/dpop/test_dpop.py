@@ -580,12 +580,49 @@ class TestProxyRouting:
 class TestProxyHeaders:
     """What the proxy sends upstream on behalf of the client."""
 
+    def test_only_the_task_token_holder_may_use_the_proxy(self, proxy):
+        """
+        A caller that does not hold the task token is refused.
+        """
+        for header in (None, "Bearer some-other-token", "Bearer", "Basic abc", ""):
+            headers = {} if header is None else {"Authorization": header}
+            # An empty dict would let the helper fill in the token, so ask for a header
+            # that carries no usable one.
+            response = proxy.get(
+                TES_PATH, headers=headers or {"Authorization": "Bearer wrong"}
+            )
+            assert response.status_code == 401, f"accepted {header!r}"
+        assert proxy.upstream.requests == [], "nothing should have been forwarded"
+
+    def test_the_task_token_is_accepted_however_it_is_presented(self, proxy):
+        """
+        Both routes authorize on the same token: TES sends it behind a scheme, and an S3
+        client sends it as the access key ID of an AWS signature.
+        """
+        assert proxy.get(TES_PATH).status_code == 200
+        assert (
+            proxy.get(
+                S3_PATH,
+                headers={
+                    "Authorization": f"AWS4-HMAC-SHA256 Credential={TASK_TOKEN}"
+                    "/20240101/us-east-1/s3/aws4_request"
+                },
+            ).status_code
+            == 200
+        )
+        assert (
+            proxy.get(
+                S3_PATH, headers={"Authorization": f"AWS {TASK_TOKEN}:signature"}
+            ).status_code
+            == 200
+        )
+
     def test_tes_credentials_are_replaced(self, proxy):
         """On the TES route the proxy supplies both credentials itself."""
         proxy.get(
             TES_PATH,
             headers={
-                "Authorization": "Bearer some-other-token",
+                "Authorization": f"Bearer {TASK_TOKEN}",
                 "DPoP": "client-supplied-proof",
             },
         )
@@ -599,7 +636,7 @@ class TestProxyHeaders:
         The client's `Authorization` is replaced on the TES route, not duplicated.
         This validates there's no unintentional duplication due to header case.
         """
-        proxy.get(TES_PATH, headers={"Authorization": "Bearer some-other-token"})
+        proxy.get(TES_PATH, headers={"Authorization": f"Bearer {TASK_TOKEN}"})
 
         names = proxy.upstream.last_request["header_names"]
         assert names.count("authorization") == 1
@@ -1219,9 +1256,17 @@ class _Proxy:
     url: str
 
     def request(self, method: str, path: str, **kwargs) -> requests.Response:
-        """Send a request through the proxy."""
+        """
+        Send a request through the proxy.
+
+        Presents the task token the way Nextflow does, unless the caller set its own
+        Authorization header, since the proxy refuses a caller that does not hold it.
+        """
         kwargs.setdefault("timeout", 60)
-        return requests.request(method, f"{self.url}{path}", **kwargs)
+        headers = dict(kwargs.pop("headers", None) or {})
+        if not any(name.lower() == "authorization" for name in headers):
+            headers["Authorization"] = f"Bearer {TASK_TOKEN}"
+        return requests.request(method, f"{self.url}{path}", headers=headers, **kwargs)
 
     def get(self, path: str, **kwargs) -> requests.Response:
         """GET through the proxy."""
@@ -1239,7 +1284,11 @@ class _Proxy:
         has to be written onto the wire directly to reach the proxy intact.
         """
         port = int(self.url.rsplit(":", 1)[1])
-        request = f"GET {target} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n"
+        request = (
+            f"GET {target} HTTP/1.1\r\n"
+            f"Host: 127.0.0.1:{port}\r\n"
+            f"Authorization: Bearer {TASK_TOKEN}\r\n\r\n"
+        )
         with socket.create_connection(("127.0.0.1", port), timeout=60) as client:
             client.sendall(request.encode())
             status_line = client.recv(64).split(b"\r\n")[0]

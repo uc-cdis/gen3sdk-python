@@ -5,6 +5,7 @@ DPoP utilities for token exchange and local proxy.
 import asyncio
 from contextlib import contextmanager
 from datetime import datetime, timezone
+import hmac
 import json
 import socket
 import tempfile
@@ -101,6 +102,11 @@ _MAX_BODY_SIZE_IN_MEMORY = 8 * 1024 * 1024
 _UPSTREAM_TIMEOUT = httpx2.Timeout(connect=30.0, read=300.0, write=300.0, pool=None)
 
 _MAX_NONCE_RETRIES = 2
+
+# Authorization schemes that carry the access token directly, lowercased for a
+# case-insensitive match. An S3 client sends an AWS signature instead, with the token as the
+# access key ID.
+_SCHEMES_CARRYING_THE_TOKEN = ("bearer ", "dpop ")
 
 # Chunk size for replaying a buffered request body upstream.
 _BODY_CHUNK_BYTES = 1024 * 1024
@@ -293,6 +299,15 @@ class AsyncDPoPProxy:
             await self._send_error(send, 404, "Not Found")
             return
 
+        # Before routing, so an unauthorized caller cannot learn which paths exist either.
+        if not self._caller_holds_the_task_token(scope.get("headers", [])):
+            logging.warning(
+                "Refusing a request that did not present the task token. This proxy signs "
+                "what it forwards, so only the process it was started for may use it."
+            )
+            await self._send_error(send, 401, "Unauthorized")
+            return
+
         method = scope["method"]
         path = scope["path"]
         query_string = scope.get("query_string", b"").decode("utf-8")
@@ -336,6 +351,35 @@ class AsyncDPoPProxy:
     async def aclose(self) -> None:
         """Close the shared upstream HTTP client."""
         await self._client.aclose()
+
+    def _caller_holds_the_task_token(
+        self, request_headers: list[tuple[bytes, bytes]]
+    ) -> bool:
+        """
+        Check that a request came from the process this proxy was started for.
+
+        The proxy signs whatever it forwards with the DPoP key, so anything that can reach it
+        can act as the user for the life of the run.
+
+        Holding the task token is what authorizes a caller. Nextflow already sends it on both
+        routes - as the TES `oauthToken` and as the S3 access key ID - so requiring it costs
+        the pipeline nothing.
+
+        Args:
+            request_headers (list[tuple[bytes, bytes]]): Raw headers from the ASGI scope.
+
+        Returns:
+            bool: True if the caller presented the task token.
+        """
+        presented = _presented_access_token(
+            _header_value(request_headers, b"authorization")
+        )
+        if not presented:
+            return False
+        # Constant time: the comparison is against a live credential.
+        return hmac.compare_digest(
+            presented.encode("utf-8"), str(self._config["TASK_TOKEN"]).encode("utf-8")
+        )
 
     def _resolve_upstream_url(
         self, path: str, query_string: str
@@ -667,6 +711,54 @@ def exchange_api_key_for_task_token(
         )
 
     return access_token, nonce
+
+
+def _header_value(request_headers: list[tuple[bytes, bytes]], name: bytes) -> str:
+    """
+    Read one header out of the raw ASGI header list.
+
+    Args:
+        request_headers (list[tuple[bytes, bytes]]): Raw headers from the ASGI scope.
+        name (bytes): Lowercased header name to look for.
+
+    Returns:
+        str: The header value, or "" if it is absent.
+    """
+    for key, value in request_headers:
+        if key.lower() == name:
+            return value.decode("utf-8", "replace")
+    return ""
+
+
+def _presented_access_token(auth_header: str) -> str | None:
+    """
+    Read the access token out of an Authorization header, whichever way it was presented.
+
+    Understands the same shapes Gen3's S3 endpoint does, so that a header this proxy accepts
+    is one the upstream would read the same token out of.
+
+    Args:
+        auth_header (str): Value of the incoming Authorization header.
+
+    Returns:
+        str | None: The token, or None if the header carries none.
+    """
+    if not auth_header:
+        return None
+
+    stripped = auth_header.strip()
+    if stripped.lower().startswith(_SCHEMES_CARRYING_THE_TOKEN):
+        parts = stripped.split(maxsplit=1)
+        candidate = parts[1].strip() if len(parts) == 2 else ""
+    elif "Credential=" in stripped:
+        candidate = stripped.split("Credential=")[1].split("/")[0]
+    elif "AWS " in stripped:
+        candidate = stripped.split("AWS ")[1].split(":")[0]
+    else:
+        return None
+
+    # A client acting on behalf of a user appends the user ID to its token.
+    return candidate.split(";userId=")[0] or None
 
 
 def is_proxy_running(port: int, host: str = "127.0.0.1") -> bool:

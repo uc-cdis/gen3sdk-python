@@ -220,15 +220,20 @@ process.
   when a nonce is stale.
 - **Task tokens are scoped.** `--task-token-type` (default `WORKFLOW`) asks Gen3 for a
   token limited to that purpose.
+- **The proxy only serves the task token holder.** It listens on `127.0.0.1`, which is
+  not a boundary on its own: every process on the host can connect to that port, and so
+  can a page open in your browser. So the proxy requires each request to present the task
+  token, the way Nextflow already does - as the TES `oauthToken` and as the S3 access key
+  ID - and refuses anything else with a 401 before it routes the request. The token is
+  passed to Nextflow in `GEN3_DPOP_BOUND_TASK_TOKEN`, so it is readable by other processes
+  running as *you*; it is not readable by other users, and a drive-by request from a
+  browser cannot guess it.
+- **Only TES and S3 are proxied.** `/ga4gh/tes` and `/s3` are the only paths forwarded,
+  and only to the commons that issued your credentials, so the task token is never sent
+  to another host.
 
 Two limits worth knowing about:
 
-- **The proxy is an unauthenticated local endpoint.** It listens only on `127.0.0.1`, so
-  it is not reachable from other machines, but any process running as any user on the
-  same host can send requests through it while it is up. Only `/ga4gh/tes` and `/s3`
-  paths are proxied, so that reaches those two services rather than the whole commons
-  API — but within them it acts with your task token. Treat it like an SSH agent socket:
-  fine on your own workstation, think twice on a shared host.
 - **The task token is not renewed.** It is fetched once at startup. A pipeline that runs
   longer than the token's lifetime will start seeing 401s; use `--task-token-expiration`
   to request a lifetime that covers the run.
