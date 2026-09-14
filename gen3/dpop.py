@@ -52,11 +52,11 @@ get_logger("httpx2").parent = logging
 # forwarding the client's `transfer-encoding` or `content-length` would describe a
 # body we are no longer sending (RFC 9112 6.1 and 6.2).
 #
-# `authorization` / `dpop` are dropped because this proxy replaces them with its own
-# credentials - except on the S3 route, see below.
+# `dpop` is dropped because this proxy mints its own proof. `authorization` is not:
+# the S3 route needs the client's SigV4 header to arrive intact, and the TES route
+# overwrites it later.
 _HEADERS_NOT_FORWARDED = frozenset(
     {
-        b"authorization",
         b"connection",
         b"content-length",
         b"dpop",
@@ -70,13 +70,6 @@ _HEADERS_NOT_FORWARDED = frozenset(
         b"upgrade",
     }
 )
-
-# The S3 route is the exception. Gen3's S3 endpoint expects a SigV4-signed request
-# and reads the task token out of the `Credential=<token>/...` field of the
-# client's `Authorization` header; it rejects anything it cannot parse that way,
-# including the `DPoP` scheme. So on that route the client's header is forwarded
-# untouched and the proof travels in the `DPoP` header alone.
-_HEADERS_NOT_FORWARDED_TO_S3 = _HEADERS_NOT_FORWARDED - {b"authorization"}
 
 # The two services the proxy will route to. Broken out here
 # to allow expansion in the typing easily if we add more services/endpoints.
@@ -421,18 +414,16 @@ class AsyncDPoPProxy:
         Returns:
             dict[str, str]: Headers to send upstream.
         """
-        is_s3 = service == _SERVICE_S3
-        not_forwarded = (
-            _HEADERS_NOT_FORWARDED_TO_S3 if is_s3 else _HEADERS_NOT_FORWARDED
-        )
         headers = {
             k.decode("utf-8"): v.decode("utf-8")
             for k, v in request_headers
-            if k.lower() not in not_forwarded
+            if k.lower() not in _HEADERS_NOT_FORWARDED
         }
 
-        if not is_s3:
-            headers["Authorization"] = f"DPoP {self._config['TASK_TOKEN']}"
+        if service != _SERVICE_S3:
+            # Lowercase to overwrite the client's header rather than sit beside it:
+            # ASGI header names arrive lowercased
+            headers["authorization"] = f"DPoP {self._config['TASK_TOKEN']}"
         headers["DPoP"] = self._generate_proof(method, url)
         # The Authorization value is a live credential and `-vv` output ends up in
         # bug reports, so log the proof (useful, single-use) but never the token.

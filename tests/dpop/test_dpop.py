@@ -594,6 +594,16 @@ class TestProxyHeaders:
         assert headers["authorization"] == f"DPoP {TASK_TOKEN}"
         assert headers["dpop"] != "client-supplied-proof"
 
+    def test_tes_sends_one_authorization_header(self, proxy):
+        """
+        The client's `Authorization` is replaced on the TES route, not duplicated.
+        This validates there's no unintentional duplication due to header case.
+        """
+        proxy.get(TES_PATH, headers={"Authorization": "Bearer some-other-token"})
+
+        names = proxy.upstream.last_request["header_names"]
+        assert names.count("authorization") == 1
+
     def test_s3_signature_survives_the_hop(self, proxy):
         """On the S3 route the client's signed `Authorization` is forwarded as-is."""
         # Gen3's S3 endpoint reads the token out of the SigV4 `Credential` field, so
@@ -1105,6 +1115,8 @@ class _Upstream:
                 "path": scope["path"],
                 "query": scope["query_string"].decode(),
                 "headers": {k.decode(): v.decode() for k, v in scope["headers"]},
+                # Kept alongside the dict, which collapses a header sent twice with different case.
+                "header_names": [k.decode().lower() for k, _ in scope["headers"]],
                 "body_length": len(body),
             }
         )
