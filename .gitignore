@@ -109,6 +109,7 @@ schema.json
 
 # pytest outputs
 tests/outputs
+tests/test_data/fhir_outputs
 *.sq3
 gen3/tools/indexing/tmp/
 
