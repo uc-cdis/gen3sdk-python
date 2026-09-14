@@ -90,9 +90,7 @@ Run that with `gen3 nextflow run main.nf` and the generated override changes fiv
 `tes.endpoint` and `aws.client.endpoint` become the local proxy, `tes.oauthToken` and
 `aws.accessKey` become the task token, and `aws.client.s3PathStyleAccess` is forced on.
 `workDir`, `region`, `timeout`, `maxErrorRetry`, `plugins` and `process` are yours and are
-left as they are. `gen3 -vv nextflow run` logs the generated file's contents; `nextflow -c
-
-<that file> config` prints the merged result.
+left as they are. `gen3 -vv nextflow run` logs the generated file's contents; `nextflow -c <that file> config` prints the merged result.
 
 Two details explain why those five:
 
