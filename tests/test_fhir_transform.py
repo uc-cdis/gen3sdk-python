@@ -9,7 +9,7 @@ from gen3.fhir import (
     transform_chunk,
     merge_chunks,
     tag_fhir_resources_with_authz,
-    DEFAULT_WORK_DIR,
+    get_resource_type,
 )
 import pathlib
 import os
@@ -19,6 +19,8 @@ import shutil
 import yaml
 
 TMP_ROOT = pathlib.Path(__file__).parent / "test_data" / "fhir_outputs"
+CHUNK_SRC = pathlib.Path(__file__).parent / "test_data" / "fhir_inputs" / "transform"
+DONE_SRC = pathlib.Path(__file__).parent / "test_data" / "fhir_inputs" / "merge"
 SRC = pathlib.Path(
     f"{pathlib.Path(__file__).parent}/test_data/test_fhir_Patient.ndjson"
 )
@@ -39,7 +41,7 @@ BASE_RECORD = {
 }
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def tmp_root():
     shutil.rmtree(TMP_ROOT, ignore_errors=True)
     TMP_ROOT.mkdir(parents=True)
@@ -48,6 +50,31 @@ def tmp_root():
 def tagger():
     """A tagger built from the synthetic Patient rules config."""
     return Gen3FHIRAuthzTagger(CONFIG_SRC)
+
+@pytest.fixture
+def chunk_workdir():
+    workdir = TMP_ROOT / "chunk"
+    shutil.rmtree(workdir, ignore_errors=True)
+    workdir.mkdir(parents=True)
+    return workdir
+
+@pytest.fixture
+def transform_workdir():
+    workdir = TMP_ROOT / "transform"
+    shutil.rmtree(workdir, ignore_errors=True)
+    workdir.mkdir(parents=True)
+    for src in CHUNK_SRC.glob("*.chunk"):
+        shutil.copy2(src, workdir / src.name)
+    return workdir
+
+@pytest.fixture
+def merge_workdir():
+    workdir = TMP_ROOT / "merge"
+    shutil.rmtree(workdir, ignore_errors=True)
+    workdir.mkdir(parents=True)
+    for src in DONE_SRC.glob("*.done"):
+        shutil.copy2(src, workdir / src.name)
+    return workdir
 
 def mock_state(
     directory: dir,
@@ -146,10 +173,10 @@ def test_fhir_output():
     assert src == out, "Output file does not match source file"
 
 
-def test_chunking():
+def test_chunking(chunk_workdir):
     """Tests that number of chunks is correct and the recombined chunks match the input file"""
-    split_file(IN, BATCH_SIZE, TMP_ROOT)
-    chunks = list(TMP_ROOT.glob("*.chunk"))
+    split_file(IN, BATCH_SIZE, chunk_workdir)
+    chunks = list(chunk_workdir.glob("*.chunk"))
     fin = [
         json.loads(line)
         for line in pathlib.Path(IN).read_bytes().splitlines()
@@ -171,19 +198,20 @@ def test_chunking():
     ), "Recombined chunks do not match the content of the input file"
 
 
-def test_transform(tagger: Gen3FHIRAuthzTagger):
+def test_transform(tagger: Gen3FHIRAuthzTagger, transform_workdir):
     """Asserts transform_chunk creates the same number of .done files as .chunk and no .chunk files remain once transformation is completed
     
     Args:
         tagger (Gen3FHIRAuthzTagger): The tagger instance to use for tagging the resources
     
     """
+    resource_type = get_resource_type(IN)
+    tagger.relevant_authz_rules(resource_type)
 
-    tagger.relevant_authz_rules(os.path.basename(IN).split(".")[0])
-    chunks = list(TMP_ROOT.glob("*.chunk"))
+    chunks = list(transform_workdir.glob("*.chunk"))
     for c in chunks:
-        transform_chunk(c, tagger, TMP_ROOT)
-    transformed = list(TMP_ROOT.glob("*.done"))
+        transform_chunk(c, tagger, transform_workdir)
+    transformed = list(transform_workdir.glob("*.done"))
 
     # same number of transformed files as chunk files
     assert len(transformed) == len(
@@ -191,21 +219,22 @@ def test_transform(tagger: Gen3FHIRAuthzTagger):
     ), f"Expected same number of transformed .done files as number of .chunk files after transformation completed, found {len(transformed)}"
     # all .chunk files deleted after transformation completed
     assert (
-        len(list(TMP_ROOT.glob("*.chunk"))) == 0
-    ), f"Expected 0 chunks after transformation completed, found {len(list(TMP_ROOT.glob('*.chunk')))}"
+        len(list(transform_workdir.glob("*.chunk"))) == 0
+    ), f"Expected 0 chunks after transformation completed, found {len(list(transform_workdir.glob('*.chunk')))}"
 
 
-def test_merge():
+def test_merge(merge_workdir):
     """Asserts that after merge is completed, the output file exists and is not empty, there are no .done files remaining,
     the length of the output matches the sum of the transformed files and the input file, and the file is not corrupt/formatting is correct
     """
-    transformed = list(TMP_ROOT.glob("*.done"))
+    out = merge_workdir / "merged.ndjson"
+    transformed = list(merge_workdir.glob("*.done"))
     transformed_sum = sum(
         len([l for l in pathlib.Path(c).read_bytes().splitlines() if l.strip()])
         for c in transformed
     )
-    merge_chunks(transformed, OUT)
-    merged = pathlib.Path(OUT).read_text(encoding="utf-8")
+    merge_chunks(transformed, out)
+    merged = pathlib.Path(out).read_text(encoding="utf-8")
     fin = [
         json.loads(line)
         for line in pathlib.Path(IN).read_bytes().splitlines()
@@ -213,18 +242,18 @@ def test_merge():
     ]
     fout = [
         json.loads(line)
-        for line in pathlib.Path(OUT).read_bytes().splitlines()
+        for line in pathlib.Path(out).read_bytes().splitlines()
         if line.strip()
     ]
 
     # output file exists after merge
-    assert os.path.exists(OUT), "Output file was not created"
+    assert os.path.exists(out), "Output file was not created"
     # output file is not empty after merge
-    assert pathlib.Path(OUT).stat().st_size > 0, "Output file empty"
+    assert pathlib.Path(out).stat().st_size > 0, "Output file empty"
     # no leftover .done files after merge completed
     assert (
-        len(list(TMP_ROOT.glob("*.done"))) == 0
-    ), f"Expected 0 .done files after transformation completed, found {len(list(TMP_ROOT.glob('*.done')))}"
+        len(list(merge_workdir.glob("*.done"))) == 0
+    ), f"Expected 0 .done files after transformation completed, found {len(list(merge_workdir.glob('*.done')))}"
     # output file is the same length as the combined transformed files and the length of the input file
     assert (
         len(fout) == transformed_sum == len(fin)
@@ -425,14 +454,16 @@ class Test_status:
 
 def test_cli():
     """Run the CLI and return the CompletedProcess."""
+    out = TMP_ROOT / "cli_test" / "cli_out.ndjson"
+    work = TMP_ROOT / "cli_test" 
     args = [
         IN,
-        OUT,
+        out,
         CONFIG_SRC,
         "--batch_size",
         str(BATCH_SIZE),
         "--work_dir",
-        TMP_ROOT,
+        work,
     ]
     result = subprocess.run(
         ["gen3", "fhir", "transform", *args],
@@ -442,10 +473,10 @@ def test_cli():
     )
 
     assert result.returncode == 0, "CLI run failed"
-    assert pathlib.Path(OUT).exists(), "CLI exited 0 but wrote no output file"
+    assert pathlib.Path(out).exists(), "CLI exited 0 but wrote no output file"
     records = [
         json.loads(line)
-        for line in pathlib.Path(OUT).read_bytes().splitlines()
+        for line in pathlib.Path(out).read_bytes().splitlines()
         if line.strip()
     ]
     in_records = [
@@ -469,8 +500,8 @@ def test_invalid_batch_size_is_rejected(bad: int | str | None):
         bad (int|str|None): bad inputs for batch_size
         
     """
-    out = TMP_ROOT / "cli_test" / "cli_out.ndjson"
-
+    out = TMP_ROOT / f"invalid_batch_size_{bad}" / "cli_out.ndjson"
+    work = TMP_ROOT / f"invalid_batch_size_{bad}" 
     args = [
         IN,
         out,
@@ -478,7 +509,7 @@ def test_invalid_batch_size_is_rejected(bad: int | str | None):
         "--batch_size",
         str(bad),
         "--work_dir",
-        TMP_ROOT,
+        work,
     ]
     result = subprocess.run(
         ["gen3", "fhir", "transform", *args],
@@ -495,7 +526,8 @@ def test_invalid_batch_size_is_rejected(bad: int | str | None):
 
 def test_missing_input_file_fails_cleanly():
     """Asserts error is raised if missing input file passed as argument"""
-    out = TMP_ROOT / "cli_test" / "nope.ndjson"
+    out = TMP_ROOT / "missing_input" / "nope.ndjson"
+    work = TMP_ROOT / "missing_input"
     args = [
         "nope.ndjson",
         out,
@@ -503,7 +535,7 @@ def test_missing_input_file_fails_cleanly():
         "--batch_size",
         str(BATCH_SIZE),
         "--work_dir",
-        TMP_ROOT,
+        work,
     ]
     result = subprocess.run(
         ["gen3", "fhir", "transform", *args],
@@ -521,6 +553,7 @@ def test_missing_input_file_fails_cleanly():
 def test_output_directory_does_not_exist():
     """Test response if output directory doesn't exists. Directory (and parents) should be created if missing"""
     out = TMP_ROOT / "missing_dir" / "out.ndjson"
+    work = TMP_ROOT / "missing_dir" 
     args = [
         IN,
         out,
@@ -528,7 +561,7 @@ def test_output_directory_does_not_exist():
         "--batch_size",
         str(BATCH_SIZE),
         "--work_dir",
-        TMP_ROOT,
+        work,
     ]
     result = subprocess.run(
         ["gen3", "fhir", "transform", *args],
@@ -544,6 +577,7 @@ def test_output_directory_does_not_exist():
 def test_global_config_overrides_other_rules():
     """Assert global authorization overrides any other rules"""
     out = TMP_ROOT / "global_config" / "out.ndjson"
+    work = TMP_ROOT / "global_config" 
     args = [
         IN,
         out,
@@ -551,7 +585,7 @@ def test_global_config_overrides_other_rules():
         "--batch_size",
         str(BATCH_SIZE),
         "--work_dir",
-        TMP_ROOT,
+        work,
     ]
     result = subprocess.run(
         ["gen3", "fhir", "transform", *args],
