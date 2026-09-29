@@ -400,33 +400,6 @@ def cleanup_fhir_transform_artifacts(
     logging.info(f"{count} stale run dir(s)")
     return count
 
-
-def split_file(
-    input_file: str | os.PathLike[str],
-    batch_size: int,
-    output_dir: str | os.PathLike[str],
-) -> None:
-    """
-    Split ndjson file into manageable batch-sized chunks
-
-    Args:
-        input_file (str): input .ndjson file to split
-        batch_size (int): batch size of each chunk
-        output_dir (str): the path to the directory where to write all the intermediate files to
-
-    """
-    if batch_size < 1:
-        raise ValueError(f"batch_size must be >= 1, got {batch_size}")
-    start = time.time()
-    with open(input_file, "rb") as fin:
-        for i, lines in enumerate(iter(lambda: list(islice(fin, batch_size)), [])):
-            with open(
-                f"{output_dir}/{pathlib.Path(input_file).stem}_{i:05d}.chunk", "wb"
-            ) as out:
-                out.writelines(lines)
-    logging.info(
-        f"Split chunks total time: {(time.strftime('%H:%M:%S', time.gmtime(time.time() - start)))}"
-    )
 def compute_ranges(
     input_file: str | os.PathLike[str],
     batch_size: int,
