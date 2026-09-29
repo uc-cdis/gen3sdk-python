@@ -338,22 +338,27 @@ def _is_done(directory: str | os.PathLike[str], record: dict) -> bool:
 
 def _merge_needed(directory: str | os.PathLike[str], record: dict) -> bool:
     """
-    Check if .done files have been merged to the final output file. Returns True if .done files remaining in the directory.
+    Check whether every chunk has been transformed and the .done files are ready to merge
 
     Args:
         directory (str): path of the directory linked to the .ndjson file
         record (dict): the configuration of the current run, used to compare to what is already saved in the folder
 
     Returns:
-        status (bool): returns whether the transformed .done files have to be merged
+        status (bool): True if every chunk has a .done file, False otherwise
     """
-    # if any .chunk remaining, run is incomplete
-    if any(pathlib.Path(directory).glob("*.chunk")):
+    directory = pathlib.Path(directory)
+
+    # no .done files --> nothing to merge
+    if not any(directory.glob("*.done")):
         return False
-    # check for .done files --> merge incomplete
-    if any(pathlib.Path(directory).glob("*.done")):
-        return True
-    return False
+
+    # every chunk must have a .done file, otherwise the run is incomplete
+    ranges = compute_ranges(record["input_file"], record["batch_size"])
+    stem = pathlib.Path(record["input_file"]).stem
+    return all(
+        (directory / f"{stem}_{i:05d}.done").exists() for i in range(len(ranges))
+    )
 
 
 def cleanup_fhir_transform_artifacts(
