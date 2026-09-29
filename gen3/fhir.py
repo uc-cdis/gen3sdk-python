@@ -437,9 +437,8 @@ def transform_chunk(
         tagger (Gen3FHIRAuthzTagger): The tagger instance to use for tagging the resources
         output_dir (str): The directory path of where to write the intermediate files to
     """
-    with open(input_file, "rb") as fin, open(
-        os.path.join(output_dir, f"{os.path.basename(input_file)}.done"), "wb"
-    ) as fout:
+    done_path = os.path.join(output_dir, f"{os.path.basename(input_file)}.done")
+    with open(input_file, "rb") as fin, open(f"{done_path}.tmp", "wb") as fout:
         out = bytearray()
         for r in fin:
 
@@ -450,9 +449,11 @@ def transform_chunk(
             # generate tags
             authz_tags = tagger.determine_authz(record)
             # tag resources
-            out += json_dumps(tagger.tag_resource(record, authz_tags))
-            out += b"\n"
-        fout.write(out)
+            fout.write(json_dumps(tagger.tag_resource(record, authz_tags)))
+            fout.write(b"\n")
+
+    #replace tmp file with .done file
+    os.replace(f"{done_path}.tmp", done_path)
     # delete chunk file once it has been transformed
     os.remove(input_file)
 
@@ -496,7 +497,7 @@ def tag_fhir_resource_pipeline(
 ) -> None:
     """
 
-    Stream-transform Bulk FHIR data to Gen3 compatible data with authorization tagging.
+    Transform Bulk FHIR data to Gen3 compatible data with authorization tagging.
     Line by line tagging with batched I/O
 
     Args:
