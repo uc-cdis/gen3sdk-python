@@ -422,25 +422,68 @@ def split_file(
     logging.info(
         f"Split chunks total time: {(time.strftime('%H:%M:%S', time.gmtime(time.time() - start)))}"
     )
+def compute_ranges(
+    input_file: str | os.PathLike[str],
+    batch_size: int,
+) -> list[tuple[int, int]]:
+    """
+    Compute (start_offset, end_offset) byte ranges over the input file, each holding
+    batch_size records and split on newline boundaries
 
+    Args:
+        input_file (str): input .ndjson file
+        batch_size (int): number of records in each range
+
+    Returns:
+        list[tuple[int, int]]: byte ranges in input order ((start_offset, end_offset))
+    """
+    if batch_size < 1:
+        raise ValueError(f"batch_size must be >= 1, got {batch_size}")
+    ranges = []
+    with open(input_file, "rb") as fin:
+        start = 0
+        count = 0
+        while line := fin.readline():
+            if line.strip():
+                count += 1
+            if count == batch_size:
+                end = fin.tell()
+                ranges.append((start, end))
+                start = end
+                count = 0
+        if count:
+            ranges.append((start, fin.tell()))
+    return ranges
 
 def transform_chunk(
     input_file: str | os.PathLike[str],
+    start: int,
+    end: int,
+    index: int,
     tagger: Gen3FHIRAuthzTagger,
     output_dir: str | os.PathLike[str],
 ) -> None:
     """
+    
     Tag each resource entry with appropriate Gen3 authorization tag based on rules in a config.yaml file
+    in the byte range [start, end) of the input file
 
     Args:
-        input_file (str): .chunk file to transform
+        input_file (str): input .ndjson file
+        start (int): byte offset where this chunk starts
+        end (int): byte offset where this chunk ends
+        index (int): position of this chunk, used to name the .done file
         tagger (Gen3FHIRAuthzTagger): The tagger instance to use for tagging the resources
         output_dir (str): The directory path of where to write the intermediate files to
+   
     """
-    done_path = os.path.join(output_dir, f"{os.path.basename(input_file)}.done")
+    done_path = os.path.join(
+        output_dir, f"{pathlib.Path(input_file).stem}_{index:05d}.done"
+    )
     with open(input_file, "rb") as fin, open(f"{done_path}.tmp", "wb") as fout:
-        out = bytearray()
-        for r in fin:
+        fin.seek(start)
+        while fin.tell() < end:
+            r = fin.readline()
 
             if not r.strip():
                 continue
@@ -452,10 +495,8 @@ def transform_chunk(
             fout.write(json_dumps(tagger.tag_resource(record, authz_tags)))
             fout.write(b"\n")
 
-    #replace tmp file with .done file
+    # replace tmp file with .done file
     os.replace(f"{done_path}.tmp", done_path)
-    # delete chunk file once it has been transformed
-    os.remove(input_file)
 
 
 def merge_chunks(
@@ -535,17 +576,18 @@ def tag_fhir_resource_pipeline(
 
     # if not fully transformed or new/reset, resume
     if not _merge_needed(output_dir, record):
-        # paths for chunk files
-        chunk_files = glob.glob(
-            os.path.join(output_dir, f"{pathlib.Path(input_file).stem}_*.chunk")
-        )
+        ranges = compute_ranges(input_file, batch_size)
 
-        # parallelize transform
         logging.info("Transforming chunks...")
         start = time.time()
 
-        for chunk in chunk_files:
-            transform_chunk(chunk, tagger, output_dir)
+        stem = pathlib.Path(input_file).stem
+        for i, (s, e) in enumerate(ranges):
+            # skip chunks finished on a previous run
+            if os.path.exists(os.path.join(output_dir, f"{stem}_{i:05d}.done")):
+                continue
+            transform_chunk(input_file, s, e, i, tagger, output_dir)
+
 
         logging.info(
             f"Transform chunks total time: {(time.strftime('%H:%M:%S', time.gmtime(time.time() - start)))}"
