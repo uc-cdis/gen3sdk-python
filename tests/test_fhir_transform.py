@@ -178,9 +178,9 @@ def test_compute_ranges():
         recombined.extend(records)
 
     assert recombined == fin, "Ranges do not recombine to the input file"
-    
+
 def test_transform(tagger: Gen3FHIRAuthzTagger, transform_workdir):
-    """Asserts transform_chunk creates the same number of .done files as .chunk and no .chunk files remain once transformation is completed
+    """Asserts transform_chunk one .done file per range, doesn't modify the input file, and no .tmp files remain once transformation is completed
     
     Args:
         tagger (Gen3FHIRAuthzTagger): The tagger instance to use for tagging the resources
@@ -188,20 +188,24 @@ def test_transform(tagger: Gen3FHIRAuthzTagger, transform_workdir):
     """
     resource_type = get_resource_type(IN)
     tagger.relevant_authz_rules(resource_type)
+    before = IN.read_bytes()
 
-    chunks = list(transform_workdir.glob("*.chunk"))
-    for c in chunks:
-        transform_chunk(c, tagger, transform_workdir)
-    transformed = list(transform_workdir.glob("*.done"))
+    ranges = compute_ranges(IN, BATCH_SIZE)
+    for i, (s, e) in enumerate(ranges):
+        transform_chunk(IN, s, e, i, tagger, transform_workdir)
+    done = list(transform_workdir.glob("*.done"))
 
-    # same number of transformed files as chunk files
-    assert len(transformed) == len(
-        chunks
-    ), f"Expected same number of transformed .done files as number of .chunk files after transformation completed, found {len(transformed)}"
-    # all .chunk files deleted after transformation completed
-    assert (
-        len(list(transform_workdir.glob("*.chunk"))) == 0
-    ), f"Expected 0 chunks after transformation completed, found {len(list(transform_workdir.glob('*.chunk')))}"
+    assert len(done) == len(ranges), f"Expected {len(ranges)} .done files, found {len(done)}"
+    assert not list(transform_workdir.glob("*.tmp")), "Temp files left behind"
+    assert IN.read_bytes() == before, "Input file was modified"
+    fin = [json.loads(line) for line in before.splitlines() if line.strip()]
+    out = [
+        json.loads(line)
+        for p in done
+        for line in p.read_bytes().splitlines()
+        if line.strip()
+    ]
+    assert [r["id"] for r in out] == [r["id"] for r in fin], "Records missing or out of order"
 
 
 def test_merge(merge_workdir):
