@@ -69,11 +69,11 @@ def merge_workdir():
 
 def mock_state(
     directory: dir,
-    config: str | dict | None ="match",
-    chunks: int,
-    done: int =0,
-    output: str | None =None,
-    record: dict | None=None,
+    config: str | dict | None = "match",
+    chunks: int = 0,
+    done: int = 0,
+    output: str | None = None,
+    record: dict | None = None,
 ) -> tuple[str | os.PathLike[str], dict]:
     """
     Build an on-disk run directory and return (directory, record).
