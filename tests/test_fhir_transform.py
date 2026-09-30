@@ -5,6 +5,7 @@ from gen3.fhir import (
     _is_new,
     _is_done,
     _merge_needed,
+    compute_ranges,
     transform_chunk,
     merge_chunks,
     tag_fhir_resources_with_authz,
@@ -18,7 +19,6 @@ import shutil
 import yaml
 
 TMP_ROOT = pathlib.Path(__file__).parent / "test_data" / "fhir_outputs"
-CHUNK_SRC = pathlib.Path(__file__).parent / "test_data" / "fhir_inputs" / "transform"
 DONE_SRC = pathlib.Path(__file__).parent / "test_data" / "fhir_inputs" / "merge"
 SRC = pathlib.Path(
     f"{pathlib.Path(__file__).parent}/test_data/test_fhir_Patient.ndjson"
@@ -51,19 +51,10 @@ def tagger():
     return Gen3FHIRAuthzTagger(CONFIG_SRC)
 
 @pytest.fixture
-def chunk_workdir():
-    workdir = TMP_ROOT / "chunk"
-    shutil.rmtree(workdir, ignore_errors=True)
-    workdir.mkdir(parents=True)
-    return workdir
-
-@pytest.fixture
 def transform_workdir():
     workdir = TMP_ROOT / "transform"
     shutil.rmtree(workdir, ignore_errors=True)
     workdir.mkdir(parents=True)
-    for src in CHUNK_SRC.glob("*.chunk"):
-        shutil.copy2(src, workdir / src.name)
     return workdir
 
 @pytest.fixture
@@ -78,7 +69,6 @@ def merge_workdir():
 def mock_state(
     directory: dir,
     config: str | dict | None ="match",
-    chunks: int =0,
     done: int =0,
     output: str | None =None,
     record: dict | None=None,
@@ -92,8 +82,7 @@ def mock_state(
                 dict    -> record updated with these overrides
                 str     -> written verbatim (for malformed-JSON cases)
                 None    -> no .config.json written
-        chunks (int): number of chunk_NNN.chunk files
-        done (int): number of chunk_NNN.done files (indices align with chunks)
+        done (int): number of finished chunks; writes <stem>_NNNNN.done for indices 0..done-1
         output(str): None -> no output file, "empty" -> touched, "full" -> one row
         record (dict): base record; defaults to BASE_RECORD
 
@@ -121,10 +110,9 @@ def mock_state(
     elif isinstance(config, str) and config != "match":
         (directory / ".config.json").write_text(config, encoding="utf-8")
 
-    for i in range(chunks):
-        (directory / f"chunk_{i:03d}.chunk").write_text("{}\n", encoding="utf-8")
+    stem = pathlib.Path(record["input_file"]).stem
     for i in range(done):
-        (directory / f"chunk_{i:03d}.done").write_text("{}\n", encoding="utf-8")
+        (directory / f"{stem}_{i:05d}.done").write_text("{}\n", encoding="utf-8")
 
     if output == "empty":
         out.touch()
