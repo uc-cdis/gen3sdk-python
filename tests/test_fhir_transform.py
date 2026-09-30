@@ -416,9 +416,9 @@ class Test_status:
     @pytest.mark.parametrize(
         ["chunk_files", "done_files"], [(5, 2), (5, 5), (5, 7), (1, 10)]
     )
-    def test_need_to_resume_overlap(self, chunk_files, done_files):
+    def test_need_to_resume_overlap(self, chunks, done_files):
         directory, record = mock_state(
-            self.tmp_path, config="match", chunks=chunk_files, done=done_files
+            self.tmp_path, config="match", chunks=chunks, done=done_files
         )
         assert _is_new(directory, record) is False
         assert _is_done(directory, record) is False
@@ -426,7 +426,7 @@ class Test_status:
     
     def test_merge_needed_overlap(self):
         # merge needed
-        directory, record = mock_state(self.tmp_path, config="match", chunks=0, done=5)
+        directory, record = mock_state(self.tmp_path, config="match", chunks=5, done=5)
         assert _is_new(directory, record) is False
         assert _is_done(directory, record) is False
         assert _merge_needed(directory, record) is True
