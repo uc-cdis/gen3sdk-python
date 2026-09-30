@@ -201,7 +201,12 @@ class TestTaskTokenExchangeNonceRetry:
     def test_challenge_carrying_only_a_nonce_header_is_retried(
         self, ec_key, requests_mock
     ):
-        """A refusal with a nonce but no explanation is still read as a nonce demand."""
+        """
+        A nonce header on a refusal with an empty body is read as a nonce demand.
+
+        With no explanation in the body the header is the only signal left. Contrast
+        test_unrelated_error_is_not_retried_as_a_nonce_problem, where the body wins.
+        """
         requests_mock.post(
             TOKEN_ENDPOINT,
             [
@@ -225,8 +230,10 @@ class TestTaskTokenExchangeNonceRetry:
             headers={"DPoP-Nonce": "as-nonce-1"},
         )
 
-        _refusal(ec_key)
+        with pytest.raises(Gen3AuthError):
+            _exchange(ec_key)
 
+        # The first attempt plus two nonce retries.
         assert requests_mock.call_count == 3
 
     def test_challenge_without_a_nonce_header_raises(self, ec_key, requests_mock):
@@ -306,12 +313,18 @@ class TestTaskTokenExchangeFailures:
         """A refusal with no body at all is still an error, not a crash."""
         requests_mock.post(TOKEN_ENDPOINT, status_code=500, text="")
 
-        _refusal(ec_key)
+        with pytest.raises(Gen3AuthError):
+            _exchange(ec_key)
 
     def test_unrelated_error_is_not_retried_as_a_nonce_problem(
         self, ec_key, requests_mock
     ):
-        """A 400 carrying a nonce header but explaining something else is not retried."""
+        """
+        A 400 whose body explains something else is not retried, nonce header or not.
+
+        Servers may attach a nonce to every response, so a body that names another
+        error outranks the header.
+        """
         requests_mock.post(
             TOKEN_ENDPOINT,
             status_code=400,
@@ -347,6 +360,7 @@ class TestApiKeyExpirationCheck:
         [
             pytest.param(3600, 345600, id="request_outlives_api_key"),
             pytest.param(-60, 60, id="api_key_already_expired"),
+            pytest.param(-60, None, id="api_key_already_expired_no_lifetime"),
         ],
     )
     def test_impossible_lifetime_is_refused_before_any_request(
@@ -362,9 +376,9 @@ class TestApiKeyExpirationCheck:
 
         assert not requests_mock.called
 
-    def test_no_requested_lifetime_skips_the_check(self, ec_key, requests_mock):
-        """Without an explicit lifetime the server picks one, so nothing is checked."""
-        token, _ = _exchange(ec_key, api_key=_api_key_expiring_in(-60))
+    def test_no_requested_lifetime_is_left_to_the_server(self, ec_key, requests_mock):
+        """Without an explicit lifetime the server picks one, however short the key."""
+        token, _ = _exchange(ec_key, api_key=_api_key_expiring_in(60))
 
         assert token == TASK_TOKEN
         assert requests_mock.called
@@ -822,6 +836,7 @@ class TestProxyNonceRetry:
 
         assert response.status_code == 401
         assert response.json() == {"error": "use_dpop_nonce"}
+        # The first attempt plus two nonce retries.
         assert proxy.upstream.nonce_challenges_sent == 3
 
     def test_challenge_without_a_usable_nonce_becomes_a_502(self, proxy):

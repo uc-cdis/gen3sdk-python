@@ -232,7 +232,7 @@ process.
   and only to the commons that issued your credentials, so the task token is never sent
   to another host.
 
-Two limits worth knowing about:
+Limits worth knowing about:
 
 - **The task token is not renewed.** It is fetched once at startup. A pipeline that runs
   longer than the token's lifetime will start seeing 401s; use `--task-token-expiration`
@@ -241,6 +241,11 @@ Two limits worth knowing about:
   so `--task-token-expiration` is capped by whatever is left of the API key. For a long
   pipeline, download a fresh API key first. The SDK checks this before it makes the
   request and tells you the maximum you can ask for.
+- **Large uploads need temporary disk space.** The proxy holds each request body until the
+  upstream accepts it, so it can replay the body on a nonce retry. Bodies over 8 MiB are
+  written to a temporary file for the length of the transfer, so parallel uploads of large
+  files need that much free space at once. The file goes in Python's temporary directory
+  (usually `/tmp`); set `TMPDIR` to put it on a larger volume.
 
 ## Troubleshooting
 

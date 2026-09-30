@@ -908,7 +908,8 @@ def _check_expiration_fits_api_key(
 
     Gen3 will not issue a token that outlives the API key it was requested with, and
     its rejection does not say what lifetime would have worked. The API key is a JWT,
-    so the answer can be worked out locally before spending a round trip.
+    so the answer can be worked out locally before spending a round trip. An expired
+    API key is refused whether or not a lifetime was requested.
 
     Args:
         api_key (str): The Gen3 API key (a JWT) being exchanged.
@@ -918,9 +919,6 @@ def _check_expiration_fits_api_key(
         Gen3AuthError: If the API key has expired, or expires before the requested
             lifetime would.
     """
-    if not task_token_expiration:
-        return
-
     try:
         api_key_expiration = decode_token(api_key).get("exp")
     except Exception as exc:
@@ -942,7 +940,7 @@ def _check_expiration_fits_api_key(
             "Create a new one on the Gen3 profile page and try again."
         )
 
-    if task_token_expiration > remaining_seconds:
+    if task_token_expiration and task_token_expiration > remaining_seconds:
         raise Gen3AuthError(
             f"Requested a task token lifetime of {task_token_expiration} seconds "
             f"({humanfriendly.format_timespan(task_token_expiration)}), but your API "

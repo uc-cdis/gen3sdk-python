@@ -60,7 +60,8 @@ def generated_config(nextflow_process) -> dict[str, Any]:
 
     def capture(*args: Any, **kwargs: Any) -> _CompletedProcess:
         argv = args[0]
-        captured["path"] = Path(argv[argv.index("-c") + 1])
+        last_c_idx = len(argv) - 1 - argv[::-1].index("-c")
+        captured["path"] = Path(argv[last_c_idx + 1])
         captured["contents"] = captured["path"].read_text()
         return _CompletedProcess(0)
 
@@ -173,8 +174,8 @@ class TestGeneratedConfig:
         """Nextflow lets the last -c win, so ours has to come after the user's."""
         run_cli(["main.nf", "-c", "mine.config"])
 
+        assert _pipeline_args(nextflow_process) == ["main.nf", "-c", "mine.config"]
         argv = nextflow_process.call_args.args[0]
-        assert argv[:5] == ["nextflow", "run", "main.nf", "-c", "mine.config"]
         assert argv[-2] == "-c"
         assert argv[-1].endswith("gen3-dpop.config")
 
@@ -209,7 +210,7 @@ class TestGeneratedConfig:
     def test_the_upstreams_are_named_so_users_can_see_where_traffic_goes(
         self, run_cli, generated_config
     ):
-        """127.0.0.1 endpoints are alarming without saying what is behind them."""
+        """127.0.0.1 alone gives users no way to tell where their traffic goes."""
         run_cli(["main.nf"])
 
         assert f"{COMMONS}/ga4gh/tes" in generated_config["contents"]
