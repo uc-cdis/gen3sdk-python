@@ -157,7 +157,6 @@ except ImportError:
         name="fhir",
         epilog="Requires FHIR packages which aren't installed by default. Install the 'fhir' extras: poetry install --all-extras",
     )
-    
     @click.argument("args", nargs=-1, type=click.UNPROCESSED)
     def fhir(args):
         """Commands for FHIR data processing: transform & cleanup"""

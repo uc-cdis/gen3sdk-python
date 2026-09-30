@@ -46,10 +46,12 @@ def tmp_root():
     shutil.rmtree(TMP_ROOT, ignore_errors=True)
     TMP_ROOT.mkdir(parents=True)
 
+
 @pytest.fixture(scope="session")
 def tagger():
     """A tagger built from the synthetic Patient rules config."""
     return Gen3FHIRAuthzTagger(CONFIG_SRC)
+
 
 @pytest.fixture
 def transform_workdir():
@@ -57,6 +59,7 @@ def transform_workdir():
     shutil.rmtree(workdir, ignore_errors=True)
     workdir.mkdir(parents=True)
     return workdir
+
 
 @pytest.fixture
 def merge_workdir():
@@ -66,6 +69,7 @@ def merge_workdir():
     for src in DONE_SRC.glob("*.done"):
         shutil.copy2(src, workdir / src.name)
     return workdir
+
 
 def mock_state(
     directory: dir,
@@ -171,12 +175,15 @@ def test_fhir_output():
     ], "Content of the output file does not match the content of the input file (other than the security tags)"
     assert src == out, "Output file does not match source file"
 
+
 def test_compute_ranges():
     """Assert ranges cover the hwole input, hold batch_size records each, and recombine the input"""
     ranges = compute_ranges(IN, BATCH_SIZE)
     data = IN.read_bytes()
     fin = [json.loads(line) for line in data.splitlines() if line.strip()]
-    assert len(ranges) == math.ceil(len(fin) / BATCH_SIZE), "Unexpected number of ranges"
+    assert len(ranges) == math.ceil(
+        len(fin) / BATCH_SIZE
+    ), "Unexpected number of ranges"
     assert ranges[0][0] == 0, "First range does not start at the beginning of the file"
     assert ranges[-1][1] == len(data), "Last range does not end at the end of the file"
     for (_, prev_end), (next_start, _) in zip(ranges, ranges[1:]):
@@ -186,17 +193,20 @@ def test_compute_ranges():
     for i, (s, e) in enumerate(ranges):
         records = [json.loads(line) for line in data[s:e].splitlines() if line.strip()]
         if i < len(ranges) - 1:
-            assert len(records) == BATCH_SIZE, f"Range {i} does not hold batch_size records"
+            assert (
+                len(records) == BATCH_SIZE
+            ), f"Range {i} does not hold batch_size records"
         recombined.extend(records)
 
     assert recombined == fin, "Ranges do not recombine to the input file"
 
+
 def test_transform(tagger: Gen3FHIRAuthzTagger, transform_workdir):
     """Asserts transform_chunk one .done file per range, doesn't modify the input file, and no .tmp files remain once transformation is completed
-    
+
     Args:
         tagger (Gen3FHIRAuthzTagger): The tagger instance to use for tagging the resources
-    
+
     """
     resource_type = get_resource_type(IN)
     tagger.relevant_authz_rules(resource_type)
@@ -207,7 +217,9 @@ def test_transform(tagger: Gen3FHIRAuthzTagger, transform_workdir):
         transform_chunk(IN, s, e, i, tagger, transform_workdir)
     done = sorted(list(transform_workdir.glob("*.done")))
 
-    assert len(done) == len(ranges), f"Expected {len(ranges)} .done files, found {len(done)}"
+    assert len(done) == len(
+        ranges
+    ), f"Expected {len(ranges)} .done files, found {len(done)}"
     assert not list(transform_workdir.glob("*.tmp")), "Temp files left behind"
     assert IN.read_bytes() == before, "Input file was modified"
     fin = [json.loads(line) for line in before.splitlines() if line.strip()]
@@ -217,7 +229,9 @@ def test_transform(tagger: Gen3FHIRAuthzTagger, transform_workdir):
         for line in p.read_bytes().splitlines()
         if line.strip()
     ]
-    assert [r["id"] for r in out] == [r["id"] for r in fin], "Records missing or out of order"
+    assert [r["id"] for r in out] == [
+        r["id"] for r in fin
+    ], "Records missing or out of order"
 
 
 def test_merge(merge_workdir):
@@ -423,7 +437,6 @@ class Test_status:
         assert _is_new(directory, record) is False
         assert _is_done(directory, record) is False
 
-    
     def test_merge_needed_overlap(self):
         # merge needed
         directory, record = mock_state(self.tmp_path, config="match", chunks=5, done=5)
@@ -441,7 +454,7 @@ class Test_status:
     @pytest.mark.parametrize(
         "state", ["match", None, {"config_hash": "x"}, {"batch_size": 1}]
     )
-    def test_new_and_done_are_mutually_exclusive(self,state):
+    def test_new_and_done_are_mutually_exclusive(self, state):
         # new and done are mutually exclusive
         directory, record = mock_state(
             TMP_ROOT / str(id(state)), config=state, output="full"
@@ -452,7 +465,7 @@ class Test_status:
 def test_cli():
     """Run the CLI and return the CompletedProcess."""
     out = TMP_ROOT / "cli_test" / "cli_out.ndjson"
-    work = TMP_ROOT / "cli_test" 
+    work = TMP_ROOT / "cli_test"
     args = [
         IN,
         out,
@@ -492,13 +505,13 @@ def test_cli():
 @pytest.mark.parametrize("bad", [0, -1, None, "bad"])
 def test_invalid_batch_size_is_rejected(bad: int | str | None):
     """Assert invalid batch_size is rejected and raises an error
-    
+
     Args:
         bad (int|str|None): bad inputs for batch_size
-        
+
     """
     out = TMP_ROOT / f"invalid_batch_size_{bad}" / "cli_out.ndjson"
-    work = TMP_ROOT / f"invalid_batch_size_{bad}" 
+    work = TMP_ROOT / f"invalid_batch_size_{bad}"
     args = [
         IN,
         out,
@@ -550,7 +563,7 @@ def test_missing_input_file_fails_cleanly():
 def test_output_directory_does_not_exist():
     """Test response if output directory doesn't exists. Directory (and parents) should be created if missing"""
     out = TMP_ROOT / "missing_dir" / "out.ndjson"
-    work = TMP_ROOT / "missing_dir" 
+    work = TMP_ROOT / "missing_dir"
     args = [
         IN,
         out,
@@ -574,7 +587,7 @@ def test_output_directory_does_not_exist():
 def test_global_config_overrides_other_rules():
     """Assert global authorization overrides any other rules"""
     out = TMP_ROOT / "global_config" / "out.ndjson"
-    work = TMP_ROOT / "global_config" 
+    work = TMP_ROOT / "global_config"
     args = [
         IN,
         out,

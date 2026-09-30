@@ -154,18 +154,19 @@ class Gen3FHIRAuthzTagger:
         return resource
 
 
-def resolve_work_dir(work_dir: str | os.PathLike[str] | None = None, clean: bool = False) -> pathlib.Path:
-
+def resolve_work_dir(
+    work_dir: str | os.PathLike[str] | None = None, clean: bool = False
+) -> pathlib.Path:
     """
     Finds or creates the working directory for intermediate files and modifies the permissions to only make it readable by owner
-    
+
     Args:
         work_dir (str): static work directory where all run directories are stored
         clean (bool):  True when used for cleaning up directories, False when used to initiate run and create the working directory
-        
+
     Returns:
         root (dir): Returns the path to the working directory
-    
+
     """
     root = pathlib.Path(
         work_dir or os.environ.get("GEN3_FHIR_WORK_DIR") or DEFAULT_WORK_DIR
@@ -184,16 +185,16 @@ def resolve_work_dir(work_dir: str | os.PathLike[str] | None = None, clean: bool
 
 def json_dumps(obj: dict, default: Callable[[Any], Any] | None = None) -> bytes:
     """Compact UTF-8 JSON bytes.
-    
-    Args: 
+
+    Args:
         obj (dict): object to serialize
         default (Callable | None): Called for objects the encoder can't serialize; should
             return a serializable substitute or raise TypeError. If None
             (the default), unsupported types raise TypeError.
-            
+
     Returns:
         bytes: UTF-8 encoded JSON with no whitespace between tokens and non-ASCII characters left unescaped.
-            
+
     """
     return json.dumps(
         obj,
@@ -220,7 +221,7 @@ def get_sha256hash(input_file: str | os.PathLike[str]) -> str:
     return digest
 
 
-def get_resource_type(input_file: str | os.PathLike[str], sample: int =5) -> str:
+def get_resource_type(input_file: str | os.PathLike[str], sample: int = 5) -> str:
     """
     Check resource type within the input .ndjson file by reading the first few and last few lines
 
@@ -296,7 +297,6 @@ def _is_new(directory: str | os.PathLike[str], record: dict) -> bool:
     ):
         return True
 
-
     return False
 
 
@@ -362,7 +362,9 @@ def _merge_needed(directory: str | os.PathLike[str], record: dict) -> bool:
 
 
 def cleanup_fhir_transform_artifacts(
-    work_dir: str | os.PathLike[str] = DEFAULT_WORK_DIR, dry_run: bool = False, force: bool = False
+    work_dir: str | os.PathLike[str] = DEFAULT_WORK_DIR,
+    dry_run: bool = False,
+    force: bool = False,
 ) -> int:
     """
     Remove run dirs whose owning process is gone.
@@ -400,6 +402,7 @@ def cleanup_fhir_transform_artifacts(
     logging.info(f"{count} stale run dir(s)")
     return count
 
+
 def compute_ranges(
     input_file: str | os.PathLike[str],
     batch_size: int,
@@ -433,6 +436,7 @@ def compute_ranges(
             ranges.append((start, fin.tell()))
     return ranges
 
+
 def transform_chunk(
     input_file: str | os.PathLike[str],
     start: int,
@@ -442,7 +446,7 @@ def transform_chunk(
     output_dir: str | os.PathLike[str],
 ) -> None:
     """
-    
+
     Tag each resource entry with appropriate Gen3 authorization tag based on rules in a config.yaml file
     in the byte range [start, end) of the input file
 
@@ -453,7 +457,7 @@ def transform_chunk(
         index (int): position of this chunk, used to name the .done file
         tagger (Gen3FHIRAuthzTagger): The tagger instance to use for tagging the resources
         output_dir (str): The directory path of where to write the intermediate files to
-   
+
     """
     done_path = os.path.join(
         output_dir, f"{pathlib.Path(input_file).stem}_{index:05d}.done"
@@ -544,7 +548,6 @@ def tag_fhir_resource_pipeline(
         )
         # split into chunks
         logging.info(f"Chunking {input_file} into {batch_size}-sized batches...")
-       
 
     # initialize tagger
     tagger = Gen3FHIRAuthzTagger(config_path=config)
@@ -565,7 +568,6 @@ def tag_fhir_resource_pipeline(
             if os.path.exists(os.path.join(output_dir, f"{stem}_{i:05d}.done")):
                 continue
             transform_chunk(input_file, s, e, i, tagger, output_dir)
-
 
         logging.info(
             f"Transform chunks total time: {(time.strftime('%H:%M:%S', time.gmtime(time.time() - start)))}"
