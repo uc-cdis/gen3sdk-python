@@ -28,6 +28,7 @@ from joserfc import jwk
 from gen3.auth import Gen3AuthError
 from gen3.cli.dpop import dpop
 from gen3.dpop import (
+    _MAX_NONCE_RETRIES,
     AsyncDPoPProxy,
     MissingDPoPNonceError,
     ProxyStartupError,
@@ -37,6 +38,7 @@ from gen3.dpop import (
     logging as dpop_logging,
     resolve_service_endpoints,
     start_proxy_server,
+    _server_error_message,
 )
 from tests.dpop.conftest import COMMONS, TASK_TOKEN
 
@@ -233,8 +235,7 @@ class TestTaskTokenExchangeNonceRetry:
         with pytest.raises(Gen3AuthError):
             _exchange(ec_key)
 
-        # The first attempt plus two nonce retries.
-        assert requests_mock.call_count == 3
+        assert requests_mock.call_count == _MAX_NONCE_RETRIES + 1
 
     def test_challenge_without_a_nonce_header_raises(self, ec_key, requests_mock):
         """A nonce demand with no DPoP-Nonce header is a server protocol error."""
@@ -272,33 +273,25 @@ class TestTaskTokenExchangeFailures:
         """The error names the status and the endpoint that rejected the request."""
         requests_mock.post(TOKEN_ENDPOINT, status_code=403, json={"error": "denied"})
 
-        error = str(_refusal(ec_key))
+        with pytest.raises(Gen3AuthError) as raised:
+            _exchange(ec_key)
+
+        error = str(raised.value)
 
         assert "403" in error
         assert TOKEN_ENDPOINT in error
 
-    # `body` is passed straight to requests_mock as kwargs (json= or text=).
+    # `body` is passed straight to requests_mock as kwargs (json= or text=). Every
+    # response shape is covered in TestServerErrorMessage; these only confirm the
+    # explanation reaches the raised error.
 
     @pytest.mark.parametrize(
         "body,expected",
         [
-            # Whichever field fence puts its explanation in, it is quoted back.
-            pytest.param({"json": {"message": "no can do"}}, "no can do", id="message"),
-            pytest.param(
-                {"json": {"error_description": "no can do"}},
-                "no can do",
-                id="error_description",
-            ),
-            pytest.param({"json": {"detail": "no can do"}}, "no can do", id="detail"),
-            pytest.param({"json": {"error": "no can do"}}, "no can do", id="error"),
-            # An HTML or plain-text body is included rather than dropped.
+            pytest.param({"json": {"message": "no can do"}}, "no can do", id="json"),
             pytest.param(
                 {"text": "<html>bad gateway</html>"}, "bad gateway", id="html"
             ),
-            # A JSON error with no field this SDK knows about is reported as-is.
-            pytest.param({"json": {"weird": ["shape"]}}, '"weird"', id="unknown_shape"),
-            # JSON that is not an object at all still has to survive the trip.
-            pytest.param({"json": ["no can do"]}, "no can do", id="json_array"),
         ],
     )
     def test_server_explanation_is_surfaced(
@@ -307,7 +300,10 @@ class TestTaskTokenExchangeFailures:
         """Whatever the server said reaches the caller."""
         requests_mock.post(TOKEN_ENDPOINT, status_code=400, **body)
 
-        assert expected in str(_refusal(ec_key))
+        with pytest.raises(Gen3AuthError) as raised:
+            _exchange(ec_key)
+
+        assert expected in str(raised.value)
 
     def test_empty_error_body_still_raises(self, ec_key, requests_mock):
         """A refusal with no body at all is still an error, not a crash."""
@@ -332,10 +328,55 @@ class TestTaskTokenExchangeFailures:
             headers={"DPoP-Nonce": "nonce-attached-to-everything"},
         )
 
-        error = str(_refusal(ec_key))
+        with pytest.raises(Gen3AuthError) as raised:
+            _exchange(ec_key)
+
+        error = str(raised.value)
 
         assert requests_mock.call_count == 1
         assert "no can do" in error
+
+
+class TestServerErrorMessage:
+    """The explanation pulled out of an error response, whatever its shape."""
+
+    # `body` is passed straight to requests_mock as kwargs (json= or text=).
+
+    @pytest.mark.parametrize(
+        "body,expected",
+        [
+            # Whichever field fence puts its explanation in, it is quoted back.
+            pytest.param({"json": {"message": "no can do"}}, "no can do", id="message"),
+            pytest.param(
+                {"json": {"error_description": "no can do"}},
+                "no can do",
+                id="error_description",
+            ),
+            pytest.param({"json": {"detail": "no can do"}}, "no can do", id="detail"),
+            pytest.param({"json": {"error": "no can do"}}, "no can do", id="error"),
+            # An HTML or plain-text body is included rather than dropped.
+            pytest.param(
+                {"text": "<html>bad gateway</html>"},
+                "<html>bad gateway</html>",
+                id="html",
+            ),
+            # A JSON error with no field this SDK knows about is reported as-is.
+            pytest.param(
+                {"json": {"weird": ["shape"]}},
+                '{"weird": ["shape"]}',
+                id="unknown_shape",
+            ),
+            # JSON that is not an object at all still has to survive the trip.
+            pytest.param({"json": ["no can do"]}, '["no can do"]', id="json_array"),
+            # An empty body falls through to the fallback literal.
+            pytest.param({"text": ""}, "<empty response body>", id="empty_body"),
+        ],
+    )
+    def test_message_is_extracted(self, requests_mock, body, expected):
+        """Each response shape yields the explanation the server gave, or a fallback."""
+        requests_mock.post(TOKEN_ENDPOINT, status_code=400, **body)
+
+        assert _server_error_message(requests.post(TOKEN_ENDPOINT)) == expected
 
 
 class TestApiKeyExpirationCheck:
@@ -836,8 +877,7 @@ class TestProxyNonceRetry:
 
         assert response.status_code == 401
         assert response.json() == {"error": "use_dpop_nonce"}
-        # The first attempt plus two nonce retries.
-        assert proxy.upstream.nonce_challenges_sent == 3
+        assert proxy.upstream.nonce_challenges_sent == _MAX_NONCE_RETRIES + 1
 
     def test_challenge_without_a_usable_nonce_becomes_a_502(self, proxy):
         """A server demanding a nonce but sending an empty one is a protocol error."""
@@ -1328,10 +1368,3 @@ def _exchange(ec_key: jwk.Key, **overrides: Any) -> tuple[str, str | None]:
         "task_token_type": "WORKFLOW",
     }
     return exchange_api_key_for_task_token(**{**kwargs, **overrides})
-
-
-def _refusal(ec_key: jwk.Key, **overrides: Any) -> Gen3AuthError:
-    """Attempt an exchange expected to fail and return the error it raised."""
-    with pytest.raises(Gen3AuthError) as raised:
-        _exchange(ec_key, **overrides)
-    return raised.value
