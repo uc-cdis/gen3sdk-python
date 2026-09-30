@@ -414,7 +414,7 @@ class Test_status:
         assert _merge_needed(directory, record) is False
 
     @pytest.mark.parametrize(
-        ["chunk_files", "done_files"], [(5, 2), (5, 5), (5, 7), (1, 10)]
+        ["chunks", "done_files"], [(5, 2), (5, 5), (5, 7), (1, 10)]
     )
     def test_need_to_resume_overlap(self, chunks, done_files):
         directory, record = mock_state(
