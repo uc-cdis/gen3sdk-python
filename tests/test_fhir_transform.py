@@ -31,6 +31,7 @@ GLOBAL_CONFIG_SRC = pathlib.Path(
 )
 
 BATCH_SIZE = 1
+N_CHUNKS = len(compute_ranges(IN, BATCH_SIZE))
 BASE_RECORD = {
     "timestamp": "2026-08-12T21:00:20.677168+00:00",
     "input_file": f"{IN}",
@@ -69,6 +70,7 @@ def merge_workdir():
 def mock_state(
     directory: dir,
     config: str | dict | None ="match",
+    chunks: int,
     done: int =0,
     output: str | None =None,
     record: dict | None=None,
@@ -82,6 +84,8 @@ def mock_state(
                 dict    -> record updated with these overrides
                 str     -> written verbatim (for malformed-JSON cases)
                 None    -> no .config.json written
+        chunks (int): number of chunks in the input; writes an input file with
+                chunks * batch_size records
         done (int): number of finished chunks; writes <stem>_NNNNN.done for indices 0..done-1
         output(str): None -> no output file, "empty" -> touched, "full" -> one row
         record (dict): base record; defaults to BASE_RECORD
@@ -91,11 +95,19 @@ def mock_state(
     """
 
     record = dict(record or BASE_RECORD)
-    out = pathlib.Path(directory) / "status.ndjson"
-    record["output_file"] = str(out)
-
     shutil.rmtree(directory, ignore_errors=True)
     directory.mkdir(parents=True)
+
+    # input file sized so compute_ranges returns exactly `chunks` ranges
+    input_file = directory / "input.ndjson"
+    input_file.write_text(
+        "".join(f'{{"id":{i}}}\n' for i in range(chunks * record["batch_size"])),
+        encoding="utf-8",
+    )
+    record["input_file"] = str(input_file)
+
+    out = pathlib.Path(directory) / "status.ndjson"
+    record["output_file"] = str(out)
 
     if config == "match":
         params = dict(record)
@@ -361,27 +373,27 @@ class Test_merge_needed:
 
     tmp_path = TMP_ROOT / "outputs" / "test_merge"
 
-    def test_merge_needed_when_no_done_files_remaining(self):
-        # no merge on clean directory
-        directory, record = mock_state(self.tmp_path, done=0)
+    def test_merge_needed_when_no_done_files(self):
+        # no merge when nothing has been transformed
+        directory, record = mock_state(self.tmp_path, chunks=5, done=0)
         assert _merge_needed(directory, record) is False
 
-    @pytest.mark.parametrize("done_files", [5, 20, 57, 100])
-    def test_merge_needed_when_done_files_remaining(self, done_files):
-        # merge when done files left
-        directory, record = mock_state(self.tmp_path, done=done_files)
+    @pytest.mark.parametrize("chunks", [1, 5, 20, 100])
+    def test_merge_needed_when_all_chunks_done(self, chunks):
+        # merge when every chunk has a .done file
+        directory, record = mock_state(self.tmp_path, chunks=chunks, done=chunks)
         assert _merge_needed(directory, record) is True
 
-    @pytest.mark.parametrize(
-        ["chunk_files", "done_files"], [(5, 2), (5, 5), (5, 7), (1, 10)]
-    )
-    def test_merge_needed_when_chunk_and_done_files_remaining(
-        self, chunk_files, done_files
-    ):
-        # no merge when both chunk and done files left
-        directory, record = mock_state(
-            self.tmp_path, chunks=chunk_files, done=done_files
-        )
+    @pytest.mark.parametrize(["chunks", "done"], [(5, 1), (5, 4), (20, 19), (100, 57)])
+    def test_merge_not_needed_when_some_chunks_missing(self, chunks, done):
+        # no merge when some chunks have not been transformed yet
+        directory, record = mock_state(self.tmp_path, chunks=chunks, done=done)
+        assert _merge_needed(directory, record) is False
+
+    def test_merge_not_needed_when_last_chunk_only_has_tmp(self):
+        # a partially written .done.tmp does not count as finished
+        directory, record = mock_state(self.tmp_path, chunks=5, done=4)
+        (directory / "input_00004.done.tmp").write_text("{", encoding="utf-8")
         assert _merge_needed(directory, record) is False
 
     def test_merge_needed_when_directory_missing(self):
