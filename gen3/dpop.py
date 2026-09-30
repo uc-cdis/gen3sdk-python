@@ -176,8 +176,9 @@ def resolve_service_endpoints(
         if httpx2.URL(endpoint).host != commons_host:
             raise Gen3AuthError(
                 f"{option} is {endpoint}, which is not on {commons_host} - the "
-                "commons that issued your credentials. The task token is only "
-                "valid there, so it will not be sent anywhere else."
+                "commons that issued your credentials. For security, the task "
+                f"token is only sent to the host that issued it. Change {option} "
+                f"to a URL on {commons_host}."
             )
 
     return tes_endpoint, s3_endpoint
