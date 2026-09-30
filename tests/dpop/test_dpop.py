@@ -787,7 +787,7 @@ class TestProxyBodies:
 
         with proxy.get("/s3/bucket/big", stream=True, timeout=120) as response:
             content_length = response.headers["content-length"]
-            received = sum(len(chunk) for chunk in response.iter_content(65536))
+            received = sum(len(chunk) for chunk in response.iter_content(64 * 1024))
 
         assert received == 8 * 1024 * 1024
         assert content_length == str(received)
