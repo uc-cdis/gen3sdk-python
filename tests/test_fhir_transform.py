@@ -159,32 +159,26 @@ def test_fhir_output():
     ], "Content of the output file does not match the content of the input file (other than the security tags)"
     assert src == out, "Output file does not match source file"
 
-"""
-def test_chunking(chunk_workdir):
-    "Tests that number of chunks is correct and the recombined chunks match the input file"
-    split_file(IN, BATCH_SIZE, chunk_workdir)
-    chunks = list(chunk_workdir.glob("*.chunk"))
-    fin = [
-        json.loads(line)
-        for line in pathlib.Path(IN).read_bytes().splitlines()
-        if line.strip()
-    ]
-    expected = math.ceil(len(fin) / BATCH_SIZE)
+def test_compute_ranges():
+    """Assert ranges cover the hwole input, hold batch_size records each, and recombine the input"""
+    ranges = compute_ranges(IN, BATCH_SIZE)
+    data = IN.read_bytes()
+    fin = [json.loads(line) for line in data.splitlines() if line.strip()]
+    assert len(ranges) == math.ceil(len(fin) / BATCH_SIZE), "Unexpected number of ranges"
+    assert ranges[0][0] == 0, "First range does not start at the beginning of the file"
+    assert ranges[-1][1] == len(data), "Last range does not end at the end of the file"
+    for (_, prev_end), (next_start, _) in zip(ranges, ranges[1:]):
+        assert prev_end == next_start, "Gap or overlap between ranges"
 
-    # number of chunk files matches expected
-    assert len(chunks) == expected, f"Expected {expected} chunks, found {len(chunks)}"
-    recombined = [
-        json.loads(line)
-        for p in sorted(chunks)
-        for line in p.read_bytes().splitlines()
-        if line.strip()
-    ]
-    # chunks recombine to match input file
-    assert (
-        recombined == fin
-    ), "Recombined chunks do not match the content of the input file"
-"""
+    recombined = []
+    for i, (s, e) in enumerate(ranges):
+        records = [json.loads(line) for line in data[s:e].splitlines() if line.strip()]
+        if i < len(ranges) - 1:
+            assert len(records) == BATCH_SIZE, f"Range {i} does not hold batch_size records"
+        recombined.extend(records)
 
+    assert recombined == fin, "Ranges do not recombine to the input file"
+    
 def test_transform(tagger: Gen3FHIRAuthzTagger, transform_workdir):
     """Asserts transform_chunk creates the same number of .done files as .chunk and no .chunk files remain once transformation is completed
     
