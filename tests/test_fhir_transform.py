@@ -205,7 +205,7 @@ def test_transform(tagger: Gen3FHIRAuthzTagger, transform_workdir):
     ranges = compute_ranges(IN, BATCH_SIZE)
     for i, (s, e) in enumerate(ranges):
         transform_chunk(IN, s, e, i, tagger, transform_workdir)
-    done = list(transform_workdir.glob("*.done"))
+    done = sorted(list(transform_workdir.glob("*.done")))
 
     assert len(done) == len(ranges), f"Expected {len(ranges)} .done files, found {len(done)}"
     assert not list(transform_workdir.glob("*.tmp")), "Temp files left behind"

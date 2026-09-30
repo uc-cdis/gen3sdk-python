@@ -544,7 +544,7 @@ def tag_fhir_resource_pipeline(
         )
         # split into chunks
         logging.info(f"Chunking {input_file} into {batch_size}-sized batches...")
-    
+       
 
     # initialize tagger
     tagger = Gen3FHIRAuthzTagger(config_path=config)
