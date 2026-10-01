@@ -1,0 +1,667 @@
+import yaml
+from itertools import islice
+import json
+from fhirpathpy import compile
+from fhirpathpy.models import models
+import os, glob
+from typing import Any
+import time
+from datetime import datetime, timezone
+import shutil
+import pathlib
+import hashlib
+from cdislogging import get_logger
+from gen3.utils import make_folders_for_filename
+from collections.abc import Callable
+
+logging = get_logger(__name__)
+DEFAULT_WORK_DIR = "~/.cache/gen3/fhir_transform"
+GEN3_PATH = "http://gen3.org/authz"
+
+
+class Gen3FHIRAuthzTagger:
+    """
+    The tagger used to tag FHIR data with appropriate Gen3 compatible authorizations given the rules in a config.yaml file.
+
+    Example:
+        tagger = Gen3FHIRAuthzTagger(config_path=config) #create instance of tagger
+        tagger.relevant_authz_rules(get_resource_type(input_file)) #keep only relevant rules for the resource type
+        authz_tags = tagger.determine_authz(record) #generate tags
+        out = json.dumps(tagger.tag_resource(record, authz_tags)) #tag resources
+
+    """
+
+    def __init__(
+        self,
+        config_path: str | os.PathLike[str],
+        custom_hook: Callable[[dict], dict] | None = None,
+        fhir_version: str = "r4",
+    ):
+        """
+        Initialize instance of the tagger.
+
+        Args:
+            config_path (str): the name/path of the config.yaml file
+            custom_hook (Callable[[dict], str] | None): if provided, called
+                instead of the configuration to determine authz. Receives the
+                FHIR resource as a dict and returns the authz path. A falsy
+                return falls through to the configured rules.
+            fhir_version (str): FHIR model version
+        """
+
+        with open(config_path, "r") as f:
+            self.config = yaml.safe_load(f)
+        self.custom_hook = custom_hook
+        self.model = models[fhir_version]
+
+    def relevant_authz_rules(self, resource_type: str) -> None:
+        """
+        Filters only the revlevant from the config.yaml file given the resource type.
+
+        Args:
+            resource_type (str): the resource type in the .ndjson file
+
+        """
+        self.rules = []
+        for rule in self.config.get("rules", []):
+            if rule["resource_type"] != resource_type:
+                continue
+            try:
+                match = compile(rule["condition"], model=self.model)
+                match({"resourceType": resource_type})
+            except Exception as e:
+                raise ValueError(
+                    f"invalid FHIRPath for authz {rule.get('authz')!r}: "
+                    f"{rule['condition']!r}: {e}"
+                ) from e
+            self.rules.append({**rule, "match": match})
+
+        # global_authz overrides every rule, so rules are optional when it is set
+        if not self.rules and "global_authz" not in self.config:
+            raise ValueError(
+                f"no authz rules configured for resource type {resource_type!r}"
+            )
+
+    def determine_authz(self, resource: dict) -> str:
+        """
+        Determines the correct authorization given the resource type and condition
+
+        Args:
+            resource (dict): the resource dictionary (a line of the .ndjson file)
+
+        Returns:
+            authz (str): The appropriate rule/authorization for the resource
+
+        """
+
+        # use custom hook if provided
+        if self.custom_hook:
+            hook_result = self.custom_hook(resource)
+            if hook_result:
+                return hook_result
+
+        # check global catch-all override
+        if "global_authz" in self.config:
+            return self.config["global_authz"]
+
+        matches = [
+            rule
+            for rule in self.rules
+            if (result := rule["match"](resource)) and result[0] is True
+        ]
+
+        if len(matches) > 1:
+            raise ValueError(
+                f"Resource {resource.get('id')!r} matched {len(matches)} authorization conditions; expected at most 1. Conflicting: {[m['condition'] for m in matches]}"
+            )
+
+        elif len(matches) == 1:
+            return matches[0]["authz"]
+
+        raise ValueError(
+            f"No authorization tag mapping found for resource ID: {resource.get('id')}"
+        )
+
+    def tag_resource(self, resource: dict, authz: str) -> dict:
+        """
+        Injects the authz path directly into the standard FHIR meta block
+
+        Must match Gen3 FHIR Proxy service requirements here
+
+        Args:
+            resource (dict): the resource dictionary (a line of the .ndjson file)
+            authz (str): the authorization string to tag the resource with
+
+        Returns:
+            resource (dict): tagged resource with the appropriate authz string
+        """
+
+        if "meta" not in resource:
+            resource["meta"] = {}
+        if "security" not in resource["meta"]:
+            resource["meta"]["security"] = []
+
+        gen3_security_tag = {
+            "system": GEN3_PATH,
+            "code": authz,
+            "display": f"Gen3 Policy Path: {authz}",
+        }
+
+        if gen3_security_tag not in resource["meta"]["security"]:
+            resource["meta"]["security"].append(gen3_security_tag)
+
+        return resource
+
+
+def resolve_work_dir(
+    work_dir: str | os.PathLike[str] | None = None, clean: bool = False
+) -> pathlib.Path:
+    """
+    Finds or creates the working directory for intermediate files. A directory created here is made readable by owner only;
+    an existing directory keeps its permissions, since it may be one the user owns for other purposes
+
+    Args:
+        work_dir (str | None): static work directory where all run directories are stored. Falls back to the
+            GEN3_FHIR_WORK_DIR environment variable, then DEFAULT_WORK_DIR
+        clean (bool):  True when used for cleaning up directories, False when used to initiate run and create the working directory
+
+    Returns:
+        root (dir): Returns the path to the working directory
+
+    """
+    root = pathlib.Path(
+        work_dir or os.environ.get("GEN3_FHIR_WORK_DIR") or DEFAULT_WORK_DIR
+    ).expanduser()
+
+    if not clean and not root.exists():
+        root.mkdir(parents=True)
+        # 0o700 makes it only readable by owner and not everyone else (which is important
+        # for potentially shared machines and potential FHIR PHI)
+        root.chmod(0o700)
+
+    return root
+
+
+def json_dumps(obj: dict, default: Callable[[Any], Any] | None = None) -> bytes:
+    """Compact UTF-8 JSON bytes.
+
+    Args:
+        obj (dict): object to serialize
+        default (Callable | None): Called for objects the encoder can't serialize; should
+            return a serializable substitute or raise TypeError. If None
+            (the default), unsupported types raise TypeError.
+
+    Returns:
+        bytes: UTF-8 encoded JSON with no whitespace between tokens and non-ASCII characters left unescaped.
+
+    """
+    return json.dumps(
+        obj,
+        ensure_ascii=False,
+        allow_nan=False,
+        separators=(",", ":"),
+        default=default,
+    ).encode("utf-8")
+
+
+def get_sha256hash(input_file: str | os.PathLike[str]) -> str:
+    """
+    Returns the SHA-256 hash of the input .ndjson file to create a unique folder per file
+
+    Args:
+        input_file (str): Input ndjson file to transform
+
+    Returns:
+        digest (str): SHA-256 hash of the input .ndjson file
+
+    """
+    with open(input_file, "rb") as f:
+        digest = hashlib.file_digest(f, "sha256").hexdigest()
+    return digest
+
+
+def get_resource_type(input_file: str | os.PathLike[str], sample: int = 5) -> str:
+    """
+    Check resource type within the input .ndjson file by reading the first few and last few lines
+
+    Args:
+        input_file(str): Input ndjson file to be transformed
+        sample(int): number of lines to read
+
+    Returns:
+        resource_type(str): Resource type contained within the ndjson (one per file)
+
+    """
+
+    path = pathlib.Path(input_file)
+    size = path.stat().st_size
+
+    with path.open("rb") as f:
+        head = list(islice((ln for ln in f if ln.strip()), sample))
+        if not head:
+            raise ValueError(f"{path}: file has no records")
+
+        # calculate approximate offset from end of file, guards from concatnated files with different resource types
+        f.seek(max(0, size - max(len(ln) for ln in head) * sample * 2))
+        # drop [0]: a partial line mid-file, or a line the head already has
+        tail = [ln for ln in f.read().split(b"\n")[1:] if ln.strip()][-sample:]
+
+        if len(tail) < sample:
+            f.seek(0)
+            tail = [ln for ln in f.read().split(b"\n") if ln.strip()][-sample:]
+
+    types = set()
+    for raw in head + tail:
+        try:
+            rec = json.loads(raw.decode("utf-8-sig"))
+        except json.JSONDecodeError as e:
+            raise ValueError(f"{path}: malformed JSON in sampled line: {e}") from e
+        if not isinstance(rec, dict) or "resourceType" not in rec:
+            raise ValueError(f"{path}: sampled line has no 'resourceType' field")
+        types.add(rec["resourceType"])
+
+    if len(types) == 1:
+        return types.pop()
+    else:
+        raise ValueError(
+            f"Expected 1 resource type per file, got {len(types)} types: {sorted(types)} in {input_file}."
+        )
+
+
+def _is_new(directory: str | os.PathLike[str], record: dict) -> bool:
+    """
+    Check if directory is new or needs to be rerun. Returns true if directory doesn't exist, if .config.json doesn't exist, or if the the config.yaml file,
+    batch_size, or output_file name have changed.
+
+    Args:
+        directory (str): path of the directory linked to the .ndjson file
+        record (dict): the configuration of the current run, used to compare to what is already saved in the folder
+
+    Returns:
+        status (bool): returns whether the directory is new/has to be reset or not
+    """
+
+    if not pathlib.Path(directory).is_dir():
+        return True
+
+    try:
+        params = json.loads(pathlib.Path(directory, ".config.json").read_bytes())
+    except (OSError, ValueError):
+        return True
+
+    if (
+        record["config_hash"] != params["config_hash"]
+        or record["batch_size"] != params["batch_size"]
+        or record["output_file"] != params["output_file"]
+    ):
+        return True
+
+    return False
+
+
+def _is_done(directory: str | os.PathLike[str], record: dict) -> bool:
+    """
+    Check if transformation in this directory is completed.
+
+    Args:
+        directory (str): path of the directory linked to the .ndjson file
+        record (dict): the configuration of the current run, used to compare to what is already saved in the folder
+
+    Returns:
+        status (bool): returns whether the transformation has beencompleted
+    """
+
+    try:
+        params = json.loads(pathlib.Path(directory, ".config.json").read_bytes())
+        if (
+            record["config_hash"] != params["config_hash"]
+            or record["batch_size"] != params["batch_size"]
+            or record["output_file"] != params["output_file"]
+        ):
+            return False
+
+    except (OSError, ValueError):
+        return False
+
+    # check if output file is the same and if exists
+    if (
+        record["output_file"] == params["output_file"]
+        and pathlib.Path(record["output_file"]).is_file()
+        and pathlib.Path(record["output_file"]).stat().st_size != 0
+    ):
+        logging.info(f"File already tagged. Locate file here: {record['output_file']}")
+        return True
+
+    return False
+
+
+def _merge_needed(directory: str | os.PathLike[str], record: dict) -> bool:
+    """
+    Check whether every chunk has been transformed and the .done files are ready to merge
+
+    Args:
+        directory (str): path of the directory linked to the .ndjson file
+        record (dict): the configuration of the current run, used to compare to what is already saved in the folder
+
+    Returns:
+        status (bool): True if every chunk has a .done file, False otherwise
+    """
+    directory = pathlib.Path(directory)
+
+    # no .done files --> nothing to merge
+    if not any(directory.glob("*.done")):
+        return False
+
+    # every chunk must have a .done file, otherwise the run is incomplete
+    ranges = compute_ranges(record["input_file"], record["batch_size"])
+    stem = pathlib.Path(record["input_file"]).stem
+    return all(
+        (directory / f"{stem}_{i:05d}.done").exists() for i in range(len(ranges))
+    )
+
+
+def cleanup_fhir_transform_artifacts(
+    work_dir: str | os.PathLike[str] | None = None,
+    dry_run: bool = False,
+    force: bool = False,
+) -> int:
+    """
+    Remove all run dirs in the working directory. Only directories containing a .config.json
+    (written at the start of every run) are treated as run dirs; anything else is left alone.
+
+    Args:
+        work_dir (str | None): static work directory where all run directories are stored
+        dry_run (bool): If True, lists all directories which would be removed, but not actually remove them
+        force (bool): If True, also remove the working directory itself if it is empty afterwards
+
+    Returns:
+        count(int): number of directories deleted / flagged for deletion (if dry_run=True)
+    """
+    working_dir = resolve_work_dir(work_dir, clean=True)
+    if not working_dir.is_dir():
+        logging.info("Nothing to clean")
+        return 0
+
+    count = 0
+    for run_dir in sorted(working_dir.glob("*")):
+        if not (run_dir / ".config.json").is_file():
+            continue
+
+        logging.info(f"{'would remove' if dry_run else 'removed '} {run_dir}")
+        if not dry_run:
+            shutil.rmtree(run_dir, ignore_errors=True)
+        count += 1
+
+    logging.info(f"{count} stale run dir(s)")
+
+    if force and not dry_run:
+        try:
+            working_dir.rmdir()
+        except OSError:
+            logging.info(f"{working_dir} is not empty, leaving it in place")
+
+    return count
+
+
+def compute_ranges(
+    input_file: str | os.PathLike[str],
+    batch_size: int,
+) -> list[tuple[int, int]]:
+    """
+    Compute (start_offset, end_offset) byte ranges over the input file, each holding
+    batch_size records and split on newline boundaries
+
+    Args:
+        input_file (str): input .ndjson file
+        batch_size (int): number of records in each range
+
+    Returns:
+        list[tuple[int, int]]: byte ranges in input order ((start_offset, end_offset))
+    """
+    if batch_size < 1:
+        raise ValueError(f"batch_size must be >= 1, got {batch_size}")
+    ranges = []
+    with open(input_file, "rb") as fin:
+        start = 0
+        count = 0
+        while line := fin.readline():
+            if line.strip():
+                count += 1
+            if count == batch_size:
+                end = fin.tell()
+                ranges.append((start, end))
+                start = end
+                count = 0
+        if count:
+            ranges.append((start, fin.tell()))
+    return ranges
+
+
+def transform_chunk(
+    input_file: str | os.PathLike[str],
+    start: int,
+    end: int,
+    index: int,
+    tagger: Gen3FHIRAuthzTagger,
+    output_dir: str | os.PathLike[str],
+) -> None:
+    """
+
+    Tag each resource entry with appropriate Gen3 authorization tag based on rules in a config.yaml file
+    in the byte range [start, end) of the input file
+
+    Args:
+        input_file (str): input .ndjson file
+        start (int): byte offset where this chunk starts
+        end (int): byte offset where this chunk ends
+        index (int): position of this chunk, used to name the .done file
+        tagger (Gen3FHIRAuthzTagger): The tagger instance to use for tagging the resources
+        output_dir (str): The directory path of where to write the intermediate files to
+
+    """
+    done_path = os.path.join(
+        output_dir, f"{pathlib.Path(input_file).stem}_{index:05d}.done"
+    )
+    with open(input_file, "rb") as fin, open(f"{done_path}.tmp", "wb") as fout:
+        fin.seek(start)
+        while fin.tell() < end:
+            r = fin.readline()
+
+            if not r.strip():
+                continue
+
+            record = json.loads(r)
+            # generate tags
+            authz_tags = tagger.determine_authz(record)
+            # tag resources
+            fout.write(json_dumps(tagger.tag_resource(record, authz_tags)))
+            fout.write(b"\n")
+
+    # replace tmp file with .done file
+    os.replace(f"{done_path}.tmp", done_path)
+
+
+def merge_chunks(
+    input_files: list[str | os.PathLike[str]], output_file: str | os.PathLike[str]
+) -> None:
+    """
+    Merge all tagged files back to one ndjson file
+
+    Args:
+        input_files (list[str]): Tagged files to merge together
+        output_file (str): output_file to write the tagged ndjson
+
+    """
+    start = time.time()
+    out = pathlib.Path(output_file)
+
+    # creates all directories in path if dont exist
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    # write to a temp file and replace at the end, a partially written output_file
+    # would otherwise be reported as finished by _is_done on the next run
+    tmp = out.with_name(f"{out.name}.tmp")
+    with open(tmp, "wb") as fout:
+        for f in sorted(input_files):
+            with open(f, "rb") as fin:
+                shutil.copyfileobj(fin, fout)
+    os.replace(tmp, out)
+    logging.info(
+        f"merge chunks total time: {(time.strftime('%H:%M:%S', time.gmtime(time.time() - start)))}"
+    )
+    # remove .done files once merge completed
+    for f in input_files:
+        os.remove(f)
+
+
+def tag_fhir_resource_pipeline(
+    input_file: str | os.PathLike[str],
+    output_file: str | os.PathLike[str],
+    config: str | os.PathLike[str],
+    output_dir: str | os.PathLike[str],
+    record: dict,
+    batch_size: int = 10000,
+) -> None:
+    """
+
+    Transform Bulk FHIR data to Gen3 compatible data with authorization tagging.
+    Line by line tagging with batched I/O
+
+    Args:
+            input_file (str): Input .ndjson file
+            output_file (str): Output file name
+            config (str): .yaml file with authorization rules
+            batch_size (int): number of lines per chunk
+            output_dir (str): static work directory where all run directories are stored
+            record (dict): the record/information for the current run (.config.json)
+    """
+    logging.info("Checking status of file")
+
+    # if done, skip
+    if _is_done(output_dir, record):
+        return
+
+    # if new file, missing/corrupt .config.json, or changed config/batch_size/output_file, reset folder
+    if _is_new(output_dir, record):
+        logging.info("New run, resetting run directory")
+        if pathlib.Path(output_dir).exists():
+            shutil.rmtree(output_dir)
+        make_folders_for_filename(f"{output_dir}/.config.json")
+        # run dirs hold potential FHIR PHI, keep them readable by owner only
+        pathlib.Path(output_dir).chmod(0o700)
+        pathlib.Path(f"{output_dir}/.config.json").write_text(
+            json.dumps(record, default=str), encoding="utf-8"
+        )
+
+    # initialize tagger
+    tagger = Gen3FHIRAuthzTagger(config_path=config)
+    # keep only relevant rules for the resource type
+    resource_type = get_resource_type(input_file)
+    tagger.relevant_authz_rules(resource_type)
+
+    # if not fully transformed or new/reset, resume
+    if not _merge_needed(output_dir, record):
+        logging.info(f"Chunking {input_file} into {batch_size}-sized batches...")
+        ranges = compute_ranges(input_file, batch_size)
+
+        logging.info("Transforming chunks...")
+        start = time.time()
+
+        stem = pathlib.Path(input_file).stem
+        for i, (s, e) in enumerate(ranges):
+            # skip chunks finished on a previous run
+            if os.path.exists(os.path.join(output_dir, f"{stem}_{i:05d}.done")):
+                continue
+            transform_chunk(input_file, s, e, i, tagger, output_dir)
+
+        logging.info(
+            f"Transform chunks total time: {(time.strftime('%H:%M:%S', time.gmtime(time.time() - start)))}"
+        )
+
+    # merge back to one ndjson file
+    transformed_files = glob.glob(
+        os.path.join(output_dir, f"{pathlib.Path(input_file).stem}_*.done")
+    )
+    logging.info(f"Merging chunks to {output_file}...")
+    merge_chunks(transformed_files, output_file)
+
+
+def tag_fhir_resources_with_authz(
+    input_file: str | os.PathLike[str],
+    output_file: str | os.PathLike[str],
+    config: str | os.PathLike[str],
+    batch_size: int = 10000,
+    work_dir: str | os.PathLike[str] | None = None,
+    force: bool = False,
+) -> None:
+    """
+    End-to-end pipeline for FHIR resource tagging.
+    Stream-transform Bulk FHIR data to Gen3 compatible data with authorization tagging.
+
+    Args:
+            input_file (str): Input .ndjson file
+            output_file (str): Output file name
+            config (str): .yaml file with authorization rules
+            batch_size (int): number of lines per chunk
+            work_dir (str | None): static work directory where all run directories are stored. Falls back to the
+                GEN3_FHIR_WORK_DIR environment variable, then DEFAULT_WORK_DIR
+            force (bool): remove all intermediate files for this run before exiting even if it fails
+
+    Raises:
+        ValueError: if batch_size < 1, input_file and output_file are the same, input_file is empty,
+            or a resource cannot be tagged
+    """
+
+    start_time = time.time()
+    if batch_size < 1:
+        raise ValueError(f"batch_size must be >= 1, got {batch_size}")
+
+    if os.path.realpath(input_file) == os.path.realpath(output_file):
+        raise ValueError("input_file and output_file must be different")
+
+    # check if input file is empty
+    if pathlib.Path(input_file).stat().st_size == 0:
+        raise ValueError(f"{input_file}: file is empty")
+
+    # only necessary the first time its run
+    working_dir = resolve_work_dir(work_dir)
+
+    # make temp directories
+    hash = get_sha256hash(input_file)
+    output_dir = f"{working_dir}/{os.path.basename(input_file).split('.')[0]}_{hash}"
+
+    # str() so a run started with Path arguments compares equal to the .config.json
+    # it saved (which holds strings), otherwise every rerun is treated as new
+    record = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "input_file": str(input_file),
+        "output_file": str(output_file),
+        "config_hash": get_sha256hash(config),
+        "batch_size": batch_size,
+    }
+
+    try:
+        tag_fhir_resource_pipeline(
+            input_file=input_file,
+            output_file=output_file,
+            config=config,
+            output_dir=output_dir,
+            record=record,
+            batch_size=batch_size,
+        )
+        elapsed_time = time.time() - start_time
+        logging.info(f"Tagged file -> {output_file}")
+        logging.info(
+            f"Total time to process: {(time.strftime('%H:%M:%S', time.gmtime(elapsed_time)))}"
+        )
+        if force:
+            shutil.rmtree(output_dir, ignore_errors=True)
+
+    except Exception as e:
+        logging.error(e)
+        if force:
+            shutil.rmtree(output_dir, ignore_errors=True)
+            logging.error("Run failed; removed intermediates in %s", output_dir)
+        else:
+            logging.error("Run failed; intermediates left in %s", output_dir)
+        raise
