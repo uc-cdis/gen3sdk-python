@@ -37,6 +37,8 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">aiohttp</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">backoff</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">inspect</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
@@ -88,11 +90,51 @@
 <span class="p">}</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_requires_auth</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Decorator for Gen3Metadata methods that hit admin endpoints. If the object was</span>
+<span class="sd">    created without an auth provider, log a helpful message and return None instead</span>
+<span class="sd">    of making a request that is guaranteed to fail.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_log_missing_auth</span><span class="p">():</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"'</span><span class="si">{</span><span class="n">func</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">' calls an /mds-admin endpoint and requires "</span>
+            <span class="s2">"authentication. Create a Gen3Auth object, e.g. "</span>
+            <span class="s2">"`auth = Gen3Auth(refresh_file='credentials.json')`, and supply it when "</span>
+            <span class="s2">"initializing: `Gen3Metadata(auth_provider=auth)`."</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">inspect</span><span class="o">.</span><span class="n">iscoroutinefunction</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+
+        <span class="nd">@functools</span><span class="o">.</span><span class="n">wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+        <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">async_wrapper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">_log_missing_auth</span><span class="p">()</span>
+                <span class="k">return</span> <span class="kc">None</span>
+            <span class="k">return</span> <span class="k">await</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">async_wrapper</span>
+
+    <span class="nd">@functools</span><span class="o">.</span><span class="n">wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">wrapper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">_log_missing_auth</span><span class="p">()</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">wrapper</span>
+
+
 <div class="viewcode-block" id="Gen3Metadata">
 <a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Gen3Metadata</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    A class for interacting with the Gen3 Metadata services.</span>
+
+<span class="sd">    Open access endpoints work without authentication. Methods that call admin</span>
+<span class="sd">    endpoints (create, update, delete, index management, alias changes) require an</span>
+<span class="sd">    auth_provider; without one they log a message and return directly.</span>
 
 <span class="sd">    Examples:</span>
 <span class="sd">        This generates the Gen3Metadata class pointed at the sandbox commons while</span>
@@ -129,8 +171,13 @@
             <span class="n">endpoint</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">auth_provider</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">auth_provider</span><span class="p">,</span> <span class="n">Gen3Auth</span><span class="p">):</span>
             <span class="n">endpoint</span> <span class="o">=</span> <span class="n">auth_provider</span><span class="o">.</span><span class="n">endpoint</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">endpoint</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"Provide either an endpoint or a Gen3Auth object (auth_provider) "</span>
+                <span class="s2">"to initialize Gen3Metadata."</span>
+            <span class="p">)</span>
         <span class="n">endpoint</span> <span class="o">=</span> <span class="n">endpoint</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>
-        <span class="c1"># if running locally, mds is deployed by itself without a location relative</span>
+        <span class="c1"># if running locally, MDS is deployed by itself without a location relative</span>
         <span class="c1"># to the commons</span>
         <span class="k">if</span> <span class="s2">"http://localhost"</span> <span class="ow">in</span> <span class="n">endpoint</span><span class="p">:</span>
             <span class="n">service_location</span> <span class="o">=</span> <span class="s2">""</span>
@@ -182,6 +229,7 @@
 <div class="viewcode-block" id="Gen3Metadata.get_index_key_paths">
 <a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.get_index_key_paths">[docs]</a>
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="nd">@_requires_auth</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_index_key_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        List all the metadata key paths indexed in the database.</span>
@@ -199,6 +247,7 @@
 <div class="viewcode-block" id="Gen3Metadata.create_index_key_path">
 <a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.create_index_key_path">[docs]</a>
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="nd">@_requires_auth</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_index_key_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Create a metadata key path indexed in the database.</span>
@@ -216,6 +265,7 @@
 <div class="viewcode-block" id="Gen3Metadata.delete_index_key_path">
 <a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.delete_index_key_path">[docs]</a>
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="nd">@_requires_auth</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">delete_index_key_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        List all the metadata key paths indexed in the database.</span>
@@ -235,11 +285,10 @@
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">query</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">query</span><span class="p">,</span>
+        <span class="n">query</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">return_full_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
         <span class="n">limit</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
         <span class="n">offset</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-        <span class="n">use_agg_mds</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">"""</span>
@@ -276,7 +325,8 @@
 <span class="sd">            '''</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            query (str): mds query as defined by the metadata api</span>
+<span class="sd">            query (str, optional): MDS query as defined by the metadata api. If not</span>
+<span class="sd">                provided, all records are returned (subject to limit/offset)</span>
 <span class="sd">            return_full_metadata (bool, optional): if False will just return a list of guids</span>
 <span class="sd">            limit (int, optional): max num records to return</span>
 <span class="sd">            offset (int, optional): offset for output</span>
@@ -288,7 +338,11 @@
 <span class="sd">                metadata JSON blobs as values</span>
 <span class="sd">        """</span>
 
-        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">"/metadata?</span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s2">"</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">"/metadata?</span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s2">"</span>
+            <span class="k">if</span> <span class="n">query</span>
+            <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">+</span> <span class="s2">"/metadata"</span>
+        <span class="p">)</span>
 
         <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span>
             <span class="n">url</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">return_full_metadata</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="n">offset</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
@@ -351,6 +405,7 @@
 <div class="viewcode-block" id="Gen3Metadata.batch_create">
 <a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.batch_create">[docs]</a>
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="nd">@_requires_auth</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">batch_create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">metadata_list</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Create the list of metadata associated with the list of guids</span>
@@ -358,10 +413,10 @@
 <span class="sd">        Args:</span>
 <span class="sd">            metadata_list (List[Dict{"guid": "", "data": {}}]): list of metadata</span>
 <span class="sd">                objects in a specific format. Expects a dict with "guid" and "data"</span>
-<span class="sd">                fields where "data" is another JSON blob to add to the mds</span>
+<span class="sd">                fields where "data" is another JSON blob to add to the MDS</span>
 <span class="sd">            overwrite (bool, optional): whether or not to overwrite existing data</span>
 <span class="sd">        """</span>
-        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">"/metadata"</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="s2">"/metadata"</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">metadata_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="p">(</span>
             <span class="s2">"guid"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">metadata_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="s2">"data"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">metadata_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -387,6 +442,7 @@
 <div class="viewcode-block" id="Gen3Metadata.create">
 <a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.create">[docs]</a>
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">BACKOFF_NO_LOG_IF_NOT_RETRIED</span><span class="p">)</span>
+    <span class="nd">@_requires_auth</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">aliases</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Create the metadata associated with the guid</span>
@@ -426,6 +482,7 @@
 <div class="viewcode-block" id="Gen3Metadata.async_create">
 <a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.async_create">[docs]</a>
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">BACKOFF_NO_LOG_IF_NOT_RETRIED</span><span class="p">)</span>
+    <span class="nd">@_requires_auth</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">async_create</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">guid</span><span class="p">,</span>
@@ -483,6 +540,7 @@
 <div class="viewcode-block" id="Gen3Metadata.update">
 <a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.update">[docs]</a>
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="nd">@_requires_auth</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">aliases</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">merge</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Update the metadata associated with the guid</span>
@@ -521,6 +579,7 @@
 <div class="viewcode-block" id="Gen3Metadata.async_update">
 <a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.async_update">[docs]</a>
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="nd">@_requires_auth</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">async_update</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">aliases</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">merge</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
     <span class="p">):</span>
@@ -572,6 +631,7 @@
 <div class="viewcode-block" id="Gen3Metadata.delete">
 <a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.delete">[docs]</a>
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_BACKOFF_SETTINGS</span><span class="p">)</span>
+    <span class="nd">@_requires_auth</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Delete the metadata associated with the guid</span>
@@ -638,7 +698,11 @@
 
             <span class="c1"># aiohttp only allows basic auth with their built in auth, so we</span>
             <span class="c1"># need to manually add JWT auth header</span>
-            <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"Authorization"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">_get_auth_value</span><span class="p">()}</span>
+            <span class="n">headers</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="p">{</span><span class="s2">"Authorization"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">_get_auth_value</span><span class="p">()}</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span>
+                <span class="k">else</span> <span class="p">{}</span>
+            <span class="p">)</span>
 
             <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"hitting: </span><span class="si">{</span><span class="n">url_with_params</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
             <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
@@ -649,13 +713,17 @@
             <span class="k">return</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
 
+<div class="viewcode-block" id="Gen3Metadata.delete_alias">
+<a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.delete_alias">[docs]</a>
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">BACKOFF_NO_LOG_IF_NOT_RETRIED</span><span class="p">)</span>
+    <span class="nd">@_requires_auth</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">delete_alias</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">alias</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Delete single Alias for the given guid</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            guid (TYPE): Globally unique ID for the metadata blob</span>
+<span class="sd">            alias (str): alternative identifier (alias) to delete</span>
 <span class="sd">            **kwargs: additional query params</span>
 
 <span class="sd">        Returns:</span>
@@ -668,15 +736,20 @@
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">url_with_params</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
         <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
 
-        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
 
+
+<div class="viewcode-block" id="Gen3Metadata.async_delete_alias">
+<a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.async_delete_alias">[docs]</a>
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">BACKOFF_NO_LOG_IF_NOT_RETRIED</span><span class="p">)</span>
+    <span class="nd">@_requires_auth</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">async_delete_alias</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">alias</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Asyncronously delete single Aliases for the given guid</span>
+<span class="sd">        Asynchronously delete single Aliases for the given guid</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            guid (TYPE): Globally unique ID for the metadata blob</span>
+<span class="sd">            alias (str): alternative identifier (alias) to delete</span>
 <span class="sd">            _ssl (None, optional): whether or not to use ssl</span>
 <span class="sd">            **kwargs: additional query params</span>
 
@@ -697,11 +770,13 @@
             <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
                 <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
 
-            <span class="k">return</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+            <span class="k">return</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
 
 <div class="viewcode-block" id="Gen3Metadata.create_aliases">
 <a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.create_aliases">[docs]</a>
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">BACKOFF_NO_LOG_IF_NOT_RETRIED</span><span class="p">)</span>
+    <span class="nd">@_requires_auth</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_aliases</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">aliases</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Create Aliases for the given guid</span>
@@ -730,9 +805,10 @@
 <div class="viewcode-block" id="Gen3Metadata.async_create_aliases">
 <a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.async_create_aliases">[docs]</a>
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">BACKOFF_NO_LOG_IF_NOT_RETRIED</span><span class="p">)</span>
+    <span class="nd">@_requires_auth</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">async_create_aliases</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">aliases</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Asyncronously create Aliases for the given guid</span>
+<span class="sd">        Asynchronously create Aliases for the given guid</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            guid (TYPE): Globally unique ID for the metadata blob</span>
@@ -765,6 +841,7 @@
 <div class="viewcode-block" id="Gen3Metadata.update_aliases">
 <a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.update_aliases">[docs]</a>
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">BACKOFF_NO_LOG_IF_NOT_RETRIED</span><span class="p">)</span>
+    <span class="nd">@_requires_auth</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">update_aliases</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">aliases</span><span class="p">,</span> <span class="n">merge</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Update Aliases for the given guid</span>
@@ -794,11 +871,12 @@
 <div class="viewcode-block" id="Gen3Metadata.async_update_aliases">
 <a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.async_update_aliases">[docs]</a>
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">BACKOFF_NO_LOG_IF_NOT_RETRIED</span><span class="p">)</span>
+    <span class="nd">@_requires_auth</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">async_update_aliases</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">aliases</span><span class="p">,</span> <span class="n">merge</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Asyncronously update Aliases for the given guid</span>
+<span class="sd">        Asynchronously update Aliases for the given guid</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            guid (TYPE): Globally unique ID for the metadata blob</span>
@@ -833,6 +911,7 @@
 <div class="viewcode-block" id="Gen3Metadata.delete_aliases">
 <a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.delete_aliases">[docs]</a>
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">BACKOFF_NO_LOG_IF_NOT_RETRIED</span><span class="p">)</span>
+    <span class="nd">@_requires_auth</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">delete_aliases</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Delete all Aliases for the given guid</span>
@@ -857,9 +936,10 @@
 <div class="viewcode-block" id="Gen3Metadata.async_delete_aliases">
 <a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.async_delete_aliases">[docs]</a>
     <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">BACKOFF_NO_LOG_IF_NOT_RETRIED</span><span class="p">)</span>
+    <span class="nd">@_requires_auth</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">async_delete_aliases</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Asyncronously delete all Aliases for the given guid</span>
+<span class="sd">        Asynchronously delete all Aliases for the given guid</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            guid (TYPE): Globally unique ID for the metadata blob</span>
@@ -871,64 +951,6 @@
 <span class="sd">        """</span>
         <span class="k">async</span> <span class="k">with</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
             <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">"/metadata/</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">/aliases"</span>
-            <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-            <span class="c1"># aiohttp only allows basic auth with their built in auth, so we</span>
-            <span class="c1"># need to manually add JWT auth header</span>
-            <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"Authorization"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">_get_auth_value</span><span class="p">()}</span>
-
-            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"hitting: </span><span class="si">{</span><span class="n">url_with_params</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
-                <span class="n">url_with_params</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">ssl</span><span class="o">=</span><span class="n">_ssl</span>
-            <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
-                <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
-
-                <span class="k">return</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span></div>
-
-
-<div class="viewcode-block" id="Gen3Metadata.delete_alias">
-<a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.delete_alias">[docs]</a>
-    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">BACKOFF_NO_LOG_IF_NOT_RETRIED</span><span class="p">)</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">delete_alias</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">alias</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Delete single Alias for the given guid</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            guid (TYPE): Globally unique ID for the metadata blob</span>
-<span class="sd">            alias (str): alternative identifier (alias) to delete</span>
-<span class="sd">            **kwargs: additional query params</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            requests.Response: response from the request to delete aliases</span>
-<span class="sd">        """</span>
-        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">"/metadata/</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">/aliases/</span><span class="si">{</span><span class="n">alias</span><span class="si">}</span><span class="s2">"</span>
-        <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"hitting: </span><span class="si">{</span><span class="n">url_with_params</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">url_with_params</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">)</span>
-        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
-
-        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span></div>
-
-
-<div class="viewcode-block" id="Gen3Metadata.async_delete_alias">
-<a class="viewcode-back" href="../../metadata.html#gen3.metadata.Gen3Metadata.async_delete_alias">[docs]</a>
-    <span class="nd">@backoff</span><span class="o">.</span><span class="n">on_exception</span><span class="p">(</span><span class="n">backoff</span><span class="o">.</span><span class="n">expo</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">,</span> <span class="o">**</span><span class="n">BACKOFF_NO_LOG_IF_NOT_RETRIED</span><span class="p">)</span>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">async_delete_alias</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">alias</span><span class="p">,</span> <span class="n">_ssl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Asyncronously delete single Aliases for the given guid</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            guid (str): Globally unique ID for the metadata blob</span>
-<span class="sd">            alias (str): alternative identifier (alias) to delete</span>
-<span class="sd">            _ssl (None, optional): whether or not to use ssl</span>
-<span class="sd">            **kwargs: additional query params</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            requests.Response: response from the request to delete aliases</span>
-<span class="sd">        """</span>
-        <span class="k">async</span> <span class="k">with</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
-            <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">admin_endpoint</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">"/metadata/</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">/aliases/</span><span class="si">{</span><span class="n">alias</span><span class="si">}</span><span class="s2">"</span>
             <span class="n">url_with_params</span> <span class="o">=</span> <span class="n">append_query_params</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
             <span class="c1"># aiohttp only allows basic auth with their built in auth, so we</span>

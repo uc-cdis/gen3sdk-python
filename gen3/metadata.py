@@ -4,6 +4,8 @@ Contains class for interacting with Gen3's Metadata Service.
 import aiohttp
 import backoff
 from datetime import datetime
+import functools
+import inspect
 import requests
 import json
 import os
@@ -55,9 +57,49 @@ PACKAGE_CONTENTS_SCHEMA = {
 }
 
 
+def _requires_auth(func):
+    """
+    Decorator for Gen3Metadata methods that hit admin endpoints. If the object was
+    created without an auth provider, log a helpful message and return None instead
+    of making a request that is guaranteed to fail.
+    """
+
+    def _log_missing_auth():
+        logging.error(
+            f"'{func.__name__}' calls an /mds-admin endpoint and requires "
+            "authentication. Create a Gen3Auth object, e.g. "
+            "`auth = Gen3Auth(refresh_file='credentials.json')`, and supply it when "
+            "initializing: `Gen3Metadata(auth_provider=auth)`."
+        )
+
+    if inspect.iscoroutinefunction(func):
+
+        @functools.wraps(func)
+        async def async_wrapper(self, *args, **kwargs):
+            if self._auth_provider is None:
+                _log_missing_auth()
+                return None
+            return await func(self, *args, **kwargs)
+
+        return async_wrapper
+
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if self._auth_provider is None:
+            _log_missing_auth()
+            return None
+        return func(self, *args, **kwargs)
+
+    return wrapper
+
+
 class Gen3Metadata:
     """
     A class for interacting with the Gen3 Metadata services.
+
+    Open access endpoints work without authentication. Methods that call admin
+    endpoints (create, update, delete, index management, alias changes) require an
+    auth_provider; without one they log a message and return directly.
 
     Examples:
         This generates the Gen3Metadata class pointed at the sandbox commons while
@@ -94,8 +136,13 @@ class Gen3Metadata:
             endpoint = None
         if auth_provider and isinstance(auth_provider, Gen3Auth):
             endpoint = auth_provider.endpoint
+        if not endpoint:
+            raise ValueError(
+                "Provide either an endpoint or a Gen3Auth object (auth_provider) "
+                "to initialize Gen3Metadata."
+            )
         endpoint = endpoint.strip("/")
-        # if running locally, mds is deployed by itself without a location relative
+        # if running locally, MDS is deployed by itself without a location relative
         # to the commons
         if "http://localhost" in endpoint:
             service_location = ""
@@ -139,6 +186,7 @@ class Gen3Metadata:
         return response.text
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    @_requires_auth
     def get_index_key_paths(self):
         """
         List all the metadata key paths indexed in the database.
@@ -153,6 +201,7 @@ class Gen3Metadata:
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    @_requires_auth
     def create_index_key_path(self, path):
         """
         Create a metadata key path indexed in the database.
@@ -167,6 +216,7 @@ class Gen3Metadata:
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    @_requires_auth
     def delete_index_key_path(self, path):
         """
         List all the metadata key paths indexed in the database.
@@ -183,11 +233,10 @@ class Gen3Metadata:
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
     def query(
         self,
-        query,
+        query=None,
         return_full_metadata=False,
         limit=10,
         offset=0,
-        use_agg_mds=False,
         **kwargs,
     ):
         """
@@ -224,7 +273,8 @@ class Gen3Metadata:
             '''
 
         Args:
-            query (str): mds query as defined by the metadata api
+            query (str, optional): MDS query as defined by the metadata api. If not
+                provided, all records are returned (subject to limit/offset)
             return_full_metadata (bool, optional): if False will just return a list of guids
             limit (int, optional): max num records to return
             offset (int, optional): offset for output
@@ -236,7 +286,11 @@ class Gen3Metadata:
                 metadata JSON blobs as values
         """
 
-        url = self.endpoint + f"/metadata?{query}"
+        url = (
+            self.endpoint + f"/metadata?{query}"
+            if query
+            else self.endpoint + "/metadata"
+        )
 
         url_with_params = append_query_params(
             url, data=return_full_metadata, limit=limit, offset=offset, **kwargs
@@ -290,6 +344,7 @@ class Gen3Metadata:
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    @_requires_auth
     def batch_create(self, metadata_list, overwrite=True, **kwargs):
         """
         Create the list of metadata associated with the list of guids
@@ -297,10 +352,10 @@ class Gen3Metadata:
         Args:
             metadata_list (List[Dict{"guid": "", "data": {}}]): list of metadata
                 objects in a specific format. Expects a dict with "guid" and "data"
-                fields where "data" is another JSON blob to add to the mds
+                fields where "data" is another JSON blob to add to the MDS
             overwrite (bool, optional): whether or not to overwrite existing data
         """
-        url = self.admin_endpoint + f"/metadata"
+        url = self.admin_endpoint + "/metadata"
 
         if len(metadata_list) > 1 and (
             "guid" not in metadata_list[0] and "data" not in metadata_list[0]
@@ -323,6 +378,7 @@ class Gen3Metadata:
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    @_requires_auth
     def create(self, guid, metadata, aliases=None, overwrite=False, **kwargs):
         """
         Create the metadata associated with the guid
@@ -359,6 +415,7 @@ class Gen3Metadata:
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    @_requires_auth
     async def async_create(
         self,
         guid,
@@ -413,6 +470,7 @@ class Gen3Metadata:
         return response
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    @_requires_auth
     def update(self, guid, metadata, aliases=None, merge=False, **kwargs):
         """
         Update the metadata associated with the guid
@@ -448,6 +506,7 @@ class Gen3Metadata:
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    @_requires_auth
     async def async_update(
         self, guid, metadata, aliases=None, merge=False, _ssl=None, **kwargs
     ):
@@ -496,6 +555,7 @@ class Gen3Metadata:
         return response
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    @_requires_auth
     def delete(self, guid, **kwargs):
         """
         Delete the metadata associated with the guid
@@ -556,7 +616,11 @@ class Gen3Metadata:
 
             # aiohttp only allows basic auth with their built in auth, so we
             # need to manually add JWT auth header
-            headers = {"Authorization": self._auth_provider._get_auth_value()}
+            headers = (
+                {"Authorization": self._auth_provider._get_auth_value()}
+                if self._auth_provider
+                else {}
+            )
 
             logging.debug(f"hitting: {url_with_params}")
             async with session.get(
@@ -567,12 +631,14 @@ class Gen3Metadata:
             return await response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    @_requires_auth
     def delete_alias(self, guid, alias, **kwargs):
         """
         Delete single Alias for the given guid
 
         Args:
             guid (TYPE): Globally unique ID for the metadata blob
+            alias (str): alternative identifier (alias) to delete
             **kwargs: additional query params
 
         Returns:
@@ -588,12 +654,14 @@ class Gen3Metadata:
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    @_requires_auth
     async def async_delete_alias(self, guid, alias, _ssl=None, **kwargs):
         """
-        Asyncronously delete single Aliases for the given guid
+        Asynchronously delete single Aliases for the given guid
 
         Args:
             guid (TYPE): Globally unique ID for the metadata blob
+            alias (str): alternative identifier (alias) to delete
             _ssl (None, optional): whether or not to use ssl
             **kwargs: additional query params
 
@@ -617,6 +685,7 @@ class Gen3Metadata:
             return await response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    @_requires_auth
     def create_aliases(self, guid, aliases, **kwargs):
         """
         Create Aliases for the given guid
@@ -642,9 +711,10 @@ class Gen3Metadata:
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    @_requires_auth
     async def async_create_aliases(self, guid, aliases, _ssl=None, **kwargs):
         """
-        Asyncronously create Aliases for the given guid
+        Asynchronously create Aliases for the given guid
 
         Args:
             guid (TYPE): Globally unique ID for the metadata blob
@@ -674,6 +744,7 @@ class Gen3Metadata:
                 return await response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    @_requires_auth
     def update_aliases(self, guid, aliases, merge=False, **kwargs):
         """
         Update Aliases for the given guid
@@ -700,11 +771,12 @@ class Gen3Metadata:
         return response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    @_requires_auth
     async def async_update_aliases(
         self, guid, aliases, merge=False, _ssl=None, **kwargs
     ):
         """
-        Asyncronously update Aliases for the given guid
+        Asynchronously update Aliases for the given guid
 
         Args:
             guid (TYPE): Globally unique ID for the metadata blob
@@ -736,6 +808,7 @@ class Gen3Metadata:
                 return await response.json()
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    @_requires_auth
     def delete_aliases(self, guid, **kwargs):
         """
         Delete all Aliases for the given guid
@@ -757,9 +830,10 @@ class Gen3Metadata:
         return response.text
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
+    @_requires_auth
     async def async_delete_aliases(self, guid, _ssl=None, **kwargs):
         """
-        Asyncronously delete all Aliases for the given guid
+        Asynchronously delete all Aliases for the given guid
 
         Args:
             guid (TYPE): Globally unique ID for the metadata blob
@@ -771,58 +845,6 @@ class Gen3Metadata:
         """
         async with aiohttp.ClientSession() as session:
             url = self.admin_endpoint + f"/metadata/{guid}/aliases"
-            url_with_params = append_query_params(url, **kwargs)
-
-            # aiohttp only allows basic auth with their built in auth, so we
-            # need to manually add JWT auth header
-            headers = {"Authorization": self._auth_provider._get_auth_value()}
-
-            logging.debug(f"hitting: {url_with_params}")
-            async with session.delete(
-                url_with_params, headers=headers, ssl=_ssl
-            ) as response:
-                response.raise_for_status()
-
-                return await response.text
-
-    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
-    def delete_alias(self, guid, alias, **kwargs):
-        """
-        Delete single Alias for the given guid
-
-        Args:
-            guid (TYPE): Globally unique ID for the metadata blob
-            alias (str): alternative identifier (alias) to delete
-            **kwargs: additional query params
-
-        Returns:
-            requests.Response: response from the request to delete aliases
-        """
-        url = self.admin_endpoint + f"/metadata/{guid}/aliases/{alias}"
-        url_with_params = append_query_params(url, **kwargs)
-
-        logging.debug(f"hitting: {url_with_params}")
-        response = requests.delete(url_with_params, auth=self._auth_provider)
-        response.raise_for_status()
-
-        return response.text
-
-    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
-    async def async_delete_alias(self, guid, alias, _ssl=None, **kwargs):
-        """
-        Asyncronously delete single Aliases for the given guid
-
-        Args:
-            guid (str): Globally unique ID for the metadata blob
-            alias (str): alternative identifier (alias) to delete
-            _ssl (None, optional): whether or not to use ssl
-            **kwargs: additional query params
-
-        Returns:
-            requests.Response: response from the request to delete aliases
-        """
-        async with aiohttp.ClientSession() as session:
-            url = self.admin_endpoint + f"/metadata/{guid}/aliases/{alias}"
             url_with_params = append_query_params(url, **kwargs)
 
             # aiohttp only allows basic auth with their built in auth, so we

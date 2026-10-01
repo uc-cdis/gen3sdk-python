@@ -126,11 +126,11 @@ def test_get_version(requests_mock):
 
 
 @patch("gen3.metadata.requests.get")
-def test_get_index_key_paths(requests_mock):
+def test_get_index_key_paths(requests_mock, gen3_auth):
     """
     Test getting index key paths
     """
-    metadata = Gen3Metadata("https://example.com")
+    metadata = Gen3Metadata("https://example.com", auth_provider=gen3_auth)
     expected_response = ["abc"]
 
     def _mock_request(url, **kwargs):
@@ -151,11 +151,11 @@ def test_get_index_key_paths(requests_mock):
 
 
 @patch("gen3.metadata.requests.get")
-def test_get_index_key_paths_error(requests_mock):
+def test_get_index_key_paths_error(requests_mock, gen3_auth):
     """
     Test getting key paths error
     """
-    metadata = Gen3Metadata("https://example.com")
+    metadata = Gen3Metadata("https://example.com", auth_provider=gen3_auth)
 
     def _mock_request(url, **kwargs):
         assert url.endswith("/metadata_index")
@@ -174,11 +174,11 @@ def test_get_index_key_paths_error(requests_mock):
 
 
 @patch("gen3.metadata.requests.post")
-def test_create_index_key_paths(requests_mock):
+def test_create_index_key_paths(requests_mock, gen3_auth):
     """
     Test creating index key paths
     """
-    metadata = Gen3Metadata("https://example.com")
+    metadata = Gen3Metadata("https://example.com", auth_provider=gen3_auth)
     path = "/blah"
     expected_response = path
 
@@ -200,11 +200,11 @@ def test_create_index_key_paths(requests_mock):
 
 
 @patch("gen3.metadata.requests.post")
-def test_create_index_key_paths_error(requests_mock):
+def test_create_index_key_paths_error(requests_mock, gen3_auth):
     """
     Test create index key paths error
     """
-    metadata = Gen3Metadata("https://example.com")
+    metadata = Gen3Metadata("https://example.com", auth_provider=gen3_auth)
     path = "/blah"
 
     def _mock_request(url, **kwargs):
@@ -224,11 +224,11 @@ def test_create_index_key_paths_error(requests_mock):
 
 
 @patch("gen3.metadata.requests.delete")
-def test_delete_index_key_path(requests_mock):
+def test_delete_index_key_path(requests_mock, gen3_auth):
     """
     Test deleting the index key path
     """
-    metadata = Gen3Metadata("https://example.com")
+    metadata = Gen3Metadata("https://example.com", auth_provider=gen3_auth)
     path = "/blah"
     expected_response = {}
 
@@ -250,11 +250,11 @@ def test_delete_index_key_path(requests_mock):
 
 
 @patch("gen3.metadata.requests.delete")
-def test_delete_index_key_paths_error(requests_mock):
+def test_delete_index_key_paths_error(requests_mock, gen3_auth):
     """
     Test deleting the index key path error
     """
-    metadata = Gen3Metadata("https://example.com")
+    metadata = Gen3Metadata("https://example.com", auth_provider=gen3_auth)
     path = "/blah"
     expected_response = {}
 
@@ -363,11 +363,11 @@ def test_query_full_metadata(requests_mock):
 
 
 @patch("gen3.metadata.requests.post")
-def test_batch_create(requests_mock):
+def test_batch_create(requests_mock, gen3_auth):
     """
     Test batch creation
     """
-    metadata = Gen3Metadata("https://example.com")
+    metadata = Gen3Metadata("https://example.com", auth_provider=gen3_auth)
     metadata_list = [
         {"guid": "3c42c819-1dfe-4c3e-8d46-c3ec7eb99bf4", "data": {"foo": "bar"}},
         {"guid": "dfa1a1dc-98f4-46be-ba8f-ae9b42b0ee50", "data": {"foo": "bar"}},
@@ -403,11 +403,11 @@ def test_batch_create(requests_mock):
     [None, [], ["1"], ["1a", "2b", "3c"], ["A!@SJD)(*@#Q&)AS(DF"]],
 )
 @patch("gen3.metadata.requests.post")
-def test_create(requests_mock, aliases):
+def test_create(requests_mock, aliases, gen3_auth):
     """
     Test creating for guids
     """
-    metadata = Gen3Metadata("https://example.com")
+    metadata = Gen3Metadata("https://example.com", auth_provider=gen3_auth)
     guid = "95a41871-244c-48ae-8004-63f4ed1f0291"
     data = {"foo": "bar", "fizz": "buzz", "nested_details": {"key1": "value1"}}
     expected_response = data
@@ -438,11 +438,11 @@ def test_create(requests_mock, aliases):
     [None, [], ["1"], ["1a", "2b", "3c"], ["A!@SJD)(*@#Q&)AS(DF"]],
 )
 @patch("gen3.metadata.requests.put")
-def test_update(requests_mock, aliases):
+def test_update(requests_mock, aliases, gen3_auth):
     """
     Test updating for guids
     """
-    metadata = Gen3Metadata("https://example.com")
+    metadata = Gen3Metadata("https://example.com", auth_provider=gen3_auth)
     guid = "95a41871-244c-48ae-8004-63f4ed1f0291"
     data = {"foo": "bar", "fizz": "buzz", "nested_details": {"key1": "value1"}}
     expected_response = data
@@ -469,11 +469,11 @@ def test_update(requests_mock, aliases):
 
 
 @patch("gen3.metadata.requests.delete")
-def test_delete(requests_mock):
+def test_delete(requests_mock, gen3_auth):
     """
     Test deleting guids
     """
-    metadata = Gen3Metadata("https://example.com")
+    metadata = Gen3Metadata("https://example.com", auth_provider=gen3_auth)
     guid = "95a41871-244c-48ae-8004-63f4ed1f0291"
     expected_response = {}
 
@@ -628,3 +628,78 @@ def test_aliases_creation(
 
     response = mds.get_aliases(guid)
     assert response.get("aliases") == []
+
+
+def test_init_requires_endpoint_or_auth():
+    """
+    Neither an endpoint nor an auth provider is an error
+    """
+    with pytest.raises(ValueError):
+        Gen3Metadata()
+
+
+@patch("gen3.metadata.requests.get")
+def test_open_endpoints_without_auth(requests_mock):
+    """
+    Open access endpoints work when no auth provider is supplied
+    """
+    metadata = Gen3Metadata("https://example.com")
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"guid": {}}
+    mock_response.text = "1.0"
+    requests_mock.return_value = mock_response
+
+    assert metadata.query("a=1") == {"guid": {}}
+    assert metadata.get("guid") == {"guid": {}}
+    assert metadata.get_aliases("guid") == {"guid": {}}
+    assert metadata.get_version() == "1.0"
+    assert requests_mock.call_count == 4
+    for call in requests_mock.call_args_list:
+        assert call.kwargs["auth"] is None
+
+
+@patch("gen3.metadata.requests.delete")
+@patch("gen3.metadata.requests.put")
+@patch("gen3.metadata.requests.post")
+@patch("gen3.metadata.requests.get")
+@patch("gen3.metadata.logging")
+def test_admin_endpoints_without_auth(
+    mock_logging, requests_get, requests_post, requests_put, requests_delete
+):
+    """
+    Admin methods log a helpful message and make no request without an auth provider
+    """
+    metadata = Gen3Metadata("https://example.com")
+    calls = [
+        (metadata.get_index_key_paths, ()),
+        (metadata.create_index_key_path, ("path",)),
+        (metadata.delete_index_key_path, ("path",)),
+        (metadata.batch_create, ([{"guid": "g", "data": {}}],)),
+        (metadata.create, ("g", {})),
+        (metadata.update, ("g", {})),
+        (metadata.delete, ("g",)),
+        (metadata.delete_alias, ("g", "a")),
+        (metadata.create_aliases, ("g", ["a"])),
+        (metadata.update_aliases, ("g", ["a"])),
+        (metadata.delete_aliases, ("g",)),
+    ]
+    async_calls = [
+        (metadata.async_create, ("g", {})),
+        (metadata.async_update, ("g", {})),
+        (metadata.async_delete_alias, ("g", "a")),
+        (metadata.async_create_aliases, ("g", ["a"])),
+        (metadata.async_update_aliases, ("g", ["a"])),
+        (metadata.async_delete_aliases, ("g",)),
+    ]
+    loop = get_or_create_event_loop_for_thread()
+    for func, args in calls:
+        mock_logging.reset_mock()
+        assert func(*args) is None
+        assert "Gen3Auth" in mock_logging.error.call_args.args[0], func.__name__
+    for func, args in async_calls:
+        mock_logging.reset_mock()
+        assert loop.run_until_complete(func(*args)) is None
+        assert "Gen3Auth" in mock_logging.error.call_args.args[0], func.__name__
+
+    for mock in (requests_get, requests_post, requests_put, requests_delete):
+        mock.assert_not_called()
