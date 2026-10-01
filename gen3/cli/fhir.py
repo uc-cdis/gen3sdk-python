@@ -40,7 +40,7 @@ def fhir():
     "--work_dir",
     type=click.Path(),
     metavar="work_dir",
-    help=f"Specify which working directory to clean, if not specified the default ({DEFAULT_WORK_DIR}) will be used. Can also be set as an environment variable: GEN3_FHIR_WORK_DIR",
+    help=f"Working directory for intermediate files (allows resuming runs). If not specified the default ({DEFAULT_WORK_DIR}) will be used. Can also be set with the environment variable GEN3_FHIR_WORK_DIR",
 )
 @click.option(
     "-b",
@@ -75,6 +75,9 @@ def cli(
         batch_size (int): number of lines per chunk
         force (bool): remove all intermediate files for this run before exiting even if it crashes
     """
+    if os.path.realpath(input_file) == os.path.realpath(output_file):
+        raise click.UsageError("input_file and output_file must be different")
+
     tag_fhir_resources_with_authz(
         input_file=input_file,
         output_file=output_file,
@@ -103,7 +106,7 @@ def cli(
 @click.option(
     "--force",
     is_flag=True,
-    help="Remove temporary directory ignoring status of each directory",
+    help="Also remove the working directory itself if it is empty after cleanup",
 )
 def cleanup(work_dir, dry_run: bool, force: bool):
     """
@@ -112,7 +115,7 @@ def cleanup(work_dir, dry_run: bool, force: bool):
     Args:
         work_dir (str): Working directory to save intermediate files for each run
         dry_run (bool): If True, list the files that would be removed, but not actually remove them
-        force (bool): Delete all intermediate directories disregarding the status
+        force (bool): Also remove the working directory itself if it is empty after cleanup
     """
 
     cleanup_fhir_transform_artifacts(work_dir=work_dir, dry_run=dry_run, force=force)
