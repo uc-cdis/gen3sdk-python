@@ -8,8 +8,12 @@ version: "1.0"
 # Conditional Field-Level Routing (Per Resource Type)
 rules:
  - resource_type: "Patient"
-   condition: "Patient.managingOrganization.reference = 'Organization/site-alpha'"
-   authz: "/programs/Alpha/projects/Main"
+   condition: "Patient.gender = 'male'"
+   authz: "/programs/Alpha/projects/Biobank"
+
+ - resource_type: "Patient"
+   condition: "Patient.gender = 'female'"
+   authz: "/programs/Restricted/projects/Genomics"
 
  - resource_type: "Observation"
    condition: "Observation.code.coding.where(code = '9876-5').exists()"
@@ -22,18 +26,3 @@ rules:
  - resource_type: "Specimen"
    condition: "Specimen.status = 'available'"
    authz: "/programs/Alpha/projects/Biobank"
-
- - resource_type: "Specimen"
-   condition: "Specimen.Type = 'Blood specimen (specimen)'"
-   authz: "/programs/Alpha/projects/Biobank"
-
- -  resource_type: "Patient"
-    condition: "Patient.gender = 'male'"
-    authz: "/programs/Alpha/projects/Biobank"
-  
- -  resource_type: "Patient"
-    condition: "Patient.gender = 'female'"
-    authz: "/programs/Restricted/projects/Genomics"
-
-
-

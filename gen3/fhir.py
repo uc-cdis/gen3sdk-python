@@ -3,7 +3,6 @@ from itertools import islice
 import json
 from fhirpathpy import compile
 from fhirpathpy.models import models
-import click
 import os, glob
 from typing import Any
 import time
@@ -26,7 +25,7 @@ class Gen3FHIRAuthzTagger:
 
     Example:
         tagger = Gen3FHIRAuthzTagger(config_path=config) #create instance of tagger
-        tagger.relevant_authz_rules(os.path.basename(input_file).split(".")[0]) #keep only relevant rules for the resource type
+        tagger.relevant_authz_rules(get_resource_type(input_file)) #keep only relevant rules for the resource type
         authz_tags = tagger.determine_authz(record) #generate tags
         out = json.dumps(tagger.tag_resource(record, authz_tags)) #tag resources
 
@@ -77,7 +76,8 @@ class Gen3FHIRAuthzTagger:
                 ) from e
             self.rules.append({**rule, "match": match})
 
-        if not self.rules:
+        # global_authz overrides every rule, so rules are optional when it is set
+        if not self.rules and "global_authz" not in self.config:
             raise ValueError(
                 f"no authz rules configured for resource type {resource_type!r}"
             )
@@ -104,7 +104,6 @@ class Gen3FHIRAuthzTagger:
         if "global_authz" in self.config:
             return self.config["global_authz"]
 
-        matches = []
         matches = [
             rule
             for rule in self.rules
@@ -158,10 +157,12 @@ def resolve_work_dir(
     work_dir: str | os.PathLike[str] | None = None, clean: bool = False
 ) -> pathlib.Path:
     """
-    Finds or creates the working directory for intermediate files and modifies the permissions to only make it readable by owner
+    Finds or creates the working directory for intermediate files. A directory created here is made readable by owner only;
+    an existing directory keeps its permissions, since it may be one the user owns for other purposes
 
     Args:
-        work_dir (str): static work directory where all run directories are stored
+        work_dir (str | None): static work directory where all run directories are stored. Falls back to the
+            GEN3_FHIR_WORK_DIR environment variable, then DEFAULT_WORK_DIR
         clean (bool):  True when used for cleaning up directories, False when used to initiate run and create the working directory
 
     Returns:
@@ -172,12 +173,10 @@ def resolve_work_dir(
         work_dir or os.environ.get("GEN3_FHIR_WORK_DIR") or DEFAULT_WORK_DIR
     ).expanduser()
 
-    if not clean:
-        root.mkdir(parents=True, exist_ok=True)
-
-    # 0o700 makes it only only readable by owner and not everyone else (which is important
-    # for potentially shared machines and potential FHIR PHI)
-    if root.is_dir():
+    if not clean and not root.exists():
+        root.mkdir(parents=True)
+        # 0o700 makes it only readable by owner and not everyone else (which is important
+        # for potentially shared machines and potential FHIR PHI)
         root.chmod(0o700)
 
     return root
@@ -362,17 +361,18 @@ def _merge_needed(directory: str | os.PathLike[str], record: dict) -> bool:
 
 
 def cleanup_fhir_transform_artifacts(
-    work_dir: str | os.PathLike[str] = DEFAULT_WORK_DIR,
+    work_dir: str | os.PathLike[str] | None = None,
     dry_run: bool = False,
     force: bool = False,
 ) -> int:
     """
-    Remove run dirs whose owning process is gone.
+    Remove all run dirs in the working directory. Only directories containing a .config.json
+    (written at the start of every run) are treated as run dirs; anything else is left alone.
 
     Args:
-        work_dir (str): static work directory where all run directories are stored
+        work_dir (str | None): static work directory where all run directories are stored
         dry_run (bool): If True, lists all directories which would be removed, but not actually remove them
-        force (bool): If True, delete the whole temporary directory disregarding the status
+        force (bool): If True, also remove the working directory itself if it is empty afterwards
 
     Returns:
         count(int): number of directories deleted / flagged for deletion (if dry_run=True)
@@ -382,16 +382,9 @@ def cleanup_fhir_transform_artifacts(
         logging.info("Nothing to clean")
         return 0
 
-    # force to delete everything disregarding status
-    if force:
-        count = sum(1 for p in working_dir.glob("*") if p.is_dir())
-        logging.info(f"{count} run dir(s) deleted")
-        shutil.rmtree(working_dir, ignore_errors=True)
-        return count
-
     count = 0
     for run_dir in sorted(working_dir.glob("*")):
-        if not run_dir.is_dir():
+        if not (run_dir / ".config.json").is_file():
             continue
 
         logging.info(f"{'would remove' if dry_run else 'removed '} {run_dir}")
@@ -400,6 +393,13 @@ def cleanup_fhir_transform_artifacts(
         count += 1
 
     logging.info(f"{count} stale run dir(s)")
+
+    if force and not dry_run:
+        try:
+            working_dir.rmdir()
+        except OSError:
+            logging.info(f"{working_dir} is not empty, leaving it in place")
+
     return count
 
 
@@ -498,10 +498,14 @@ def merge_chunks(
     # creates all directories in path if dont exist
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(out, "wb") as fout:
+    # write to a temp file and replace at the end, a partially written output_file
+    # would otherwise be reported as finished by _is_done on the next run
+    tmp = out.with_name(f"{out.name}.tmp")
+    with open(tmp, "wb") as fout:
         for f in sorted(input_files):
             with open(f, "rb") as fin:
                 shutil.copyfileobj(fin, fout)
+    os.replace(tmp, out)
     logging.info(
         f"merge chunks total time: {(time.strftime('%H:%M:%S', time.gmtime(time.time() - start)))}"
     )
@@ -537,17 +541,17 @@ def tag_fhir_resource_pipeline(
     if _is_done(output_dir, record):
         return
 
-    # if new file or new config/batch_size, reset folder
+    # if new file, missing/corrupt .config.json, or changed config/batch_size/output_file, reset folder
     if _is_new(output_dir, record):
-        logging.info("New folder, creating directory and chunking")
+        logging.info("New run, resetting run directory")
         if pathlib.Path(output_dir).exists():
             shutil.rmtree(output_dir)
         make_folders_for_filename(f"{output_dir}/.config.json")
+        # run dirs hold potential FHIR PHI, keep them readable by owner only
+        pathlib.Path(output_dir).chmod(0o700)
         pathlib.Path(f"{output_dir}/.config.json").write_text(
             json.dumps(record, default=str), encoding="utf-8"
         )
-        # split into chunks
-        logging.info(f"Chunking {input_file} into {batch_size}-sized batches...")
 
     # initialize tagger
     tagger = Gen3FHIRAuthzTagger(config_path=config)
@@ -557,6 +561,7 @@ def tag_fhir_resource_pipeline(
 
     # if not fully transformed or new/reset, resume
     if not _merge_needed(output_dir, record):
+        logging.info(f"Chunking {input_file} into {batch_size}-sized batches...")
         ranges = compute_ranges(input_file, batch_size)
 
         logging.info("Transforming chunks...")
@@ -586,7 +591,7 @@ def tag_fhir_resources_with_authz(
     output_file: str | os.PathLike[str],
     config: str | os.PathLike[str],
     batch_size: int = 10000,
-    work_dir: str | os.PathLike[str] = DEFAULT_WORK_DIR,
+    work_dir: str | os.PathLike[str] | None = None,
     force: bool = False,
 ) -> None:
     """
@@ -598,8 +603,13 @@ def tag_fhir_resources_with_authz(
             output_file (str): Output file name
             config (str): .yaml file with authorization rules
             batch_size (int): number of lines per chunk
-            work_dir (str): static work directory where all run directories are stored
-            force (bool): remove all intermediate files for this run before exiting even if it crashes
+            work_dir (str | None): static work directory where all run directories are stored. Falls back to the
+                GEN3_FHIR_WORK_DIR environment variable, then DEFAULT_WORK_DIR
+            force (bool): remove all intermediate files for this run before exiting even if it fails
+
+    Raises:
+        ValueError: if batch_size < 1, input_file and output_file are the same, input_file is empty,
+            or a resource cannot be tagged
     """
 
     start_time = time.time()
@@ -607,7 +617,7 @@ def tag_fhir_resources_with_authz(
         raise ValueError(f"batch_size must be >= 1, got {batch_size}")
 
     if os.path.realpath(input_file) == os.path.realpath(output_file):
-        raise click.UsageError("input_file and output_file must be different")
+        raise ValueError("input_file and output_file must be different")
 
     # check if input file is empty
     if pathlib.Path(input_file).stat().st_size == 0:
@@ -620,10 +630,12 @@ def tag_fhir_resources_with_authz(
     hash = get_sha256hash(input_file)
     output_dir = f"{working_dir}/{os.path.basename(input_file).split('.')[0]}_{hash}"
 
+    # str() so a run started with Path arguments compares equal to the .config.json
+    # it saved (which holds strings), otherwise every rerun is treated as new
     record = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "input_file": input_file,
-        "output_file": output_file,
+        "input_file": str(input_file),
+        "output_file": str(output_file),
         "config_hash": get_sha256hash(config),
         "batch_size": batch_size,
     }
@@ -647,5 +659,9 @@ def tag_fhir_resources_with_authz(
 
     except Exception as e:
         logging.error(e)
-        logging.error("Run failed; intermediates left in %s", output_dir)
+        if force:
+            shutil.rmtree(output_dir, ignore_errors=True)
+            logging.error("Run failed; removed intermediates in %s", output_dir)
+        else:
+            logging.error("Run failed; intermediates left in %s", output_dir)
         raise

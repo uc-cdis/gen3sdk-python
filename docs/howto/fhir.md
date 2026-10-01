@@ -24,7 +24,7 @@ OUTPUT_FILE:
 Requires a distinct name/path from the input file to prevent overwriting the input file.
 
 CONFIG.YAML:
-The authorization configuration file has to be in yaml format and can have multiple conditions, as well as a `global_authz` which overrides all other rules. Conditions use [https://hl7.org/fhirpath/](FHIRPath) syntax.
+The authorization configuration file has to be in yaml format and can have multiple conditions, as well as a `global_authz` which overrides all other rules. Conditions use [FHIRPath](https://hl7.org/fhirpath/) syntax, which is case-sensitive (e.g. `Specimen.type`, not `Specimen.Type`).
 
 A resource matching two rules will throw an error and will require reconfiguration of the YAML file. 
 
@@ -38,11 +38,11 @@ rules:
 
 #Example with multiple conditions
  - resource_type: "Specimen"
-   condition: "Specimen.status = 'available' and Specimen.Type = 'Blood specimen (specimen)'"
+   condition: "Specimen.status = 'available' and Specimen.type.text = 'Blood specimen (specimen)'"
    authz: "/programs/Alpha/projects/Biobank"
 ```
 
-And example config.yaml file can be found in [fhir_config.yaml](../../tests/test_data/fhir_config.yaml)
-To run the fhir transfrom with synthetic test data:
+An example config.yaml file can be found in [fhir_config.yaml](../../tests/test_data/fhir_config.yaml)
+To run the fhir transform with synthetic test data:
 
 `poetry run gen3 -vv fhir transform ./tests/test_data/Patient.ndjson ./test_Patient.ndjson ./tests/test_data/fhir_config.yaml`
