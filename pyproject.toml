@@ -37,6 +37,9 @@ aiofiles = "*"
 pandas = ">=1.4.2"
 xmltodict = ">=0.13.0"
 gen3users = "*"
+# TODO: transitive dependency pinned for a security vulnerability. Remove this
+# pin in the future and check whether the vulnerability scan still flags it
+urllib3 = ">=2.8.0"
 
 # A list of all of the optional dependencies, some of which are included in the
 # below `extras`. They can be opted into by apps.
