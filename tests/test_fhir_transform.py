@@ -374,8 +374,7 @@ class Test_is_new:
     def test_is_new_when_output_filename_changed(self, case_dir: pathlib.Path) -> None:
         """A changed output file makes the run new."""
         directory, record = mock_state(
-            self.tmp_path, config={"output_file": "/tmp/somewhere_else.ndjson"}
-            case_dir, config={"output_file": "/tmp/somewhere_else.ndjson"}
+            case_dir, config={"output_file": "/tmp/somewhere_else.ndjson"},
         )
         assert _is_new(directory, record) is True
 
