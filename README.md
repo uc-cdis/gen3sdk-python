@@ -45,7 +45,7 @@ Additional documentation for different components is available:
     - [Gen3 Discovery Page Metadata Tools](docs/howto/discoveryMetadataTools.md)
     - [Gen3 Subject-level Crosswalk Metadata Tools](docs/howto/crosswalk.md)
 - [Bundle Tools](docs/howto/bundleTools.md)
-- [Nextflow with the Gen3 DPoP Proxy](docs/howto/nextflow.md)
+- [Using the Gen3 DPoP Proxy](docs/howto/dpop-proxy.md)
 - [Development](docs/howto/devTest.md)
 - [CLI](docs/howto/cli.md)
 

@@ -70,7 +70,7 @@ def proxy_start_command(
     Start the DPoP proxy server in the foreground.
 
     Point Nextflow (or another client) at the port and stop the proxy
-    with Ctrl+C. See docs/nextflow.md for the Nextflow configuration.
+    with Ctrl+C. See docs/howto/dpop-proxy.md for client configuration.
     """
     stop_event = threading.Event()
     try:

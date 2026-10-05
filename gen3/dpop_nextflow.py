@@ -88,7 +88,7 @@ def run_gen3_nextflow(
     over the existing config, so only the keys the proxy forces change - workDir,
     region, executor and plugins stay as the pipeline set them. Pass
     `generate_config=False` to point the config at the proxy by hand instead; see
-    docs/nextflow.md.
+    docs/howto/dpop-proxy.md.
 
     Args:
         nf_args (List[str]): Arguments to pass to `nextflow run`.
