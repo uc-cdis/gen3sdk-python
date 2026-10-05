@@ -651,7 +651,7 @@ class Gen3Metadata:
         response = requests.delete(url_with_params, auth=self._auth_provider)
         response.raise_for_status()
 
-        return response.json()
+        return response.text
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
     @_requires_auth
@@ -682,7 +682,7 @@ class Gen3Metadata:
             ) as response:
                 response.raise_for_status()
 
-            return await response.json()
+                return await response.text()
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_NO_LOG_IF_NOT_RETRIED)
     @_requires_auth

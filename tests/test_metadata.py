@@ -559,8 +559,12 @@ def test_aliases_creation(
                 current_aliases.remove(alias)
 
         mocked_response = MagicMock(requests.Response)
-        mocked_response.status_code = 200
-        mocked_response.json.return_value = {}
+        mocked_response.status_code = 204
+        mocked_response.text = ""
+        # make sure no regression for calling .json() on a 204 response again
+        mocked_response.json.side_effect = requests.exceptions.JSONDecodeError(
+            "Expecting value", "", 0
+        )
         mocked_response.raise_for_status.side_effect = lambda *args: None
 
         return mocked_response
