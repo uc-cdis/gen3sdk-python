@@ -25,7 +25,6 @@ class Gen3FHIRAuthzTagger:
 
     Example:
         tagger = Gen3FHIRAuthzTagger(config_path=config) #create instance of tagger
-        tagger.relevant_authz_rules(os.path.basename(input_file).split(".")[0]) #keep only relevant rules for the resource type
         tagger.relevant_authz_rules(get_resource_type(input_file)) #keep only relevant rules for the resource type
         out = json.dumps(tagger.tag_resource(record, authz_tags)) #tag resources
 
@@ -34,7 +33,7 @@ class Gen3FHIRAuthzTagger:
     def __init__(
         self,
         config_path: str | os.PathLike[str],
-        custom_hook: Callable[[dict], dict] | None = None,
+        custom_hook: Callable[[dict], str | None] | None = None,
         fhir_version: str = "r4",
     ):
         """
@@ -42,7 +41,7 @@ class Gen3FHIRAuthzTagger:
 
         Args:
             config_path (str): the name/path of the config.yaml file
-            custom_hook (Callable[[dict], str] | None): if provided, called
+            custom_hook (Callable[[dict], str | None] | None): if provided, called
                 instead of the configuration to determine authz. Receives the
                 FHIR resource as a dict and returns the authz path. A falsy
                 return falls through to the configured rules.
@@ -53,6 +52,7 @@ class Gen3FHIRAuthzTagger:
             self.config = yaml.safe_load(f)
         self.custom_hook = custom_hook
         self.model = models[fhir_version]
+        self.resource_type = None
 
     def relevant_authz_rules(self, resource_type: str) -> None:
         """
@@ -62,6 +62,7 @@ class Gen3FHIRAuthzTagger:
             resource_type (str): the resource type in the .ndjson file
 
         """
+        self.resource_type = resource_type
         self.rules = []
         for rule in self.config.get("rules", []):
             if rule["resource_type"] != resource_type:
@@ -215,9 +216,12 @@ def get_sha256hash(input_file: str | os.PathLike[str]) -> str:
         digest (str): SHA-256 hash of the input .ndjson file
 
     """
+    # hashlib.file_digest would do this too, but it is 3.11+
+    digest = hashlib.sha256()
     with open(input_file, "rb") as f:
-        digest = hashlib.file_digest(f, "sha256").hexdigest()
-    return digest
+        for block in iter(lambda: f.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def get_resource_type(input_file: str | os.PathLike[str], sample: int = 5) -> str:
@@ -311,25 +315,12 @@ def _is_done(directory: str | os.PathLike[str], record: dict) -> bool:
         status (bool): returns whether the transformation has beencompleted
     """
 
-    try:
-        params = json.loads(pathlib.Path(directory, ".config.json").read_bytes())
-        if (
-            record["config_hash"] != params["config_hash"]
-            or record["batch_size"] != params["batch_size"]
-            or record["output_file"] != params["output_file"]
-        ):
-            return False
-
-    except (OSError, ValueError):
+    if _is_new(directory, record):
         return False
 
-    # check if output file is the same and if exists
-    if (
-        record["output_file"] == params["output_file"]
-        and pathlib.Path(record["output_file"]).is_file()
-        and pathlib.Path(record["output_file"]).stat().st_size != 0
-    ):
-        logging.info(f"File already tagged. Locate file here: {record['output_file']}")
+    output = pathlib.Path(record["output_file"])
+    if output.is_file() and output.stat().st_size != 0:
+        logging.info(f"File already tagged. Locate file here: {output}")
         return True
 
     return False
@@ -392,18 +383,15 @@ def cleanup_fhir_transform_artifacts(
             shutil.rmtree(run_dir, ignore_errors=True)
         count += 1
 
-    logging.info(f"{count} stale run dir(s)")
-    
+    logging.info(f"{count} stale run dir(s) {'found' if dry_run else 'removed'}")
+
     if force and not dry_run:
-        count = 0
         try:
             working_dir.rmdir()
-            count += 1 #count how many directories removed
+            logging.info(f"removed empty working directory {working_dir}")
         except OSError:
             logging.info(f"{working_dir} is not empty, leaving it in place")
 
-    logging.info(f"{count} stale run dir(s) removed")
-    
     return count
 
 
@@ -459,9 +447,12 @@ def transform_chunk(
         start (int): byte offset where this chunk starts
         end (int): byte offset where this chunk ends
         index (int): position of this chunk, used to name the .done file
-        tagger (Gen3FHIRAuthzTagger): The tagger instance to use for tagging the resources
+        tagger (Gen3FHIRAuthzTagger): The tagger instance to use for tagging the resources,
+            after relevant_authz_rules has been called for the file's resource type
         output_dir (str): The directory path of where to write the intermediate files to
 
+    Raises:
+        ValueError: if a record's resourceType differs from the tagger's resource type
     """
     done_path = os.path.join(
         output_dir, f"{pathlib.Path(input_file).stem}_{index:05d}.done"
@@ -475,6 +466,13 @@ def transform_chunk(
                 continue
 
             record = json.loads(r)
+            # get_resource_type only samples the head and tail of the file, and a
+            # condition not prefixed with the type would match the wrong resource
+            if record.get("resourceType") != tagger.resource_type:
+                raise ValueError(
+                    f"{input_file}: expected only {tagger.resource_type} resources, "
+                    f"found {record.get('resourceType')!r} (id {record.get('id')!r})"
+                )
             # generate tags
             authz_tags = tagger.determine_authz(record)
             # tag resources

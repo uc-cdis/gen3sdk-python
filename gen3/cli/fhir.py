@@ -1,6 +1,7 @@
 import click
 import os
 import pathlib
+import sys
 from cdislogging import get_logger
 from gen3.fhir import *
 
@@ -78,14 +79,18 @@ def cli(
     if os.path.realpath(input_file) == os.path.realpath(output_file):
         raise click.UsageError("input_file and output_file must be different")
 
-    tag_fhir_resources_with_authz(
-        input_file=input_file,
-        output_file=output_file,
-        config=config,
-        batch_size=batch_size,
-        work_dir=work_dir,
-        force=force,
-    )
+    try:
+        tag_fhir_resources_with_authz(
+            input_file=input_file,
+            output_file=output_file,
+            config=config,
+            batch_size=batch_size,
+            work_dir=work_dir,
+            force=force,
+        )
+    except Exception:
+        # tag_fhir_resources_with_authz already logged the error
+        sys.exit(1)
 
 
 @click.command(

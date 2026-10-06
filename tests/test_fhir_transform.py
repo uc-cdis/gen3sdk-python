@@ -18,6 +18,7 @@ import os
 import json
 import subprocess
 import shutil
+import sys
 import yaml
 from typing import Any
 
@@ -33,7 +34,6 @@ GLOBAL_CONFIG_SRC = pathlib.Path(
 )
 
 BATCH_SIZE = 1
-N_CHUNKS = len(compute_ranges(IN, BATCH_SIZE))
 BASE_RECORD = {
     "timestamp": "2026-08-12T21:00:20.677168+00:00",
     "input_file": f"{IN}",
@@ -49,6 +49,7 @@ def tmp_root() -> None:
     shutil.rmtree(TMP_ROOT, ignore_errors=True)
     TMP_ROOT.mkdir(parents=True)
 
+
 @pytest.fixture
 def case_dir(request: pytest.FixtureRequest) -> pathlib.Path:
     """A fresh directory under TMP_ROOT named after the test, so each test's intermediates are isolated and easy to find."""
@@ -57,10 +58,12 @@ def case_dir(request: pytest.FixtureRequest) -> pathlib.Path:
     directory.mkdir(parents=True)
     return directory
 
+
 @pytest.fixture(scope="session")
 def tagger():
     """A tagger built from the synthetic Patient rules config."""
     return Gen3FHIRAuthzTagger(CONFIG_SRC)
+
 
 @pytest.fixture
 def transform_workdir(case_dir: pathlib.Path) -> pathlib.Path:
@@ -81,7 +84,7 @@ def merge_workdir(case_dir: pathlib.Path) -> pathlib.Path:
 
 
 def mock_state(
-    directory: dir,
+    directory: pathlib.Path,
     config: str | dict | None = "match",
     chunks: int = 0,
     done: int = 0,
@@ -92,7 +95,7 @@ def mock_state(
     Build an on-disk run directory and return (directory, record).
 
     Args:
-        directory (case_dir): parent directory; a fresh subdir is created under it
+        directory (Path): parent directory; a fresh subdir is created under it
         config (str|dict|None): "match" -> .config.json equal to record
                 dict    -> record updated with these overrides
                 str     -> written verbatim (for malformed-JSON cases)
@@ -145,6 +148,7 @@ def mock_state(
         out.write_text('{"id":1}\n', encoding="utf-8")
 
     return directory, record
+
 
 def read_ndjson(path: str | os.PathLike[str]) -> list[dict]:
     """
@@ -205,12 +209,13 @@ GENDER_RULES = [
     },
 ]
 
+
 def test_fhir_output(case_dir: pathlib.Path) -> None:
     """Tests that output file matches the input file with the only difference being the tags"""
     output_file = case_dir / "fhir_output_Patient.ndjson"
     fin = read_ndjson(IN)
     src = read_ndjson(SRC)
-    
+
     tag_fhir_resources_with_authz(
         input_file=IN,
         output_file=output_file,
@@ -218,7 +223,7 @@ def test_fhir_output(case_dir: pathlib.Path) -> None:
         batch_size=BATCH_SIZE,
         work_dir=case_dir,
     )
-    
+
     out = read_ndjson(output_file)
 
     # check that output matched input in everything other than the tags
@@ -259,7 +264,9 @@ def test_compute_ranges():
     assert recombined == fin, "Ranges do not recombine to the input file"
 
 
-def test_transform(tagger: Gen3FHIRAuthzTagger, transform_workdir: pathlib.Path) -> None:
+def test_transform(
+    tagger: Gen3FHIRAuthzTagger, transform_workdir: pathlib.Path
+) -> None:
     """Asserts transform_chunk one .done file per range, doesn't modify the input file, and no .tmp files remain once transformation is completed
 
     Args:
@@ -374,7 +381,8 @@ class Test_is_new:
     def test_is_new_when_output_filename_changed(self, case_dir: pathlib.Path) -> None:
         """A changed output file makes the run new."""
         directory, record = mock_state(
-            case_dir, config={"output_file": "/tmp/somewhere_else.ndjson"},
+            case_dir,
+            config={"output_file": "/tmp/somewhere_else.ndjson"},
         )
         assert _is_new(directory, record) is True
 
@@ -534,17 +542,19 @@ class Test_status:
         directory, record = mock_state(case_dir, config=state, output="full")
         assert not (_is_new(directory, record) and _is_done(directory, record))
 
+
 def test_rerun_after_interrupted_transform_completes_output(
     case_dir: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A run that fails partway through transforming resumes and produces the full output on rerun."""
     output_file = case_dir / "out.ndjson"
+    n_chunks = len(compute_ranges(IN, BATCH_SIZE))
     original = Gen3FHIRAuthzTagger.determine_authz
     calls = {"n": 0}
 
     def fail_halfway(self: Gen3FHIRAuthzTagger, resource: dict) -> str:
         calls["n"] += 1
-        if calls["n"] > N_CHUNKS // 2:
+        if calls["n"] > n_chunks // 2:
             raise RuntimeError("simulated crash")
         return original(self, resource)
 
@@ -698,6 +708,50 @@ def test_failed_run_writes_no_output(case_dir: pathlib.Path) -> None:
     assert not output_file.exists()
 
 
+def test_mismatched_resource_type_mid_file_is_rejected(case_dir: pathlib.Path) -> None:
+    """A different resourceType in the middle of the file, where the head/tail sample can't see it, raises ValueError."""
+    lines = IN.read_text(encoding="utf-8").splitlines()
+    observation = json.dumps(
+        {"resourceType": "Observation", "id": "obs-1", "status": "final"}
+    )
+    mixed = case_dir / "Patient.ndjson"
+    mixed.write_text(
+        "\n".join(lines[:6] + [observation] + lines[6:]) + "\n", encoding="utf-8"
+    )
+    # a condition without the type prefix matches the Observation too
+    config = write_config(
+        case_dir,
+        {
+            "rules": [
+                {
+                    "resource_type": "Patient",
+                    "condition": "gender.exists() or status.exists()",
+                    "authz": "/programs/A/projects/B",
+                }
+            ]
+        },
+    )
+    with pytest.raises(ValueError):
+        tag_fhir_resources_with_authz(
+            mixed, case_dir / "out.ndjson", config, work_dir=case_dir / "work"
+        )
+
+
+def test_rerun_with_changed_config_retags_output(case_dir: pathlib.Path) -> None:
+    """Rerunning a completed run after the config changes retags the output under the new config."""
+    output_file = case_dir / "out.ndjson"
+    work_dir = case_dir / "work"
+    config = write_config(case_dir, {"rules": GENDER_RULES})
+    tag_fhir_resources_with_authz(IN, output_file, config, work_dir=work_dir)
+
+    config = write_config(case_dir, {"global_authz": "/programs/A/projects/B"})
+    tag_fhir_resources_with_authz(IN, output_file, config, work_dir=work_dir)
+
+    assert {r["meta"]["security"][0]["code"] for r in read_ndjson(output_file)} == {
+        "/programs/A/projects/B"
+    }
+
+
 def test_global_authz_without_rules_tags_every_resource(case_dir: pathlib.Path) -> None:
     """A config with only global_authz tags every resource with it."""
     output_file = case_dir / "out.ndjson"
@@ -729,12 +783,16 @@ class Test_cleanup:
         cleanup_fhir_transform_artifacts(work_dir)
         assert not run_dirs(work_dir)
 
-    @pytest.mark.parametrize("dry_run", [False, True])
+    @pytest.mark.parametrize(
+        "options",
+        [{}, {"dry_run": True}, {"force": True}],
+        ids=["plain", "dry_run", "force"],
+    )
     def test_cleanup_returns_run_dir_count(
-        self, work_dir: pathlib.Path, dry_run: bool
+        self, work_dir: pathlib.Path, options: dict
     ) -> None:
         """Cleanup returns the number of run dirs removed, or that would be removed on a dry run."""
-        assert cleanup_fhir_transform_artifacts(work_dir, dry_run=dry_run) == 1
+        assert cleanup_fhir_transform_artifacts(work_dir, **options) == 1
 
     def test_cleanup_leaves_non_run_dirs(self, work_dir: pathlib.Path) -> None:
         """Cleanup does not touch directories it did not create."""
@@ -761,7 +819,7 @@ class Test_cleanup:
 
 
 def test_cli(case_dir: pathlib.Path) -> None:
-    """Run the CLI and return the CompletedProcess."""
+    """The CLI tags every record of the input file."""
     out = case_dir / "cli_out.ndjson"
     args = [
         IN,
@@ -801,6 +859,45 @@ def test_cli_rejects_same_input_and_output(case_dir: pathlib.Path) -> None:
     )
     # click exits 2 for a UsageError, an uncaught exception exits 1
     assert result.returncode == 2
+
+
+def test_cli_failed_run_exits_without_traceback(case_dir: pathlib.Path) -> None:
+    """A run that fails on an untaggable resource exits 1 with the logged error, not a traceback."""
+    config = write_config(case_dir, {"rules": GENDER_RULES[:1]})
+    result = subprocess.run(
+        [
+            "gen3",
+            "fhir",
+            "transform",
+            IN,
+            case_dir / "out.ndjson",
+            config,
+            "--work_dir",
+            case_dir / "work",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert result.returncode == 1
+    assert "Traceback" not in result.stderr, "Raw traceback instead of an error message"
+
+
+@pytest.mark.parametrize(
+    "args", [["fhir"], ["fhir", "transform", "a", "b", "c"], ["fhir", "cleanup"]]
+)
+def test_cli_without_fhir_extras_reports_missing_extras(args: list[str]) -> None:
+    """Without fhirpathpy installed, every fhir command fails with the extras error (exit 1) rather than a click usage error (exit 2)."""
+    # None in sys.modules makes `import fhirpathpy` raise ModuleNotFoundError
+    simulate = (
+        "import sys; sys.modules['fhirpathpy'] = None; "
+        f"sys.argv = ['gen3', *{args!r}]; import gen3.cli.__main__"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", simulate], capture_output=True, text=True, timeout=60
+    )
+    assert result.returncode == 1
+
 
 @pytest.mark.parametrize("bad", [0, -1, None, "bad"])
 def test_invalid_batch_size_is_rejected(

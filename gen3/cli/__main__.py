@@ -151,10 +151,16 @@ try:
     import gen3.cli.fhir as fhir
 
     main.add_command(fhir.fhir)
-except ImportError:
+except ModuleNotFoundError as e:
+    # any other missing module is a real bug, not a missing extra
+    if e.name != "fhirpathpy":
+        raise
 
     @click.group(
         name="fhir",
+        # without invoke_without_command click never calls fhir() for `gen3 fhir <subcommand>` and
+        # reports "Missing command." instead of the extras message
+        invoke_without_command=True,
         epilog="Requires FHIR packages which aren't installed by default. Install the 'fhir' extras: poetry install --all-extras",
     )
     @click.argument("args", nargs=-1, type=click.UNPROCESSED)
