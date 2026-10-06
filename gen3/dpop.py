@@ -758,8 +758,7 @@ def _presented_access_token(auth_header: str) -> str | None:
     else:
         return None
 
-    # A client acting on behalf of a user appends the user ID to its token.
-    return candidate.split(";userId=")[0] or None
+    return candidate or None
 
 
 def is_proxy_running(port: int, host: str = "127.0.0.1") -> bool:

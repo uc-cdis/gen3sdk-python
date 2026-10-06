@@ -639,7 +639,15 @@ class TestProxyHeaders:
         """
         A caller that does not hold the task token is refused.
         """
-        for header in (None, "Bearer some-other-token", "Bearer", "Basic abc", ""):
+        for header in (
+            None,
+            "Bearer some-other-token",
+            "Bearer",
+            "Basic abc",
+            "",
+            # Gen3's S3 endpoint refuses a key ID with a user ID appended to the token.
+            f"AWS {TASK_TOKEN};userId=someone:signature",
+        ):
             headers = {} if header is None else {"Authorization": header}
             # An empty dict would let the helper fill in the token, so ask for a header
             # that carries no usable one.
