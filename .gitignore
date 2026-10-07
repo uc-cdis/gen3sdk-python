@@ -111,6 +111,17 @@ schema.json
 tests/outputs
 *.sq3
 gen3/tools/indexing/tmp/
+gen3tests-*.logs
+
+# nextflow
+.nextflow
+.nextflow.log*
+
+# AI
+.claude
+.serena
+AGENTS.md
+CLAUDE.md
 
 .dccache
 .idea
