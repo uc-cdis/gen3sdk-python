@@ -40,8 +40,7 @@ pandas = ">=1.4.2"
 xmltodict = ">=0.13.0"
 gen3users = "*"
 joserfc = ">=1.7.3"
-
-authutils = {git = "https://github.com/uc-cdis/authutils.git", rev = "feat/dpop"}
+authutils = ">=9.0.0"
 
 # A list of all of the optional dependencies, some of which are included in the
 # below `extras`. They can be opted into by apps.
