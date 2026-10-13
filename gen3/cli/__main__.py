@@ -13,11 +13,13 @@ import gen3.cli.configure as configure
 import gen3.cli.objects as objects
 import gen3.cli.file as file
 import gen3.cli.drs_pull as drs_pull
+import gen3.cli.dpop as dpop
 import gen3.cli.users as users
 import gen3.cli.wrap as wrap
 import gen3
 from gen3 import logging as sdklogging
 from gen3.cli import nih
+from gen3.cli import nextflow
 
 
 class AuthFactory:
@@ -143,6 +145,8 @@ main.add_command(objects.objects)
 main.add_command(drs_pull.drs_pull)
 main.add_command(file.file)
 main.add_command(nih.nih)
+main.add_command(dpop.dpop)
 main.add_command(users.users)
 main.add_command(wrap.run)
+main.add_command(nextflow.nextflow)
 main()
