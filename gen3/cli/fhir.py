@@ -92,6 +92,7 @@ def cli(
         # tag_fhir_resources_with_authz already logged the error
         sys.exit(1)
 
+
 @click.command(
     context_settings={"help_option_names": ["-h", "--help"]},
     help="Remove all intermediate files in the tmp folder from previous runs",

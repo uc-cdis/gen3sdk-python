@@ -383,7 +383,7 @@ def cleanup_fhir_transform_artifacts(
         count += 1
 
     logging.info(f"{count} stale run dir(s) {'found' if dry_run else 'removed'}")
-    
+
     if force and not dry_run:
         try:
             working_dir.rmdir()

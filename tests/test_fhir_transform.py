@@ -149,7 +149,7 @@ def mock_state(
 
     return directory, record
 
-    
+
 def read_ndjson(path: str | os.PathLike[str]) -> list[dict]:
     """
     Parse every non-blank line of an .ndjson file.
@@ -697,6 +697,7 @@ def test_untaggable_resources_are_rejected(
         tag_fhir_resources_with_authz(
             IN, case_dir / "out.ndjson", config, work_dir=case_dir
         )
+
 
 def test_mismatched_resource_type_mid_file_is_rejected(case_dir: pathlib.Path) -> None:
     """A different resourceType in the middle of the file, where the head/tail sample can't see it, raises ValueError."""
