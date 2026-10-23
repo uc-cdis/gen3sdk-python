@@ -130,11 +130,11 @@ process {
 }
 tes {
     endpoint = 'https://<your-commons>/ga4gh/tes'
-    oauthToken = env('GEN3_TOKEN')
+    oauthToken = ''
     timeout = 60
 }
 aws {
-    accessKey = env('GEN3_TOKEN')
+    accessKey = ''
     secretKey = 'N/A'  # pragma: allowlist secret
     region = 'us-east-1'
     client {
