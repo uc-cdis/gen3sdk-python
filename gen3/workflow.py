@@ -1,6 +1,7 @@
 """
 Contains class for interacting with Gen3's Workflow Service.
 """
+
 from dataclasses import dataclass
 import time
 
@@ -203,15 +204,16 @@ class Gen3Workflow:
 
             # TODO: can't use raise_for_status - these are all using task dicts.
             if state in ["SYSTEM_ERROR", "EXECUTOR_ERROR"]:
-                logging.error("Task failed")
-                break
+                error_message = f"Task failed with error state '{state}'"
+                logging.error(error_message)
+                raise Exception(error_message)
             if state in final_states:
-                message = (
+                error_message = (
                     f"TES task reached a final state, that is not '{expected_final_state}'."
                     f" Final state: {state}, Response: {task_info}"
                 )
-                logging.warning(message)
-                break
+                logging.warning(error_message)
+                raise Exception(error_message)
             if state not in transient_states:
                 message = f"Unexpected TES task state '{state}' encountered. Response: {task_info}"
                 logging.warning(message)
