@@ -1,22 +1,15 @@
 """
 Conf Test for Gen3 test suite
 """
-from multiprocessing import Process
-import multiprocessing
+
+from collections.abc import Generator
 from unittest.mock import patch
 import os
 import pytest
-import requests
 
 from drsclient.client import DrsClient
-from cdisutilstest.code.indexd_fixture import (
-    setup_database,
-    clear_database,
-    create_user,
-)
+
 from gen3.cli.auth import endpoint
-from indexd import get_app
-from indexd.default_settings import settings
 
 from gen3.file import Gen3File
 from gen3.index import Gen3Index
@@ -25,6 +18,7 @@ from gen3.query import Gen3Query
 from gen3.auth import Gen3Auth
 from gen3.object import Gen3Object
 
+from tests.fake_indexd import FakeIndexd
 
 os.makedirs("tests/outputs", exist_ok=True)
 
@@ -117,83 +111,37 @@ def supported_protocol(request):
     return request.param
 
 
-@pytest.fixture(scope="session")
-def indexd_server():
+@pytest.fixture
+def indexd_server() -> Generator[FakeIndexd, None, None]:
     """
-    Fixture copied from cdisutils-test and updated to mock Arborist
+    An empty in-memory indexd, with every HTTP client routed to it.
+
+    Each test gets its own store, so there is no database to clear between them.
     """
-
-    class MockServer(object):
-        def __init__(self, port):
-            self.port = port
-            self.baseurl = "http://localhost:{}".format(port)
-
-    def run_indexd(port):
-        app = get_app()
-        app.run(host="localhost", port=port, debug=False)
-
-    def wait_for_indexd_alive(port):
-        url = "http://localhost:{}".format(port)
-        try:
-            requests.get(url)
-        except requests.ConnectionError:
-            return wait_for_indexd_alive(port)
-        else:
-            return
-
-    def wait_for_indexd_not_alive(port):
-        url = "http://localhost:{}".format(port)
-        try:
-            requests.get(url)
-        except requests.ConnectionError:
-            return
-        else:
-            return wait_for_indexd_not_alive(port)
-
-    class MockArboristClient(object):
-        def auth_request(*args, **kwargs):
-            return True
-
-    port = 8001
-    settings["auth"].arborist = MockArboristClient()
-    indexd = Process(target=run_indexd, args=[port])
-    # Add this line because OS X multiprocessing default is spawn which will cause pickling errors
-    # NOTE: fork is unstable and not technically supported on OS X, forking is only supported on Unix
-    # However explicitly setting default behavior to fork to pass unit test, only used for tests
-    # https://docs.python.org/3/library/multiprocessing.html
-    # https://github.com/pytest-dev/pytest-flask/issues/104
-    multiprocessing.set_start_method("fork")
-    indexd.start()
-    wait_for_indexd_alive(port)
-
-    yield MockServer(port=port)
-
-    indexd.terminate()
+    fake_indexd = FakeIndexd()
+    with fake_indexd.serving_in_process():
+        yield fake_indexd
 
 
 @pytest.fixture
-def index_client(indexd_server):
+def index_client(indexd_server: FakeIndexd) -> Gen3Index:
     """
-    Handles getting all the docs from an
-    indexing endpoint. Currently this is changing from
-    signpost to indexd, so we'll use just indexd_client now.
-    I.E. test to a common interface this could be multiply our
-    tests:
-    https://docs.pytest.org/en/latest/fixture.html#parametrizing-fixtures
+    Gen3Index pointed at the fake indexd.
     """
-    setup_database()
+    return Gen3Index(indexd_server.baseurl, ("admin", "admin"), service_location="")
 
-    try:
-        user = create_user("admin", "admin")
-    except Exception:
-        # assume user already exists, try using username and password for admin
-        user = ("admin", "admin")
 
-    client = Gen3Index(indexd_server.baseurl, user, service_location="")
+@pytest.fixture
+def gen3_index_over_http() -> Generator[Gen3Index, None, None]:
+    """
+    Gen3Index pointed at a fake indexd listening on a real socket.
 
-    yield client
-
-    clear_database()
+    For tools that shell out: a subprocess cannot see the in-process patching that
+    `indexd_server` relies on, so it needs a server it can actually connect to.
+    """
+    fake = FakeIndexd()
+    with fake.serving_over_http():
+        yield Gen3Index(fake.baseurl, ("admin", "admin"), service_location="")
 
 
 @pytest.fixture
@@ -213,21 +161,11 @@ def gen3_query(gen3_auth):
 
 
 @pytest.fixture(scope="function")
-def drs_client(indexd_server):
+def drs_client(indexd_server: FakeIndexd) -> DrsClient:
     """
-    Returns a DrsClient. This will delete any documents,
-    aliases, or users made by this
-    client after the test has completed.
-    Currently the default user is the admin user
-    Runs once per test.
+    Returns a DrsClient pointed at the fake indexd.
     """
-    try:
-        user = create_user("user", "user")
-    except Exception:
-        user = ("user", "user")
-    client = DrsClient(baseurl=indexd_server.baseurl, auth=user)
-    yield client
-    clear_database()
+    return DrsClient(baseurl=indexd_server.baseurl, auth=("user", "user"))
 
 
 @pytest.fixture(scope="function")

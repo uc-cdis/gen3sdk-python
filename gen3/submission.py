@@ -247,11 +247,11 @@ class Gen3Submission:
             uuids_to_delete = uuids[batch_size * i : batch_size * (i + 1)]
             if len(uuids_to_delete) == 0:
                 break
-            output = requests.delete(
-                "{}/{}".format(api_url, ",".join(uuids_to_delete)),
-                auth=self._auth_provider,
-            )
             try:
+                output = requests.delete(
+                    "{}/{}".format(api_url, ",".join(uuids_to_delete)),
+                    auth=self._auth_provider,
+                )
                 raise_for_status_and_print_error(output)
             except requests.exceptions.HTTPError:
                 print(
@@ -347,7 +347,9 @@ class Gen3Submission:
         api_url = "{}/api/v0/submission/{}/{}/export?ids={}&format={}".format(
             self._endpoint, program, project, uuid, fileformat
         )
-        output = requests.get(api_url, auth=self._auth_provider).text
+        response = requests.get(api_url, auth=self._auth_provider)
+        raise_for_status_and_print_error(response)
+        output = response.text
         if filename is None:
             if fileformat == "json":
                 try:
@@ -383,7 +385,9 @@ class Gen3Submission:
         api_url = "{}/api/v0/submission/{}/{}/export/?node_label={}&format={}".format(
             self._endpoint, program, project, node_type, fileformat
         )
-        output = requests.get(api_url, auth=self._auth_provider).text
+        response = requests.get(api_url, auth=self._auth_provider)
+        raise_for_status_and_print_error(response)
+        output = response.text
         if filename is None:
             if fileformat == "json":
                 try:
