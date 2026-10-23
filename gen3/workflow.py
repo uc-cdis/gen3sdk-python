@@ -113,9 +113,7 @@ class Gen3Workflow:
             task_id
         """
 
-        print("IN CREATE")
         tes_task_url = f"{self.tes_url}/tasks"
-        print(f"POSTING TO URL {tes_task_url}")
         response = requests.post(
             tes_task_url,
             json=body,
