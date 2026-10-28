@@ -2,9 +2,11 @@
 Contains class for interacting with Gen3's Workflow Service.
 """
 
+import asyncio
 from dataclasses import dataclass
 import time
 
+import aiohttp
 import backoff
 import requests
 from cdislogging import get_logger
@@ -110,7 +112,7 @@ class Gen3Workflow:
             body (dict): The json of the TES workflow.
 
         Returns:
-            task_id
+            str: the task_id of the created task
         """
 
         tes_task_url = f"{self.tes_url}/tasks"
@@ -126,6 +128,45 @@ class Gen3Workflow:
             raise_for_status_and_print_error(response)
         data = response.json()
         return data.get("id")
+
+    @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
+    async def async_get_tes_task(
+        self,
+        task_id: str,
+        user: str,
+        expected_status: int = 200,
+        _ssl=None,
+    ):
+        """
+        Asynchronous function to get a TES task.
+
+        Args:
+            task_id (str): ID of the TES task
+            user (str): same truthy flag as the sync version; if falsy, no auth
+                header is sent
+            expected_status (int): Expected HTTP status_code, default=200
+            _ssl (None, optional): passed to aiohttp's `ssl=` argument
+
+        Returns:
+            dict: TES task
+        """
+        url = f"{self.tes_url}/tasks/{task_id}?view=FULL"
+
+        # aiohttp can't use requests-style auth objects, so set the JWT header
+        # manually (same approach as the indexd async methods)
+        headers = (
+            {"Authorization": self._auth_provider._get_auth_value()} if user else {}
+        )
+
+        async with aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=60)
+        ) as session:
+            async with session.get(url, headers=headers, ssl=_ssl) as response:
+                if response.status != expected_status:
+                    body = await response.text()
+                    logging.error(f"Unexpected status {response.status}: {body}")
+                    response.raise_for_status()
+                return await response.json()
 
     def get_tes_task(self, task_id: str, user: str, expected_status=200):
         """
@@ -154,6 +195,91 @@ class Gen3Workflow:
 
         return response.json()
 
+    async def async_poll_task_until_expected_state(
+        self,
+        task_id: str,
+        user: str,
+        expected_final_state: str = "COMPLETE",
+        max_retries: int = 60,
+        poll_interval: int = 5,
+        _ssl=None,
+    ) -> dict:
+        """
+        Asynchronously poll the TES task until it reaches the specified expected
+        state or exceeds max retries. Use with asyncio.gather to wait on many
+        tasks concurrently.
+
+        Args:
+            task_id (str): ID of the TES task to poll
+            user (str): same truthy flag as the sync version
+            expected_final_state (str): Final state this task is expected to reach
+            max_retries (int): Maximum number of polling attempts
+            poll_interval (int): Seconds between polling attempts
+            _ssl (None, optional): passed to aiohttp's `ssl=` argument
+
+        Returns:
+            dict: the task, once it reaches expected_final_state
+        """
+        transient_states = {"QUEUED", "INITIALIZING", "RUNNING"}
+        final_states = {
+            "COMPLETE",
+            "FAILED",
+            "EXECUTOR_ERROR",
+            "CANCELED",
+            "SYSTEM_ERROR",
+        }
+        logging.info(f"Polling task {task_id} until {expected_final_state}")
+
+        state = None
+        task_info = None
+
+        # NOTE: no @backoff on this method on purpose. It already loops, and
+        # retrying the whole poll would restart the clock and mask real
+        # task failures. Transient HTTP errors are retried inside
+        # async_get_tes_task.
+        for attempt in range(1, max_retries + 1):
+            task_info = await self.async_get_tes_task(
+                task_id=task_id,
+                user=user,
+                expected_status=200,
+                _ssl=_ssl,
+            )
+            state = task_info.get("state")
+
+            if state == expected_final_state:
+                logging.info(f"TES task reached final state '{state}'")
+                return task_info
+
+            if state in ("SYSTEM_ERROR", "EXECUTOR_ERROR"):
+                error_message = f"Task failed with error state '{state}'"
+                logging.error(error_message)
+                raise Exception(error_message)
+            if state in final_states:
+                error_message = (
+                    f"TES task reached a final state that is not "
+                    f"'{expected_final_state}'. Final state: {state}, "
+                    f"Response: {task_info}"
+                )
+                logging.warning(error_message)
+                raise Exception(error_message)
+            if state not in transient_states:
+                logging.warning(
+                    f"Unexpected TES task state '{state}' encountered. "
+                    f"Response: {task_info}"
+                )
+
+            if attempt < max_retries:
+                logging.info(
+                    f"Attempt {attempt} of {max_retries}: Task state is "
+                    f"'{state}', retrying after {poll_interval} seconds..."
+                )
+                await asyncio.sleep(poll_interval)
+
+        raise Exception(
+            f"TES task did not reach a final state in time. "
+            f"Last known state: {state}, Response: {task_info}"
+        )
+
     def poll_task_until_expected_state(
         self,
         task_id: str,
@@ -161,20 +287,20 @@ class Gen3Workflow:
         expected_final_state: str = "COMPLETE",
         max_retries: int = 60,
         poll_interval: int = 5,
-    ) -> str:
+    ) -> dict:
         """
-        Poll the TES task status until it reaches a final state or exceeds max retries.
+        Poll the TES task status until it reaches the specified expected state or exceeds max retries.
 
         Args:
             task_id (str): ID of the TES task to poll.
             user (str): User_id that matches credentials.
             expected_final_state (str): Final state, which this task is expected to return
-                (e.g., {"COMPLETE", "FAILED"}).
+                (e.g., one of {"COMPLETE", "FAILED"}).
             max_retries (int): Maximum number of polling attempts before giving up.
             poll_interval (int): Time in seconds between polling attempts.
 
         Returns:
-            Final task state if completed successfully.
+            dict: Final task information once it reaches expected_final_state.
         """
 
         # TODO: maybe move these higher up for accessing from tests, etc.
@@ -186,6 +312,9 @@ class Gen3Workflow:
             "CANCELED",
             "SYSTEM_ERROR",
         }
+        state = None
+        task_info = None
+
         logging.info(f"Polling task {task_id} until {expected_final_state}")
         for attempt in range(1, max_retries + 1):
             # TODO: might wrap in try-except here.
@@ -216,18 +345,17 @@ class Gen3Workflow:
                 message = f"Unexpected TES task state '{state}' encountered. Response: {task_info}"
                 logging.warning(message)
 
-            logging.info(
-                f"Attempt {attempt} of {max_retries}: Task state is '{state}',"
-                f" retrying after {poll_interval} seconds..."
-            )
-            if attempt <= max_retries:
+            if attempt < max_retries:
+                logging.info(
+                    f"Attempt {attempt} of {max_retries}: Task state is '{state}',"
+                    f" retrying after {poll_interval} seconds..."
+                )
                 time.sleep(poll_interval)
 
         raise Exception(
             f"TES task did not reach a final state in time. Last known state: {state}, Response: {task_info}"
         )
 
-    # Get a single page of tasks for user
     def get_tasks_for_page(self, user: str, page=None) -> dict:
         """
         Get a list of tasks for page for user
@@ -258,7 +386,6 @@ class Gen3Workflow:
 
         return response.json()
 
-    # Get all tasks for user
     def get_all_tasks_for_user(self, user: str) -> dict:
         """
         Get all tasks for user.
@@ -314,5 +441,3 @@ class Gen3Workflow:
 
     # Perform S3 action
     # https://github.com/uc-cdis/gen3-code-vigil/blob/20bb83b/gen3-integration-tests/services/gen3workflow.py#L152
-
-    # Delete task
