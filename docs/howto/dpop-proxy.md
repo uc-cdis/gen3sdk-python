@@ -129,17 +129,11 @@ process {
     container = 'quay.io/nextflow/bash'
 }
 tes {
-    endpoint = 'https://<your-commons>/ga4gh/tes'
-    oauthToken = env('GEN3_TOKEN')
     timeout = 60
 }
 aws {
-    accessKey = env('GEN3_TOKEN')
-    secretKey = 'N/A'  # pragma: allowlist secret
     region = 'us-east-1'
     client {
-        endpoint = 'https://<your-commons>/workflows/s3'
-        s3PathStyleAccess = true
         maxErrorRetry = 1
     }
 }
@@ -147,7 +141,7 @@ aws {
 workDir = 's3://<your-workflow-bucket>/<your-prefix>'
 ```
 
-Run that with `gen3 nextflow run main.nf` and the generated override changes five keys:
+Run that with `gen3 nextflow run main.nf` and the generated override sets five keys:
 `tes.endpoint` and `aws.client.endpoint` become the local proxy, `tes.oauthToken` and
 `aws.accessKey` become the task token, and `aws.client.s3PathStyleAccess` is forced on.
 `workDir`, `region`, `timeout`, `maxErrorRetry`, `plugins` and `process` are yours and are
