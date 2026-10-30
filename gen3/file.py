@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse, quote
-from queue import Empty
+from queue import Empty, Full
 
 from cdislogging import get_logger
 
@@ -326,6 +326,7 @@ class Gen3File:
 
         processes = []
         producer_thread = None
+        stop_producer = threading.Event()
 
         try:
             for i in range(num_processes):
@@ -338,7 +339,7 @@ class Gen3File:
 
             producer_thread = threading.Thread(
                 target=self._guid_producer,
-                args=(guids, input_queue, num_processes),
+                args=(guids, input_queue, num_processes, stop_producer),
             )
             producer_thread.start()
 
@@ -348,44 +349,52 @@ class Gen3File:
             if not no_progress:
                 pbar = tqdm(total=len(guids), desc="Downloading")
 
+            def record(batch_results):
+                nonlocal completed_count
+                for result in batch_results or []:
+                    if result["status"] == "downloaded":
+                        results["succeeded"].append(result["guid"])
+                    elif result["status"] == "skipped":
+                        results["skipped"].append(result["guid"])
+                    else:
+                        results["failed"].append(result["guid"])
+
+                    completed_count += 1
+                    if not no_progress:
+                        pbar.update(1)
+
             while completed_count < len(guids):
                 try:
-                    batch_results = output_queue.get()
-
-                    if not batch_results:
+                    record(output_queue.get(timeout=1.0))
+                except Empty:
+                    # Downloads can legitimately take longer than the poll
+                    # interval, so only give up once every worker has exited.
+                    if any(p.is_alive() for p in processes):
                         continue
 
-                    for result in batch_results:
-                        if result["status"] == "downloaded":
-                            results["succeeded"].append(result["guid"])
-                        elif result["status"] == "skipped":
-                            results["skipped"].append(result["guid"])
-                        else:
-                            results["failed"].append(result["guid"])
+                    # Workers are gone; collect anything they queued before exiting
+                    while True:
+                        try:
+                            record(output_queue.get_nowait())
+                        except Empty:
+                            break
 
-                        completed_count += 1
-                        if not no_progress:
-                            pbar.update(1)
-
-                except Empty:
-                    logging.warning(
-                        f"No more results available ({completed_count}/{len(guids)}): Queue is empty"
-                    )
+                    if completed_count < len(guids):
+                        logging.error(
+                            f"All worker processes exited before finishing "
+                            f"({completed_count}/{len(guids)} results received)"
+                        )
                     break
                 except Exception as e:
                     logging.warning(
                         f"Error waiting for results ({completed_count}/{len(guids)}): {e}"
                     )
 
-                    alive_processes = [p for p in processes if p.is_alive()]
-                    if not alive_processes:
-                        logging.error("All worker processes have died")
-                        break
-
             if not no_progress:
                 pbar.close()
 
             if producer_thread:
+                stop_producer.set()
                 producer_thread.join()
 
         except Exception as e:
@@ -407,13 +416,31 @@ class Gen3File:
         )
         return results
 
-    def _guid_producer(self, guids, input_queue, num_processes):
+    def _guid_producer(self, guids, input_queue, num_processes, stop_event):
+        def put(item):
+            # input_queue is bounded, so a blocking put() would hang forever if
+            # the workers died; poll instead so the consumer can stop us.
+            while not stop_event.is_set():
+                try:
+                    input_queue.put(item, timeout=1.0)
+                    return True
+                except Full:
+                    continue
+            return False
+
         try:
             for guid in guids:
-                input_queue.put(guid)
+                if not put(guid):
+                    return
 
         except Exception as e:
             logging.error(f"Error in producer: {e}")
+
+        finally:
+            # One sentinel per worker signals that there is no more work
+            for _ in range(num_processes):
+                if not put(None):
+                    break
 
     @staticmethod
     def _async_worker_process(input_queue, output_queue, config, process_id):
@@ -458,11 +485,8 @@ class Gen3File:
             connector=connector, timeout=timeout
         ) as session:
             while True:
-                try:
-                    # Check if queue is empty with timeout
-                    guid = input_queue.get()
-                except Empty:
-                    # If queue is empty (timeout), break the loop
+                guid = input_queue.get()
+                if guid is None:
                     break
 
                 # Process single GUID as a batch of one
