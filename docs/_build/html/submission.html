@@ -51,7 +51,7 @@ Supports GraphQL queries through Peregrine.</p>
 <p class="rubric">Examples</p>
 <p>This generates the Gen3Submission class pointed at the sandbox commons while
 using the credentials.json downloaded from the commons profile page.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">"credentials.json"</span><span class="p">)</span>
 <span class="gp">... </span><span class="n">sub</span> <span class="o">=</span> <span class="n">Gen3Submission</span><span class="p">(</span><span class="n">auth</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -78,7 +78,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 :type json: object</p>
 <p class="rubric">Examples</p>
 <p>This creates a project on the DCF program in the sandbox commons.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">create_project</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="n">json</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">create_project</span><span class="p">(</span><span class="s2">"DCF"</span><span class="p">,</span> <span class="n">json</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -104,7 +104,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dl>
 <p class="rubric">Examples</p>
 <p>This deletes a node from the CCLE project in the sandbox commons.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_node</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">,</span> <span class="s2">&quot;demographic&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_node</span><span class="p">(</span><span class="s2">"DCF"</span><span class="p">,</span> <span class="s2">"CCLE"</span><span class="p">,</span> <span class="s2">"demographic"</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -130,7 +130,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dl>
 <p class="rubric">Examples</p>
 <p>This deletes a list of nodes from the CCLE project in the sandbox commons.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_nodes</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;demographic&quot;</span><span class="p">,</span> <span class="s2">&quot;subject&quot;</span><span class="p">,</span> <span class="s2">&quot;experiment&quot;</span><span class="p">])</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_nodes</span><span class="p">(</span><span class="s2">"DCF"</span><span class="p">,</span> <span class="s2">"CCLE"</span><span class="p">,</span> <span class="p">[</span><span class="s2">"demographic"</span><span class="p">,</span> <span class="s2">"subject"</span><span class="p">,</span> <span class="s2">"experiment"</span><span class="p">])</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -147,7 +147,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dl>
 <p class="rubric">Examples</p>
 <p>This deletes the “DCF” program.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_program</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_program</span><span class="p">(</span><span class="s2">"DCF"</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -167,7 +167,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dl>
 <p class="rubric">Examples</p>
 <p>This deletes the “CCLE” project from the “DCF” program.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_project</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_project</span><span class="p">(</span><span class="s2">"DCF"</span><span class="p">,</span> <span class="s2">"CCLE"</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -187,7 +187,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dl>
 <p class="rubric">Examples</p>
 <p>This deletes a record from the CCLE project in the sandbox commons.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_record</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">,</span> <span class="n">uuid</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_record</span><span class="p">(</span><span class="s2">"DCF"</span><span class="p">,</span> <span class="s2">"CCLE"</span><span class="p">,</span> <span class="n">uuid</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -210,7 +210,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dl>
 <p class="rubric">Examples</p>
 <p>This deletes a list of records from the CCLE project in the sandbox commons.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_records</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;uuid1&quot;</span><span class="p">,</span> <span class="s2">&quot;uuid2&quot;</span><span class="p">])</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">delete_records</span><span class="p">(</span><span class="s2">"DCF"</span><span class="p">,</span> <span class="s2">"CCLE"</span><span class="p">,</span> <span class="p">[</span><span class="s2">"uuid1"</span><span class="p">,</span> <span class="s2">"uuid2"</span><span class="p">])</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -232,7 +232,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dl>
 <p class="rubric">Examples</p>
 <p>This exports all records in the “sample” node from the CCLE project in the sandbox commons.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">export_node</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">,</span> <span class="s2">&quot;sample&quot;</span><span class="p">,</span> <span class="s2">&quot;tsv&quot;</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s2">&quot;DCF-CCLE_sample_node.tsv&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">export_node</span><span class="p">(</span><span class="s2">"DCF"</span><span class="p">,</span> <span class="s2">"CCLE"</span><span class="p">,</span> <span class="s2">"sample"</span><span class="p">,</span> <span class="s2">"tsv"</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s2">"DCF-CCLE_sample_node.tsv"</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -254,7 +254,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dl>
 <p class="rubric">Examples</p>
 <p>This exports a single record from the sandbox commons.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">export_record</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">,</span> <span class="s2">&quot;d70b41b9-6f90-4714-8420-e043ab8b77b9&quot;</span><span class="p">,</span> <span class="s2">&quot;json&quot;</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s2">&quot;DCF-CCLE_one_record.json&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">export_record</span><span class="p">(</span><span class="s2">"DCF"</span><span class="p">,</span> <span class="s2">"CCLE"</span><span class="p">,</span> <span class="s2">"d70b41b9-6f90-4714-8420-e043ab8b77b9"</span><span class="p">,</span> <span class="s2">"json"</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s2">"DCF-CCLE_one_record.json"</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -283,7 +283,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dl>
 <p class="rubric">Examples</p>
 <p>This returns the dictionary schema the “subject” node.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">get_dictionary_node</span><span class="p">(</span><span class="s2">&quot;subject&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">get_dictionary_node</span><span class="p">(</span><span class="s2">"subject"</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -319,7 +319,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">get_project_dictionary</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">get_project_dictionary</span><span class="p">(</span><span class="s2">"DCF"</span><span class="p">,</span> <span class="s2">"CCLE"</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -337,7 +337,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">get_project_manifest</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">get_project_manifest</span><span class="p">(</span><span class="s2">"DCF"</span><span class="p">,</span> <span class="s2">"CCLE"</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -353,7 +353,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dl>
 <p class="rubric">Example</p>
 <p>This lists all the projects under the DCF program</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">get_projects</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">get_projects</span><span class="p">(</span><span class="s2">"DCF"</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -371,7 +371,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">get_project_manifest</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">get_project_manifest</span><span class="p">(</span><span class="s2">"DCF"</span><span class="p">,</span> <span class="s2">"CCLE"</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -392,7 +392,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 <p class="rubric">Examples</p>
 <p>This executes a query to get the list of all the project codes for all the projects
 in the Data Commons.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;{ project(first:0) { code } }&quot;</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">query</span> <span class="o">=</span> <span class="s2">"{ project(first:0) { code } }"</span>
 <span class="gp">... </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -414,7 +414,7 @@ in the Data Commons.</p>
 </dl>
 <p class="rubric">Examples</p>
 <p>This submits a spreadsheet file containing multiple records in rows to the CCLE project in the sandbox commons.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">submit_file</span><span class="p">(</span><span class="s2">&quot;DCF-CCLE&quot;</span><span class="p">,</span><span class="s2">&quot;data_spreadsheet.tsv&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">submit_file</span><span class="p">(</span><span class="s2">"DCF-CCLE"</span><span class="p">,</span><span class="s2">"data_spreadsheet.tsv"</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -434,7 +434,7 @@ in the Data Commons.</p>
 </dl>
 <p class="rubric">Examples</p>
 <p>This submits records to the CCLE project in the sandbox commons.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">submit_record</span><span class="p">(</span><span class="s2">&quot;DCF&quot;</span><span class="p">,</span> <span class="s2">&quot;CCLE&quot;</span><span class="p">,</span> <span class="n">json</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Submission</span><span class="o">.</span><span class="n">submit_record</span><span class="p">(</span><span class="s2">"DCF"</span><span class="p">,</span> <span class="s2">"CCLE"</span><span class="p">,</span> <span class="n">json</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>

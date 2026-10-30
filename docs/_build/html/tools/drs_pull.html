@@ -41,12 +41,12 @@ this module for downloading DRS objects are DownloadManager and Manifest.</p>
 <div><dl>
 <dt>Examples:</dt><dd><p>This generates the Gen3Jobs class pointed at the sandbox commons while
 using the credentials.json downloaded from the commons profile page.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">datafiles</span> <span class="o">=</span> <span class="n">Manifest</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;sample/manifest_1.json&#39;</span><span class="p">)</span>
-<span class="go">    downloadManager = DownloadManager(&quot;source.my_commons.org&quot;,</span>
-<span class="go">                      Gen3Auth(refresh_file=&quot;~.gen3/my_credentials.json&quot;), datafiles)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">datafiles</span> <span class="o">=</span> <span class="n">Manifest</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">'sample/manifest_1.json'</span><span class="p">)</span>
+<span class="go">    downloadManager = DownloadManager("source.my_commons.org",</span>
+<span class="go">                      Gen3Auth(refresh_file="~.gen3/my_credentials.json"), datafiles)</span>
 <span class="go">    for i in datafiles:</span>
 <span class="go">        print(i)</span>
-<span class="go">    downloadManager.download(datafiles, &quot;.&quot;)</span>
+<span class="go">    downloadManager.download(datafiles, ".")</span>
 </pre></div>
 </div>
 <p>See docs/howto/drsDownloading.md for more details</p>

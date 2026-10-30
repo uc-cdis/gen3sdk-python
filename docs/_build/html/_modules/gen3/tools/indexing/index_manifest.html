@@ -31,8 +31,8 @@
           <div class="body" role="main">
             
   <h1>Source code for gen3.tools.indexing.index_manifest</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Module for indexing object files in a manifest (against indexd&#39;s API).</span>
+<span></span><span class="sd">"""</span>
+<span class="sd">Module for indexing object files in a manifest (against indexd's API).</span>
 
 <span class="sd">The default manifest format created is a Tab-Separated Value file (tsv)</span>
 <span class="sd">with rows for every record.</span>
@@ -43,11 +43,11 @@
 <span class="sd">All supported formats of acl, authz and url fields are shown in the below example.</span>
 
 <span class="sd">guid    md5 size    acl authz   url</span>
-<span class="sd">255e396f-f1f8-11e9-9a07-0a80fada099c    473d83400bc1bc9dc635e334faddf33c    363455714   [&#39;Open&#39;]    [s3://pdcdatastore/test1.raw]</span>
+<span class="sd">255e396f-f1f8-11e9-9a07-0a80fada099c    473d83400bc1bc9dc635e334faddf33c    363455714   ['Open']    [s3://pdcdatastore/test1.raw]</span>
 <span class="sd">255e396f-f1f8-11e9-9a07-0a80fada098c    473d83400bc1bc9dc635e334faddd33c    343434344   Open    s3://pdcdatastore/test2.raw</span>
 <span class="sd">255e396f-f1f8-11e9-9a07-0a80fada097c    473d83400bc1bc9dc635e334fadd433c    543434443   phs0001 phs0002 s3://pdcdatastore/test3.raw</span>
-<span class="sd">255e396f-f1f8-11e9-9a07-0a80fada096c    473d83400bc1bc9dc635e334fadd433c    363455714   [&#39;phs0001&#39;, &#39;phs0002&#39;]  [&#39;s3://pdcdatastore/test4.raw&#39;]</span>
-<span class="sd">255e396f-f1f8-11e9-9a07-0a80fada010c    473d83400bc1bc9dc635e334fadde33c    363455714   [&#39;Open&#39;]    s3://pdcdatastore/test5.raw</span>
+<span class="sd">255e396f-f1f8-11e9-9a07-0a80fada096c    473d83400bc1bc9dc635e334fadd433c    363455714   ['phs0001', 'phs0002']  ['s3://pdcdatastore/test4.raw']</span>
+<span class="sd">255e396f-f1f8-11e9-9a07-0a80fada010c    473d83400bc1bc9dc635e334fadde33c    363455714   ['Open']    s3://pdcdatastore/test5.raw</span>
 
 <span class="sd">Attributes:</span>
 <span class="sd">    CURRENT_DIR (str): directory this file is in</span>
@@ -60,9 +60,9 @@
 <span class="sd">    PREV_GUID (list(string)): supported previous guid column names</span>
 
 <span class="sd">Usages:</span>
-<span class="sd">    python index_manifest.py --commons_url https://giangb.planx-pla.net  --manifest_file path_to_manifest --auth &quot;admin,admin&quot; --replace_urls False --thread_num 10</span>
+<span class="sd">    python index_manifest.py --commons_url https://giangb.planx-pla.net  --manifest_file path_to_manifest --auth "admin,admin" --replace_urls False --thread_num 10</span>
 <span class="sd">    python index_manifest.py --commons_url https://giangb.planx-pla.net  --manifest_file path_to_manifest --api_key ./credentials.json --replace_urls False --thread_num 10</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">csv</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">click</span>
@@ -104,9 +104,9 @@
 <div class="viewcode-block" id="ThreadControl">
 <a class="viewcode-back" href="../../../../tools/indexing.html#gen3.tools.indexing.index_manifest.ThreadControl">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ThreadControl</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Class for thread synchronization</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">processed_files</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_total_files</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mutexLock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
@@ -116,7 +116,7 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_write_csv</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">files</span><span class="p">,</span> <span class="n">fieldnames</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    write to csv file</span>
 
 <span class="sd">    Args:</span>
@@ -124,24 +124,24 @@
 <span class="sd">        files(list(dict)): list of file info</span>
 <span class="sd">        [</span>
 <span class="sd">            {</span>
-<span class="sd">                &quot;guid&quot;: &quot;guid_example&quot;,</span>
-<span class="sd">                &quot;filename&quot;: &quot;example&quot;,</span>
-<span class="sd">                &quot;size&quot;: 100,</span>
-<span class="sd">                &quot;acl&quot;: &quot;[&#39;open&#39;]&quot;,</span>
-<span class="sd">                &quot;md5&quot;: &quot;md5_hash&quot;,</span>
+<span class="sd">                "guid": "guid_example",</span>
+<span class="sd">                "filename": "example",</span>
+<span class="sd">                "size": 100,</span>
+<span class="sd">                "acl": "['open']",</span>
+<span class="sd">                "md5": "md5_hash",</span>
 <span class="sd">            },</span>
 <span class="sd">        ]</span>
 <span class="sd">        fieldnames(list(str)): list of column names</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        None</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">files</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
     <span class="n">fieldnames</span> <span class="o">=</span> <span class="n">fieldnames</span> <span class="ow">or</span> <span class="n">files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
-        <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictWriter</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">fieldnames</span><span class="o">=</span><span class="n">fieldnames</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
+        <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictWriter</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">,</span> <span class="n">fieldnames</span><span class="o">=</span><span class="n">fieldnames</span><span class="p">)</span>
         <span class="n">writer</span><span class="o">.</span><span class="n">writeheader</span><span class="p">()</span>
 
         <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
@@ -159,7 +159,7 @@
     <span class="n">force_metadata_columns_even_if_empty</span><span class="p">,</span>
     <span class="n">fi</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Index a single file, and submit additional metadata to the metadata service if provided</span>
 
 <span class="sd">    Args:</span>
@@ -174,49 +174,49 @@
 <span class="sd">    Returns:</span>
 <span class="sd">        None</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">index_success</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">urls</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">get_urls</span><span class="p">(</span><span class="n">fi</span><span class="p">[</span><span class="n">URLS_STANDARD_KEY</span><span class="p">])</span>
             <span class="k">if</span> <span class="n">URLS_STANDARD_KEY</span> <span class="ow">in</span> <span class="n">fi</span>
-            <span class="ow">and</span> <span class="n">fi</span><span class="p">[</span><span class="n">URLS_STANDARD_KEY</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;[]&quot;</span>
+            <span class="ow">and</span> <span class="n">fi</span><span class="p">[</span><span class="n">URLS_STANDARD_KEY</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">"[]"</span>
             <span class="ow">and</span> <span class="n">fi</span><span class="p">[</span><span class="n">URLS_STANDARD_KEY</span><span class="p">]</span>
             <span class="k">else</span> <span class="p">[]</span>
         <span class="p">)</span>
         <span class="n">authz</span> <span class="o">=</span> <span class="p">(</span>
             <span class="p">[</span>
-                <span class="n">element</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;%20&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span>
+                <span class="n">element</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"'"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">'"'</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"%20"</span><span class="p">,</span> <span class="s2">" "</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">_standardize_str</span><span class="p">(</span><span class="n">fi</span><span class="p">[</span><span class="n">AUTHZ_STANDARD_KEY</span><span class="p">])</span>
                 <span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-                <span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;[&quot;</span><span class="p">)</span>
-                <span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;]&quot;</span><span class="p">)</span>
-                <span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">"["</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"]"</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">" "</span><span class="p">)</span>
             <span class="p">]</span>
             <span class="k">if</span> <span class="n">AUTHZ_STANDARD_KEY</span> <span class="ow">in</span> <span class="n">fi</span>
-            <span class="ow">and</span> <span class="n">fi</span><span class="p">[</span><span class="n">AUTHZ_STANDARD_KEY</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;[]&quot;</span>
+            <span class="ow">and</span> <span class="n">fi</span><span class="p">[</span><span class="n">AUTHZ_STANDARD_KEY</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">"[]"</span>
             <span class="ow">and</span> <span class="n">fi</span><span class="p">[</span><span class="n">AUTHZ_STANDARD_KEY</span><span class="p">]</span>
             <span class="k">else</span> <span class="p">[]</span>
         <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">ACL_STANDARD_KEY</span> <span class="ow">in</span> <span class="n">fi</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">fi</span><span class="p">[</span><span class="n">ACL_STANDARD_KEY</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;[u&#39;open&#39;]&quot;</span><span class="p">,</span> <span class="s2">&quot;[&#39;open&#39;]&quot;</span><span class="p">}:</span>
-                <span class="n">acl</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;*&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">fi</span><span class="p">[</span><span class="n">ACL_STANDARD_KEY</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">"[u'open']"</span><span class="p">,</span> <span class="s2">"['open']"</span><span class="p">}:</span>
+                <span class="n">acl</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"*"</span><span class="p">]</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">acl</span> <span class="o">=</span> <span class="p">(</span>
                     <span class="p">[</span>
                         <span class="n">element</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-                        <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-                        <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-                        <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;%20&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span>
+                        <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"'"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+                        <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">'"'</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+                        <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"%20"</span><span class="p">,</span> <span class="s2">" "</span><span class="p">)</span>
                         <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">_standardize_str</span><span class="p">(</span><span class="n">fi</span><span class="p">[</span><span class="n">ACL_STANDARD_KEY</span><span class="p">])</span>
                         <span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-                        <span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;[&quot;</span><span class="p">)</span>
-                        <span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;]&quot;</span><span class="p">)</span>
-                        <span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+                        <span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">"["</span><span class="p">)</span>
+                        <span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"]"</span><span class="p">)</span>
+                        <span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">" "</span><span class="p">)</span>
                     <span class="p">]</span>
                     <span class="k">if</span> <span class="n">ACL_STANDARD_KEY</span> <span class="ow">in</span> <span class="n">fi</span>
-                    <span class="ow">and</span> <span class="n">fi</span><span class="p">[</span><span class="n">ACL_STANDARD_KEY</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;[]&quot;</span>
+                    <span class="ow">and</span> <span class="n">fi</span><span class="p">[</span><span class="n">ACL_STANDARD_KEY</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">"[]"</span>
                     <span class="ow">and</span> <span class="n">fi</span><span class="p">[</span><span class="n">ACL_STANDARD_KEY</span><span class="p">]</span>
                     <span class="k">else</span> <span class="p">[]</span>
                 <span class="p">)</span>
@@ -226,7 +226,7 @@
         <span class="k">if</span> <span class="n">FILENAME_STANDARD_KEY</span> <span class="ow">in</span> <span class="n">fi</span><span class="p">:</span>
             <span class="n">file_name</span> <span class="o">=</span> <span class="n">_standardize_str</span><span class="p">(</span><span class="n">fi</span><span class="p">[</span><span class="n">FILENAME_STANDARD_KEY</span><span class="p">])</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">file_name</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="n">file_name</span> <span class="o">=</span> <span class="s2">""</span>
 
         <span class="k">if</span> <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">PREV_GUID_STANDARD_KEY</span><span class="p">):</span>
             <span class="n">prev_guid</span> <span class="o">=</span> <span class="n">fi</span><span class="p">[</span><span class="n">PREV_GUID_STANDARD_KEY</span><span class="p">]</span>
@@ -243,7 +243,7 @@
                 <span class="n">MD5_STANDARD_KEY</span>
             <span class="p">)</span> <span class="o">!=</span> <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">MD5_STANDARD_KEY</span><span class="p">):</span>
                 <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
-                    <span class="s2">&quot;The guid </span><span class="si">{}</span><span class="s2"> with different size/hash already exists. Can not index it without getting a new guid&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="s2">"The guid </span><span class="si">{}</span><span class="s2"> with different size/hash already exists. Can not index it without getting a new guid"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
                         <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">GUID_STANDARD_KEY</span><span class="p">)</span>
                     <span class="p">)</span>
                 <span class="p">)</span>
@@ -254,7 +254,7 @@
                     <span class="n">doc</span><span class="o">.</span><span class="n">urls</span> <span class="o">=</span> <span class="n">urls</span>
                     <span class="n">need_update</span> <span class="o">=</span> <span class="kc">True</span>
 
-                    <span class="c1"># indexd doesn&#39;t like when records have metadata for non-existing</span>
+                    <span class="c1"># indexd doesn't like when records have metadata for non-existing</span>
                     <span class="c1"># urls</span>
                     <span class="n">new_urls_metadata</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">urls_metadata</span><span class="p">)</span>
                     <span class="k">for</span> <span class="n">url</span><span class="p">,</span> <span class="n">metadata</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">urls_metadata</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -281,17 +281,17 @@
                     <span class="n">need_update</span> <span class="o">=</span> <span class="kc">True</span>
 
                 <span class="k">if</span> <span class="n">need_update</span><span class="p">:</span>
-                    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;updating </span><span class="si">{</span><span class="n">doc</span><span class="o">.</span><span class="n">did</span><span class="si">}</span><span class="s2"> to: </span><span class="si">{</span><span class="n">doc</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"updating </span><span class="si">{</span><span class="n">doc</span><span class="o">.</span><span class="n">did</span><span class="si">}</span><span class="s2"> to: </span><span class="si">{</span><span class="n">doc</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
                     <span class="n">doc</span><span class="o">.</span><span class="n">patch</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">GUID_STANDARD_KEY</span><span class="p">):</span>
-                <span class="n">guid</span> <span class="o">=</span> <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">GUID_STANDARD_KEY</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                <span class="n">guid</span> <span class="o">=</span> <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">GUID_STANDARD_KEY</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">guid</span> <span class="o">=</span> <span class="kc">None</span>
 
             <span class="n">record</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;did&quot;</span><span class="p">:</span> <span class="n">guid</span><span class="p">,</span>
-                <span class="s2">&quot;hashes&quot;</span><span class="p">:</span> <span class="p">{</span><span class="n">MD5_STANDARD_KEY</span><span class="p">:</span> <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">MD5_STANDARD_KEY</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()},</span>
+                <span class="s2">"did"</span><span class="p">:</span> <span class="n">guid</span><span class="p">,</span>
+                <span class="s2">"hashes"</span><span class="p">:</span> <span class="p">{</span><span class="n">MD5_STANDARD_KEY</span><span class="p">:</span> <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">MD5_STANDARD_KEY</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()},</span>
                 <span class="n">SIZE_STANDARD_KEY</span><span class="p">:</span> <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">SIZE_STANDARD_KEY</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
                 <span class="n">ACL_STANDARD_KEY</span><span class="p">:</span> <span class="n">acl</span><span class="p">,</span>
                 <span class="n">AUTHZ_STANDARD_KEY</span><span class="p">:</span> <span class="n">authz</span><span class="p">,</span>
@@ -300,41 +300,41 @@
             <span class="p">}</span>
 
             <span class="k">if</span> <span class="n">prev_guid</span><span class="p">:</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;creating new version of </span><span class="si">{</span><span class="n">prev_guid</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">record</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"creating new version of </span><span class="si">{</span><span class="n">prev_guid</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">record</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
-                <span class="c1"># indexd exports a &quot;form&quot; field that gets populated in indexclient.create,</span>
+                <span class="c1"># indexd exports a "form" field that gets populated in indexclient.create,</span>
                 <span class="c1"># but not indexclient.add_version, need to add manually here</span>
-                <span class="n">record</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">})</span>
+                <span class="n">record</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">"form"</span><span class="p">:</span> <span class="s2">"object"</span><span class="p">})</span>
 
                 <span class="c1"># to generate new GUID, new version indexd API expects body to not</span>
-                <span class="c1"># contain &quot;did&quot;, rather than have it be None or &quot;&quot;</span>
-                <span class="n">new_guid</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">]</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">]:</span>
-                    <span class="k">del</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;did&quot;</span><span class="p">]</span>
+                <span class="c1"># contain "did", rather than have it be None or ""</span>
+                <span class="n">new_guid</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s2">"did"</span><span class="p">]</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">record</span><span class="p">[</span><span class="s2">"did"</span><span class="p">]:</span>
+                    <span class="k">del</span> <span class="n">record</span><span class="p">[</span><span class="s2">"did"</span><span class="p">]</span>
                     <span class="n">new_guid</span> <span class="o">=</span> <span class="kc">None</span>
 
                 <span class="n">new_doc</span> <span class="o">=</span> <span class="n">Document</span><span class="p">(</span><span class="n">client</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">did</span><span class="o">=</span><span class="n">new_guid</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">record</span><span class="p">)</span>
 
                 <span class="c1"># TODO: in the case where a new GUID *is* provided AND a version with that</span>
-                <span class="c1">#       guid already exists AND you run this, it&#39;s gonna throw an error.</span>
+                <span class="c1">#       guid already exists AND you run this, it's gonna throw an error.</span>
                 <span class="c1">#       We need to gracefully handle the error from indexd. there will</span>
                 <span class="c1">#       be a conflict where a version with this GUID already exists...</span>
                 <span class="c1">#       but if we can verify that the version has the correct values</span>
                 <span class="c1">#       for all the fields, we can effectively ignore this error and continue</span>
                 <span class="n">doc</span> <span class="o">=</span> <span class="n">indexclient</span><span class="o">.</span><span class="n">add_version</span><span class="p">(</span><span class="n">current_did</span><span class="o">=</span><span class="n">prev_guid</span><span class="p">,</span> <span class="n">new_doc</span><span class="o">=</span><span class="n">new_doc</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;creating: </span><span class="si">{</span><span class="n">record</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"creating: </span><span class="si">{</span><span class="n">record</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
                 <span class="n">doc</span> <span class="o">=</span> <span class="n">indexclient</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="o">**</span><span class="n">record</span><span class="p">)</span>
 
             <span class="n">fi</span><span class="p">[</span><span class="n">GUID_STANDARD_KEY</span><span class="p">]</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">did</span>
 
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="c1"># Don&#39;t break for any reason</span>
+        <span class="c1"># Don't break for any reason</span>
         <span class="n">index_success</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="n">exc_info</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
         <span class="n">traceback</span><span class="o">.</span><span class="n">print_exception</span><span class="p">(</span><span class="o">*</span><span class="n">exc_info</span><span class="p">)</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
-            <span class="s2">&quot;Can not update/create an indexd record with guid </span><span class="si">{}</span><span class="s2">. Detail: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="s2">"Can not update/create an indexd record with guid </span><span class="si">{}</span><span class="s2">. Detail: </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
                 <span class="n">fi</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">GUID_STANDARD_KEY</span><span class="p">),</span> <span class="n">e</span>
             <span class="p">)</span>
         <span class="p">)</span>
@@ -344,7 +344,7 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">mds</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
-                    <span class="s2">&quot;Can not submit to the metadata service when using indexd basic auth&quot;</span>
+                    <span class="s2">"Can not submit to the metadata service when using indexd basic auth"</span>
                 <span class="p">)</span>
             <span class="n">metadata</span> <span class="o">=</span> <span class="n">mds</span><span class="o">.</span><span class="n">_prepare_metadata</span><span class="p">(</span>
                 <span class="n">fi</span><span class="p">,</span>
@@ -354,11 +354,11 @@
             <span class="k">if</span> <span class="n">metadata</span><span class="p">:</span>
                 <span class="n">mds</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">guid</span><span class="o">=</span><span class="n">doc</span><span class="o">.</span><span class="n">did</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="c1"># Don&#39;t break, but delete indexd record</span>
+            <span class="c1"># Don't break, but delete indexd record</span>
             <span class="n">exc_info</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
             <span class="n">traceback</span><span class="o">.</span><span class="n">print_exception</span><span class="p">(</span><span class="o">*</span><span class="n">exc_info</span><span class="p">)</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
-                <span class="s2">&quot;Can not create package metadata for guid </span><span class="si">{}</span><span class="s2">. Deleting indexd record. Detail: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="s2">"Can not create package metadata for guid </span><span class="si">{}</span><span class="s2">. Deleting indexd record. Detail: </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
                     <span class="n">fi</span><span class="p">[</span><span class="n">GUID_STANDARD_KEY</span><span class="p">],</span> <span class="n">e</span>
                 <span class="p">)</span>
             <span class="p">)</span>
@@ -368,7 +368,7 @@
                 <span class="n">exc_info</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
                 <span class="n">traceback</span><span class="o">.</span><span class="n">print_exception</span><span class="p">(</span><span class="o">*</span><span class="n">exc_info</span><span class="p">)</span>
                 <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
-                    <span class="s2">&quot;Cannot delete indexd record with </span><span class="si">{}</span><span class="s2">. Detail: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="s2">"Cannot delete indexd record with </span><span class="si">{}</span><span class="s2">. Detail: </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
                         <span class="n">fi</span><span class="p">[</span><span class="n">GUID_STANDARD_KEY</span><span class="p">],</span> <span class="n">e</span>
                     <span class="p">)</span>
                 <span class="p">)</span>
@@ -377,7 +377,7 @@
     <span class="n">thread_control</span><span class="o">.</span><span class="n">num_processed_files</span> <span class="o">+=</span> <span class="mi">1</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">thread_control</span><span class="o">.</span><span class="n">num_processed_files</span> <span class="o">*</span> <span class="mi">10</span><span class="p">)</span> <span class="o">%</span> <span class="n">thread_control</span><span class="o">.</span><span class="n">num_total_files</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-            <span class="s2">&quot;Progress: </span><span class="si">{}</span><span class="s2">%&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="s2">"Progress: </span><span class="si">{}</span><span class="s2">%"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
                 <span class="n">thread_control</span><span class="o">.</span><span class="n">num_processed_files</span>
                 <span class="o">*</span> <span class="mf">100.0</span>
                 <span class="o">/</span> <span class="n">thread_control</span><span class="o">.</span><span class="n">num_total_files</span>
@@ -395,11 +395,11 @@
     <span class="n">auth</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">replace_urls</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">manifest_file_delimiter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">output_filename</span><span class="o">=</span><span class="s2">&quot;indexing-output-manifest.csv&quot;</span><span class="p">,</span>
+    <span class="n">output_filename</span><span class="o">=</span><span class="s2">"indexing-output-manifest.csv"</span><span class="p">,</span>
     <span class="n">submit_additional_metadata_columns</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="n">force_metadata_columns_even_if_empty</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Loop through all the files in the manifest, update/create records in indexd</span>
 <span class="sd">    update indexd if the url is not in the record url list or acl has changed</span>
 
@@ -409,7 +409,7 @@
 <span class="sd">        thread_num(int): number of threads for indexing</span>
 <span class="sd">        auth(Gen3Auth): Gen3 auth or tuple with basic auth name and password</span>
 <span class="sd">        replace_urls(bool): flag to indicate if replace urls or not</span>
-<span class="sd">        manifest_file_delimiter(str): manifest&#39;s delimiter</span>
+<span class="sd">        manifest_file_delimiter(str): manifest's delimiter</span>
 <span class="sd">        output_filename(str): output file name for manifest</span>
 <span class="sd">        submit_additional_metadata_columns(bool): whether to submit additional metadata to the metadata service</span>
 <span class="sd">        force_metadata_columns_even_if_empty(bool): force the creation of a metadata column</span>
@@ -423,58 +423,58 @@
 <span class="sd">                    2, ...,        ,   dataB,</span>
 
 <span class="sd">            Resulting metadata if force_metadata_columns_even_if_empty=True :</span>
-<span class="sd">                &quot;1&quot;: {</span>
-<span class="sd">                    &quot;columnA&quot;: &quot;dataA&quot;,</span>
-<span class="sd">                    &quot;columnB&quot;: &quot;&quot;,</span>
-<span class="sd">                    &quot;ColumnC&quot;: &quot;&quot;,</span>
+<span class="sd">                "1": {</span>
+<span class="sd">                    "columnA": "dataA",</span>
+<span class="sd">                    "columnB": "",</span>
+<span class="sd">                    "ColumnC": "",</span>
 <span class="sd">                },</span>
-<span class="sd">                &quot;2&quot;: {</span>
-<span class="sd">                    &quot;columnA&quot;: &quot;&quot;,</span>
-<span class="sd">                    &quot;columnB&quot;: &quot;dataB&quot;,</span>
-<span class="sd">                    &quot;ColumnC&quot;: &quot;&quot;,</span>
+<span class="sd">                "2": {</span>
+<span class="sd">                    "columnA": "",</span>
+<span class="sd">                    "columnB": "dataB",</span>
+<span class="sd">                    "ColumnC": "",</span>
 <span class="sd">                },</span>
 
 <span class="sd">            Resulting metadata if force_metadata_columns_even_if_empty=False :</span>
-<span class="sd">                &quot;1&quot;: {</span>
-<span class="sd">                    &quot;columnA&quot;: &quot;dataA&quot;,</span>
+<span class="sd">                "1": {</span>
+<span class="sd">                    "columnA": "dataA",</span>
 <span class="sd">                },</span>
-<span class="sd">                &quot;2&quot;: {</span>
-<span class="sd">                    &quot;columnB&quot;: &quot;dataB&quot;,</span>
+<span class="sd">                "2": {</span>
+<span class="sd">                    "columnB": "dataB",</span>
 <span class="sd">                },</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        files(list(dict)): list of file info</span>
 <span class="sd">        [</span>
 <span class="sd">            {</span>
-<span class="sd">                &quot;guid&quot;: &quot;guid_example&quot;,</span>
-<span class="sd">                &quot;filename&quot;: &quot;example&quot;,</span>
-<span class="sd">                &quot;size&quot;: 100,</span>
-<span class="sd">                &quot;acl&quot;: &quot;[&#39;open&#39;]&quot;,</span>
-<span class="sd">                &quot;md5&quot;: &quot;md5_hash&quot;,</span>
+<span class="sd">                "guid": "guid_example",</span>
+<span class="sd">                "filename": "example",</span>
+<span class="sd">                "size": 100,</span>
+<span class="sd">                "acl": "['open']",</span>
+<span class="sd">                "md5": "md5_hash",</span>
 <span class="sd">            },</span>
 <span class="sd">        ]</span>
 <span class="sd">        headers(list(str)): list of fieldnames</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Start the process ...&quot;</span><span class="p">)</span>
-    <span class="n">service_location</span> <span class="o">=</span> <span class="s2">&quot;index&quot;</span>
-    <span class="n">commons_url</span> <span class="o">=</span> <span class="n">commons_url</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Start the process ..."</span><span class="p">)</span>
+    <span class="n">service_location</span> <span class="o">=</span> <span class="s2">"index"</span>
+    <span class="n">commons_url</span> <span class="o">=</span> <span class="n">commons_url</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>
     <span class="c1"># if running locally, indexd is deployed by itself without a location relative</span>
     <span class="c1"># to the commons</span>
-    <span class="k">if</span> <span class="s2">&quot;http://localhost&quot;</span> <span class="ow">in</span> <span class="n">commons_url</span><span class="p">:</span>
-        <span class="n">service_location</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">if</span> <span class="s2">"http://localhost"</span> <span class="ow">in</span> <span class="n">commons_url</span><span class="p">:</span>
+        <span class="n">service_location</span> <span class="o">=</span> <span class="s2">""</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">commons_url</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">service_location</span><span class="p">):</span>
-        <span class="n">commons_url</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">service_location</span>
+        <span class="n">commons_url</span> <span class="o">+=</span> <span class="s2">"/"</span> <span class="o">+</span> <span class="n">service_location</span>
 
-    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Using URL </span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">commons_url</span><span class="p">))</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Using URL </span><span class="si">{}</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">commons_url</span><span class="p">))</span>
 
-    <span class="n">indexclient</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">IndexClient</span><span class="p">(</span><span class="n">commons_url</span><span class="p">,</span> <span class="s2">&quot;v0&quot;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="n">auth</span><span class="p">)</span>
+    <span class="n">indexclient</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">IndexClient</span><span class="p">(</span><span class="n">commons_url</span><span class="p">,</span> <span class="s2">"v0"</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="n">auth</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>  <span class="c1"># basic auth</span>
         <span class="k">if</span> <span class="n">submit_additional_metadata_columns</span><span class="p">:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;&#39;submit_additional_metadata_columns&#39; is on, but using indexd basic auth. Will not be able to submit to the metadata service. To create metadata, use Gen3Auth instance instead.&quot;</span>
+                <span class="sa">f</span><span class="s2">"'submit_additional_metadata_columns' is on, but using indexd basic auth. Will not be able to submit to the metadata service. To create metadata, use Gen3Auth instance instead."</span>
             <span class="p">)</span>
         <span class="n">mds</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">else</span><span class="p">:</span>  <span class="c1"># Gen3Auth</span>
@@ -487,7 +487,7 @@
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="n">exc_info</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
         <span class="n">traceback</span><span class="o">.</span><span class="n">print_exception</span><span class="p">(</span><span class="o">*</span><span class="n">exc_info</span><span class="p">)</span>
-        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Can not read </span><span class="si">{}</span><span class="s2">. Detail: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">,</span> <span class="n">e</span><span class="p">))</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">"Can not read </span><span class="si">{}</span><span class="s2">. Detail: </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">,</span> <span class="n">e</span><span class="p">))</span>
         <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
 
     <span class="c1"># Early terminate</span>
@@ -522,7 +522,7 @@
     <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
 
     <span class="n">output_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)</span>
-    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Writing output to </span><span class="si">{</span><span class="n">output_filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Writing output to </span><span class="si">{</span><span class="n">output_filename</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="c1"># remove existing output if it exists</span>
     <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">output_filename</span><span class="p">):</span>
@@ -536,42 +536,42 @@
 
 <span class="nd">@click</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
-    <span class="s2">&quot;--commons-url&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;commons_url&quot;</span><span class="p">,</span>
-    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Root domain (url) for a commons containing indexd.&quot;</span><span class="p">,</span>
+    <span class="s2">"--commons-url"</span><span class="p">,</span>
+    <span class="s2">"commons_url"</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">"Root domain (url) for a commons containing indexd."</span><span class="p">,</span>
     <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--manifest_file&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;The path to input manifest&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">"--manifest_file"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"The path to input manifest"</span><span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
-    <span class="s2">&quot;--thread-num&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;thread_num&quot;</span><span class="p">,</span>
+    <span class="s2">"--thread-num"</span><span class="p">,</span>
+    <span class="s2">"thread_num"</span><span class="p">,</span>
     <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
-    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Number of threads&quot;</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">"Number of threads"</span><span class="p">,</span>
     <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">show_default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--api-key&quot;</span><span class="p">,</span> <span class="s2">&quot;api_key&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;path to api key&quot;</span><span class="p">)</span>
-<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--auth&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;basic auth&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">"--api-key"</span><span class="p">,</span> <span class="s2">"api_key"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"path to api key"</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">"--auth"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"basic auth"</span><span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
-    <span class="s2">&quot;--replace-urls&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;replace_urls&quot;</span><span class="p">,</span>
+    <span class="s2">"--replace-urls"</span><span class="p">,</span>
+    <span class="s2">"replace_urls"</span><span class="p">,</span>
     <span class="nb">type</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span>
-    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;If supplied, will replace urls for existing records. e.g. existing urls will be overwritten by the new ones&quot;</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">"If supplied, will replace urls for existing records. e.g. existing urls will be overwritten by the new ones"</span><span class="p">,</span>
     <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="n">show_default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
-    <span class="s2">&quot;--manifest-file-delimiter&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;manifest_file_delimiter&quot;</span><span class="p">,</span>
-    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;string character that delimites the file (tab or comma). Defaults to tab.&quot;</span><span class="p">,</span>
-    <span class="n">default</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="s2">"--manifest-file-delimiter"</span><span class="p">,</span>
+    <span class="s2">"manifest_file_delimiter"</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">"string character that delimites the file (tab or comma). Defaults to tab."</span><span class="p">,</span>
+    <span class="n">default</span><span class="o">=</span><span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">,</span>
     <span class="n">show_default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
-    <span class="s2">&quot;--out-manifest-file&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;out_manifest_file&quot;</span><span class="p">,</span>
-    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;The path to output manifest&quot;</span><span class="p">,</span>
-    <span class="n">default</span><span class="o">=</span><span class="s2">&quot;indexing-output-manifest.csv&quot;</span><span class="p">,</span>
+    <span class="s2">"--out-manifest-file"</span><span class="p">,</span>
+    <span class="s2">"out_manifest_file"</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">"The path to output manifest"</span><span class="p">,</span>
+    <span class="n">default</span><span class="o">=</span><span class="s2">"indexing-output-manifest.csv"</span><span class="p">,</span>
     <span class="n">show_default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">index_object_manifest_cli</span><span class="p">(</span>
@@ -584,7 +584,7 @@
     <span class="n">manifest_file_delimiter</span><span class="p">,</span>
     <span class="n">out_manifest_file</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Commandline interface for indexing a given manifest to indexd</span>
 
 <span class="sd">    Args:</span>
@@ -596,18 +596,18 @@
 <span class="sd">        replace_urls(bool): Replace urls or not</span>
 <span class="sd">            NOTE: if both api_key and auth are specified, it will ignore the later and</span>
 <span class="sd">            take the former as a default</span>
-<span class="sd">        manifest_file_delimiter(str): manifest&#39;s delimiter</span>
+<span class="sd">        manifest_file_delimiter(str): manifest's delimiter</span>
 <span class="sd">        out_manifest_file(str): path to the output manifest</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">if</span> <span class="n">api_key</span><span class="p">:</span>
         <span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">commons_url</span><span class="p">,</span> <span class="n">refresh_file</span><span class="o">=</span><span class="n">api_key</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">auth</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">auth</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">))</span> <span class="k">if</span> <span class="n">auth</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">auth</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">auth</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">","</span><span class="p">))</span> <span class="k">if</span> <span class="n">auth</span> <span class="k">else</span> <span class="kc">None</span>
 
     <span class="n">files</span><span class="p">,</span> <span class="n">headers</span> <span class="o">=</span> <span class="n">index_object_manifest</span><span class="p">(</span>
-        <span class="n">commons_url</span> <span class="o">+</span> <span class="s2">&quot;/index&quot;</span><span class="p">,</span>
+        <span class="n">commons_url</span> <span class="o">+</span> <span class="s2">"/index"</span><span class="p">,</span>
         <span class="n">manifest_file</span><span class="p">,</span>
         <span class="nb">int</span><span class="p">(</span><span class="n">thread_num</span><span class="p">),</span>
         <span class="n">auth</span><span class="p">,</span>
@@ -617,8 +617,8 @@
     <span class="p">)</span>
 
 
-<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-    <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="s2">&quot;index_object_manifest.log&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="s2">"index_object_manifest.log"</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
     <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">))</span>
     <span class="n">index_object_manifest_cli</span><span class="p">()</span>
 
@@ -626,47 +626,47 @@
 <div class="viewcode-block" id="delete_all_guids">
 <a class="viewcode-back" href="../../../../tools/indexing.html#gen3.tools.indexing.index_manifest.delete_all_guids">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">delete_all_guids</span><span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="n">file</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Delete all GUIDs specified in the object manifest.</span>
 
 <span class="sd">    WARNING: THIS COMPLETELY REMOVES INDEX RECORDS. USE THIS ONLY IF YOU KNOW</span>
 <span class="sd">             THE IMPLICATIONS.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">index</span> <span class="o">=</span> <span class="n">Gen3Index</span><span class="p">(</span><span class="n">auth</span><span class="o">.</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">auth_provider</span><span class="o">=</span><span class="n">auth</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">index</span><span class="o">.</span><span class="n">is_healthy</span><span class="p">():</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;uh oh! The indexing service is not healthy in the commons </span><span class="si">{</span><span class="n">auth</span><span class="o">.</span><span class="n">endpoint</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">"uh oh! The indexing service is not healthy in the commons </span><span class="si">{</span><span class="n">auth</span><span class="o">.</span><span class="n">endpoint</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
         <span class="n">exit</span><span class="p">()</span>
 
     <span class="c1"># try to get delimeter based on file ext</span>
     <span class="n">file_ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">file_ext</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.tsv&quot;</span><span class="p">:</span>
-        <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span>
+    <span class="k">if</span> <span class="n">file_ext</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">".tsv"</span><span class="p">:</span>
+        <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\t</span><span class="s2">"</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="c1"># default, assume CSV</span>
-        <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span>
+        <span class="n">manifest_file_delimiter</span> <span class="o">=</span> <span class="s2">","</span>
 
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8-sig&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">input_file</span><span class="p">:</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s2">"r"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8-sig"</span><span class="p">)</span> <span class="k">as</span> <span class="n">input_file</span><span class="p">:</span>
         <span class="n">csvReader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">manifest_file_delimiter</span><span class="p">)</span>
         <span class="n">fieldnames</span> <span class="o">=</span> <span class="n">csvReader</span><span class="o">.</span><span class="n">fieldnames</span>
 
-        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;got fieldnames from </span><span class="si">{</span><span class="n">file</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">fieldnames</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"got fieldnames from </span><span class="si">{</span><span class="n">file</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">fieldnames</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="c1"># figure out which permutation of the name GUID is being used 1 time</span>
         <span class="c1"># then use it for all future rows</span>
-        <span class="n">guid_name</span> <span class="o">=</span> <span class="s2">&quot;guid&quot;</span>
-        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;guid&quot;</span><span class="p">,</span> <span class="s2">&quot;GUID&quot;</span><span class="p">,</span> <span class="s2">&quot;did&quot;</span><span class="p">,</span> <span class="s2">&quot;DID&quot;</span><span class="p">]:</span>
+        <span class="n">guid_name</span> <span class="o">=</span> <span class="s2">"guid"</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"guid"</span><span class="p">,</span> <span class="s2">"GUID"</span><span class="p">,</span> <span class="s2">"did"</span><span class="p">,</span> <span class="s2">"DID"</span><span class="p">]:</span>
             <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">fieldnames</span><span class="p">:</span>
                 <span class="n">guid_name</span> <span class="o">=</span> <span class="n">name</span>
 
-        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;using </span><span class="si">{</span><span class="n">guid_name</span><span class="si">}</span><span class="s2"> to retrieve GUID to delete...&quot;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"using </span><span class="si">{</span><span class="n">guid_name</span><span class="si">}</span><span class="s2"> to retrieve GUID to delete..."</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">csvReader</span><span class="p">:</span>
             <span class="n">guid</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">guid_name</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">guid</span><span class="p">:</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;deleting GUID record:</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"deleting GUID record:</span><span class="si">{</span><span class="n">guid</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
                 <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">index</span><span class="o">.</span><span class="n">delete_record</span><span class="p">(</span><span class="n">guid</span><span class="o">=</span><span class="n">guid</span><span class="p">))</span></div>
 
 </pre></div>

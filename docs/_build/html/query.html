@@ -48,7 +48,7 @@
 <p class="rubric">Examples</p>
 <p>This generates the Gen3Query class pointed at the sandbox commons while
 using the credentials.json downloaded from the commons profile page.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;credentials.json&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">refresh_file</span><span class="o">=</span><span class="s2">"credentials.json"</span><span class="p">)</span>
 <span class="gp">... </span><span class="n">query</span> <span class="o">=</span> <span class="n">Gen3Query</span><span class="p">(</span><span class="n">auth</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -71,7 +71,7 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">query_string</span> <span class="o">=</span> <span class="s2">&quot;{ my_index { my_field } }&quot;</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">query_string</span> <span class="o">=</span> <span class="s2">"{ my_index { my_field } }"</span>
 <span class="gp">... </span><span class="n">Gen3Query</span><span class="o">.</span><span class="n">graphql_query</span><span class="p">(</span><span class="n">query_string</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -103,14 +103,14 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dl>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Query</span><span class="o">.</span><span class="n">query</span><span class="p">(</span>
-<span class="go">    data_type=&quot;subject&quot;,</span>
+<span class="go">    data_type="subject",</span>
 <span class="go">    first=50,</span>
 <span class="go">    fields=[</span>
-<span class="go">        &quot;vital_status&quot;,</span>
-<span class="go">        &quot;submitter_id&quot;,</span>
+<span class="go">        "vital_status",</span>
+<span class="go">        "submitter_id",</span>
 <span class="go">    ],</span>
-<span class="go">    filters={&quot;vital_status&quot;: &quot;Alive&quot;},</span>
-<span class="go">    sort_object={&quot;submitter_id&quot;: &quot;asc&quot;},</span>
+<span class="go">    filters={"vital_status": "Alive"},</span>
+<span class="go">    sort_object={"submitter_id": "asc"},</span>
 <span class="go">)</span>
 </pre></div>
 </div>
@@ -141,15 +141,15 @@ using the credentials.json downloaded from the commons profile page.</p>
 </dl>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Gen3Query</span><span class="o">.</span><span class="n">raw_data_download</span><span class="p">(</span>
-<span class="go">        data_type=&quot;subject&quot;,</span>
+<span class="go">        data_type="subject",</span>
 <span class="go">        fields=[</span>
-<span class="go">            &quot;vital_status&quot;,</span>
-<span class="go">            &quot;submitter_id&quot;,</span>
-<span class="go">            &quot;project_id&quot;</span>
+<span class="go">            "vital_status",</span>
+<span class="go">            "submitter_id",</span>
+<span class="go">            "project_id"</span>
 <span class="go">        ],</span>
-<span class="go">        filter_object={&quot;=&quot;: {&quot;project_id&quot;: &quot;my_program-my_project&quot;}},</span>
-<span class="go">        sort_fields=[{&quot;submitter_id&quot;: &quot;asc&quot;}],</span>
-<span class="go">        accessibility=&quot;accessible&quot;</span>
+<span class="go">        filter_object={"=": {"project_id": "my_program-my_project"}},</span>
+<span class="go">        sort_fields=[{"submitter_id": "asc"}],</span>
+<span class="go">        accessibility="accessible"</span>
 <span class="go">    )</span>
 </pre></div>
 </div>
