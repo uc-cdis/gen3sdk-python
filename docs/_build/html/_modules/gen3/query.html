@@ -39,7 +39,7 @@
 <div class="viewcode-block" id="Gen3Query">
 <a class="viewcode-back" href="../../query.html#gen3.query.Gen3Query">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Gen3Query</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Query ElasticSearch data from a Gen3 system.</span>
 
 <span class="sd">    Args:</span>
@@ -49,9 +49,9 @@
 <span class="sd">        This generates the Gen3Query class pointed at the sandbox commons while</span>
 <span class="sd">        using the credentials.json downloaded from the commons profile page.</span>
 
-<span class="sd">        &gt;&gt;&gt; auth = Gen3Auth(endpoint, refresh_file=&quot;credentials.json&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; auth = Gen3Auth(endpoint, refresh_file="credentials.json")</span>
 <span class="sd">        ... query = Gen3Query(auth)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">auth_provider</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span> <span class="o">=</span> <span class="n">auth_provider</span>
@@ -70,7 +70,7 @@
         <span class="n">accessibility</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Execute a query against a Data Commons.</span>
 
 <span class="sd">        Args:</span>
@@ -81,23 +81,23 @@
 <span class="sd">            filters: (object, optional): { field: sort method } object. Will filter data with ALL fields EQUAL to the provided respective value. If more complex filters are needed, use the `filter_object` parameter instead.</span>
 <span class="sd">            filter_object (object, optional): Filter to apply. For syntax details, see https://github.com/uc-cdis/guppy/blob/master/doc/queries.md#filter.</span>
 <span class="sd">            sort_object (object, optional): { field: sort method } object.</span>
-<span class="sd">            accessibility (list, optional): One of [&quot;accessible&quot; (default), &quot;unaccessible&quot;, &quot;all&quot;]. Only valid when querying a data type in &quot;regular&quot; tier access mode.</span>
+<span class="sd">            accessibility (list, optional): One of ["accessible" (default), "unaccessible", "all"]. Only valid when querying a data type in "regular" tier access mode.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Object: {&quot;data&quot;: {&lt;data_type&gt;: [&lt;record&gt;, &lt;record&gt;, ...]}}</span>
+<span class="sd">            Object: {"data": {&lt;data_type&gt;: [&lt;record&gt;, &lt;record&gt;, ...]}}</span>
 
 <span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Gen3Query.query(</span>
-<span class="sd">                data_type=&quot;subject&quot;,</span>
+<span class="sd">                data_type="subject",</span>
 <span class="sd">                first=50,</span>
 <span class="sd">                fields=[</span>
-<span class="sd">                    &quot;vital_status&quot;,</span>
-<span class="sd">                    &quot;submitter_id&quot;,</span>
+<span class="sd">                    "vital_status",</span>
+<span class="sd">                    "submitter_id",</span>
 <span class="sd">                ],</span>
-<span class="sd">                filters={&quot;vital_status&quot;: &quot;Alive&quot;},</span>
-<span class="sd">                sort_object={&quot;submitter_id&quot;: &quot;asc&quot;},</span>
+<span class="sd">                filters={"vital_status": "Alive"},</span>
+<span class="sd">                sort_object={"submitter_id": "asc"},</span>
 <span class="sd">            )</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">first</span><span class="p">:</span>
             <span class="n">first</span> <span class="o">=</span> <span class="mi">10</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">offset</span><span class="p">:</span>
@@ -105,14 +105,14 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">sort_object</span><span class="p">:</span>
             <span class="n">sort_object</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">accessibility</span><span class="p">:</span>
-            <span class="n">accessibility</span> <span class="o">=</span> <span class="s2">&quot;accessible&quot;</span>
+            <span class="n">accessibility</span> <span class="o">=</span> <span class="s2">"accessible"</span>
         <span class="k">if</span> <span class="n">filters</span> <span class="ow">and</span> <span class="n">filter_object</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
-                <span class="s2">&quot;Only one of `filters` and `filter_object` can be used at a time.&quot;</span>
+                <span class="s2">"Only one of `filters` and `filter_object` can be used at a time."</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="n">filters</span><span class="p">:</span>
             <span class="n">filter_object</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;AND&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;=&quot;</span><span class="p">:</span> <span class="p">{</span><span class="n">field</span><span class="p">:</span> <span class="n">val</span><span class="p">}}</span> <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">filters</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+                <span class="s2">"AND"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"="</span><span class="p">:</span> <span class="p">{</span><span class="n">field</span><span class="p">:</span> <span class="n">val</span><span class="p">}}</span> <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">filters</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
             <span class="p">}</span>
 
         <span class="k">if</span> <span class="n">first</span> <span class="o">+</span> <span class="n">offset</span> <span class="o">&gt;</span> <span class="mi">10000</span><span class="p">:</span>  <span class="c1"># ElasticSearch limitation</span>
@@ -126,13 +126,13 @@
                 <span class="n">first</span><span class="o">=</span><span class="n">first</span><span class="p">,</span>
                 <span class="n">offset</span><span class="o">=</span><span class="n">offset</span><span class="p">,</span>
             <span class="p">)</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span><span class="n">data_type</span><span class="p">:</span> <span class="n">data</span><span class="p">}}</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">"data"</span><span class="p">:</span> <span class="p">{</span><span class="n">data_type</span><span class="p">:</span> <span class="n">data</span><span class="p">}}</span>
 
-        <span class="c1"># convert sort_object to graphql: [ { field_name: &quot;sort_method&quot; } ]</span>
-        <span class="n">sorts</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s1">: &quot;</span><span class="si">{</span><span class="n">val</span><span class="si">}</span><span class="s1">&quot;</span><span class="se">}}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">sort_object</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
-        <span class="n">sort_string</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;[</span><span class="si">{</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sorts</span><span class="p">)</span><span class="si">}</span><span class="s1">]&#39;</span>
+        <span class="c1"># convert sort_object to graphql: [ { field_name: "sort_method" } ]</span>
+        <span class="n">sorts</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">'</span><span class="se">{{</span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s1">: "</span><span class="si">{</span><span class="n">val</span><span class="si">}</span><span class="s1">"</span><span class="se">}}</span><span class="s1">'</span> <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">sort_object</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+        <span class="n">sort_string</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'[</span><span class="si">{</span><span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sorts</span><span class="p">)</span><span class="si">}</span><span class="s1">]'</span>
 
-        <span class="n">query_string</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;query($filter: JSON) </span><span class="se">{{</span>
+        <span class="n">query_string</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"""query($filter: JSON) </span><span class="se">{{</span>
 <span class="s2">            </span><span class="si">{</span><span class="n">data_type</span><span class="si">}</span><span class="s2">(</span>
 <span class="s2">                first: </span><span class="si">{</span><span class="n">first</span><span class="si">}</span><span class="s2">,</span>
 <span class="s2">                offset: </span><span class="si">{</span><span class="n">offset</span><span class="si">}</span><span class="s2">,</span>
@@ -140,17 +140,17 @@
 <span class="s2">                accessibility: </span><span class="si">{</span><span class="n">accessibility</span><span class="si">}</span><span class="s2">,</span>
 <span class="s2">                filter: $filter</span>
 <span class="s2">            ) </span><span class="se">{{</span>
-<span class="s2">                </span><span class="si">{</span><span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">fields</span><span class="p">)</span><span class="si">}</span>
+<span class="s2">                </span><span class="si">{</span><span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">fields</span><span class="p">)</span><span class="si">}</span>
 <span class="s2">            </span><span class="se">}}</span>
-<span class="s2">        </span><span class="se">}}</span><span class="s2">&quot;&quot;&quot;</span>
-        <span class="n">variables</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;filter&quot;</span><span class="p">:</span> <span class="n">filter_object</span><span class="p">}</span>
+<span class="s2">        </span><span class="se">}}</span><span class="s2">"""</span>
+        <span class="n">variables</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"filter"</span><span class="p">:</span> <span class="n">filter_object</span><span class="p">}</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graphql_query</span><span class="p">(</span><span class="n">query_string</span><span class="o">=</span><span class="n">query_string</span><span class="p">,</span> <span class="n">variables</span><span class="o">=</span><span class="n">variables</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Gen3Query.graphql_query">
 <a class="viewcode-back" href="../../query.html#gen3.query.Gen3Query.graphql_query">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">graphql_query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query_string</span><span class="p">,</span> <span class="n">variables</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Execute a GraphQL query against a Data Commons.</span>
 
 <span class="sd">        Args:</span>
@@ -158,29 +158,29 @@
 <span class="sd">            variables (:obj:`object`, optional): Dictionary of variables to pass with the query.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Object: {&quot;data&quot;: {&lt;data_type&gt;: [&lt;record&gt;, &lt;record&gt;, ...]}}</span>
+<span class="sd">            Object: {"data": {&lt;data_type&gt;: [&lt;record&gt;, &lt;record&gt;, ...]}}</span>
 
 <span class="sd">        Examples:</span>
-<span class="sd">            &gt;&gt;&gt; query_string = &quot;{ my_index { my_field } }&quot;</span>
+<span class="sd">            &gt;&gt;&gt; query_string = "{ my_index { my_field } }"</span>
 <span class="sd">            ... Gen3Query.graphql_query(query_string)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">endpoint</span><span class="si">}</span><span class="s2">/guppy/graphql&quot;</span>
+<span class="sd">        """</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">endpoint</span><span class="si">}</span><span class="s2">/guppy/graphql"</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
             <span class="n">url</span><span class="p">,</span>
-            <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="n">query_string</span><span class="p">,</span> <span class="s2">&quot;variables&quot;</span><span class="p">:</span> <span class="n">variables</span><span class="p">},</span>
+            <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">query_string</span><span class="p">,</span> <span class="s2">"variables"</span><span class="p">:</span> <span class="n">variables</span><span class="p">},</span>
             <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Unable to query.</span><span class="se">\n</span><span class="s2">Query: </span><span class="si">{</span><span class="n">query_string</span><span class="si">}</span><span class="se">\n</span><span class="s2">Variables: </span><span class="si">{</span><span class="n">variables</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"Unable to query.</span><span class="se">\n</span><span class="s2">Query: </span><span class="si">{</span><span class="n">query_string</span><span class="si">}</span><span class="se">\n</span><span class="s2">Variables: </span><span class="si">{</span><span class="n">variables</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
             <span class="k">raise</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Did not receive JSON: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Did not receive JSON: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
             <span class="k">raise</span></div>
 
 
@@ -196,7 +196,7 @@
         <span class="n">first</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">offset</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Execute a raw data download against a Data Commons.</span>
 
 <span class="sd">        Args:</span>
@@ -204,7 +204,7 @@
 <span class="sd">            fields (list): List of fields to return.</span>
 <span class="sd">            filter_object (object, optional): Filter to apply. For syntax details, see https://github.com/uc-cdis/guppy/blob/master/doc/queries.md#filter.</span>
 <span class="sd">            sort_fields (list, optional): List of { field: sort method } objects.</span>
-<span class="sd">            accessibility (list, optional): One of [&quot;accessible&quot; (default), &quot;unaccessible&quot;, &quot;all&quot;]. Only valid when downloading from a data type in &quot;regular&quot; tier access mode.</span>
+<span class="sd">            accessibility (list, optional): One of ["accessible" (default), "unaccessible", "all"]. Only valid when downloading from a data type in "regular" tier access mode.</span>
 <span class="sd">            first (int, optional): Number of rows to return (default: all rows).</span>
 <span class="sd">            offset (int, optional): Starting position (default: 0).</span>
 
@@ -213,29 +213,29 @@
 
 <span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Gen3Query.raw_data_download(</span>
-<span class="sd">                    data_type=&quot;subject&quot;,</span>
+<span class="sd">                    data_type="subject",</span>
 <span class="sd">                    fields=[</span>
-<span class="sd">                        &quot;vital_status&quot;,</span>
-<span class="sd">                        &quot;submitter_id&quot;,</span>
-<span class="sd">                        &quot;project_id&quot;</span>
+<span class="sd">                        "vital_status",</span>
+<span class="sd">                        "submitter_id",</span>
+<span class="sd">                        "project_id"</span>
 <span class="sd">                    ],</span>
-<span class="sd">                    filter_object={&quot;=&quot;: {&quot;project_id&quot;: &quot;my_program-my_project&quot;}},</span>
-<span class="sd">                    sort_fields=[{&quot;submitter_id&quot;: &quot;asc&quot;}],</span>
-<span class="sd">                    accessibility=&quot;accessible&quot;</span>
+<span class="sd">                    filter_object={"=": {"project_id": "my_program-my_project"}},</span>
+<span class="sd">                    sort_fields=[{"submitter_id": "asc"}],</span>
+<span class="sd">                    accessibility="accessible"</span>
 <span class="sd">                )</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">accessibility</span><span class="p">:</span>
-            <span class="n">accessibility</span> <span class="o">=</span> <span class="s2">&quot;accessible&quot;</span>
+            <span class="n">accessibility</span> <span class="o">=</span> <span class="s2">"accessible"</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">offset</span><span class="p">:</span>
             <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
 
-        <span class="n">body</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">data_type</span><span class="p">,</span> <span class="s2">&quot;fields&quot;</span><span class="p">:</span> <span class="n">fields</span><span class="p">,</span> <span class="s2">&quot;accessibility&quot;</span><span class="p">:</span> <span class="n">accessibility</span><span class="p">}</span>
+        <span class="n">body</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"type"</span><span class="p">:</span> <span class="n">data_type</span><span class="p">,</span> <span class="s2">"fields"</span><span class="p">:</span> <span class="n">fields</span><span class="p">,</span> <span class="s2">"accessibility"</span><span class="p">:</span> <span class="n">accessibility</span><span class="p">}</span>
         <span class="k">if</span> <span class="n">filter_object</span><span class="p">:</span>
-            <span class="n">body</span><span class="p">[</span><span class="s2">&quot;filter&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">filter_object</span>
+            <span class="n">body</span><span class="p">[</span><span class="s2">"filter"</span><span class="p">]</span> <span class="o">=</span> <span class="n">filter_object</span>
         <span class="k">if</span> <span class="n">sort_fields</span><span class="p">:</span>
-            <span class="n">body</span><span class="p">[</span><span class="s2">&quot;sort&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sort_fields</span>
+            <span class="n">body</span><span class="p">[</span><span class="s2">"sort"</span><span class="p">]</span> <span class="o">=</span> <span class="n">sort_fields</span>
 
-        <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">endpoint</span><span class="si">}</span><span class="s2">/guppy/download&quot;</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_provider</span><span class="o">.</span><span class="n">endpoint</span><span class="si">}</span><span class="s2">/guppy/download"</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
             <span class="n">url</span><span class="p">,</span>
             <span class="n">json</span><span class="o">=</span><span class="n">body</span><span class="p">,</span>
@@ -244,12 +244,12 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="n">raise_for_status_and_print_error</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unable to download.</span><span class="se">\n</span><span class="s2">Body: </span><span class="si">{</span><span class="n">body</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unable to download.</span><span class="se">\n</span><span class="s2">Body: </span><span class="si">{</span><span class="n">body</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
             <span class="k">raise</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Did not receive JSON: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Did not receive JSON: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
             <span class="k">raise</span>
 
         <span class="k">if</span> <span class="n">offset</span><span class="p">:</span>

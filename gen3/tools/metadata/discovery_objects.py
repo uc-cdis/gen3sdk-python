@@ -21,7 +21,7 @@ from gen3.tools.metadata.discovery import (
 REQUIRED_OBJECT_FIELDS = {"dataset_guid", "guid", "display_name"}
 OPTIONAL_OBJECT_FIELDS = {"description", "type"}
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 async def output_discovery_objects(

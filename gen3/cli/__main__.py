@@ -13,12 +13,14 @@ import gen3.cli.configure as configure
 import gen3.cli.objects as objects
 import gen3.cli.file as file
 import gen3.cli.drs_pull as drs_pull
+import gen3.cli.dpop as dpop
 import gen3.cli.users as users
 import gen3.cli.wrap as wrap
 import gen3.cli.ai.main as ai
 import gen3
 from gen3 import logging as sdklogging
 from gen3.cli import nih
+from gen3.cli import nextflow
 
 
 class AuthFactory:
@@ -109,7 +111,7 @@ def main(
         # we still need to define the logger, the log_level here doesn't
         # really matter b/c we immediately disable all logging
         logger = cdislogging.get_logger(
-            __name__, format=gen3.LOG_FORMAT, log_level="debug"
+            "gen3", format=gen3.LOG_FORMAT, log_level="debug"
         )
         # disables all logging
         logging.disable(logging.CRITICAL)
@@ -117,27 +119,27 @@ def main(
     elif very_verbose_logs:
         level = "DEBUG"
         logger = cdislogging.get_logger(
-            __name__, format=gen3.LOG_FORMAT, log_level="debug"
+            "gen3", format=gen3.LOG_FORMAT, log_level="debug"
         )
         sdklogging.setLevel(level)
 
     elif verbose_logs:
         level = "INFO"
         logger = cdislogging.get_logger(
-            __name__, format=gen3.LOG_FORMAT, log_level="info"
+            "gen3", format=gen3.LOG_FORMAT, log_level="info"
         )
         sdklogging.setLevel(level)
 
     elif only_error_logs:
         level = "ERROR"
         logger = cdislogging.get_logger(
-            __name__, format=gen3.LOG_FORMAT, log_level="error"
+            "gen3", format=gen3.LOG_FORMAT, log_level="error"
         )
         sdklogging.setLevel(level)
     else:
         level = "WARNING"
         logger = cdislogging.get_logger(
-            __name__, format=gen3.LOG_FORMAT, log_level="warning"
+            "gen3", format=gen3.LOG_FORMAT, log_level="warning"
         )
         sdklogging.setLevel(level)
 
@@ -157,7 +159,9 @@ main.add_command(objects.objects)
 main.add_command(drs_pull.drs_pull)
 main.add_command(file.file)
 main.add_command(nih.nih)
+main.add_command(dpop.dpop)
 main.add_command(users.users)
 main.add_command(wrap.run)
 main.add_command(ai.ai)
+main.add_command(nextflow.nextflow)
 main()

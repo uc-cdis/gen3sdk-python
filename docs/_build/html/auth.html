@@ -73,11 +73,11 @@ and installed in ~/.gen3/credentials.json</p>
 </pre></div>
 </div>
 <p>or use ~/.gen3/crdc.json:</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;crdc&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">"crdc"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>or use some arbitrary file:</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">&quot;./key.json&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span><span class="n">refresh_file</span><span class="o">=</span><span class="s2">"./key.json"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>or set the GEN3_API_KEY environment variable rather
@@ -87,8 +87,8 @@ constructor.</p>
 access tokens, provide the client ID and secret:</p>
 <p>Note: client secrets should never be hardcoded!</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auth</span> <span class="o">=</span> <span class="n">Gen3Auth</span><span class="p">(</span>
-<span class="go">    endpoint=&quot;https://datacommons.example&quot;,</span>
-<span class="go">    client_credentials=(&quot;client ID&quot;, os.environ[&quot;GEN3_OIDC_CLIENT_CREDS_SECRET&quot;])</span>
+<span class="go">    endpoint="https://datacommons.example",</span>
+<span class="go">    client_credentials=("client ID", os.environ["GEN3_OIDC_CLIENT_CREDS_SECRET"])</span>
 <span class="go">)</span>
 </pre></div>
 </div>
@@ -122,6 +122,13 @@ access tokens, provide the client ID and secret:</p>
 <span class="sig-name descname"><span class="pre">get_access_token_from_wts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">endpoint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/auth.html#Gen3Auth.get_access_token_from_wts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.auth.Gen3Auth.get_access_token_from_wts" title="Link to this definition">¶</a></dt>
 <dd><p>Try to fetch an access token for the given idp from the wts
 in the given namespace.  If idp is not set, then default to “local”</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gen3.auth.Gen3Auth.get_api_key">
+<span class="sig-name descname"><span class="pre">get_api_key</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/auth.html#Gen3Auth.get_api_key"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.auth.Gen3Auth.get_api_key" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the actual API key loaded, or None if the loaded credentials
+do not contain one (for example a raw access token).</p>
 </dd></dl>
 
 <dl class="py method">
@@ -173,6 +180,7 @@ in the given namespace.  If idp is not set, then default to “local”</p>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.auth.Gen3Auth.curl"><code class="docutils literal notranslate"><span class="pre">Gen3Auth.curl()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.auth.Gen3Auth.get_access_token"><code class="docutils literal notranslate"><span class="pre">Gen3Auth.get_access_token()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.auth.Gen3Auth.get_access_token_from_wts"><code class="docutils literal notranslate"><span class="pre">Gen3Auth.get_access_token_from_wts()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gen3.auth.Gen3Auth.get_api_key"><code class="docutils literal notranslate"><span class="pre">Gen3Auth.get_api_key()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#gen3.auth.Gen3Auth.refresh_access_token"><code class="docutils literal notranslate"><span class="pre">Gen3Auth.refresh_access_token()</span></code></a></li>
 </ul>
 </li>

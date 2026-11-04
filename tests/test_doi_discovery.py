@@ -5,7 +5,12 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from gen3.auth import Gen3Auth
-from gen3.discovery_dois import mint_dois_for_discovery_datasets, GetMetadataInterface
+from gen3.discovery_dois import (
+    DOI_DISCOVERY_METADATA_EXPORT_LIMIT,
+    GetMetadataInterface,
+    get_alternate_id_to_guid_mapping,
+    mint_dois_for_discovery_datasets,
+)
 from gen3.utils import get_random_alphanumeric
 from gen3.doi import DigitalObjectIdentifier
 
@@ -18,6 +23,48 @@ DOI_DISCLAIMER = "DOI_DISCLAIMER"
 DOI_ACCESS_INFORMATION = "DOI_ACCESS_INFORMATION"
 DOI_ACCESS_INFORMATION_LINK = "DOI_ACCESS_INFORMATION_LINK"
 DOI_CONTACT = "DOI_CONTACT"
+
+
+@patch("gen3.discovery_dois.output_expanded_discovery_metadata")
+def test_get_alternate_id_to_guid_mapping_uses_increased_export_limit(
+    mock_output_expanded_discovery_metadata, gen3_auth, tmp_path
+):
+    """
+    Test to ensure DOI mapping requests an export with DOI_DISCOVERY_METADATA_EXPORT_LIMIT.
+    """
+    output_filename = tmp_path / "discovery_metadata.tsv"
+    output_filename.write_text(
+        "guid\tdbgap_accession\tdoi_identifier\n"
+        "guid_one\tphs004546.v1.p1.c1\t10.12345/EXISTING-ONE\n"
+        "guid_two\tphs000007.v1.p1.c1\t\n",
+        encoding="utf-8",
+    )
+    mock_output_expanded_discovery_metadata.return_value = str(output_filename)
+
+    alternate_id_to_guid, all_discovery_metadata = get_alternate_id_to_guid_mapping(
+        auth=gen3_auth,
+        metadata_field_for_alternate_id=METADATA_FIELD_FOR_ALTERNATE_ID,
+    )
+
+    assert alternate_id_to_guid == {
+        "phs004546.v1.p1.c1": "guid_one",
+        "phs000007.v1.p1.c1": "guid_two",
+    }
+    assert all_discovery_metadata["guid_one"] == {
+        "dbgap_accession": "phs004546.v1.p1.c1",
+        "doi_identifier": "10.12345/EXISTING-ONE",
+        "guid": "guid_one",
+    }
+    assert all_discovery_metadata["guid_two"] == {
+        "dbgap_accession": "phs000007.v1.p1.c1",
+        "doi_identifier": "",
+        "guid": "guid_two",
+    }
+    mock_output_expanded_discovery_metadata.assert_called_once_with(
+        gen3_auth,
+        endpoint=gen3_auth.endpoint,
+        limit=DOI_DISCOVERY_METADATA_EXPORT_LIMIT,
+    )
 
 
 @pytest.mark.parametrize("exclude_datasets", [["guid_W"], ["alternate_id_0"]])

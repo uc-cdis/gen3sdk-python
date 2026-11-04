@@ -12,7 +12,7 @@ from gen3.utils import (
     raise_for_status_and_print_error,
 )
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 def wsurl_to_tokens(ws_urlstr):

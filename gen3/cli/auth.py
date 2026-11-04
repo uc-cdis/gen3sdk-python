@@ -7,7 +7,7 @@ import gen3.auth as auth_tool
 
 from cdislogging import get_logger
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 def stderr(*str):

@@ -10,7 +10,7 @@ from gen3.tools.bundle.ingest_manifest import (
 
 from cdislogging import get_logger
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 def test_replace_bundle_name_with_guid():

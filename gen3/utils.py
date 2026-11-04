@@ -15,7 +15,7 @@ from urllib.parse import parse_qs
 
 from cdislogging import get_logger
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 UUID_FORMAT = (
     r"^.*[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"

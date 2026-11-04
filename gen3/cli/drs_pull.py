@@ -11,7 +11,7 @@ from gen3.tools.download.drs_download import (
     list_access_in_drs_manifest,
 )
 
-logger = get_logger("__name__")
+logger = get_logger(__name__)
 
 
 @click.command()
@@ -142,7 +142,7 @@ def download_object(
         ctx.obj["auth_factory"].get(),
         [object_id],
         output_dir,
-        no_progress,
+        not no_progress,
         not no_unpack_packages,
         delete_unpacked_packages,
         ctx.obj["commons_url"],
@@ -226,7 +226,7 @@ def download_objects(
         ctx.obj["auth_factory"].get(),
         object_ids,
         output_dir,
-        no_progress,
+        not no_progress,
         not no_unpack_packages,
         delete_unpacked_packages,
         ctx.obj["commons_url"],

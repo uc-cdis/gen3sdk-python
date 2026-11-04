@@ -7,7 +7,7 @@ from gen3.external import ExternalMetadataSourceInterface
 from gen3.external.nih.utils import get_dbgap_accession_as_parts
 from gen3.utils import append_query_params
 
-logging = get_logger("__name__")
+logging = get_logger(__name__)
 
 
 class dbgapStudyRegistration(ExternalMetadataSourceInterface):

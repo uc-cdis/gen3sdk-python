@@ -348,10 +348,9 @@ def test_download_file_from_url_failures(download_dir):
             text="1234567890",
             status_code=500,
         )
-        assert (
-            get_download_url_using_drs("test.commons1.io", "blah", "s3", "bad token")
-            is None
-        )
+        assert get_download_url_using_drs(
+            "test.commons1.io", "blah", "s3", "bad token"
+        ) == (None, 500)
 
         assert (
             download_file_from_url(
@@ -366,10 +365,9 @@ def test_download_file_from_url_failures(download_dir):
             url=f"https://test.commons1.io/ga4gh/drs/v1/objects/blah/access/s3",
             exc=requests.exceptions.Timeout,
         )
-        assert (
-            get_download_url_using_drs("test.commons1.io", "blah", "s3", "bad token")
-            is None
-        )
+        assert get_download_url_using_drs(
+            "test.commons1.io", "blah", "s3", "bad token"
+        ) == (None, None)
 
         try:
             download_file_from_url(
@@ -672,7 +670,7 @@ def test_download_objects(
 
         # test download object with no auth
         m.post(
-            f"http://{hostname}/user/credentials/cdis/access_token",
+            f"http://{hostname}/user/credentials/api/access_token",
             json={},
             status_code=404,
         )
@@ -843,7 +841,7 @@ def test_download_status_repr_and_str():
         end_time=datetime.strptime("2011-11-04T00:07:12Z", "%Y-%m-%dT%H:%M:%SZ"),
     )
 
-    expected = "filename: test.csv; status: downloaded; start_time: 11/04/2011, 00:05:23; end_time: 11/04/2011, 00:07:12"
+    expected = "filename: test.csv; status: downloaded; status_code: None; start_time: 11/04/2011, 00:05:23; end_time: 11/04/2011, 00:07:12"
 
     results = download1.__repr__()
     assert results == expected
@@ -866,7 +864,7 @@ def test_no_gen3_auth():
 
     with requests_mock.Mocker() as m:
         m.post(
-            f"http://{hostname}/user/credentials/cdis/access_token",
+            f"http://{hostname}/user/credentials/api/access_token",
             json={},
             status_code=501,
         )
@@ -926,7 +924,7 @@ def test_list_no_auth(
     with requests_mock.Mocker() as m:
         m.get(f"https://{hostname}/wts/external_oidc/", json=wts_oidc[hostname])
         m.post(
-            f"http://{hostname}/user/credentials/cdis/access_token",
+            f"http://{hostname}/user/credentials/api/access_token",
             json={"access_token": "test_access_token"},
         )
         for object_id, info in drs_object_info.items():
@@ -939,7 +937,7 @@ def test_list_no_auth(
             # test getting auth error
             # test no auth
             m.post(
-                f"http://{hostname}/user/credentials/cdis/access_token",
+                f"http://{hostname}/user/credentials/api/access_token",
                 json={"access_token": "test_access_token"},
                 status_code=401,
             )
