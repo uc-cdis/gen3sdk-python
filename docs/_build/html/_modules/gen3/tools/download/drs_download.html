@@ -146,7 +146,7 @@
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="s2">"Downloadable"</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Method to load a json manifest and return a list of Bownloadable object.</span>
+<span class="sd">        Method to load a json manifest and return a list of Downloadable object.</span>
 <span class="sd">        This list is passed to the DownloadManager methods of download, and list</span>
 
 <span class="sd">        Args:</span>
@@ -931,9 +931,9 @@
         <span class="n">resolve_objects_drs_hostname</span><span class="p">(</span>
             <span class="n">object_list</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">resolved_compact_drs</span><span class="p">,</span>
-            <span class="n">mds_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">"http://</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">hostname</span><span class="si">}</span><span class="s2">/mds/aggregate/info"</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hostname</span>
-            <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">mds_url</span><span class="o">=</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"http://</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">hostname</span><span class="si">}</span><span class="s2">/mds/aggregate/info"</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hostname</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">),</span>
             <span class="n">commons_url</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">commons_url</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">progress_bar</span> <span class="o">=</span> <span class="p">(</span>
