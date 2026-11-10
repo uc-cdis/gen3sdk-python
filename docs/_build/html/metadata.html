@@ -40,6 +40,9 @@
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">gen3.metadata.</span></span><span class="sig-name descname"><span class="pre">Gen3Metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">endpoint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth_provider</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service_location</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mds'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">admin_endpoint_suffix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'-admin'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>A class for interacting with the Gen3 Metadata services.</p>
+<p>Open access endpoints work without authentication. Methods that call admin
+endpoints (create, update, delete, index management, alias changes) require an
+auth_provider; without one they log a message and return directly.</p>
 <p class="rubric">Examples</p>
 <p>This generates the Gen3Metadata class pointed at the sandbox commons while
 using the credentials.json downloaded from the commons profile page.</p>
@@ -89,7 +92,7 @@ attached to the provided GUID as metadata</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.async_create_aliases">
 <span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">async_create_aliases</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aliases</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.async_create_aliases"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.async_create_aliases" title="Link to this definition">¶</a></dt>
-<dd><p>Asyncronously create Aliases for the given guid</p>
+<dd><p>Asynchronously create Aliases for the given guid</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -111,11 +114,11 @@ attached to the provided GUID as metadata</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.async_delete_alias">
 <span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">async_delete_alias</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alias</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.async_delete_alias"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.async_delete_alias" title="Link to this definition">¶</a></dt>
-<dd><p>Asyncronously delete single Aliases for the given guid</p>
+<dd><p>Asynchronously delete single Aliases for the given guid</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>guid</strong> (<em>str</em>) – Globally unique ID for the metadata blob</p></li>
+<li><p><strong>guid</strong> (<em>TYPE</em>) – Globally unique ID for the metadata blob</p></li>
 <li><p><strong>alias</strong> (<em>str</em>) – alternative identifier (alias) to delete</p></li>
 <li><p><strong>_ssl</strong> (<em>None</em><em>, </em><em>optional</em>) – whether or not to use ssl</p></li>
 <li><p><strong>**kwargs</strong> – additional query params</p></li>
@@ -133,7 +136,7 @@ attached to the provided GUID as metadata</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.async_delete_aliases">
 <span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">async_delete_aliases</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.async_delete_aliases"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.async_delete_aliases" title="Link to this definition">¶</a></dt>
-<dd><p>Asyncronously delete all Aliases for the given guid</p>
+<dd><p>Asynchronously delete all Aliases for the given guid</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -215,7 +218,7 @@ with existing values</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.async_update_aliases">
 <span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">async_update_aliases</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">guid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aliases</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">merge</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.async_update_aliases"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.async_update_aliases" title="Link to this definition">¶</a></dt>
-<dd><p>Asyncronously update Aliases for the given guid</p>
+<dd><p>Asynchronously update Aliases for the given guid</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -244,7 +247,7 @@ with existing values</p></li>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>(</strong><strong>List</strong><strong>[</strong><strong>Dict{&quot;guid&quot;</strong> (<em>metadata_list</em>) – “”, “data”: {}}]): list of metadata
 objects in a specific format. Expects a dict with “guid” and “data”
-fields where “data” is another JSON blob to add to the mds</p></li>
+fields where “data” is another JSON blob to add to the MDS</p></li>
 <li><p><strong>overwrite</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether or not to overwrite existing data</p></li>
 </ul>
 </dd>
@@ -442,7 +445,7 @@ attached to the provided GUID as metadata</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gen3.metadata.Gen3Metadata.query">
-<span class="sig-name descname"><span class="pre">query</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_full_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_agg_mds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.query"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.query" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">query</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_full_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gen3/metadata.html#Gen3Metadata.query"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gen3.metadata.Gen3Metadata.query" title="Link to this definition">¶</a></dt>
 <dd><p>Query the metadata given a query.</p>
 <dl>
 <dt>Query format is based off the logic used in the service:</dt><dd><p>‘’’
@@ -471,7 +474,8 @@ But won’t match these:</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>query</strong> (<em>str</em>) – mds query as defined by the metadata api</p></li>
+<li><p><strong>query</strong> (<em>str</em><em>, </em><em>optional</em>) – MDS query as defined by the metadata api. If not
+provided, all records are returned (subject to limit/offset)</p></li>
 <li><p><strong>return_full_metadata</strong> (<em>bool</em><em>, </em><em>optional</em>) – if False will just return a list of guids</p></li>
 <li><p><strong>limit</strong> (<em>int</em><em>, </em><em>optional</em>) – max num records to return</p></li>
 <li><p><strong>offset</strong> (<em>int</em><em>, </em><em>optional</em>) – offset for output</p></li>

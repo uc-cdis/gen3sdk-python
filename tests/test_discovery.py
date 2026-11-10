@@ -260,14 +260,12 @@ def test_discovery_tsv_export_with_large_limit_reads_multiple_pages(
             return_full_metadata=True,
             limit=2000,
             offset=0,
-            use_agg_mds=False,
         ),
         call(
             "_guid_type=discovery_metadata",
             return_full_metadata=True,
             limit=2000,
             offset=2000,
-            use_agg_mds=False,
         ),
     ]
 

@@ -166,7 +166,6 @@ def read_mds_into_cache(
             return_full_metadata=True,
             limit=min(limit, max_guids_per_request),
             offset=offset,
-            use_agg_mds=use_agg_mds,
         )
 
         # if agg MDS we will flatten the results as they are in "common" : dict format
