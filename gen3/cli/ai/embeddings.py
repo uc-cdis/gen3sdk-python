@@ -61,7 +61,7 @@ COLLECTION_NAME_TO_ID_CACHE = {}
 @click.option(
     "--url-prefix",
     "-u",
-    default=None,
+    default="",
     help=(
         "Prefix for ALL `urls` in the output file. If a url provided doesn't have the prefix, it will be added. "
         "This can be used to ensure an appropriate https://example.com/ai prefix if the input manifest doesn't have that "
@@ -149,7 +149,7 @@ def convert_embeddings(
                         f"Row #{row_number} did not contain REQUIRED `authz` column contents. Continuing anyway..."
                     )
 
-                if not url.startswith(url_prefix):
+                if url and not url.startswith(url_prefix):
                     url = url_prefix + url
 
                 if not valid_guids:
@@ -182,9 +182,11 @@ def convert_embeddings(
         The manifest must be a CSV/TSV with the following columns:
 
         \b
-                              embedding: JSON-encoded list of floats
-        collection_id / collection_name: Target collection (use name to lookup id)
-                     **metadata columns: any additional columns are treated as metadata for the embedding
+                  embedding: JSON-encoded list of floats
+            collection_name: Target collection (falls back to --default-collection)
+              collection_id: Optional. If set, must match the ID of the target collection
+                      authz: Optional authz resource path (defaults to the collection's path)
+         **metadata columns: any additional columns are treated as metadata for the embedding
 
         Example usage:
 
@@ -267,12 +269,38 @@ def publish_embeddings(
             c for c in getattr(reader, "fieldnames", []) if c not in excluded
         ]
 
-        pending_per_collection = {}
+        # the API takes authz per request, so embeddings are batched by
+        # (collection_name, authz)
+        pending_batches = {}
         pending_count = 0
         total_count = 0
 
         all_metadata_keys = set()
         output_header_written = False
+
+        def create_pending_batches():
+            nonlocal output_header_written
+            for (collection_name, authz), embeddings in pending_batches.items():
+                loop = get_or_create_event_loop_for_thread()
+                created_embeddings_response = loop.run_until_complete(
+                    client.create_embeddings(
+                        collection_name=collection_name,
+                        embeddings_with_metadata=embeddings,
+                        authz=authz,
+                        overwrite=overwrite,
+                    )
+                )
+                created_embeddings = created_embeddings_response.get("embeddings", [])
+
+                _append_created_embeddings_to_file(
+                    created_embeddings,
+                    out_manifest_file,
+                    all_metadata_keys=all_metadata_keys,
+                    output_header_written=output_header_written,
+                )
+                output_header_written = True
+
+            pending_batches.clear()
 
         with tqdm(
             total=total_rows,
@@ -280,16 +308,23 @@ def publish_embeddings(
             mininterval=1.0,
         ) as pbar:
             for row in reader:
-                collection_id = row.get("collection_id")
-                collection_name = row.get("collection_name", "")
-                authz = row.get("authz")
+                row_collection_id = row.get("collection_id")
+                authz = row.get("authz") or None
 
-                if not collection_id:
-                    collection_id, collection_name = _get_collection_id_and_name(
-                        collection_name=collection_name,
-                        client=client,
-                        default_collection=default_collection,
+                # the API addresses collections by name, so always resolve the name
+                collection_id, collection_name = _get_collection_id_and_name(
+                    collection_name=row.get("collection_name", ""),
+                    client=client,
+                    default_collection=default_collection,
+                )
+                if row_collection_id and str(row_collection_id) != str(collection_id):
+                    click.echo(
+                        f"Row has collection_id '{row_collection_id}', but collection "
+                        f"'{collection_name}' has ID '{collection_id}'. Fix the manifest "
+                        f"so the collection_name and collection_id columns agree.",
+                        err=True,
                     )
+                    sys.exit(1)
 
                 try:
                     embedding = json.loads(row.get("embedding", "[]"))
@@ -308,75 +343,23 @@ def publish_embeddings(
                 # on the overall columns of the manifest
                 all_metadata_keys.update(metadata.keys())
 
-                if authz:
-                    embedding_content.update({"authz": authz})
-
-                collection_group = pending_per_collection.setdefault(
-                    collection_id, {"name": collection_name, "embeddings": []}
+                pending_batches.setdefault((collection_name, authz), []).append(
+                    embedding_content
                 )
-                collection_group["embeddings"].append(embedding_content)
                 pending_count += 1
 
                 # create the embeddings
                 if pending_count >= batch_size:
-                    for (
-                        collection_id,
-                        collection_group,
-                    ) in pending_per_collection.items():
-                        loop = get_or_create_event_loop_for_thread()
-                        created_embeddings_response = loop.run_until_complete(
-                            client.create_embeddings(
-                                collection_name=collection_group["name"],
-                                collection_id=collection_id,
-                                embeddings_with_metadata=collection_group["embeddings"],
-                                overwrite=overwrite,
-                            )
-                        )
-                        created_embeddings = created_embeddings_response.get(
-                            "embeddings", {}
-                        )
-
-                        _append_created_embeddings_to_file(
-                            created_embeddings,
-                            out_manifest_file,
-                            all_metadata_keys=all_metadata_keys,
-                            output_header_written=output_header_written,
-                        )
-                        output_header_written = True
-
+                    create_pending_batches()
                     total_count += pending_count
                     pbar.update(pending_count)
-                    pending_per_collection.clear()
                     pending_count = 0
 
             # get the last batch
-            if pending_per_collection:
-                for collection_id, collection_group in pending_per_collection.items():
-                    loop = get_or_create_event_loop_for_thread()
-                    created_embeddings_response = loop.run_until_complete(
-                        client.create_embeddings(
-                            # ignore unbound type error here because we know it will be bound
-                            collection_name=collection_group["name"],
-                            collection_id=collection_id,
-                            embeddings_with_metadata=collection_group["embeddings"],
-                            overwrite=overwrite,
-                        )
-                    )
-                    created_embeddings = created_embeddings_response.get(
-                        "embeddings", {}
-                    )
-
-                    _append_created_embeddings_to_file(
-                        created_embeddings,
-                        out_manifest_file,
-                        all_metadata_keys=all_metadata_keys,
-                        output_header_written=output_header_written,
-                    )
-                    output_header_written = True
-
+            if pending_batches:
+                create_pending_batches()
                 total_count += pending_count
                 pbar.update(pending_count)
-                pending_per_collection.clear()
                 pending_count = 0
 
     click.echo(f"Published {total_count} embeddings.")
@@ -427,47 +410,29 @@ def _get_collection_id_and_name(
     """
     global COLLECTION_NAME_TO_ID_CACHE
 
-    if collection_name and collection_name in COLLECTION_NAME_TO_ID_CACHE:
-        # cache hit
-        collection_id = COLLECTION_NAME_TO_ID_CACHE[collection_name]
-    elif collection_name:
-        # cache miss
-        # resolve collection id if a name was supplied
-        collection = asyncio.run(
-            client.list_collections(collection_name=collection_name)
-        )
-        if not collection:
-            click.echo(
-                f"Failed to resolve a collection. Given collection_name:'{collection_name}' / default_collection:'{default_collection}'"
-            )
-            sys.exit(1)
-        collection_id = collection[0]["id"]
-
-        # update in-mem cache
-        COLLECTION_NAME_TO_ID_CACHE[collection_name] = collection_id
-
-    elif default_collection:
-        # resolve collection id using default_collection if provided
-        collection_name = default_collection
-        collection = asyncio.run(
-            client.list_collections(collection_name=collection_name)
-        )
-        if not collection:
-            click.echo(
-                f"Failed to resolve a collection. Given collection_name:'{collection_name}' / default_collection:'{default_collection}'"
-            )
-            sys.exit(1)
-        collection_id = collection[0]["id"]
-
-        # update in-mem cache
-        COLLECTION_NAME_TO_ID_CACHE[collection_name] = collection_id
-    else:
+    collection_name = collection_name or default_collection
+    if not collection_name:
         click.echo(
-            f"Failed to resolve a collection. Given collection_name:'{collection_name}' / default_collection:'{default_collection}'"
+            "Failed to resolve a collection: the row has no collection_name and no "
+            "--default-collection was given. Collections are looked up by name, so a "
+            "collection_id alone is not enough.",
+            err=True,
         )
         sys.exit(1)
 
-    return collection_id, collection_name
+    if collection_name not in COLLECTION_NAME_TO_ID_CACHE:
+        collection = asyncio.run(
+            client.list_collections(collection_name=collection_name)
+        )
+        if not collection:
+            click.echo(
+                f"Failed to resolve a collection. Given collection_name:'{collection_name}' / default_collection:'{default_collection}'",
+                err=True,
+            )
+            sys.exit(1)
+        COLLECTION_NAME_TO_ID_CACHE[collection_name] = collection[0]["id"]
+
+    return COLLECTION_NAME_TO_ID_CACHE[collection_name], collection_name
 
 
 @click.command(

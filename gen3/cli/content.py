@@ -4,15 +4,15 @@ Tool for retrieving bulk content (not signed URLs) from a Gen3 commons.
 The command accepts either an input file that contains one GUID per line
 (`--input-file`) or a list of GUIDs passed on the command line (`--guids`).
 It then calls `Gen3File.get_content` in batches, normalises the response,
-and writes a TSV that is compatible with the *publish_embeddings* manifest.
+and writes a TSV in the same format as the output manifest of `publish_embeddings`,
+with a leading `guid` column:
 
-The output file format follows exactly what the `publish_embeddings`
-command generates for each row:
-
-    embedding_id   embedding   authz   collection_id   self
+    guid   embedding_id   embedding   collection_id   authz   self   <metadata keys...>
 """
 
+import asyncio
 import csv
+import json
 from typing import List
 
 import click
@@ -64,9 +64,9 @@ def get_bulk_content(ctx, input_file, guids, output_file, batch_size, content_ty
 
     The function writes a TSV with columns:
 
-        embedding_id   embedding   authz   collection_id   self
+        guid   embedding_id   embedding   collection_id   authz   self   <metadata keys...>
 
-    which is identical to the manifest produced by `publish_embeddings`.
+    which is the output manifest format of `publish_embeddings` with a leading `guid` column.
 
     Args:
         ctx (click.Context): Click context containing `auth_factory`.
@@ -88,41 +88,42 @@ def get_bulk_content(ctx, input_file, guids, output_file, batch_size, content_ty
         ctx.exit(1)
 
     gen3_file = Gen3File(auth.endpoint, auth_provider=auth)
-    embeddings = gen3_file.get_bulk_content(
-        input_file=input_file,
-        guids=guids,
-        batch_size=batch_size,
-        content_type=content_type,
+    embeddings = asyncio.run(
+        gen3_file.get_bulk_content(
+            input_file=input_file,
+            guids=guids,
+            batch_size=batch_size,
+            content_type=content_type,
+        )
     )
 
     rows = []
-    fieldnames = []
-    fieldnames = set(
-        [
-            "guid",
-            "embedding_id",
-            "embedding",
-            "authz",
-            "collection_id",
-            "self",
-            "metadata",
-        ]
-    )
+    all_metadata_keys = set()
 
-    for _, embedding in embeddings.items():
-        rows.append(
+    for embedding in embeddings.values():
+        metadata = embedding.metadata or {}
+        all_metadata_keys.update(metadata.keys())
+
+        row = {
+            "guid": embedding.guid,
+            "embedding_id": embedding.embedding_id,
+            "embedding": json.dumps(embedding.embedding.tolist()),
+            "collection_id": embedding.collection_id or "",
+            "authz": embedding.authz or "",
+            "self": embedding.self,
+        }
+        row.update(
             {
-                "guid": embedding.guid,
-                "embedding_id": embedding.embedding_id,
-                "embedding": embedding.embedding,
-                "authz": embedding.authz,
-                "collection_id": embedding.collection_id,
-                "self": embedding.self,
-                "metadata": embedding.metadata,
+                key: value if isinstance(value, str) else json.dumps(value)
+                for key, value in metadata.items()
             }
         )
+        rows.append(row)
 
-    _write_output(output_file, rows, fieldnames=list(fieldnames))
+    fieldnames = ["guid", "embedding_id", "embedding", "collection_id", "authz", "self"]
+    fieldnames.extend(sorted(all_metadata_keys))
+
+    _write_output(output_file, rows, fieldnames=fieldnames)
     click.echo(f"Successfully wrote {len(rows)} records to {output_file}")
 
 

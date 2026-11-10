@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, patch
 from gen3.cli.ai.main import ai
 
 
-@patch("gen3.cli.ai.main.EmbeddingsClient")
+@patch("gen3.cli.ai.utils.EmbeddingsClient")
 def test_create_collection_success(patched_embeddings_client, runner, mock_ctx_obj):
     """Test successful creation of an embeddings collection."""
     mocked_client = AsyncMock()
@@ -41,7 +41,7 @@ def test_create_collection_success(patched_embeddings_client, runner, mock_ctx_o
     )
 
 
-@patch("gen3.cli.ai.main.EmbeddingsClient")
+@patch("gen3.cli.ai.utils.EmbeddingsClient")
 def test_read_collections_all_success(patched_embeddings_client, runner, mock_ctx_obj):
     """Test reading all collections."""
     mocked_client = AsyncMock()
@@ -62,7 +62,7 @@ def test_read_collections_all_success(patched_embeddings_client, runner, mock_ct
     assert "256" in result.output
 
 
-@patch("gen3.cli.ai.main.EmbeddingsClient")
+@patch("gen3.cli.ai.utils.EmbeddingsClient")
 def test_read_collection_specific_success(
     patched_embeddings_client, runner, mock_ctx_obj
 ):
@@ -87,7 +87,7 @@ def test_read_collection_specific_success(
     assert "384" in result.output
 
 
-@patch("gen3.cli.ai.main.EmbeddingsClient")
+@patch("gen3.cli.ai.utils.EmbeddingsClient")
 def test_delete_collection_success(patched_embeddings_client, runner, mock_ctx_obj):
     """Test successful deletion of a collection."""
     mocked_client = AsyncMock()

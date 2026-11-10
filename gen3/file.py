@@ -257,7 +257,7 @@ class Gen3File:
             return EmbeddingContent(
                 guid=guid,
                 embedding_id="",
-                embedding=numpy.ndarray([]),
+                embedding=numpy.array([]),
                 authz=[],
                 collection_id=None,
                 self="",

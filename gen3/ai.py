@@ -109,7 +109,7 @@ class EmbeddingsClient:
         self,
         collection_name: str,
         embeddings_with_metadata: list[dict],
-        collection_id: int | None = None,
+        authz: str | None = None,
         ai_model: str | None = None,
         overwrite: bool = False,
     ) -> dict[str, Any]:
@@ -119,6 +119,8 @@ class EmbeddingsClient:
         Args:
             collection_name (str): Name of the collection to add embeddings to
             embeddings_with_metadata (list[dict]): List of dictionaries containing the embedding and metadata
+            authz (str): Optional authz resource path applied to every embedding in the request.
+                The service defaults to the collection's own path when omitted.
             ai_model (str): Optional AI model name
             overwrite (bool): Whether to overwrite existing embeddings
 
@@ -126,14 +128,24 @@ class EmbeddingsClient:
             Response from the API
 
         Raises:
+            ValueError: If an item in embeddings_with_metadata sets its own `authz`
             httpx.HTTPError: If the request fails
         """
+        # the API only takes authz per request, and silently ignores it on an item
+        if any(item.get("authz") for item in embeddings_with_metadata):
+            raise ValueError(
+                "authz cannot be set per embedding. Pass `authz` to apply it to the "
+                "whole request, and send embeddings with different authz in separate requests."
+            )
+
         url = f"{self.endpoint}/vectorstore/collections/{collection_name}/embeddings"
         params = {}
         if ai_model:
             params["ai_model"] = ai_model
 
         body = {"embeddings": embeddings_with_metadata}
+        if authz:
+            body["authz"] = authz
 
         method = "post"
         if overwrite:
@@ -187,14 +199,14 @@ class EmbeddingsClient:
     async def list_embeddings(
         self,
         collection_name: str,
-        no_embeddings_info: bool = False,
+        exclude_info: bool = False,
     ) -> list[dict[str, Any]]:
         """
         List all embeddings in an collection.
 
         Args:
             collection_name (str): Name of the collection
-            no_embeddings_info (bool): If True, omit info block in response to reduce payload size
+            exclude_info (bool): If True, omit info block in response to reduce payload size
 
         Returns:
             List of embedding information
@@ -204,8 +216,8 @@ class EmbeddingsClient:
         """
         url = f"{self.endpoint}/vectorstore/collections/{collection_name}/embeddings"
         params = {}
-        if no_embeddings_info:
-            params["no_embeddings_info"] = "true"
+        if exclude_info:
+            params["exclude_info"] = "true"
 
         async with httpx.AsyncClient() as client:
             response = await client.get(url, params=params, headers=self._get_headers())
@@ -357,6 +369,7 @@ class LocalEmbeddingClient:
 
         Args:
             texts_with_metadata (list[dict]): List of text strings to embed w/ metadata
+            keep_original_text (bool): Whether to keep the original text, as `text` in the metadata
 
         Returns:
             list of objects with embedding and metadata
@@ -369,13 +382,13 @@ class LocalEmbeddingClient:
 
         # we can only have an embedding with metadata in the final output, so
         # if we need to keep the original text, move it to the metadata
-        if not keep_original_text:
+        if keep_original_text:
             for item in texts_with_metadata:
                 item["metadata"].update({"text": item["text"]})
                 del item["text"]
 
-        # this format should be what the JSON body for bulk creation of embeddings
-        # expects
+        # each item matches an entry in the JSON body for bulk creation of embeddings,
+        # plus `authz` for the manifest. The API takes authz per request, not per item
         embeddings_with_metadata = [
             {
                 "embedding": embedding,
