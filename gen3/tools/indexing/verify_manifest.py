@@ -39,6 +39,7 @@ Attributes:
     MAX_CONCURRENT_REQUESTS (int): maximum number of desired concurrent requests across
         processes/threads
 """
+
 import aiohttp
 import asyncio
 import csv
@@ -48,7 +49,8 @@ import os
 import time
 
 from gen3.index import Gen3Index
-from gen3.utils import get_or_create_event_loop_for_thread
+from gen3.tools.utils import AUTHZ_STANDARD_KEY
+from gen3.utils import get_or_create_event_loop_for_thread, standardize_str
 
 MAX_CONCURRENT_REQUESTS = 24
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -136,7 +138,21 @@ def _get_authz_from_row(row):
     Returns:
         List[str]: authz resources for the indexd record
     """
-    return [item for item in row.get("authz", "").strip().split(" ") if item]
+    authz = (
+        [
+            element.strip().replace("'", "").replace('"', "").replace("%20", " ")
+            for element in standardize_str(row[AUTHZ_STANDARD_KEY])
+            .strip()
+            .lstrip("[")
+            .rstrip("]")
+            .split(" ")
+        ]
+        if AUTHZ_STANDARD_KEY in row
+        and row[AUTHZ_STANDARD_KEY] != "[]"
+        and row[AUTHZ_STANDARD_KEY]
+        else []
+    )
+    return authz
 
 
 def _get_urls_from_row(row):

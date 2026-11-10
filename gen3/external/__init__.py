@@ -6,4 +6,5 @@ are usually used for gathering metadata.
 
 If you're adding a new metadata source, use the ExternalMetadataSourceInterface.
 """
+
 from gen3.external.external import ExternalMetadataSourceInterface

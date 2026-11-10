@@ -249,7 +249,7 @@ def download_objects(
 
 @click.group()
 def drs_pull():
-    """Commands for downloading and listing DRS objects and manifests"""
+    """For downloading and listing DRS objects and manifests"""
     pass
 
 

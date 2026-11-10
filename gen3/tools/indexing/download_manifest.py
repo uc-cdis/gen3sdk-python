@@ -20,6 +20,7 @@ Attributes:
               To workaround this, we have each process write to a file and concat
               them all post-processing.
 """
+
 import asyncio
 import aiofiles
 import click

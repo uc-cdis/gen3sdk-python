@@ -1,11 +1,11 @@
 """
 Tests gen3.file.Gen3File for calls
 """
+
 from unittest.mock import patch
 import json
 import pytest
 from requests import HTTPError
-
 
 NO_UPLOAD_ACCESS_MESSAGE = """
     You do not have access to upload data. 

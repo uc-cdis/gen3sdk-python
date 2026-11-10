@@ -112,9 +112,7 @@ MOCK_PHS001172 = """
         <Status uid="1" name="released" title="Released"/>
     </Study>
 </dbgapss>
-""".replace(
-    "\n", ""
-)
+""".replace("\n", "")
 
 """
 Does not have child studies 
@@ -227,9 +225,7 @@ MOCK_PHS001173 = """
         <Status uid="1" name="released" title="Released"/>
     </Study>
 </dbgapss>
-""".replace(
-    "\n", ""
-)
+""".replace("\n", "")
 
 MOCK_PHS000089 = """
 <?xml version="1.0" encoding="UTF-8" ?>
@@ -643,9 +639,7 @@ Hum Mol Genet. 2007 Jan 1; 16(1):1-14. </Unparsed>
     </Study>
 </dbgapss>
 
-""".replace(
-    "\n", ""
-)
+""".replace("\n", "")
 
 """
 Has multiple studies
@@ -862,14 +856,10 @@ MOCK_PHS001174 = """
         <Status uid="1" name="released" title="Released"/>
     </Study>
 </dbgapss>
-""".replace(
-    "\n", ""
-)
+""".replace("\n", "")
 
 MOCK_BAD_RESPONSE = """
 {
     "
 }
-""".replace(
-    "\n", ""
-)
+""".replace("\n", "")

@@ -18,6 +18,7 @@ use_shepherd=false
 min_shepherd_version=
 
 """
+
 import json
 from os.path import expanduser
 from pathlib import Path

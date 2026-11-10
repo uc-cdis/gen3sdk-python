@@ -12,7 +12,6 @@ from gen3.tools.metadata.discovery_objects import (
     OPTIONAL_OBJECT_FIELDS,
 )
 
-
 MOCK_METADATA_1 = {
     "str_key": "str_val \n \t \\",
     "listval": ["v1", "v2"],

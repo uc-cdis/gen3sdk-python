@@ -22,6 +22,7 @@ Attributes:
     MAX_CONCURRENT_REQUESTS (int): maximum number of desired concurrent requests across
         processes/threads
 """
+
 import asyncio
 import aiohttp
 import csv

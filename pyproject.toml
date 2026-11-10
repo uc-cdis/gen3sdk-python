@@ -39,8 +39,10 @@ aiofiles = "*"
 pandas = ">=1.4.2"
 xmltodict = ">=0.13.0"
 gen3users = "*"
+numpy = ">=2.4.6"
+pydantic = ">=2.13.4"
+ipywidgets = ">=8.1.8"
 joserfc = ">=1.7.3"
-
 authutils = ">=9.0.0"
 
 # A list of all of the optional dependencies, some of which are included in the
@@ -48,11 +50,21 @@ authutils = ">=9.0.0"
 # fhir
 fhirclient = { version = "*", optional = true }
 
+# ai
+sentence-transformers = { version = ">5.4.1", optional = true }
+httpx = { version = "*", optional = true }
+# TODO: Trying removing the following sub-dep when sentence-transformers updates beyond 5.5.0
+torch = ">=2.10.0"
+
 # dpop
 uvicorn = { version = "*", optional = true }
 
 [tool.poetry.extras]
 fhir = ["fhirclient"]
+ai = [
+    "sentence-transformers",
+    "httpx",
+]
 dpop = ["uvicorn"]
 
 [tool.poetry.group.dev.dependencies]
@@ -61,6 +73,8 @@ pytest-cov = "*"
 pytest-xdist = "*"
 requests-mock = "*"
 deptry = ">=0.23.1"
+ipykernel = "*"
+notebook = "*"
 
 [tool.poetry.scripts]
 gen3 = "gen3.cli.__main__:main"

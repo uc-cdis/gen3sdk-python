@@ -1,6 +1,7 @@
 """
 Tests gen3.doi
 """
+
 import json
 import os
 import pytest

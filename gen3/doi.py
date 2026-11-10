@@ -5,6 +5,7 @@ minting the DOIs.
 For collecting DOI Metadata, other classes (outside of the ones in this module)
 can interact with different APIs to gather the necessary metadata.
 """
+
 import backoff
 import requests
 import os
@@ -290,9 +291,9 @@ class DataCite(object):
                     f"DOI {doi.identifier} is missing `version` in doi.optional_fields. "
                     f"Defaulting to `1`."
                 )
-            metadata[
-                prefix + "version_information"
-            ] = f"This is version {doi.optional_fields.get('version', '1')} of this {doi.doi_type_general}."
+            metadata[prefix + "version_information"] = (
+                f"This is version {doi.optional_fields.get('version', '1')} of this {doi.doi_type_general}."
+            )
         if additional_metadata.get("version_information"):
             del additional_metadata["version_information"]
 
@@ -305,9 +306,9 @@ class DataCite(object):
                 "`additional_metadata` in doi.persist_metadata_in_gen3() call. "
                 f"Consider providing this. Default will be used: {DataCite.DEFAULT_DOI_ACCESS_INFORMATION}"
             )
-            metadata[
-                prefix + "access_information"
-            ] = DataCite.DEFAULT_DOI_ACCESS_INFORMATION
+            metadata[prefix + "access_information"] = (
+                DataCite.DEFAULT_DOI_ACCESS_INFORMATION
+            )
         if additional_metadata.get("access_information"):
             del additional_metadata["access_information"]
 

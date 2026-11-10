@@ -3,8 +3,9 @@ Conf Test for Gen3 test suite
 """
 
 from collections.abc import Generator
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import os
+from click.testing import CliRunner
 import pytest
 
 from drsclient.client import DrsClient
@@ -17,7 +18,6 @@ from gen3.submission import Gen3Submission
 from gen3.query import Gen3Query
 from gen3.auth import Gen3Auth
 from gen3.object import Gen3Object
-
 from tests.fake_indexd import FakeIndexd
 
 os.makedirs("tests/outputs", exist_ok=True)
@@ -174,3 +174,30 @@ def drsclient(drs_client):
     Mock drsclient
     """
     return drs_client
+
+
+@pytest.fixture
+def runner():
+    """Returns a click runner instance."""
+    return CliRunner()
+
+
+@pytest.fixture
+def mock_ctx_obj():
+    """Returns a mock context object for click commands.
+
+    The context contains an ``auth_factory`` that returns an auth object with
+    an ``endpoint`` attribute, and the ``endpoint`` and ``ai_api_prefix``
+    values used by the command group.
+    """
+    mock_auth = MagicMock()
+    mock_auth.endpoint = "http://localhost:4142"
+
+    mock_auth_factory = MagicMock()
+    mock_auth_factory.get.return_value = mock_auth
+
+    return {
+        "auth_factory": mock_auth_factory,
+        "endpoint": "http://localhost:4142",
+        "ai_api_prefix": "",
+    }

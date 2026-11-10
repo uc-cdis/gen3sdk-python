@@ -270,7 +270,7 @@ def _verify_schema(data, schema):
     return True
 
 
-def _standardize_str(s):
+def standardize_str(s):
     """
     Remove unnecessary spaces
 
@@ -304,7 +304,7 @@ def get_urls(raw_urls_string):
         .replace('"', "")
         .replace("%20", " ")
         .rstrip(",")
-        for element in _standardize_str(raw_urls_string)
+        for element in standardize_str(raw_urls_string)
         .strip()
         .lstrip("[")
         .rstrip("]")
