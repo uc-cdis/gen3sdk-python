@@ -22,7 +22,6 @@ import sys
 import yaml
 from typing import Any
 
-TMP_ROOT = pathlib.Path(__file__).parent / "test_data" / "fhir_outputs"
 DONE_SRC = pathlib.Path(__file__).parent / "test_data" / "fhir_inputs" / "merge"
 SRC = pathlib.Path(
     f"{pathlib.Path(__file__).parent}/test_data/test_fhir_Patient.ndjson"
@@ -43,18 +42,21 @@ BASE_RECORD = {
 }
 
 
-@pytest.fixture(scope="session", autouse=True)
-def tmp_root() -> None:
-    """Clear outputs from the previous session. Outputs are left in place afterwards so intermediates can be inspected."""
-    shutil.rmtree(TMP_ROOT, ignore_errors=True)
-    TMP_ROOT.mkdir(parents=True)
+@pytest.fixture(scope="session")
+def tmp_root(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
+    """
+    Root for this session's outputs, inside pytest's per-worker basetemp so parallel
+    workers never share it. We keep the last few sessions' basetemps, so
+    intermediates can be inspected after a run.
+    """
+    return tmp_path_factory.mktemp("fhir_outputs", numbered=False)
 
 
 @pytest.fixture
-def case_dir(request: pytest.FixtureRequest) -> pathlib.Path:
-    """A fresh directory under TMP_ROOT named after the test, so each test's intermediates are isolated and easy to find."""
+def case_dir(request: pytest.FixtureRequest, tmp_root: pathlib.Path) -> pathlib.Path:
+    """A fresh directory under tmp_root named after the test, so each test's intermediates are isolated and easy to find."""
     name = request.node.nodeid.split("::", 1)[1]
-    directory = TMP_ROOT / re.sub(r"\W+", "_", name).strip("_")
+    directory = tmp_root / re.sub(r"\W+", "_", name).strip("_")
     directory.mkdir(parents=True)
     return directory
 
@@ -389,8 +391,6 @@ class Test_is_new:
 
 class Test_is_done:
     """Tests the logic of the run/directory being marked as done (_is_done(directory, record) returns True)"""
-
-    tmp_path = TMP_ROOT / "test_done"
 
     def test_is_done_with_matching_config_and_empty_output(
         self, case_dir: pathlib.Path
