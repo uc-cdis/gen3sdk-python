@@ -7,7 +7,8 @@ import sys
 import traceback
 import re
 
-from drsclient.client import DrsClient
+import requests
+
 from gen3.auth import Gen3Auth
 from gen3.utils import UUID_FORMAT, SIZE_FORMAT, _verify_format, _standardize_str
 from gen3.tools.utils import (
@@ -258,6 +259,70 @@ def _write_csv(records, filename="tests/outputs/output_manifest.csv"):
     return filename
 
 
+def _create_bundle(
+    commons_url,
+    bundles,
+    name=None,
+    guid=None,
+    size=None,
+    checksums=None,
+    description=None,
+    version=None,
+    aliases=None,
+    auth=None,
+    token=None,
+):
+    """
+    Create a bundle in indexd.
+
+    Args:
+        commons_url (str): url of the commons' indexd instance
+        bundles (list): bundle ids and object guids to include in the bundle
+        name (str): defaults to the guid if not provided
+        guid (str): indexd creates one if not provided
+        size (int): indexd calculates it if not provided
+        checksums (list): checksums in the form
+            [{"checksum": "somehash1234", "type": "md5"}]. Indexd calculates an
+            md5 checksum if not provided
+        description (str): description of the bundle object
+        version (str): version of the bundle object
+        aliases (list): aliases related to the bundle
+        auth (Gen3Auth or tuple): Gen3Auth or a (username, password) tuple for
+            indexd basic auth. Takes precedence over `token`
+        token (str): access token, used only when `auth` is not provided
+
+    Returns:
+        requests.Response: indexd's response to the bundle creation
+    """
+    data = {"bundles": bundles if bundles is not None else []}
+    if guid:
+        data["bundle_id"] = guid
+    if size:
+        data["size"] = size
+    if name:
+        data["name"] = name
+    if checksums:
+        data["checksums"] = checksums
+    if description:
+        data["description"] = description
+    if version:
+        data["version"] = version
+    if aliases:
+        data["aliases"] = aliases
+
+    headers = {"content-type": "application/json"}
+    if not auth and token:
+        headers["Authorization"] = "Bearer " + token
+
+    return requests.post(
+        "{}/bundle".format(commons_url),
+        data=json.dumps(data),
+        headers=headers,
+        auth=auth,
+        timeout=60,
+    )
+
+
 def ingest_bundle_manifest(
     commons_url,
     manifest_file,
@@ -292,7 +357,6 @@ def ingest_bundle_manifest(
     if not records:
         return None
 
-    drsclient = DrsClient(commons_url, auth=auth, token=token)
     total = len(records)
     # Iterate through the records list and post to indexd
     for start, record in enumerate(records, 1):
@@ -303,7 +367,7 @@ def ingest_bundle_manifest(
         record["bundles"] = _replace_bundle_name_with_guid(
             record["bundles"], bundle_name_to_guid
         )
-        resp = drsclient.create(**record)
+        resp = _create_bundle(commons_url, auth=auth, token=token, **record)
 
         if resp.status_code != 200:
             logging.error(

@@ -35,7 +35,7 @@ class AuthFactory:
         return self._cache
 
 
-@click.group()
+@click.group(epilog="FHIR commands require extras. See: poetry install --all-extras")
 @click.option(
     "--auth",
     "auth_config",
@@ -149,4 +149,32 @@ main.add_command(dpop.dpop)
 main.add_command(users.users)
 main.add_command(wrap.run)
 main.add_command(nextflow.nextflow)
+
+# optional fhir subcommand dependent on whether user installed FHIR extras
+try:
+    import gen3.cli.fhir as fhir
+
+    main.add_command(fhir.fhir)
+except ModuleNotFoundError as e:
+    # any other missing module is a real bug, not a missing extra
+    if e.name != "fhirpathpy":
+        raise
+
+    @click.group(
+        name="fhir",
+        # without invoke_without_command click never calls fhir() for `gen3 fhir <subcommand>` and
+        # reports "Missing command." instead of the extras message
+        invoke_without_command=True,
+        epilog="Requires FHIR packages which aren't installed by default. Install the 'fhir' extras: poetry install --all-extras",
+    )
+    @click.argument("args", nargs=-1, type=click.UNPROCESSED)
+    def fhir(args):
+        """Commands for FHIR data processing: transform & cleanup"""
+        raise click.ClickException(
+            "FHIR commands require the 'fhir' extras: poetry install --all-extras"
+        )
+
+    main.add_command(fhir)
+
+
 main()
