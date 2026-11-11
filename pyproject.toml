@@ -39,6 +39,10 @@ aiofiles = "*"
 pandas = ">=1.4.2"
 xmltodict = ">=0.13.0"
 gen3users = "*"
+# TODO: transitive dependency pinned for a security vulnerability. Remove this
+# pin in the future and check whether the vulnerability scan still flags it
+urllib3 = ">=2.8.0"
+
 joserfc = ">=1.7.3"
 
 authutils = ">=9.0.0"
@@ -47,12 +51,13 @@ authutils = ">=9.0.0"
 # below `extras`. They can be opted into by apps.
 # fhir
 fhirclient = { version = "*", optional = true }
+fhirpathpy = { version = "*", optional = true }
 
 # dpop
 uvicorn = { version = "*", optional = true }
 
 [tool.poetry.extras]
-fhir = ["fhirclient"]
+fhir = ["fhirclient", "fhirpathpy"]
 dpop = ["uvicorn"]
 
 [tool.poetry.group.dev.dependencies]

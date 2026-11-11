@@ -1,25 +1,11 @@
 ## Dev-Test
 
-### Set up Python Virtual Environment
-
-You can set up a Python development environment with a virtual environment:
-
-```bash
-python3 -m venv py3
-```
-
-Make sure that you have the virtual environment activated:
-
-```bash
-. py3/bin/activate
-```
-
 ### Install poetry
 
 To use the latest code in this repo (or to develop new features) you can clone this repo, install `poetry`:
 
 ```
-curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+curl -sSL https://install.python-poetry.org | python3 -
 ```
 
 and then use `poetry` to install this package:
@@ -34,8 +20,7 @@ poetry install -vv
 Local development like this:
 
 ```
-poetry shell
-poetry install -vv
+eval $(poetry env activate)
 python3 -m pytest
 ```
 
