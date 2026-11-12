@@ -40,7 +40,7 @@ pandas = ">=1.4.2"
 xmltodict = ">=0.13.0"
 gen3users = "*"
 # TODO: transitive dependency pinned for a security vulnerability. Remove this
-# pin in the future and check whether the vulnerability scan still flags it
+# pin in the future and check whether the vulnerability scan still flags it.
 urllib3 = ">=2.8.0"
 
 joserfc = ">=1.7.3"
