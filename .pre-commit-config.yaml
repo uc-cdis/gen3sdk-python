@@ -1,17 +1,24 @@
 repos:
--   repo: git@github.com:Yelp/detect-secrets
-    rev: v1.5.0
-    hooks:
-    -   id: detect-secrets
-        args: ['--baseline', '.secrets.baseline']
-        exclude: '(docs\/_build|poetry.lock)'
--   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
-    hooks:
-    -   id: no-commit-to-branch
-        args: [--branch, develop, --branch, master, --pattern, release/.*]
--   repo: https://github.com/psf/black
-    rev: 26.5.1
-    hooks:
-    -   id: black
-        additional_dependencies: ['click==8.0.4']
+    - repo: git@github.com:Yelp/detect-secrets
+      rev: v1.5.0
+      hooks:
+          - id: detect-secrets
+            args: ["--baseline", ".secrets.baseline"]
+            exclude: '(docs\/_build|poetry.lock)'
+    - repo: https://github.com/pre-commit/pre-commit-hooks
+      rev: v6.0.0
+      hooks:
+          - id: no-commit-to-branch
+            args: [--branch, develop, --branch, master, --pattern, release/.*]
+    - repo: https://github.com/psf/black
+      rev: 26.5.1
+      hooks:
+          - id: black
+            additional_dependencies: ["click==8.0.4"]
+    - repo: local
+      hooks:
+          - id: check-version-bump
+            name: Check version bump
+            entry: git-hooks/check-version-bump.sh
+            language: script
+            pass_filenames: false
