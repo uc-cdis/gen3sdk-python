@@ -18,7 +18,7 @@ def main():
 
 @click.group()
 def pfb():
-    """Commands for working with Portable Format for Biomedical Data (PFB)"""
+    """For working with Portable Format for Biomedical Data (PFB)"""
     pass
 
 

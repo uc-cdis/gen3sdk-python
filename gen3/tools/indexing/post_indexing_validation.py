@@ -8,13 +8,11 @@ The output format is as follows:
 | ACL | Bucket | Protocol | Presigned URL Status | Download Status | GUID |
 """
 
-
 import csv
 from cdislogging import get_logger, get_stream_handler
 from gen3.file import Gen3File
 import requests
 import re
-
 
 logger = get_logger(__name__)
 logger.addHandler(get_stream_handler())

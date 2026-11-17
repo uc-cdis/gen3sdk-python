@@ -2,6 +2,7 @@
 These tests are heavily based off the docs/crosswalk.md example.
 See the test data in /tests/test_data/crosswalk
 """
+
 import asyncio
 import os
 from unittest.mock import MagicMock, patch

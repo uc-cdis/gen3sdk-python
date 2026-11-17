@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "gen3"
 homepage = "https://gen3.org/"
-version = "5.1.0"
+version = "5.2.0"
 description = "Gen3 CLI and Python SDK"
 authors = ["Center for Translational Data Science at the University of Chicago <support@gen3.org>"]
 license = "Apache-2.0"
@@ -39,12 +39,10 @@ aiofiles = "*"
 pandas = ">=1.4.2"
 xmltodict = ">=0.13.0"
 gen3users = "*"
-# TODO: transitive dependency pinned for a security vulnerability. Remove this
-# pin in the future and check whether the vulnerability scan still flags it.
-urllib3 = ">=2.8.0"
-
+numpy = ">=2.4.6"
+pydantic = ">=2.13.4"
+ipywidgets = ">=8.1.8"
 joserfc = ">=1.7.3"
-
 authutils = ">=9.0.0"
 
 # A list of all of the optional dependencies, some of which are included in the
@@ -53,11 +51,21 @@ authutils = ">=9.0.0"
 fhirclient = { version = "*", optional = true }
 fhirpathpy = { version = "*", optional = true }
 
+# ai
+sentence-transformers = { version = ">5.4.1", optional = true }
+httpx = { version = "*", optional = true }
+# TODO: Trying removing the following sub-dep when sentence-transformers updates beyond 5.5.0
+torch = ">=2.10.0"
+
 # dpop
 uvicorn = { version = "*", optional = true }
 
 [tool.poetry.extras]
 fhir = ["fhirclient", "fhirpathpy"]
+ai = [
+    "sentence-transformers",
+    "httpx",
+]
 dpop = ["uvicorn"]
 
 [tool.poetry.group.dev.dependencies]
@@ -66,6 +74,8 @@ pytest-cov = "*"
 pytest-xdist = "*"
 requests-mock = "*"
 deptry = ">=0.23.1"
+ipykernel = "*"
+notebook = "*"
 
 [tool.poetry.scripts]
 gen3 = "gen3.cli.__main__:main"

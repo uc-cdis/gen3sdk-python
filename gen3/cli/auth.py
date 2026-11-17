@@ -72,7 +72,7 @@ def wts_list():
 
 @click.group()
 def auth():
-    """Commands for authentication and authorization"""
+    """For authentication and authorization"""
     pass
 
 

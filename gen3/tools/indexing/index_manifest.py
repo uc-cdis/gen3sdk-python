@@ -30,6 +30,7 @@ Usages:
     python index_manifest.py --commons_url https://giangb.planx-pla.net  --manifest_file path_to_manifest --auth "admin,admin" --replace_urls False --thread_num 10
     python index_manifest.py --commons_url https://giangb.planx-pla.net  --manifest_file path_to_manifest --api_key ./credentials.json --replace_urls False --thread_num 10
 """
+
 import os
 import csv
 import click
@@ -54,14 +55,13 @@ from gen3.tools.utils import (
     PREV_GUID_STANDARD_KEY,
 )
 from gen3.utils import (
-    _standardize_str,
+    standardize_str,
     get_urls,
 )
 from gen3.tools.utils import get_and_verify_fileinfos_from_manifest
 import indexclient.client as client
 from indexclient.client import Document
 from cdislogging import get_logger
-
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -151,7 +151,7 @@ def _index_record(
         authz = (
             [
                 element.strip().replace("'", "").replace('"', "").replace("%20", " ")
-                for element in _standardize_str(fi[AUTHZ_STANDARD_KEY])
+                for element in standardize_str(fi[AUTHZ_STANDARD_KEY])
                 .strip()
                 .lstrip("[")
                 .rstrip("]")
@@ -173,7 +173,7 @@ def _index_record(
                         .replace("'", "")
                         .replace('"', "")
                         .replace("%20", " ")
-                        for element in _standardize_str(fi[ACL_STANDARD_KEY])
+                        for element in standardize_str(fi[ACL_STANDARD_KEY])
                         .strip()
                         .lstrip("[")
                         .rstrip("]")
@@ -188,7 +188,7 @@ def _index_record(
             acl = []
 
         if FILENAME_STANDARD_KEY in fi:
-            file_name = _standardize_str(fi[FILENAME_STANDARD_KEY])
+            file_name = standardize_str(fi[FILENAME_STANDARD_KEY])
         else:
             file_name = ""
 

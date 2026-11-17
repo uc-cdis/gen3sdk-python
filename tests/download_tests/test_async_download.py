@@ -9,7 +9,6 @@ from types import SimpleNamespace as Namespace
 from gen3.file import Gen3File
 from gen3.utils import get_or_create_event_loop_for_thread
 
-
 DIR = Path(__file__).resolve().parent
 NO_DOWNLOAD_ACCESS_MESSAGE = """
 You do not have access to download data.
@@ -18,7 +17,6 @@ You need read permissions on the files specified in the manifest provided
 
 
 def _load_manifest(manifest_file_path):
-
     """
     Function to convert manifest to python objects, stored in a list.
 
@@ -166,7 +164,6 @@ class Test_Async_Download:
 
     @patch("gen3.file.requests")
     def test_download_single_no_auth(self, mock_get, download_dir, mock_gen3_auth):
-
         """
         Testing how download_single function reacts when it is given no authorisation details
         Request(url) should return status_code = 403 and download function should return False
@@ -196,7 +193,6 @@ class Test_Async_Download:
 
     @patch("gen3.file.requests")
     def test_download_single_wrong_auth(self, mock_get, download_dir, mock_gen3_auth):
-
         """
         Testing how download_single function reacts when it is given wrong authorisation details
         Request(url) should return status_code = 403 and download function should return False
@@ -226,7 +222,6 @@ class Test_Async_Download:
 
     @patch("gen3.file.requests")
     def test_download_single_bad_id(self, mock_get, download_dir, mock_gen3_auth):
-
         """
         Testing how download_single function reacts when it is given a manifest with bad id
         Request(url) should return status_code = 404 (File not found) and download function should return False
@@ -256,7 +251,6 @@ class Test_Async_Download:
         assert result == False
 
     def test_load_manifest_bad_format(self):
-
         """
         Testing how load_manifest function reacts when it is given a manifest with bad format as input
         Function should not load the manifest and should return an empty manifest_list

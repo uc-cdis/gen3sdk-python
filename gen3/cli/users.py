@@ -19,7 +19,7 @@ def main():
 
 @click.group()
 def users():
-    """Commands for working with gen3users"""
+    """For working with gen3users"""
     pass
 
 

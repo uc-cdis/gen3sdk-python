@@ -1,6 +1,7 @@
 """
 Tests gen3.nih
 """
+
 import json
 import os
 import pytest
@@ -167,9 +168,9 @@ def test_dbgap_fhir_sanitizes_unsafe_markdown_links():
     )
 
     unsafe_response = deepcopy(MOCK_NIH_DBGAP_FHIR_RESPONSE_FOR_PHS000007)
-    unsafe_response[
-        "description"
-    ] = "Description with [malformed JS](javascript:getPage(this, 'document.cgi', 2022 and also [unsafe link](javascript:getPage(this, 'document.cgi', 2022);return true;) and context"
+    unsafe_response["description"] = (
+        "Description with [malformed JS](javascript:getPage(this, 'document.cgi', 2022 and also [unsafe link](javascript:getPage(this, 'document.cgi', 2022);return true;) and context"
+    )
     unsafe_response["keyword"][0][
         "text"
     ] = "[JS](javascript:getPage(this, 'document.cgi', 2022);return true;)"

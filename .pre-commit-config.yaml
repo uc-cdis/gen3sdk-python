@@ -8,8 +8,11 @@ repos:
     - repo: https://github.com/pre-commit/pre-commit-hooks
       rev: v6.0.0
       hooks:
+          # TODO: enable these in a future PR
+          # -   id: trailing-whitespace
+          # -   id: end-of-file-fixer
           - id: no-commit-to-branch
-            args: [--branch, develop, --branch, master, --pattern, release/.*]
+            args: [--branch, develop, --branch, master, --branch, main, --pattern, release/.*]
     - repo: https://github.com/psf/black
       rev: 26.5.1
       hooks:
@@ -22,3 +25,9 @@ repos:
             entry: git-hooks/check-version-bump.sh
             language: script
             pass_filenames: false
+        # nbstripout removes cell outputs from any jupyter notebooks to ensure 
+        # no accidental commit of responses / secrets
+    -   repo: https://github.com/kynan/nbstripout
+        rev: 0.9.1
+        hooks:
+        -   id: nbstripout
