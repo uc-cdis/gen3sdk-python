@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "gen3"
 homepage = "https://gen3.org/"
-version = "5.0.0"
+version = "5.2.0"
 description = "Gen3 CLI and Python SDK"
 authors = ["Center for Translational Data Science at the University of Chicago <support@gen3.org>"]
 license = "Apache-2.0"
@@ -49,6 +49,7 @@ authutils = ">=9.0.0"
 # below `extras`. They can be opted into by apps.
 # fhir
 fhirclient = { version = "*", optional = true }
+fhirpathpy = { version = "*", optional = true }
 
 # ai
 sentence-transformers = { version = ">5.4.1", optional = true }
@@ -60,7 +61,7 @@ torch = ">=2.10.0"
 uvicorn = { version = "*", optional = true }
 
 [tool.poetry.extras]
-fhir = ["fhirclient"]
+fhir = ["fhirclient", "fhirpathpy"]
 ai = [
     "sentence-transformers",
     "httpx",

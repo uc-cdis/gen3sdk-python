@@ -161,6 +161,14 @@ def gen3_query(gen3_auth):
 
 
 @pytest.fixture(scope="function")
+def drs_endpoint(indexd_server: FakeIndexd) -> str:
+    """
+    Returns the base url of the fake indexd.
+    """
+    return indexd_server.baseurl
+
+
+@pytest.fixture(scope="function")
 def drs_client(indexd_server: FakeIndexd) -> DrsClient:
     """
     Returns a DrsClient pointed at the fake indexd.
